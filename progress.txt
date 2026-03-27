@@ -1,3 +1,19 @@
+## 2026-03-27 - US-010
+- Implemented filesystem scanner for media file discovery
+- Files changed: packages/server-core/src/scanner.ts (new), src/scanner.test.ts (new), src/index.ts (exports), package.json (added @xon/media-types dep)
+- `scanDataSource({ path, recursive }, existingItems?)` walks directory using `node:fs/promises` `readdir`/`stat`
+- Identifies media files by extension via `getMediaCategory` from `@xon/media-types`; skips non-media extensions
+- Returns `ScanResult` with `discovered`, `newFiles`, `changedFiles`, `removedFilePaths` by comparing against existing items by filePath+fileSize
+- Handles permission errors and inaccessible paths gracefully with `console.error` logging (returns empty array)
+- 9 new tests all passing (total 60 tests in server-core)
+- **Learnings for future iterations:**
+  - `.txt` IS a media type in @xon/media-types (Documents category) — don't assume it's non-media in tests; use `.log` or other non-standard extension
+  - `tsc --build --noEmit` fails in TypeScript 5.9 for composite project reference chains — use root-level `yarn typecheck` (`tsc --build` without `--noEmit`) for type checking
+  - `@xon/media-types` does NOT need to be in server-core's tsconfig.json references since it's already built; adding it breaks `--noEmit` mode
+  - Biome import order: `import type` from node built-ins sorts BEFORE `import` from same module group
+  - Biome `noImplicitAnyLet`: uninitialized `let` variables need explicit type annotations (e.g., `let x: Dirent[]`)
+---
+
 ## 2026-03-27 - US-009
 - Implemented Data Sources CRUD API endpoints nested under libraries
 - Files changed: packages/server-core/src/routes/sources.ts (new), src/routes/sources.test.ts (new), src/routes/libraries.ts (added sources sub-router mount)
@@ -52,6 +68,10 @@
 - Packages with cross-package deps need `references` in their own tsconfig.json (not just root tsconfig.json)
 - Hono sub-router params from parent routes (e.g., `:libraryId` in parent `/:libraryId/sources`) type as `string | undefined` — use `as string` cast; mount sub-routers with `router.route("/:parentParam/sub", makeSubRouter(db))`
 - Drizzle boolean `{ mode: "boolean" }` returns JS `true`/`false`, not `1`/`0` — use `toBe(false)` in tests, not `toBe(0)`
+- `tsc --build --noEmit` fails in TypeScript 5.9 with chained composite project references — use root `yarn typecheck` (`tsc --build`) for type checking
+- Workspace packages already built (dist/ exists) don't need tsconfig.json references; adding them breaks `--noEmit` mode
+- Biome `noImplicitAnyLet`: uninitialized `let` variables need explicit type annotations
+- `.txt` is in the Documents media category — never a safe "non-media" test file; use `.log` or `.xyz`
 
 ---
 
