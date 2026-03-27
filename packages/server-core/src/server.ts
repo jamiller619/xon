@@ -1,18 +1,26 @@
 import { serve } from "@hono/node-server";
 import { DEFAULT_PORT } from "@xon/shared";
+import { Hono } from "hono";
 import { createApp } from "./app.js";
 import { openDatabase } from "./db.js";
 import { migrateDatabase } from "./migrate.js";
 import { WS_PATH, createWsServer } from "./routes/ws.js";
 import { startScheduler } from "./scheduler.js";
+import { makeStaticMiddleware } from "./staticFiles.js";
 
 export function boot(): void {
   const port = Number(process.env.PORT ?? DEFAULT_PORT);
+  const webClientDir = process.env.WEB_CLIENT_DIR;
 
   openDatabase()
     .then(async ({ client, db }) => {
       await migrateDatabase(db);
-      const app = createApp(db);
+      const apiApp = createApp(db);
+      const app = new Hono();
+      app.route("/", apiApp);
+      if (webClientDir) {
+        app.use("/*", makeStaticMiddleware(webClientDir));
+      }
       const { handleUpgrade } = createWsServer();
       const scheduler = await startScheduler(db);
       const server = serve({ fetch: app.fetch, port }, (info) => {
