@@ -1,3 +1,19 @@
+## 2026-03-27 - US-015
+- Implemented `music-metadata` npm library for ID3/Vorbis tag parsing for Music and Audiobook categories
+- Files changed: packages/server-core/src/musictags.ts (new), src/musictags.test.ts (new), src/orchestrator.ts (calls extractMusicTags before ffprobe check), src/index.ts (exports), package.json (added music-metadata dep)
+- `extractMusicTags(filePath)` calls `parseFile()` from `music-metadata`, extracts: title, artist, album, year, genre (first element), trackNumber, discNumber, hasAlbumArt, duration, bitrate, sampleRate, channels, codec
+- `isMusicCategory(category)` returns true for Music and Audiobooks only (not AudioClips or Podcasts)
+- Orchestrator priority: `isMusicCategory` checked first → music-metadata; then `isAudioVideoCategory` → ffprobe; then `isImageCategory` → exiftool
+- Music and Audiobooks now use music-metadata (which provides both technical metadata AND tags) instead of ffprobe
+- 13 new tests in musictags.test.ts; total 112 tests in server-core
+- **Learnings for future iterations:**
+  - `music-metadata` `parseFile()` returns `{ common, format, native, quality }` — use `common` for tags, `format` for technical info
+  - `common.track` and `common.disk` always exist with `{ no: number | null; of: number | null }` — no `?.` needed
+  - `common.genre` is `string[]` not `string` — take `[0]` for first genre
+  - Mocking `music-metadata` with `vi.mock('music-metadata', () => ({ parseFile: vi.fn() }))` works cleanly; cast mock return with `as never`
+  - Biome import sort: `@xon/shared` (scoped package) sorts before `music-metadata` (plain package) — let `biome check --write` fix it
+---
+
 ## 2026-03-27 - US-014
 - Implemented ExifTool metadata extraction for image media items (Pictures, Images, DesignFiles)
 - Files changed: packages/server-core/src/exiftool.ts (new), src/exiftool.test.ts (new), src/orchestrator.ts (calls exiftool on insert/update), src/index.ts (exports)
@@ -134,6 +150,7 @@
 - `exactOptionalPropertyTypes: true`: can't assign `T | undefined` to optional `T` property — use `if (typeof x === "string") obj.prop = x` pattern
 - Biome `useLiteralKeys`: use dot notation (`obj.snake_case`) not bracket notation (`obj["snake_case"]`) for `Record<string, unknown>` access
 - Mocking `node:child_process` spawn: create EventEmitter with `.stdout` EventEmitter, cast to `ReturnType<typeof spawn>`
+- `music-metadata` `parseFile()` returns `{ common, format }` — `common.track`/`common.disk` always present with `.no: number | null`; `common.genre` is `string[]`; mock with `vi.mock('music-metadata', () => ({ parseFile: vi.fn() }))`, cast return as `never`
 
 ---
 
