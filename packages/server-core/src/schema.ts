@@ -41,6 +41,7 @@ export const mediaItems = sqliteTable(
     title: text("title"),
     description: text("description"),
     metadata: text("metadata").notNull().default("{}"),
+    thumbnailPaths: text("thumbnail_paths"),
     drmProtected: integer("drm_protected", { mode: "boolean" }).notNull().default(false),
     createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
     updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),

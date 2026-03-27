@@ -15,6 +15,7 @@ import {
 import { extractMusicTags, isMusicCategory } from "./musictags.js";
 import { scanDataSource } from "./scanner.js";
 import { dataSources, libraries, mediaItems } from "./schema.js";
+import { generateThumbnails } from "./thumbnails.js";
 
 export type ScanProgress = {
   dataSourceId: string;
@@ -34,8 +35,10 @@ export type ScanSummary = {
 export async function scanLibrary(
   db: LibSQLDatabase,
   libraryId: string,
-  onProgress?: (progress: ScanProgress) => void
+  onProgress?: (progress: ScanProgress) => void,
+  dataDir?: string
 ): Promise<ScanSummary> {
+  const resolvedDataDir = dataDir ?? process.env.DATA_DIR ?? "./data";
   const libraryRows = await db.select().from(libraries).where(eq(libraries.id, libraryId));
   if (libraryRows.length === 0) {
     throw new Error(`Library not found: ${libraryId}`);
@@ -111,8 +114,18 @@ export async function scanLibrary(
         }
       }
 
+      const id = crypto.randomUUID();
+
+      let thumbnailPaths: string | null = null;
+      if (isImageCategory(entry.mediaCategory)) {
+        const thumbs = await generateThumbnails(entry.filePath, id, resolvedDataDir);
+        if (thumbs) {
+          thumbnailPaths = JSON.stringify(thumbs);
+        }
+      }
+
       await db.insert(mediaItems).values({
-        id: crypto.randomUUID(),
+        id,
         libraryId,
         dataSourceId: source.id,
         filePath: entry.filePath,
@@ -121,6 +134,7 @@ export async function scanLibrary(
         mimeType: entry.mimeType ?? null,
         mediaCategory: entry.mediaCategory,
         metadata,
+        thumbnailPaths,
         createdAt: now,
         updatedAt: now,
         scannedAt: now,
@@ -156,6 +170,17 @@ export async function scanLibrary(
         const exifMeta = await extractExiftoolMetadata(entry.filePath);
         if (exifMeta) {
           updateFields.metadata = JSON.stringify(exifMeta);
+        }
+        const existingRows = await db
+          .select({ id: mediaItems.id })
+          .from(mediaItems)
+          .where(
+            and(eq(mediaItems.dataSourceId, source.id), eq(mediaItems.filePath, entry.filePath))
+          );
+        const existingId = existingRows[0]?.id ?? crypto.randomUUID();
+        const thumbs = await generateThumbnails(entry.filePath, existingId, resolvedDataDir);
+        if (thumbs) {
+          updateFields.thumbnailPaths = JSON.stringify(thumbs);
         }
       } else if (isDocumentCategory(entry.mediaCategory)) {
         const docMeta = await extractDocumentMetadata(entry.filePath);

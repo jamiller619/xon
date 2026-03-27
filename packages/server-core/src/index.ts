@@ -41,6 +41,7 @@ export {
   type Model3DMetadata,
   type ArchiveMetadata,
 } from "./miscmeta.js";
+export { generateThumbnails, type ThumbnailPaths } from "./thumbnails.js";
 export { scanDataSource, type FileEntry, type ScanResult } from "./scanner.js";
 export { scanLibrary, type ScanProgress, type ScanSummary } from "./orchestrator.js";
 export { boot } from "./server.js";
