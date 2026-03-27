@@ -1,3 +1,17 @@
+## 2026-03-27 - US-032
+- Added inline metadata editing to media detail page
+- Files changed: apps/web/src/pages/MediaDetail.tsx (edit form with title/description/tags), MediaDetail.module.css (edit form styles, tags display, titleRow layout)
+- Files changed: packages/server-core/src/routes/media.ts (PUT /api/v1/media/:id endpoint), src/routes/media.test.ts (5 new tests)
+- PUT endpoint accepts `{ title?, description?, tags? }`; tags merged into existing metadata JSON preserving other fields; returns updated item with thumbnailUrls
+- Frontend: Edit button toggles form; Cancel reverts to view mode; Save sends PUT and updates local state; tags displayed as chips in view mode
+- Tags excluded from generic metadata display (rendered as their own chips UI)
+- 5 new tests; total 223 tests in server-core
+- **Learnings for future iterations:**
+  - PUT endpoint for media uses same pattern as libraries PUT: fetch existing, build `updates` object, call `db.update().set(updates)`
+  - Tags live inside the `metadata` JSON column under key `tags`; PUT must parse existing metadata, update `tags` key, and re-serialize to preserve other fields
+  - Biome line-length limit causes long JSX attributes to be expanded to multi-line; run `biome format --write` after writing TSX
+---
+
 ## 2026-03-27 - US-031
 - Implemented media detail page at /media/:id
 - Files created: apps/web/src/pages/MediaDetail.tsx, MediaDetail.module.css
