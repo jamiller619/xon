@@ -19,6 +19,105 @@
   flex: 1;
 }
 
+/* Filter bar */
+.filterBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  align-items: flex-end;
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.07);
+  border-radius: 8px;
+}
+
+.filterGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.filterLabel {
+  font-size: 0.7rem;
+  font-weight: 600;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.filterSelect {
+  padding: 5px 8px;
+  background: rgba(255, 255, 255, 0.07);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: #c0c0d0;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  min-width: 120px;
+  appearance: auto;
+}
+
+.filterSelect:focus {
+  outline: none;
+  border-color: rgba(108, 99, 255, 0.5);
+}
+
+.filterDisabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+/* Active filter chips */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  background: rgba(108, 99, 255, 0.15);
+  border: 1px solid rgba(108, 99, 255, 0.4);
+  border-radius: 20px;
+  font-size: 0.8125rem;
+  color: #a09bff;
+}
+
+.chipRemove {
+  background: none;
+  border: none;
+  color: #a09bff;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 0;
+  display: flex;
+  align-items: center;
+  opacity: 0.7;
+}
+
+.chipRemove:hover {
+  opacity: 1;
+}
+
+.clearAll {
+  background: none;
+  border: none;
+  color: #666;
+  font-size: 0.8125rem;
+  cursor: pointer;
+  text-decoration: underline;
+  padding: 0;
+}
+
+.clearAll:hover {
+  color: #a09bff;
+}
+
 /* View toggle */
 .viewToggle {
   display: flex;

@@ -9,10 +9,48 @@ interface Library {
   name: string;
 }
 
-type SortColumn = "title" | "mediaCategory" | "fileSize" | "createdAt";
+type SortColumn = "title" | "mediaCategory" | "fileSize" | "createdAt" | "releaseDate" | "rating";
 type SortDir = "asc" | "desc";
 
 const PAGE_SIZE = 40;
+
+const MEDIA_CATEGORIES = [
+  "Movies",
+  "TV Shows",
+  "Clips",
+  "Music",
+  "Audiobooks",
+  "Audio Clips",
+  "Podcasts",
+  "Pictures",
+  "Images",
+  "Textures",
+  "Home Videos",
+  "Games",
+  "Interactive Media",
+  "Documents",
+  "Web Media",
+  "Design Files",
+  "3D Models",
+  "Archives",
+  "Fonts",
+  "Icons",
+] as const;
+
+const SORT_OPTIONS: { label: string; col: SortColumn; dir: SortDir }[] = [
+  { label: "Date Added (newest)", col: "createdAt", dir: "desc" },
+  { label: "Date Added (oldest)", col: "createdAt", dir: "asc" },
+  { label: "Title A→Z", col: "title", dir: "asc" },
+  { label: "Title Z→A", col: "title", dir: "desc" },
+  { label: "File Size (largest)", col: "fileSize", dir: "desc" },
+  { label: "File Size (smallest)", col: "fileSize", dir: "asc" },
+  { label: "Release Date (newest)", col: "releaseDate", dir: "desc" },
+  { label: "Rating (highest)", col: "rating", dir: "desc" },
+];
+
+function makeSortKey(col: SortColumn, dir: SortDir): string {
+  return `${col}:${dir}`;
+}
 
 function SkeletonCard() {
   return <div className={styles.skeletonCard ?? ""} />;
@@ -39,6 +77,7 @@ export default function LibraryBrowser() {
   const [error, setError] = useState<string | null>(null);
   const [sortCol, setSortCol] = useState<SortColumn>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
+  const [filterCategory, setFilterCategory] = useState("");
 
   useEffect(() => {
     if (!id) return;
@@ -51,11 +90,18 @@ export default function LibraryBrowser() {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    // Map sortCol to API sortBy param (mediaCategory not supported → default createdAt)
-    const apiSortBy = sortCol === "mediaCategory" ? "createdAt" : sortCol;
-    fetch(
-      `/api/v1/libraries/${id}/media?order=${sortDir}&sortBy=${apiSortBy}&limit=${PAGE_SIZE}&page=${page}`
-    )
+    const apiSortBy =
+      sortCol === "mediaCategory"
+        ? "createdAt"
+        : sortCol;
+    const params = new URLSearchParams({
+      order: sortDir,
+      sortBy: apiSortBy,
+      limit: String(PAGE_SIZE),
+      page: String(page),
+    });
+    if (filterCategory) params.set("mediaCategory", filterCategory);
+    fetch(`/api/v1/libraries/${id}/media?${params.toString()}`)
       .then((r) => r.json())
       .then((data) => {
         const mediaList = data as MediaCardItem[];
@@ -71,7 +117,7 @@ export default function LibraryBrowser() {
         setError("Failed to load media");
         setLoading(false);
       });
-  }, [id, page, sortCol, sortDir]);
+  }, [id, page, sortCol, sortDir, filterCategory]);
 
   function handleSort(col: SortColumn) {
     if (col === sortCol) {
@@ -83,9 +129,37 @@ export default function LibraryBrowser() {
     setPage(1);
   }
 
+  function handleSortOption(value: string) {
+    const opt = SORT_OPTIONS.find((o) => makeSortKey(o.col, o.dir) === value);
+    if (opt) {
+      setSortCol(opt.col);
+      setSortDir(opt.dir);
+      setPage(1);
+    }
+  }
+
+  function handleCategoryFilter(value: string) {
+    setFilterCategory(value);
+    setPage(1);
+    setTotalPages(1);
+  }
+
   function sortIndicator(col: SortColumn) {
     if (col !== sortCol) return null;
-    return <span className={styles.sortArrow ?? ""}>{sortDir === "asc" ? " ▲" : " ▼"}</span>;
+    return (
+      <span className={styles.sortArrow ?? ""}>{sortDir === "asc" ? " ▲" : " ▼"}</span>
+    );
+  }
+
+  const currentSortKey = makeSortKey(sortCol, sortDir);
+
+  const activeFilters: { key: string; label: string; onRemove: () => void }[] = [];
+  if (filterCategory) {
+    activeFilters.push({
+      key: "category",
+      label: `Category: ${filterCategory}`,
+      onRemove: () => handleCategoryFilter(""),
+    });
   }
 
   if (error) {
@@ -115,6 +189,110 @@ export default function LibraryBrowser() {
           </button>
         </div>
       </header>
+
+      {/* Filter bar */}
+      <div className={styles.filterBar ?? ""}>
+        <div className={styles.filterGroup ?? ""}>
+          <label className={styles.filterLabel ?? ""} htmlFor="filter-category">
+            Category
+          </label>
+          <select
+            id="filter-category"
+            className={styles.filterSelect ?? ""}
+            value={filterCategory}
+            onChange={(e) => handleCategoryFilter(e.target.value)}
+          >
+            <option value="">All</option>
+            {MEDIA_CATEGORIES.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className={styles.filterGroup ?? ""}>
+          <label className={styles.filterLabel ?? ""} htmlFor="filter-sort">
+            Sort
+          </label>
+          <select
+            id="filter-sort"
+            className={styles.filterSelect ?? ""}
+            value={currentSortKey}
+            onChange={(e) => handleSortOption(e.target.value)}
+          >
+            {SORT_OPTIONS.map((opt) => (
+              <option key={makeSortKey(opt.col, opt.dir)} value={makeSortKey(opt.col, opt.dir)}>
+                {opt.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        <div className={styles.filterGroup ?? ""}>
+          <label className={styles.filterLabel ?? ""} htmlFor="filter-genre">
+            Genre
+          </label>
+          <select id="filter-genre" className={`${styles.filterSelect ?? ""} ${styles.filterDisabled ?? ""}`} disabled>
+            <option value="">All</option>
+          </select>
+        </div>
+
+        <div className={styles.filterGroup ?? ""}>
+          <label className={styles.filterLabel ?? ""} htmlFor="filter-year">
+            Year
+          </label>
+          <select id="filter-year" className={`${styles.filterSelect ?? ""} ${styles.filterDisabled ?? ""}`} disabled>
+            <option value="">All</option>
+          </select>
+        </div>
+
+        <div className={styles.filterGroup ?? ""}>
+          <label className={styles.filterLabel ?? ""} htmlFor="filter-rating">
+            Rating
+          </label>
+          <select id="filter-rating" className={`${styles.filterSelect ?? ""} ${styles.filterDisabled ?? ""}`} disabled>
+            <option value="">All</option>
+          </select>
+        </div>
+
+        <div className={styles.filterGroup ?? ""}>
+          <label className={styles.filterLabel ?? ""} htmlFor="filter-tags">
+            Tags
+          </label>
+          <select id="filter-tags" className={`${styles.filterSelect ?? ""} ${styles.filterDisabled ?? ""}`} disabled>
+            <option value="">All</option>
+          </select>
+        </div>
+      </div>
+
+      {/* Active filter chips */}
+      {activeFilters.length > 0 && (
+        <div className={styles.chips ?? ""}>
+          {activeFilters.map((f) => (
+            <span key={f.key} className={styles.chip ?? ""}>
+              {f.label}
+              <button
+                type="button"
+                className={styles.chipRemove ?? ""}
+                onClick={f.onRemove}
+                aria-label={`Remove ${f.label} filter`}
+              >
+                ×
+              </button>
+            </span>
+          ))}
+          {activeFilters.length > 1 && (
+            <button
+              type="button"
+              className={styles.clearAll ?? ""}
+              onClick={() => handleCategoryFilter("")}
+            >
+              Clear all
+            </button>
+          )}
+        </div>
+      )}
 
       {viewMode === "grid" ? (
         loading ? (
@@ -158,14 +336,18 @@ export default function LibraryBrowser() {
                 <th
                   className={`${styles.th ?? ""} ${styles.thSortable ?? ""}`}
                   onClick={() => handleSort("fileSize")}
-                  onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && handleSort("fileSize")}
+                  onKeyDown={(e) =>
+                    (e.key === "Enter" || e.key === " ") && handleSort("fileSize")
+                  }
                 >
                   Size{sortIndicator("fileSize")}
                 </th>
                 <th
                   className={`${styles.th ?? ""} ${styles.thSortable ?? ""}`}
                   onClick={() => handleSort("createdAt")}
-                  onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && handleSort("createdAt")}
+                  onKeyDown={(e) =>
+                    (e.key === "Enter" || e.key === " ") && handleSort("createdAt")
+                  }
                 >
                   Date Added{sortIndicator("createdAt")}
                 </th>

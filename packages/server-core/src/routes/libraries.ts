@@ -110,7 +110,9 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
           ? sortDir(mediaItems.fileSize)
           : sortBy === "releaseDate"
             ? sortDir(sql`json_extract(${mediaItems.metadata}, '$.releaseDate')`)
-            : sortDir(mediaItems.createdAt);
+            : sortBy === "rating"
+              ? sortDir(sql`json_extract(${mediaItems.metadata}, '$.rating')`)
+              : sortDir(mediaItems.createdAt);
 
     const rows = await db
       .select()
