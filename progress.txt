@@ -1,3 +1,21 @@
+## 2026-03-27 - US-023
+- Implemented DRM detection in `drm.ts` for FairPlay (M4V/M4A), Widevine (MP4/M4V), and Adobe ADEPT (EPUB)
+- Files changed: packages/server-core/src/drm.ts (new), src/drm.test.ts (new), src/orchestrator.ts (calls detectDrm for all new/changed files), src/index.ts (exports detectDrm)
+- `detectDrm(filePath)` calls FairPlay, Widevine, and Adobe detectors in parallel via `Promise.all`; returns false on any error (non-blocking)
+- FairPlay: opens M4V/M4A, walks ISO BMFF boxes at top level, returns true if `drms` box found
+- Widevine: opens MP4/M4V/M4A/MOV, linearly scans first 64KB for `pssh` box, checks 16-byte System ID against Widevine UUID
+- Adobe DRM: opens EPUB (ZIP), finds EOCD, iterates central directory for `META-INF/encryption.xml`, checks content for Adobe ADEPT namespace
+- Orchestrator: `detectDrm` called for every new file before insert and every changed file before update; result stored in `drmProtected` column
+- `drmProtected` column was already present in schema from US-007 — no migration needed
+- 14 new tests in drm.test.ts (including ZIP builder helper); total 218 tests in server-core
+- **Learnings for future iterations:**
+  - `node:fs/promises` `open()` returns a `FileHandle` — mock it by providing `{ read, stat, close }` methods; `read` signature is `(buf, offset, length, position) => { bytesRead }`
+  - ISO BMFF box walking: each box = size(4BE) + type(4ASCII); size includes the 8-byte header; iterate at `offset += size`
+  - Widevine PSSH: linear scan is simpler than recursive box parsing — search for `pssh` bytes at positions [i+4..i+7], then read SystemID at [i+12..i+27]
+  - ZIP central directory: EOCD at end of file gives `cdOffset` and `cdSize`; CD entries have 46-byte fixed header + variable filename/extra/comment; local file offset at CD entry byte 42
+  - `EPUB` Adobe DRM: only need to check `encryption.xml` string content for the Adobe ADEPT namespace — no XML parsing required
+---
+
 ## 2026-03-27 - US-022
 - Implemented scheduled and filesystem-watch scan triggers
 - Files changed: src/schema.ts (added scanSchedule column), src/scheduler.ts (new), src/scheduler.test.ts (new), src/routes/scan.ts (added PUT /schedule endpoint), src/routes/scan.test.ts (4 new tests), src/server.ts (starts scheduler on boot), src/index.ts (exports scheduler), drizzle/0003_neat_speed.sql (migration)
