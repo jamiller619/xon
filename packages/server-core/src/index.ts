@@ -13,4 +13,5 @@ export {
   type NewMediaItem,
 } from "./schema.js";
 export { scanDataSource, type FileEntry, type ScanResult } from "./scanner.js";
+export { scanLibrary, type ScanProgress, type ScanSummary } from "./orchestrator.js";
 export { boot } from "./server.js";
