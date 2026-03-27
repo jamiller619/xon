@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import VideoPlayer from "../components/VideoPlayer.js";
 import styles from "./MediaDetail.module.css";
 
 interface MediaDetailItem {
@@ -45,6 +46,8 @@ export default function MediaDetail() {
   const [item, setItem] = useState<MediaDetailItem | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+
+  const [showPlayer, setShowPlayer] = useState(false);
 
   // Edit state
   const [editing, setEditing] = useState(false);
@@ -177,23 +180,29 @@ export default function MediaDetail() {
       </div>
 
       <div className={styles.hero ?? ""}>
-        {/* Poster / thumbnail */}
+        {/* Video player or poster */}
         <div className={styles.poster ?? ""}>
-          {item.drmProtected && (
-            <div className={styles.drmOverlay ?? ""}>
-              <span className={styles.lockIcon ?? ""}>🔒</span>
-            </div>
-          )}
-          {item.thumbnailUrls ? (
-            <img
-              src={item.thumbnailUrls.large}
-              alt={item.title ?? item.fileName}
-              className={styles.posterImg ?? ""}
-            />
+          {showPlayer && id ? (
+            <VideoPlayer mediaId={id} onClose={() => setShowPlayer(false)} />
           ) : (
-            <div className={styles.posterPlaceholder ?? ""}>
-              <span className={styles.posterIcon ?? ""}>▶</span>
-            </div>
+            <>
+              {item.drmProtected && (
+                <div className={styles.drmOverlay ?? ""}>
+                  <span className={styles.lockIcon ?? ""}>🔒</span>
+                </div>
+              )}
+              {item.thumbnailUrls ? (
+                <img
+                  src={item.thumbnailUrls.large}
+                  alt={item.title ?? item.fileName}
+                  className={styles.posterImg ?? ""}
+                />
+              ) : (
+                <div className={styles.posterPlaceholder ?? ""}>
+                  <span className={styles.posterIcon ?? ""}>▶</span>
+                </div>
+              )}
+            </>
           )}
         </div>
 
@@ -302,9 +311,16 @@ export default function MediaDetail() {
               <div className={styles.actions ?? ""}>
                 <button
                   type="button"
-                  className={`${styles.btnPlay ?? ""} ${item.drmProtected ? (styles.btnDisabled ?? "") : ""}`}
-                  disabled={item.drmProtected}
-                  title={item.drmProtected ? "Playback unavailable — DRM protected" : "Play"}
+                  className={`${styles.btnPlay ?? ""} ${item.drmProtected || !item.mimeType?.startsWith("video/") ? (styles.btnDisabled ?? "") : ""}`}
+                  disabled={item.drmProtected || !item.mimeType?.startsWith("video/")}
+                  title={
+                    item.drmProtected
+                      ? "Playback unavailable — DRM protected"
+                      : !item.mimeType?.startsWith("video/")
+                        ? "Playback not supported for this media type"
+                        : "Play"
+                  }
+                  onClick={() => setShowPlayer(true)}
                 >
                   ▶ Play
                 </button>

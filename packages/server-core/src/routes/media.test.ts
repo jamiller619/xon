@@ -1,3 +1,4 @@
+import { Readable } from "node:stream";
 import type { Client } from "@libsql/client";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -10,10 +11,18 @@ vi.mock("node:fs/promises", () => ({
   readFile: vi.fn(),
   mkdir: vi.fn(),
   access: vi.fn(),
+  stat: vi.fn(),
 }));
 
-const { readFile } = await import("node:fs/promises");
+vi.mock("node:fs", () => ({
+  createReadStream: vi.fn(),
+}));
+
+const { readFile, stat } = await import("node:fs/promises");
+const { createReadStream } = await import("node:fs");
 const mockReadFile = vi.mocked(readFile);
+const mockStat = vi.mocked(stat);
+const mockCreateReadStream = vi.mocked(createReadStream);
 
 describe("Media API - Detail endpoint", () => {
   let client: Client;
@@ -376,6 +385,127 @@ describe("Media API - Thumbnail endpoint", () => {
     it("returns 400 for invalid size parameter", async () => {
       const res = await app.request(`/api/v1/media/${mediaItemId}/thumbnail?size=huge`);
       expect(res.status).toBe(400);
+    });
+  });
+});
+
+describe("Media API - Stream endpoint", () => {
+  let client: Client;
+  let db: LibSQLDatabase;
+  let app: ReturnType<typeof createApp>;
+  let videoItemId: string;
+
+  beforeEach(async () => {
+    ({ client, db } = await openDatabase(":memory:"));
+    await migrateDatabase(db);
+    app = createApp(db);
+
+    const libId = crypto.randomUUID();
+    const now = new Date();
+    await db.insert(libraries).values({
+      id: libId,
+      name: "Test Library",
+      allowedMediaTypes: "[]",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const sourceId = crypto.randomUUID();
+    await db.insert(dataSources).values({
+      id: sourceId,
+      libraryId: libId,
+      type: "local",
+      path: "/media",
+      recursive: true,
+      enabled: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    videoItemId = crypto.randomUUID();
+    await db.insert(mediaItems).values({
+      id: videoItemId,
+      libraryId: libId,
+      dataSourceId: sourceId,
+      filePath: "/media/movie.mp4",
+      fileName: "movie.mp4",
+      fileSize: 10000,
+      mimeType: "video/mp4",
+      mediaCategory: "Movies",
+      thumbnailPaths: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    mockStat.mockReset();
+    mockCreateReadStream.mockReset();
+  });
+
+  afterEach(() => {
+    client.close();
+  });
+
+  describe("GET /api/v1/media/:id/stream", () => {
+    it("returns 404 for unknown media item", async () => {
+      const res = await app.request("/api/v1/media/nonexistent-id/stream");
+      expect(res.status).toBe(404);
+    });
+
+    it("returns 404 when file is not accessible on disk", async () => {
+      mockStat.mockRejectedValueOnce(
+        Object.assign(new Error("ENOENT"), { code: "ENOENT" }) as never
+      );
+      const res = await app.request(`/api/v1/media/${videoItemId}/stream`);
+      expect(res.status).toBe(404);
+    });
+
+    it("returns 200 with full file when no Range header", async () => {
+      mockStat.mockResolvedValueOnce({ size: 10000 } as never);
+      const fakeStream = Readable.from(["fake video data"]);
+      mockCreateReadStream.mockReturnValueOnce(fakeStream as never);
+
+      const res = await app.request(`/api/v1/media/${videoItemId}/stream`);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("Content-Type")).toBe("video/mp4");
+      expect(res.headers.get("Accept-Ranges")).toBe("bytes");
+      expect(res.headers.get("Content-Length")).toBe("10000");
+    });
+
+    it("returns 206 with partial content for Range request", async () => {
+      mockStat.mockResolvedValueOnce({ size: 10000 } as never);
+      const fakeStream = Readable.from(["chunk"]);
+      mockCreateReadStream.mockReturnValueOnce(fakeStream as never);
+
+      const res = await app.request(`/api/v1/media/${videoItemId}/stream`, {
+        headers: { Range: "bytes=0-1023" },
+      });
+      expect(res.status).toBe(206);
+      expect(res.headers.get("Content-Type")).toBe("video/mp4");
+      expect(res.headers.get("Content-Range")).toBe("bytes 0-1023/10000");
+      expect(res.headers.get("Content-Length")).toBe("1024");
+      expect(res.headers.get("Accept-Ranges")).toBe("bytes");
+    });
+
+    it("returns 206 to end of file when range end is omitted", async () => {
+      mockStat.mockResolvedValueOnce({ size: 10000 } as never);
+      const fakeStream = Readable.from(["tail"]);
+      mockCreateReadStream.mockReturnValueOnce(fakeStream as never);
+
+      const res = await app.request(`/api/v1/media/${videoItemId}/stream`, {
+        headers: { Range: "bytes=9000-" },
+      });
+      expect(res.status).toBe(206);
+      expect(res.headers.get("Content-Range")).toBe("bytes 9000-9999/10000");
+      expect(res.headers.get("Content-Length")).toBe("1000");
+    });
+
+    it("returns 416 when range is out of bounds", async () => {
+      mockStat.mockResolvedValueOnce({ size: 10000 } as never);
+
+      const res = await app.request(`/api/v1/media/${videoItemId}/stream`, {
+        headers: { Range: "bytes=9999-10000" },
+      });
+      expect(res.status).toBe(416);
     });
   });
 });

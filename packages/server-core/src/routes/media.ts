@@ -1,4 +1,6 @@
-import { readFile } from "node:fs/promises";
+import { createReadStream } from "node:fs";
+import { readFile, stat } from "node:fs/promises";
+import { Readable } from "node:stream";
 import { zValidator } from "@hono/zod-validator";
 import { asc, desc, eq } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
@@ -91,6 +93,56 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     await db.update(mediaItems).set(updates).where(eq(mediaItems.id, id));
     const updated = await db.select().from(mediaItems).where(eq(mediaItems.id, id));
     return c.json(withThumbnailUrls(updated[0] as MediaItem));
+  });
+
+  // GET /media/:id/stream — serve media file with HTTP range request support
+  router.get("/:id/stream", async (c) => {
+    const id = c.req.param("id");
+    const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id));
+    const item = rows[0];
+    if (!item) return c.json({ error: "Not found" }, 404);
+
+    let fileSize: number;
+    try {
+      const stats = await stat(item.filePath);
+      fileSize = stats.size;
+    } catch {
+      return c.json({ error: "File not accessible" }, 404);
+    }
+
+    const range = c.req.header("Range");
+    const mimeType = item.mimeType ?? "application/octet-stream";
+
+    if (range) {
+      const match = /bytes=(\d+)-(\d*)/.exec(range);
+      if (!match) return c.json({ error: "Invalid range" }, 400);
+      const start = Number.parseInt(match[1] ?? "0", 10);
+      const end = match[2] ? Number.parseInt(match[2], 10) : fileSize - 1;
+
+      if (start > end || end >= fileSize) {
+        return c.body(null, 416, { "Content-Range": `bytes */${fileSize}` });
+      }
+
+      const chunkSize = end - start + 1;
+      const nodeStream = createReadStream(item.filePath, { start, end });
+      const webStream = Readable.toWeb(nodeStream) as ReadableStream;
+
+      return c.body(webStream, 206, {
+        "Content-Range": `bytes ${start}-${end}/${fileSize}`,
+        "Accept-Ranges": "bytes",
+        "Content-Length": String(chunkSize),
+        "Content-Type": mimeType,
+      });
+    }
+
+    const nodeStream = createReadStream(item.filePath);
+    const webStream = Readable.toWeb(nodeStream) as ReadableStream;
+
+    return c.body(webStream, 200, {
+      "Accept-Ranges": "bytes",
+      "Content-Length": String(fileSize),
+      "Content-Type": mimeType,
+    });
   });
 
   // GET /media/:id/thumbnail?size=small|medium|large
