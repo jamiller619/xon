@@ -18,7 +18,9 @@
     "noImplicitOverride": true,
     "exactOptionalPropertyTypes": true
   },
-  "references": [],
+  "references": [
+    { "path": "./packages/shared" }
+  ],
   "exclude": [
     "node_modules",
     "dist",
