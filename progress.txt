@@ -7,6 +7,10 @@
 - Each new package needs: package.json (type:"module", exports with .js extensions), tsconfig.json (extends root), src/index.ts
 - When adding a package, add its path to root tsconfig.json "references" array and run `yarn install`
 - Use `yarn biome check <dir>` (not `yarn check`) for linting; `yarn check` validates workspace deps
+- Node built-ins (e.g., node:path) require `@types/node` as a devDependency in each package that uses them
+- Test framework: vitest (^2.1.0) — handles TypeScript/ESM natively without separate tsconfig; add per-package
+- noUncheckedIndexedAccess: Record<string, T> indexing returns T | undefined — use `?? fallback` pattern
+- Biome line width is 100; arrays/params exceeding this are auto-reformatted to multi-line on `biome check --write`
 
 ---
 
@@ -20,6 +24,20 @@
   - Yarn 1.22.22 is installed and working
   - `tsc --build` works at root level for typecheck
   - Empty workspace directories are not committed to git (need .gitkeep or content)
+---
+
+## 2026-03-27 - US-003
+- Created packages/media-types with all 20 category definitions, MIME mappings, and helper function
+- Files changed: packages/media-types/package.json, packages/media-types/tsconfig.json, packages/media-types/src/categories.ts, packages/media-types/src/index.ts, packages/media-types/src/index.test.ts, tsconfig.json (added reference), yarn.lock
+- CATEGORY_DEFINITIONS: Record<MediaCategory, {extensions, mimeTypes}> for all 20 categories
+- EXTENSION_TO_MIME and EXTENSION_TO_CATEGORY derived maps (first-category-wins for overlapping extensions)
+- getMediaCategory(filePath): uses node:path extname, case-insensitive, returns MediaCategory | undefined
+- 29 tests passing with vitest
+- **Learnings for future iterations:**
+  - node:path requires @types/node devDependency (not present at root level)
+  - vitest works out-of-the-box with TypeScript/ESM — no separate tsconfig needed for tests
+  - biome check --write applies format fixes; long arrays get reformatted to multi-line (lineWidth: 100)
+  - noUncheckedIndexedAccess affects Record<string, T> access — always use `?? fallback`
 ---
 
 ## 2026-03-27 - US-002
