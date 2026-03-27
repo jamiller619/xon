@@ -1,4 +1,7 @@
 ## Codebase Patterns
+- Drizzle migrations: `drizzle-orm/libsql/migrator` `migrate(db, { migrationsFolder })` applies SQL files; path uses `dirname(fileURLToPath(import.meta.url))` to work in both src/ and dist/
+- Drizzle schema for SQLite: use `drizzle-orm/sqlite-core` (sqliteTable, text, integer); integer with `{ mode: "timestamp" }` for dates; integer with `{ mode: "boolean" }` for booleans; FK via `.references(() => table.col, { onDelete: "cascade" })`
+- JSON columns in SQLite: store as text with `.default("[]")` and handle serialization in app code
 - Monorepo with Yarn 1.22 workspaces: apps/*, packages/*, plugins/*
 - drizzle-orm 0.40.x + @libsql/client 0.14.x: `drizzle(client)` from `drizzle-orm/libsql`; WAL mode via `client.execute("PRAGMA journal_mode=WAL")`
 - drizzle.config.ts lives at package root (not src/); excluded from tsc since `include: ["src/**/*"]`; processed directly by drizzle-kit
@@ -19,6 +22,19 @@
 - @hono/node-server: `serve({ fetch: app.fetch, port }, callback)` returns a Node.js HTTP server with `.close()`
 - Packages with cross-package deps need `references` in their own tsconfig.json (not just root tsconfig.json)
 
+---
+
+## 2026-03-27 - US-006
+- Defined libraries and data_sources tables with Drizzle ORM in server-core
+- Files changed: packages/server-core/src/schema.ts (new), src/migrate.ts (new), src/schema.test.ts (new), src/index.ts (exports), drizzle/0000_curious_unus.sql (generated migration)
+- libraries: id (pk), name, description, allowedMediaTypes (text/JSON), createdAt, updatedAt with `(unixepoch())` defaults
+- dataSources: id (pk), libraryId (FK→libraries, CASCADE DELETE), type (local|network enum), path, recursive, enabled, timestamps
+- migrateDatabase(db) applies migrations via drizzle-orm/libsql/migrator; path resolved with import.meta.url so it works in both src/ and dist/
+- 6 new tests: library CRUD, JSON default, timestamp defaults, data source CRUD, network type, cascade delete
+- **Learnings for future iterations:**
+  - `migrate()` from drizzle-orm/libsql/migrator reads migration SQL files from disk; use `join(dirname(fileURLToPath(import.meta.url)), "../drizzle")` for path resolution
+  - SQLite cascade delete requires foreign key pragma to be enabled at runtime; libSQL enables it by default
+  - Biome: type imports must be sorted before value imports within the same source group
 ---
 
 ## 2026-03-27 - US-004
