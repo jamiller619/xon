@@ -1,3 +1,19 @@
+## 2026-03-27 - US-008
+- Implemented Libraries CRUD API endpoints with Zod validation
+- Files changed: packages/server-core/src/app.ts (createApp factory), src/server.ts (async boot with db), src/routes/libraries.ts (new), src/routes/libraries.test.ts (new), package.json (added zod, @hono/zod-validator)
+- POST/GET/GET:id/PUT/DELETE /api/v1/libraries with Zod validation on POST and PUT
+- app.ts refactored: exports `createApp(db?: LibSQLDatabase)` factory and `app = createApp()` singleton for health-check tests
+- server.ts now async: opens db, runs migrations, creates full app with routes, then starts server
+- 14 new tests all passing (total 34 tests in server-core)
+- **Learnings for future iterations:**
+  - Hono `app.route("/path", router)` mounts sub-routers cleanly; use `makeXxxRouter(db)` factory pattern for route modules
+  - `createApp(db?)` optional db pattern: health endpoint works without db; feature routes added conditionally
+  - @hono/zod-validator: `zValidator("json", schema)` middleware, access validated body via `c.req.valid("json")`
+  - Drizzle single-row lookup: use `db.select().from(table).where(eq(...))` returns array; check `rows.length === 0` for not-found
+  - `crypto.randomUUID()` is available globally in Node 22+ without import
+  - boot() must be async (or use `.then()`) when opening database before starting server
+---
+
 ## Codebase Patterns
 - Drizzle migrations: `drizzle-orm/libsql/migrator` `migrate(db, { migrationsFolder })` applies SQL files; path uses `dirname(fileURLToPath(import.meta.url))` to work in both src/ and dist/
 - Drizzle schema for SQLite: use `drizzle-orm/sqlite-core` (sqliteTable, text, integer); integer with `{ mode: "timestamp" }` for dates; integer with `{ mode: "boolean" }` for booleans; FK via `.references(() => table.col, { onDelete: "cascade" })`
