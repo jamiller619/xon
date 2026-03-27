@@ -1,3 +1,19 @@
+## 2026-03-27 - US-013
+- Implemented FFprobe metadata extraction for audio and video media items
+- Files changed: packages/server-core/src/ffprobe.ts (new), src/ffprobe.test.ts (new), src/orchestrator.ts (calls ffprobe on insert/update), src/index.ts (exports)
+- `extractFfprobeMetadata(filePath)` spawns `ffprobe -v quiet -print_format json -show_streams -show_format` and parses output
+- Extracts: duration, bitrate (from format), codec+resolution (from video stream), audioCodec+sampleRate+channels (from audio stream)
+- Returns `null` on ENOENT (ffprobe not installed), non-zero exit, or JSON parse failure — logged with `console.error`
+- `isAudioVideoCategory(category)` checks against Movies/TVShows/Clips/HomeVideos + Music/Audiobooks/AudioClips/Podcasts
+- Orchestrator calls `extractFfprobeMetadata` for new and changed files; stores result as JSON in `metadata` column; skips update if null
+- Existing orchestrator tests still pass — ffprobe fails on fake binary files but returns null gracefully
+- 11 new tests in ffprobe.test.ts; total 87 tests in server-core
+- **Learnings for future iterations:**
+  - `exactOptionalPropertyTypes: true` prevents assigning `string | undefined` to `string` optional property — use `if (typeof x === "string") obj.prop = x`
+  - Biome `useLiteralKeys`: use `obj.sample_rate` not `obj["sample_rate"]` even for snake_case keys on `Record<string, unknown>`
+  - To mock `node:child_process` spawn in vitest: create EventEmitter with `.stdout` EventEmitter; cast to `ReturnType<typeof spawn>`
+---
+
 ## 2026-03-27 - US-012
 - Implemented scan trigger API endpoints
 - Files changed: packages/server-core/src/routes/scan.ts (new), src/routes/scan.test.ts (new), src/routes/libraries.ts (mount scan router)
@@ -101,6 +117,9 @@
 - Biome `noImplicitAnyLet`: uninitialized `let` variables need explicit type annotations
 - `.txt` is in the Documents media category — never a safe "non-media" test file; use `.log` or `.xyz`
 - `vi.mock(module)` is hoisted; use `await import(module)` after mock to get typed mocked reference; flush microtasks with 2x `await Promise.resolve()`
+- `exactOptionalPropertyTypes: true`: can't assign `T | undefined` to optional `T` property — use `if (typeof x === "string") obj.prop = x` pattern
+- Biome `useLiteralKeys`: use dot notation (`obj.snake_case`) not bracket notation (`obj["snake_case"]`) for `Record<string, unknown>` access
+- Mocking `node:child_process` spawn: create EventEmitter with `.stdout` EventEmitter, cast to `ReturnType<typeof spawn>`
 
 ---
 
