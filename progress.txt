@@ -1,3 +1,20 @@
+## 2026-03-27 - US-022
+- Implemented scheduled and filesystem-watch scan triggers
+- Files changed: src/schema.ts (added scanSchedule column), src/scheduler.ts (new), src/scheduler.test.ts (new), src/routes/scan.ts (added PUT /schedule endpoint), src/routes/scan.test.ts (4 new tests), src/server.ts (starts scheduler on boot), src/index.ts (exports scheduler), drizzle/0003_neat_speed.sql (migration)
+- `scheduler.ts`: `parseCronInterval(expr)` parses two patterns: `*/N * * * *` (every N minutes) and `0 */N * * *` (every N hours); returns interval in ms or null for unsupported expressions
+- `startScheduler(db, trigger?)`: loads all libraries from DB, sets up `setInterval` for scheduled libs and `fs.watch` for local enabled data sources; returns `SchedulerHandle` with `stop()`
+- Debounce: file change events use 2-second `setTimeout` per library; rapid changes collapse to a single scan trigger
+- `PUT /api/v1/libraries/:id/scan/schedule`: validates cron expression via Zod refine + `parseCronInterval`; persists to `scan_schedule` column; returns updated library
+- `stop()` clears all interval timers, debounce timers, and fs.watch handles
+- 14 new tests (10 in scheduler.test.ts, 4 in scan.test.ts); total 204 tests in server-core
+- **Learnings for future iterations:**
+  - `vi.useFakeTimers()` + `vi.advanceTimersByTimeAsync()` for testing setInterval-based scheduling without real time
+  - Mock `node:fs` with `vi.mock("node:fs", () => ({ watch: vi.fn() }))` to capture the watch callback for debounce tests
+  - Biome `noNonNullAssertion` applies in test files too — use `?.()` instead of `!()` for optional function calls after `expect().toBeDefined()`
+  - `watch()` from `node:fs` (not `node:fs/promises`) for filesystem watching; `{ recursive: true }` passes the dataSource's `recursive` flag
+  - `startScheduler` must be awaited (async) since it fetches libraries and data sources from the DB before setting up timers/watchers
+---
+
 ## 2026-03-27 - US-021
 - Implemented WebSocket channel for real-time events at /api/v1/ws
 - Files changed: packages/server-core/src/events.ts (new), src/events.test.ts (new), src/routes/ws.ts (new), src/routes/ws.test.ts (new), src/routes/scan.ts (emits scan events), src/orchestrator.ts (emits media:added/removed), src/server.ts (sets up WebSocket upgrade handler), src/index.ts (exports events), package.json (added ws + @types/ws)
@@ -259,6 +276,10 @@
 - Biome `noNonNullAssertion`: avoid `arr[0]!` — use `const x = arr[0]; if (!x) return;` pattern instead
 - `@hono/node-server` v1.x has no WebSocket support — use `ws` npm package with `noServer: true` + `server.on("upgrade", ...)` to handle WebSocket upgrades alongside Hono HTTP routes
 - Module-level EventEmitter pattern (`eventBus`) decouples event producers from consumers; use `emitEvent(event: XonEvent)` wrapper for type safety
+- `vi.useFakeTimers()` + `vi.advanceTimersByTimeAsync()` for testing setInterval scheduling without real time; remember `vi.useRealTimers()` in afterEach
+- Mock `node:fs` with `vi.mock("node:fs", () => ({ watch: vi.fn() }))` to capture fs.watch callbacks; use `mockImplementation` to capture callback for debounce tests
+- Biome `noNonNullAssertion` in test files: use `?.()` instead of `!()` for optional function calls (after `expect().toBeDefined()`)
+- `fs.watch` (from `node:fs`, not `node:fs/promises`) for filesystem watching; supports `{ recursive: boolean }` options
 
 ---
 
