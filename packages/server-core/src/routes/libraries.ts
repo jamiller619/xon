@@ -1,9 +1,10 @@
 import { zValidator } from "@hono/zod-validator";
-import { eq } from "drizzle-orm";
+import { and, asc, desc, eq, sql } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
-import { dataSources, libraries } from "../schema.js";
+import { dataSources, libraries, mediaItems } from "../schema.js";
+import { withThumbnailUrls } from "./media.js";
 import { makeScanRouter } from "./scan.js";
 import { makeSourcesRouter } from "./sources.js";
 
@@ -80,6 +81,46 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
     if (existing.length === 0) return c.json({ error: "Not found" }, 404);
     await db.delete(libraries).where(eq(libraries.id, id));
     return c.json({ success: true });
+  });
+
+  // GET /libraries/:libraryId/media — list media items with filtering, sorting, pagination
+  router.get("/:libraryId/media", async (c) => {
+    const libraryId = c.req.param("libraryId") as string;
+    const lib = await db.select().from(libraries).where(eq(libraries.id, libraryId));
+    if (lib.length === 0) return c.json({ error: "Not found" }, 404);
+
+    const { mediaCategory, mimeType, drmProtected, sortBy, order, page, limit } = c.req.query();
+
+    const pageNum = Math.max(1, Number(page) || 1);
+    const limitNum = Math.min(Math.max(1, Number(limit) || 20), 100);
+    const offset = (pageNum - 1) * limitNum;
+
+    const conditions = [eq(mediaItems.libraryId, libraryId)];
+    if (mediaCategory) conditions.push(eq(mediaItems.mediaCategory, mediaCategory));
+    if (mimeType) conditions.push(eq(mediaItems.mimeType, mimeType));
+    if (drmProtected !== undefined && drmProtected !== "") {
+      conditions.push(eq(mediaItems.drmProtected, drmProtected === "true"));
+    }
+
+    const sortDir = order === "desc" ? desc : asc;
+    const orderExpr =
+      sortBy === "title"
+        ? sortDir(mediaItems.title)
+        : sortBy === "fileSize"
+          ? sortDir(mediaItems.fileSize)
+          : sortBy === "releaseDate"
+            ? sortDir(sql`json_extract(${mediaItems.metadata}, '$.releaseDate')`)
+            : sortDir(mediaItems.createdAt);
+
+    const rows = await db
+      .select()
+      .from(mediaItems)
+      .where(and(...conditions))
+      .orderBy(orderExpr)
+      .limit(limitNum)
+      .offset(offset);
+
+    return c.json(rows.map(withThumbnailUrls));
   });
 
   router.route("/:libraryId/sources", makeSourcesRouter(db));

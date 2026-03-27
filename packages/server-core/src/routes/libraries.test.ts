@@ -4,6 +4,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../app.js";
 import { openDatabase } from "../db.js";
 import { migrateDatabase } from "../migrate.js";
+import { dataSources, libraries, mediaItems } from "../schema.js";
 
 describe("Libraries CRUD API", () => {
   let client: Client;
@@ -174,6 +175,156 @@ describe("Libraries CRUD API", () => {
         method: "DELETE",
       });
       expect(res.status).toBe(404);
+    });
+  });
+});
+
+describe("Libraries Media List API", () => {
+  let client: Client;
+  let db: LibSQLDatabase;
+  let app: ReturnType<typeof createApp>;
+  let libId: string;
+  let sourceId: string;
+
+  beforeEach(async () => {
+    ({ client, db } = await openDatabase(":memory:"));
+    await migrateDatabase(db);
+    app = createApp(db);
+
+    libId = crypto.randomUUID();
+    const now = new Date();
+    await db.insert(libraries).values({
+      id: libId,
+      name: "Test Library",
+      allowedMediaTypes: "[]",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    sourceId = crypto.randomUUID();
+    await db.insert(dataSources).values({
+      id: sourceId,
+      libraryId: libId,
+      type: "local",
+      path: "/media",
+      recursive: true,
+      enabled: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    // Insert 3 test media items
+    for (let i = 0; i < 3; i++) {
+      await db.insert(mediaItems).values({
+        id: crypto.randomUUID(),
+        libraryId: libId,
+        dataSourceId: sourceId,
+        filePath: `/media/file${i}.jpg`,
+        fileName: `file${i}.jpg`,
+        fileSize: 1000 * (i + 1),
+        mimeType: "image/jpeg",
+        mediaCategory: "Pictures",
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+  });
+
+  afterEach(() => {
+    client.close();
+  });
+
+  describe("GET /api/v1/libraries/:libraryId/media", () => {
+    it("returns all media items for the library", async () => {
+      const res = await app.request(`/api/v1/libraries/${libId}/media`);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body).toHaveLength(3);
+    });
+
+    it("includes thumbnailUrls field on each item", async () => {
+      const res = await app.request(`/api/v1/libraries/${libId}/media`);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body[0]).toHaveProperty("thumbnailUrls");
+    });
+
+    it("returns 404 for unknown library", async () => {
+      const res = await app.request("/api/v1/libraries/nonexistent/media");
+      expect(res.status).toBe(404);
+    });
+
+    it("filters by mediaCategory", async () => {
+      // Add a non-picture item
+      const now = new Date();
+      await db.insert(mediaItems).values({
+        id: crypto.randomUUID(),
+        libraryId: libId,
+        dataSourceId: sourceId,
+        filePath: "/media/doc.pdf",
+        fileName: "doc.pdf",
+        fileSize: 500,
+        mimeType: "application/pdf",
+        mediaCategory: "Documents",
+        createdAt: now,
+        updatedAt: now,
+      });
+
+      const res = await app.request(`/api/v1/libraries/${libId}/media?mediaCategory=Documents`);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body).toHaveLength(1);
+      expect(body[0].mediaCategory).toBe("Documents");
+    });
+
+    it("filters by mimeType", async () => {
+      const res = await app.request(`/api/v1/libraries/${libId}/media?mimeType=image/jpeg`);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body).toHaveLength(3);
+    });
+
+    it("filters by drmProtected=false", async () => {
+      const res = await app.request(`/api/v1/libraries/${libId}/media?drmProtected=false`);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body).toHaveLength(3);
+    });
+
+    it("paginates results with page and limit", async () => {
+      const res = await app.request(`/api/v1/libraries/${libId}/media?limit=2&page=1`);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body).toHaveLength(2);
+
+      const res2 = await app.request(`/api/v1/libraries/${libId}/media?limit=2&page=2`);
+      expect(res2.status).toBe(200);
+      const body2 = await res2.json();
+      expect(body2).toHaveLength(1);
+    });
+
+    it("sorts by fileSize", async () => {
+      const res = await app.request(`/api/v1/libraries/${libId}/media?sortBy=fileSize&order=desc`);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body[0].fileSize).toBe(3000);
+      expect(body[2].fileSize).toBe(1000);
+    });
+
+    it("returns empty array when library has no media", async () => {
+      const emptyLibId = crypto.randomUUID();
+      const now = new Date();
+      await db.insert(libraries).values({
+        id: emptyLibId,
+        name: "Empty Library",
+        allowedMediaTypes: "[]",
+        createdAt: now,
+        updatedAt: now,
+      });
+      const res = await app.request(`/api/v1/libraries/${emptyLibId}/media`);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body).toHaveLength(0);
     });
   });
 });

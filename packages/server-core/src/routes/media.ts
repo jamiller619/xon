@@ -2,14 +2,35 @@ import { readFile } from "node:fs/promises";
 import { eq } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
+import type { MediaItem } from "../schema.js";
 import { mediaItems } from "../schema.js";
 import type { ThumbnailPaths } from "../thumbnails.js";
 
 const VALID_SIZES = ["small", "medium", "large"] as const;
 type ThumbnailSize = (typeof VALID_SIZES)[number];
 
+export function withThumbnailUrls(item: MediaItem) {
+  const thumbnailUrls = item.thumbnailPaths
+    ? {
+        small: `/api/v1/media/${item.id}/thumbnail?size=small`,
+        medium: `/api/v1/media/${item.id}/thumbnail?size=medium`,
+        large: `/api/v1/media/${item.id}/thumbnail?size=large`,
+      }
+    : null;
+  return { ...item, thumbnailUrls };
+}
+
 export function makeMediaRouter(db: LibSQLDatabase): Hono {
   const router = new Hono();
+
+  // GET /media/:id — get single media item with full metadata and thumbnail URLs
+  router.get("/:id", async (c) => {
+    const id = c.req.param("id");
+    const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id));
+    const item = rows[0];
+    if (!item) return c.json({ error: "Not found" }, 404);
+    return c.json(withThumbnailUrls(item));
+  });
 
   // GET /media/:id/thumbnail?size=small|medium|large
   router.get("/:id/thumbnail", async (c) => {

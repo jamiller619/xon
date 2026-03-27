@@ -15,6 +15,108 @@ vi.mock("node:fs/promises", () => ({
 const { readFile } = await import("node:fs/promises");
 const mockReadFile = vi.mocked(readFile);
 
+describe("Media API - Detail endpoint", () => {
+  let client: Client;
+  let db: LibSQLDatabase;
+  let app: ReturnType<typeof createApp>;
+  let mediaItemId: string;
+  let noThumbItemId: string;
+
+  beforeEach(async () => {
+    ({ client, db } = await openDatabase(":memory:"));
+    await migrateDatabase(db);
+    app = createApp(db);
+
+    const libId = crypto.randomUUID();
+    const now = new Date();
+    await db.insert(libraries).values({
+      id: libId,
+      name: "Test Library",
+      allowedMediaTypes: "[]",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const sourceId = crypto.randomUUID();
+    await db.insert(dataSources).values({
+      id: sourceId,
+      libraryId: libId,
+      type: "local",
+      path: "/media",
+      recursive: true,
+      enabled: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    mediaItemId = crypto.randomUUID();
+    await db.insert(mediaItems).values({
+      id: mediaItemId,
+      libraryId: libId,
+      dataSourceId: sourceId,
+      filePath: "/media/photo.jpg",
+      fileName: "photo.jpg",
+      fileSize: 1000,
+      mimeType: "image/jpeg",
+      mediaCategory: "Pictures",
+      thumbnailPaths: JSON.stringify({
+        small: "/data/thumbnails/abc_small.jpg",
+        medium: "/data/thumbnails/abc_medium.jpg",
+        large: "/data/thumbnails/abc_large.jpg",
+      }),
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    noThumbItemId = crypto.randomUUID();
+    await db.insert(mediaItems).values({
+      id: noThumbItemId,
+      libraryId: libId,
+      dataSourceId: sourceId,
+      filePath: "/media/doc.pdf",
+      fileName: "doc.pdf",
+      fileSize: 500,
+      mimeType: "application/pdf",
+      mediaCategory: "Documents",
+      thumbnailPaths: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+  });
+
+  afterEach(() => {
+    client.close();
+  });
+
+  describe("GET /api/v1/media/:id", () => {
+    it("returns media item with thumbnailUrls when thumbnails exist", async () => {
+      const res = await app.request(`/api/v1/media/${mediaItemId}`);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.id).toBe(mediaItemId);
+      expect(body.fileName).toBe("photo.jpg");
+      expect(body.thumbnailUrls).toMatchObject({
+        small: `/api/v1/media/${mediaItemId}/thumbnail?size=small`,
+        medium: `/api/v1/media/${mediaItemId}/thumbnail?size=medium`,
+        large: `/api/v1/media/${mediaItemId}/thumbnail?size=large`,
+      });
+    });
+
+    it("returns null thumbnailUrls when item has no thumbnails", async () => {
+      const res = await app.request(`/api/v1/media/${noThumbItemId}`);
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.id).toBe(noThumbItemId);
+      expect(body.thumbnailUrls).toBeNull();
+    });
+
+    it("returns 404 for unknown id", async () => {
+      const res = await app.request("/api/v1/media/nonexistent-id");
+      expect(res.status).toBe(404);
+    });
+  });
+});
+
 describe("Media API - Thumbnail endpoint", () => {
   let client: Client;
   let db: LibSQLDatabase;
