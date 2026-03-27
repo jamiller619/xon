@@ -1,6 +1,7 @@
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { makeLibrariesRouter } from "./routes/libraries.js";
+import { makeMediaRouter } from "./routes/media.js";
 
 export function createApp(db?: LibSQLDatabase): Hono {
   const app = new Hono().basePath("/api/v1");
@@ -11,6 +12,7 @@ export function createApp(db?: LibSQLDatabase): Hono {
 
   if (db) {
     app.route("/libraries", makeLibrariesRouter(db));
+    app.route("/media", makeMediaRouter(db));
   }
 
   return app;
