@@ -1,4 +1,5 @@
 export { app } from "./app.js";
+export { emitEvent, eventBus, type XonEvent } from "./events.js";
 export { openDatabase, type LibSQLDatabase } from "./db.js";
 export { migrateDatabase } from "./migrate.js";
 export {

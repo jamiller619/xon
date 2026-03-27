@@ -1,5 +1,6 @@
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
+import { emitEvent } from "../events.js";
 import type { ScanProgress, ScanSummary } from "../orchestrator.js";
 import { scanLibrary } from "../orchestrator.js";
 
@@ -35,14 +36,39 @@ export function makeScanRouter(db: LibSQLDatabase): Hono {
 
     scanLibrary(db, libraryId, (progress) => {
       state.progress = progress;
+      const percentComplete =
+        progress.totalFiles > 0
+          ? Math.round((progress.processedFiles / progress.totalFiles) * 100)
+          : 0;
+      emitEvent({
+        type: "scan:progress",
+        payload: {
+          libraryId,
+          fileCount: progress.totalFiles,
+          currentFile: progress.currentFile,
+          percentComplete,
+        },
+      });
     })
       .then((summary) => {
         state.status = "completed";
         state.summary = summary;
+        emitEvent({
+          type: "scan:complete",
+          payload: {
+            libraryId,
+            newItems: summary.newItems,
+            updatedItems: summary.updatedItems,
+            removedItems: summary.removedItems,
+            totalDiscovered: summary.totalDiscovered,
+          },
+        });
       })
       .catch((err: unknown) => {
         state.status = "failed";
-        state.error = err instanceof Error ? err.message : String(err);
+        const errorMessage = err instanceof Error ? err.message : String(err);
+        state.error = errorMessage;
+        emitEvent({ type: "scan:error", payload: { libraryId, error: errorMessage } });
       });
 
     return c.json({ status: "started" }, 202);

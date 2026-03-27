@@ -1,5 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
+import { emitEvent } from "./events.js";
 import { extractExiftoolMetadata, isImageCategory } from "./exiftool.js";
 import { extractFfprobeMetadata, isAudioVideoCategory } from "./ffprobe.js";
 import {
@@ -146,6 +147,7 @@ export async function scanLibrary(
         scannedAt: now,
       });
 
+      emitEvent({ type: "media:added", payload: { libraryId, mediaItemId: id } });
       progress.processedFiles++;
       totalNew++;
     }
@@ -234,6 +236,15 @@ export async function scanLibrary(
     }
 
     if (result.removedFilePaths.length > 0) {
+      const removedRows = await db
+        .select({ id: mediaItems.id })
+        .from(mediaItems)
+        .where(
+          and(
+            eq(mediaItems.dataSourceId, source.id),
+            inArray(mediaItems.filePath, result.removedFilePaths)
+          )
+        );
       await db
         .delete(mediaItems)
         .where(
@@ -242,6 +253,9 @@ export async function scanLibrary(
             inArray(mediaItems.filePath, result.removedFilePaths)
           )
         );
+      for (const row of removedRows) {
+        emitEvent({ type: "media:removed", payload: { libraryId, mediaItemId: row.id } });
+      }
       totalRemoved += result.removedFilePaths.length;
     }
   }
