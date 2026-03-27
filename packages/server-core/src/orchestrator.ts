@@ -1,5 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
+import { extractExiftoolMetadata, isImageCategory } from "./exiftool.js";
 import { extractFfprobeMetadata, isAudioVideoCategory } from "./ffprobe.js";
 import { scanDataSource } from "./scanner.js";
 import { dataSources, libraries, mediaItems } from "./schema.js";
@@ -67,6 +68,11 @@ export async function scanLibrary(
         if (ffMeta) {
           metadata = JSON.stringify(ffMeta);
         }
+      } else if (isImageCategory(entry.mediaCategory)) {
+        const exifMeta = await extractExiftoolMetadata(entry.filePath);
+        if (exifMeta) {
+          metadata = JSON.stringify(exifMeta);
+        }
       }
 
       await db.insert(mediaItems).values({
@@ -104,6 +110,11 @@ export async function scanLibrary(
         const ffMeta = await extractFfprobeMetadata(entry.filePath);
         if (ffMeta) {
           updateFields.metadata = JSON.stringify(ffMeta);
+        }
+      } else if (isImageCategory(entry.mediaCategory)) {
+        const exifMeta = await extractExiftoolMetadata(entry.filePath);
+        if (exifMeta) {
+          updateFields.metadata = JSON.stringify(exifMeta);
         }
       }
 

@@ -13,6 +13,11 @@ export {
   type NewMediaItem,
 } from "./schema.js";
 export {
+  extractExiftoolMetadata,
+  isImageCategory,
+  type ExiftoolMetadata,
+} from "./exiftool.js";
+export {
   extractFfprobeMetadata,
   isAudioVideoCategory,
   type FfprobeMetadata,
