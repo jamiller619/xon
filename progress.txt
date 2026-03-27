@@ -1,5 +1,8 @@
 ## Codebase Patterns
 - Monorepo with Yarn 1.22 workspaces: apps/*, packages/*, plugins/*
+- drizzle-orm 0.40.x + @libsql/client 0.14.x: `drizzle(client)` from `drizzle-orm/libsql`; WAL mode via `client.execute("PRAGMA journal_mode=WAL")`
+- drizzle.config.ts lives at package root (not src/); excluded from tsc since `include: ["src/**/*"]`; processed directly by drizzle-kit
+- Biome import sorting: node: built-ins first, then third-party (alphabetical within groups)
 - TypeScript with strict mode, NodeNext module resolution (ESM)
 - Biome for linting/formatting (not ESLint/Prettier)
 - Node version: v24.14.0 (despite PRD saying Node 22.x LTS, .nvmrc had v24.14.0)
@@ -67,4 +70,20 @@
   - Package exports must use ./dist/index.js paths (not ./src/index.ts)
   - `yarn check` validates workspace dep graph; use `yarn biome check <dir>` for linting
   - Adding a package: create files → update root tsconfig.json references → `yarn install`
+---
+
+## 2026-03-27 - US-005
+- Configured SQLite database with libSQL driver and Drizzle ORM in server-core
+- Files changed: packages/server-core/package.json, src/db.ts, src/db.test.ts, src/index.ts, drizzle.config.ts, yarn.lock
+- `openDatabase(url?)` async factory: creates @libsql/client, enables WAL via PRAGMA (skipped for :memory:), returns { client, db }
+- Default URL: `file:${DATA_DIR ?? "./data"}/xon.db` (reads DATA_DIR env var)
+- drizzle.config.ts: dialect sqlite, schema ./src/schema.ts, out ./drizzle — ready for US-006 schema
+- db:generate and db:migrate scripts added to package.json
+- `openDatabase` and `LibSQLDatabase` type exported from package index
+- 4 new tests (in-memory, drizzle methods, WAL mode with temp file, DATA_DIR env var)
+- **Learnings for future iterations:**
+  - drizzle-orm/libsql `drizzle(client)` accepts @libsql/client directly (no adapter wrapper needed)
+  - WAL mode must skip `:memory:` URLs — pragma doesn't apply to in-memory databases
+  - Biome import order: node: built-ins always sort before third-party packages
+  - `delete process.env.X` triggers Biome lint/performance/noDelete — use `process.env.X = undefined` instead
 ---
