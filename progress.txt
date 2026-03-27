@@ -1,3 +1,18 @@
+## 2026-03-27 - US-027
+- Implemented Dashboard landing page at / route
+- Files created: apps/web/src/pages/Dashboard.tsx, Dashboard.module.css, components/MediaCard.tsx, MediaCard.module.css
+- Files changed: apps/web/src/App.tsx (import Dashboard), packages/server-core/src/routes/media.ts (added GET /media global list endpoint)
+- Dashboard fetches recently added (GET /api/v1/media?order=desc&limit=20) and per-library media (GET /api/v1/libraries/:id/media?order=desc&limit=8) in parallel
+- "Continue watching" section shows empty placeholder (no progress API yet)
+- MediaCard component: thumbnail image (falls back to placeholder), title, category badge; links to /media/:id
+- Grid layout: CSS grid with auto-fill minmax(160px, 1fr) for responsive cards
+- GET /api/v1/media global endpoint added to media router; supports sortBy, order (default desc), page, limit params
+- **Learnings for future iterations:**
+  - Pages go in `apps/web/src/pages/`, shared UI components in `apps/web/src/components/`
+  - `Object.fromEntries(entries)` with `as const` tuples from `Promise.all(libs.map(...))` is the idiomatic way to build a Record from parallel fetches
+  - MediaCard is a reusable card component shared by Dashboard and future library views
+---
+
 ## 2026-03-27 - US-026
 - Implemented app shell: Layout, Sidebar, TopBar components with CSS Modules
 - Files created: apps/web/src/components/Layout.tsx, Layout.module.css, Sidebar.tsx, Sidebar.module.css, TopBar.tsx, TopBar.module.css, src/vite-env.d.ts
