@@ -20,7 +20,8 @@
   },
   "references": [
     { "path": "./packages/shared" },
-    { "path": "./packages/media-types" }
+    { "path": "./packages/media-types" },
+    { "path": "./packages/server-core" }
   ],
   "exclude": [
     "node_modules",
