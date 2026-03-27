@@ -25,9 +25,77 @@ export type FfprobeMetadata = {
   channels?: number;
 };
 
+export type StreamTrack = {
+  index: number;
+  codecType: "audio" | "subtitle";
+  codec: string;
+  language?: string;
+  title?: string;
+};
+
 export function isAudioVideoCategory(category: string | null): boolean {
   if (!category) return false;
   return VIDEO_CATEGORIES.has(category) || AUDIO_CATEGORIES.has(category);
+}
+
+export async function extractStreamTracks(filePath: string): Promise<StreamTrack[]> {
+  return new Promise((resolve) => {
+    let stdout = "";
+
+    const proc = spawn("ffprobe", [
+      "-v",
+      "quiet",
+      "-print_format",
+      "json",
+      "-show_streams",
+      filePath,
+    ]);
+
+    proc.stdout?.on("data", (chunk: Buffer) => {
+      stdout += chunk.toString();
+    });
+
+    proc.on("error", () => {
+      resolve([]);
+    });
+
+    proc.on("close", (code: number | null) => {
+      if (code !== 0) {
+        resolve([]);
+        return;
+      }
+
+      try {
+        const data = JSON.parse(stdout) as {
+          streams?: Record<string, unknown>[];
+        };
+        const tracks: StreamTrack[] = [];
+
+        for (const stream of data.streams ?? []) {
+          const codecType = stream.codec_type as string | undefined;
+          if (codecType !== "audio" && codecType !== "subtitle") continue;
+
+          const index = Number(stream.index);
+          const codec = typeof stream.codec_name === "string" ? stream.codec_name : "unknown";
+          const tags = stream.tags as Record<string, string> | undefined;
+          const language = tags?.language;
+          const title = tags?.title;
+
+          tracks.push({
+            index,
+            codecType,
+            codec,
+            ...(language ? { language } : {}),
+            ...(title ? { title } : {}),
+          });
+        }
+
+        resolve(tracks);
+      } catch {
+        resolve([]);
+      }
+    });
+  });
 }
 
 export async function extractFfprobeMetadata(filePath: string): Promise<FfprobeMetadata | null> {

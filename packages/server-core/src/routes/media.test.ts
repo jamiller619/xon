@@ -12,17 +12,27 @@ vi.mock("node:fs/promises", () => ({
   mkdir: vi.fn(),
   access: vi.fn(),
   stat: vi.fn(),
+  readdir: vi.fn(),
 }));
 
 vi.mock("node:fs", () => ({
   createReadStream: vi.fn(),
 }));
 
-const { readFile, stat } = await import("node:fs/promises");
+vi.mock("../ffprobe.js", () => ({
+  extractStreamTracks: vi.fn(),
+  extractFfprobeMetadata: vi.fn(),
+  isAudioVideoCategory: vi.fn(),
+}));
+
+const { readFile, stat, readdir } = await import("node:fs/promises");
 const { createReadStream } = await import("node:fs");
+const { extractStreamTracks } = await import("../ffprobe.js");
 const mockReadFile = vi.mocked(readFile);
 const mockStat = vi.mocked(stat);
 const mockCreateReadStream = vi.mocked(createReadStream);
+const mockReaddir = vi.mocked(readdir);
+const mockExtractStreamTracks = vi.mocked(extractStreamTracks);
 
 describe("Media API - Detail endpoint", () => {
   let client: Client;
@@ -506,6 +516,232 @@ describe("Media API - Stream endpoint", () => {
         headers: { Range: "bytes=9999-10000" },
       });
       expect(res.status).toBe(416);
+    });
+  });
+});
+
+describe("Media API - Tracks endpoint", () => {
+  let client: Client;
+  let db: LibSQLDatabase;
+  let app: ReturnType<typeof createApp>;
+  let videoItemId: string;
+
+  beforeEach(async () => {
+    ({ client, db } = await openDatabase(":memory:"));
+    await migrateDatabase(db);
+    app = createApp(db);
+
+    const libId = crypto.randomUUID();
+    const now = new Date();
+    await db.insert(libraries).values({
+      id: libId,
+      name: "Test Library",
+      allowedMediaTypes: "[]",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const sourceId = crypto.randomUUID();
+    await db.insert(dataSources).values({
+      id: sourceId,
+      libraryId: libId,
+      type: "local",
+      path: "/media",
+      recursive: true,
+      enabled: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    videoItemId = crypto.randomUUID();
+    await db.insert(mediaItems).values({
+      id: videoItemId,
+      libraryId: libId,
+      dataSourceId: sourceId,
+      filePath: "/media/movie.mp4",
+      fileName: "movie.mp4",
+      fileSize: 10000,
+      mimeType: "video/mp4",
+      mediaCategory: "Movies",
+      thumbnailPaths: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    mockExtractStreamTracks.mockReset();
+    mockReaddir.mockReset();
+  });
+
+  afterEach(() => {
+    client.close();
+  });
+
+  describe("GET /api/v1/media/:id/tracks", () => {
+    it("returns 404 for unknown media item", async () => {
+      const res = await app.request("/api/v1/media/nonexistent-id/tracks");
+      expect(res.status).toBe(404);
+    });
+
+    it("returns audio and subtitle tracks from ffprobe and directory scan", async () => {
+      mockExtractStreamTracks.mockResolvedValueOnce([
+        { index: 0, codecType: "audio", codec: "aac", language: "en", title: "English" },
+        { index: 1, codecType: "audio", codec: "ac3", language: "fr" },
+        { index: 2, codecType: "subtitle", codec: "subrip", language: "en", title: "English" },
+      ]);
+      mockReaddir.mockResolvedValueOnce(["movie.en.srt", "movie.fr.vtt", "other.jpg"] as never);
+
+      const res = await app.request(`/api/v1/media/${videoItemId}/tracks`);
+      expect(res.status).toBe(200);
+      const body = await res.json() as { audioTracks: unknown[]; subtitleTracks: unknown[] };
+      expect(body.audioTracks).toHaveLength(2);
+      expect(body.audioTracks[0]).toMatchObject({ index: 0, codec: "aac", language: "en" });
+      expect(body.audioTracks[1]).toMatchObject({ index: 1, codec: "ac3", language: "fr" });
+      // embedded sub + 2 external (.srt and .vtt, not .jpg)
+      expect(body.subtitleTracks).toHaveLength(3);
+      expect(body.subtitleTracks[0]).toMatchObject({ type: "embedded", index: 2, codec: "subrip" });
+      expect(body.subtitleTracks[1]).toMatchObject({ type: "external", file: "movie.en.srt" });
+      expect(body.subtitleTracks[2]).toMatchObject({ type: "external", file: "movie.fr.vtt" });
+    });
+
+    it("returns empty tracks when ffprobe fails and directory is unreadable", async () => {
+      mockExtractStreamTracks.mockResolvedValueOnce([]);
+      mockReaddir.mockRejectedValueOnce(new Error("EACCES") as never);
+
+      const res = await app.request(`/api/v1/media/${videoItemId}/tracks`);
+      expect(res.status).toBe(200);
+      const body = await res.json() as { audioTracks: unknown[]; subtitleTracks: unknown[] };
+      expect(body.audioTracks).toHaveLength(0);
+      expect(body.subtitleTracks).toHaveLength(0);
+    });
+
+    it("only includes .srt and .vtt files matching base name", async () => {
+      mockExtractStreamTracks.mockResolvedValueOnce([]);
+      mockReaddir.mockResolvedValueOnce([
+        "movie.srt",
+        "movie.vtt",
+        "other-movie.srt",
+        "movie.mp4",
+        "movie.jpg",
+      ] as never);
+
+      const res = await app.request(`/api/v1/media/${videoItemId}/tracks`);
+      const body = await res.json() as { subtitleTracks: { file: string }[] };
+      const files = body.subtitleTracks.map((t) => t.file);
+      expect(files).toContain("movie.srt");
+      expect(files).toContain("movie.vtt");
+      expect(files).not.toContain("other-movie.srt");
+      expect(files).not.toContain("movie.mp4");
+      expect(files).not.toContain("movie.jpg");
+    });
+  });
+});
+
+describe("Media API - Subtitle endpoint", () => {
+  let client: Client;
+  let db: LibSQLDatabase;
+  let app: ReturnType<typeof createApp>;
+  let videoItemId: string;
+
+  beforeEach(async () => {
+    ({ client, db } = await openDatabase(":memory:"));
+    await migrateDatabase(db);
+    app = createApp(db);
+
+    const libId = crypto.randomUUID();
+    const now = new Date();
+    await db.insert(libraries).values({
+      id: libId,
+      name: "Test Library",
+      allowedMediaTypes: "[]",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const sourceId = crypto.randomUUID();
+    await db.insert(dataSources).values({
+      id: sourceId,
+      libraryId: libId,
+      type: "local",
+      path: "/media",
+      recursive: true,
+      enabled: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    videoItemId = crypto.randomUUID();
+    await db.insert(mediaItems).values({
+      id: videoItemId,
+      libraryId: libId,
+      dataSourceId: sourceId,
+      filePath: "/media/movie.mp4",
+      fileName: "movie.mp4",
+      fileSize: 10000,
+      mimeType: "video/mp4",
+      mediaCategory: "Movies",
+      thumbnailPaths: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    mockReadFile.mockReset();
+  });
+
+  afterEach(() => {
+    client.close();
+  });
+
+  describe("GET /api/v1/media/:id/subtitle", () => {
+    it("returns 400 when file parameter is missing", async () => {
+      const res = await app.request(`/api/v1/media/${videoItemId}/subtitle`);
+      expect(res.status).toBe(400);
+    });
+
+    it("returns 400 for path traversal attempt", async () => {
+      const res = await app.request(`/api/v1/media/${videoItemId}/subtitle?file=../secret.vtt`);
+      expect(res.status).toBe(400);
+    });
+
+    it("returns 400 for unsupported file extension", async () => {
+      const res = await app.request(`/api/v1/media/${videoItemId}/subtitle?file=movie.ass`);
+      expect(res.status).toBe(400);
+    });
+
+    it("returns 404 for unknown media item", async () => {
+      const res = await app.request("/api/v1/media/nonexistent-id/subtitle?file=movie.vtt");
+      expect(res.status).toBe(404);
+    });
+
+    it("returns 404 when subtitle file does not exist on disk", async () => {
+      mockReadFile.mockRejectedValueOnce(
+        Object.assign(new Error("ENOENT"), { code: "ENOENT" }) as never
+      );
+      const res = await app.request(`/api/v1/media/${videoItemId}/subtitle?file=movie.vtt`);
+      expect(res.status).toBe(404);
+    });
+
+    it("serves .vtt file with text/vtt content type", async () => {
+      const vttContent = "WEBVTT\n\n00:00:01.000 --> 00:00:04.000\nHello World";
+      mockReadFile.mockResolvedValueOnce(Buffer.from(vttContent) as never);
+
+      const res = await app.request(`/api/v1/media/${videoItemId}/subtitle?file=movie.vtt`);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("Content-Type")).toContain("text/vtt");
+      const text = await res.text();
+      expect(text).toContain("WEBVTT");
+      expect(text).toContain("Hello World");
+    });
+
+    it("prepends WEBVTT header to .srt files for browser compatibility", async () => {
+      const srtContent = "1\n00:00:01,000 --> 00:00:04,000\nHello World\n";
+      mockReadFile.mockResolvedValueOnce(Buffer.from(srtContent) as never);
+
+      const res = await app.request(`/api/v1/media/${videoItemId}/subtitle?file=movie.srt`);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("Content-Type")).toContain("text/vtt");
+      const text = await res.text();
+      expect(text.startsWith("WEBVTT")).toBe(true);
+      expect(text).toContain("Hello World");
     });
   });
 });

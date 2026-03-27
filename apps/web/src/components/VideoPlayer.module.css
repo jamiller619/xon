@@ -35,3 +35,33 @@
 .closeBtn:hover {
   background: rgba(0, 0, 0, 0.9);
 }
+
+.trackControls {
+  display: flex;
+  gap: 16px;
+  padding: 8px 12px;
+  background: #111;
+  flex-wrap: wrap;
+}
+
+.trackLabel {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: #ccc;
+  font-size: 0.85rem;
+}
+
+.trackSelect {
+  background: #222;
+  color: #fff;
+  border: 1px solid #444;
+  border-radius: 4px;
+  padding: 2px 6px;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.trackSelect:focus {
+  outline: 2px solid #6c63ff;
+}

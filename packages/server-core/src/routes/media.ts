@@ -1,11 +1,13 @@
 import { createReadStream } from "node:fs";
-import { readFile, stat } from "node:fs/promises";
+import { readFile, readdir, stat } from "node:fs/promises";
+import { basename, dirname, extname, join } from "node:path";
 import { Readable } from "node:stream";
 import { zValidator } from "@hono/zod-validator";
 import { asc, desc, eq } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
+import { extractStreamTracks } from "../ffprobe.js";
 import type { MediaItem } from "../schema.js";
 import { mediaItems } from "../schema.js";
 import type { ThumbnailPaths } from "../thumbnails.js";
@@ -142,6 +144,107 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       "Accept-Ranges": "bytes",
       "Content-Length": String(fileSize),
       "Content-Type": mimeType,
+    });
+  });
+
+  // GET /media/:id/tracks — list audio and subtitle tracks (embedded + external)
+  router.get("/:id/tracks", async (c) => {
+    const id = c.req.param("id");
+    const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id));
+    const item = rows[0];
+    if (!item) return c.json({ error: "Not found" }, 404);
+
+    const allTracks = await extractStreamTracks(item.filePath);
+    const audioTracks = allTracks
+      .filter((t) => t.codecType === "audio")
+      .map((t) => ({ index: t.index, codec: t.codec, language: t.language, title: t.title }));
+    const embeddedSubs = allTracks
+      .filter((t) => t.codecType === "subtitle")
+      .map((t) => ({
+        type: "embedded" as const,
+        index: t.index,
+        codec: t.codec,
+        language: t.language,
+        title: t.title,
+        label: t.title ?? t.language ?? `Track ${t.index}`,
+      }));
+
+    const dir = dirname(item.filePath);
+    const base = basename(item.filePath, extname(item.filePath));
+    let externalSubs: {
+      type: "external";
+      file: string;
+      language?: string;
+      label: string;
+    }[] = [];
+
+    try {
+      const entries = await readdir(dir);
+      externalSubs = entries
+        .filter((f) => {
+          const ext = extname(f).toLowerCase();
+          return (ext === ".srt" || ext === ".vtt") && f.startsWith(base);
+        })
+        .map((f) => {
+          // Try to extract language code from filename like "movie.en.srt" or "movie.en.US.srt"
+          const withoutExt = basename(f, extname(f));
+          const suffix = withoutExt.slice(base.length).replace(/^\./, "");
+          const language = suffix || undefined;
+          return {
+            type: "external" as const,
+            file: f,
+            ...(language ? { language } : {}),
+            label: language
+              ? `${language.toUpperCase()} (external)`
+              : `External (${extname(f).slice(1).toUpperCase()})`,
+          };
+        });
+    } catch {
+      // directory not readable — return empty external list
+    }
+
+    return c.json({
+      audioTracks,
+      subtitleTracks: [...embeddedSubs, ...externalSubs],
+    });
+  });
+
+  // GET /media/:id/subtitle?file=filename.srt — serve an external subtitle file
+  router.get("/:id/subtitle", async (c) => {
+    const id = c.req.param("id");
+    const file = c.req.query("file");
+
+    if (!file) return c.json({ error: "Missing file parameter" }, 400);
+    // Security: reject path traversal and ensure valid extension
+    if (file.includes("/") || file.includes("\\") || file.includes("..")) {
+      return c.json({ error: "Invalid file parameter" }, 400);
+    }
+    const ext = extname(file).toLowerCase();
+    if (ext !== ".srt" && ext !== ".vtt") {
+      return c.json({ error: "Only .srt and .vtt subtitle files are supported" }, 400);
+    }
+
+    const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id));
+    const item = rows[0];
+    if (!item) return c.json({ error: "Not found" }, 404);
+
+    const subtitlePath = join(dirname(item.filePath), file);
+    let content: Buffer;
+    try {
+      content = await readFile(subtitlePath);
+    } catch {
+      return c.json({ error: "Subtitle file not found" }, 404);
+    }
+
+    // Serve as WebVTT; add WEBVTT header for .srt files for browser compatibility
+    let body = content.toString("utf-8");
+    if (ext === ".srt" && !body.startsWith("WEBVTT")) {
+      body = `WEBVTT\n\n${body}`;
+    }
+
+    return c.text(body, 200, {
+      "Content-Type": "text/vtt; charset=utf-8",
+      "Cache-Control": "public, max-age=3600",
     });
   });
 
