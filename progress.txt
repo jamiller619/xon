@@ -1,3 +1,20 @@
+## 2026-03-27 - US-031
+- Implemented media detail page at /media/:id
+- Files created: apps/web/src/pages/MediaDetail.tsx, MediaDetail.module.css
+- Files changed: apps/web/src/App.tsx (import MediaDetail for /media/:id route)
+- Detail page fetches GET /api/v1/media/:id (already existed); shows large poster/thumbnail, title, description, category badge
+- Action buttons: Play (disabled if DRM-protected), Favorite, Add to Collection (all functional-looking but placeholders)
+- DRM-protected items: lock icon overlay on poster, red DRM notice with explanatory text, disabled Play button with tooltip
+- Metadata table: shows category, format (mimeType), file size, file name, date added, last scanned, plus all fields from the `metadata` JSON column
+- Arrays in metadata (e.g. genre, tags) joined with ", " for display
+- Related items section rendered as placeholder text
+- Loading skeleton with shimmer animation; error state with back link
+- **Learnings for future iterations:**
+  - `GET /api/v1/media/:id` already returns `thumbnailUrls` (added by `withThumbnailUrls`) — use `large` URL for poster on detail page
+  - `metadata` is a JSON string column; parse with try/catch and display key/value pairs; filter out arrays separately for join display
+  - Biome prefers single-line JSX for short conditional expressions: `{cond && <El />}` not `{cond && (\n  <El />\n)}`
+---
+
 ## 2026-03-27 - US-030
 - Added filter bar and active filter chips to LibraryBrowser page
 - Files changed: apps/web/src/pages/LibraryBrowser.tsx, LibraryBrowser.module.css, packages/server-core/src/routes/libraries.ts
