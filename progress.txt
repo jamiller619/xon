@@ -1,3 +1,16 @@
+## 2026-03-27 - US-019
+- Implemented thumbnail serving API endpoint GET /api/v1/media/:id/thumbnail?size=small|medium|large
+- Files changed: packages/server-core/src/routes/media.ts (new), src/routes/media.test.ts (new), src/app.ts (mounted media router)
+- `makeMediaRouter(db)` factory; validates size param (small/medium/large, defaults to medium); looks up mediaItem by id; parses thumbnailPaths JSON; reads file from disk; returns with Content-Type: image/jpeg and Cache-Control: public, max-age=86400, immutable
+- Returns 404 for unknown id, null thumbnailPaths, invalid JSON, or missing file on disk; 400 for invalid size param
+- `new Uint8Array(buffer)` required for `c.body()` since Hono expects `Uint8Array<ArrayBuffer>` not `Buffer<ArrayBufferLike>`
+- `const item = rows[0]; if (!item)` pattern avoids non-null assertion while satisfying `noUncheckedIndexedAccess`
+- 9 new tests in media.test.ts; total 167 tests in server-core
+- **Learnings for future iterations:**
+  - Hono `c.body()` accepts `Uint8Array<ArrayBuffer>` not `Buffer<ArrayBufferLike>` — use `new Uint8Array(buffer)` to convert Node.js Buffer
+  - Biome `noNonNullAssertion` forbids `arr[0]!` — use `const x = arr[0]; if (!x) return;` pattern for early return after index access
+---
+
 ## 2026-03-27 - US-018
 - Implemented video thumbnail generation using FFmpeg + sharp in `videoThumbnails.ts`
 - Files changed: packages/server-core/src/videoThumbnails.ts (new), src/videoThumbnails.test.ts (new), src/orchestrator.ts (calls generateVideoThumbnails for video items), src/index.ts (exports)
@@ -208,6 +221,8 @@
 - Drizzle `ALTER TABLE ADD COLUMN` migrations generated cleanly via `yarn workspace @xon/server-core db:generate` after schema update
 - When mocking sequential spawns (ffprobe then ffmpeg), use `mockImplementation` with `Promise.resolve().then(...)` for event emission — `mockReturnValueOnce` creates the proc before spawn is called, causing setTimeout to fire before listeners attach
 - `Promise.resolve().then(...)` fires as a microtask after synchronous listener registration — ideal for mock EventEmitter event timing in async tests
+- Hono `c.body()` accepts `Uint8Array<ArrayBuffer>` not `Buffer<ArrayBufferLike>` — use `new Uint8Array(buffer)` to convert Node.js Buffer for binary responses
+- Biome `noNonNullAssertion`: avoid `arr[0]!` — use `const x = arr[0]; if (!x) return;` pattern instead
 
 ---
 
