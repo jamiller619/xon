@@ -1,5 +1,5 @@
 import { readFile } from "node:fs/promises";
-import { eq } from "drizzle-orm";
+import { asc, desc, eq } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import type { MediaItem } from "../schema.js";
@@ -22,6 +22,31 @@ export function withThumbnailUrls(item: MediaItem) {
 
 export function makeMediaRouter(db: LibSQLDatabase): Hono {
   const router = new Hono();
+
+  // GET /media — list all media items with optional sort and limit
+  router.get("/", async (c) => {
+    const { sortBy, order, page, limit } = c.req.query();
+    const pageNum = Math.max(1, Number(page) || 1);
+    const limitNum = Math.min(Math.max(1, Number(limit) || 20), 100);
+    const offset = (pageNum - 1) * limitNum;
+
+    const sortDir = order === "asc" ? asc : desc;
+    const orderExpr =
+      sortBy === "title"
+        ? sortDir(mediaItems.title)
+        : sortBy === "fileSize"
+          ? sortDir(mediaItems.fileSize)
+          : sortDir(mediaItems.createdAt);
+
+    const rows = await db
+      .select()
+      .from(mediaItems)
+      .orderBy(orderExpr)
+      .limit(limitNum)
+      .offset(offset);
+
+    return c.json(rows.map(withThumbnailUrls));
+  });
 
   // GET /media/:id — get single media item with full metadata and thumbnail URLs
   router.get("/:id", async (c) => {
