@@ -470,3 +470,16 @@
   - For composing a root Hono app with basePath sub-apps: create `new Hono()`, call `app.route("/", apiApp)`, then `app.use("/*", middleware)`
   - Biome import sorting: local imports (./scheduler.js before ./staticFiles.js) go alphabetically
 ---
+
+## 2026-03-27 - US-029
+- Added list/table view toggle to LibraryBrowser with sortable columns
+- Files changed: apps/web/src/pages/LibraryBrowser.tsx (view toggle, sort state, list rendering), LibraryBrowser.module.css (table/toggle/skeleton row styles), apps/web/src/components/MediaCard.tsx (added listView prop + tr-based rendering, added fileSize/createdAt to MediaCardItem), MediaCard.module.css (list row styles)
+- View mode persisted in Zustand `useAppStore` (already had `viewMode`/`setViewMode`)
+- List view: table with small thumbnail, title (+ file type badge), category, size (formatted bytes), date added (locale date)
+- Sortable columns: title, fileSize, createdAt (client-side toggle asc/desc + re-fetch with sortBy/order params); mediaCategory falls back to createdAt (API doesn't support it directly)
+- Skeleton loading in list view: 10 skeleton rows with shimmer animation
+- **Learnings for future iterations:**
+  - Biome lint `noNoninteractiveTabindex` disallows tabIndex on `th` — use onClick + onKeyDown (Enter/Space) without tabIndex for accessible interactive table headers
+  - Biome formatter is strict about trailing commas in template literals inside fetch() — let biome --write auto-fix formatting issues
+  - `MediaCardItem` can render as either a grid card (`<Link>`) or list row (`<tr>`) via a `listView` prop — the component must return the right element type for table context
+---
