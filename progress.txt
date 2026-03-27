@@ -1,3 +1,21 @@
+## 2026-03-27 - US-033
+- Implemented HTML5 video player with streaming endpoint and keyboard shortcuts
+- Files changed: packages/server-core/src/routes/media.ts (GET /api/v1/media/:id/stream with range request support), src/routes/media.test.ts (6 new streaming tests; total 229 in server-core)
+- Files created: apps/web/src/components/VideoPlayer.tsx, VideoPlayer.module.css
+- Files changed: apps/web/src/pages/MediaDetail.tsx (Play button triggers inline VideoPlayer for video/* mimeType)
+- Streaming endpoint: uses `createReadStream` + `Readable.toWeb()` for web-compatible streaming; supports `Range` header for HTTP 206 partial content; returns 416 for out-of-bounds ranges
+- VideoPlayer: HTML5 `<video controls autoPlay>` with src pointing to /stream; keyboard shortcuts via document keydown listener (space=play/pause, arrows=seek±5s, F=fullscreen, Escape=close)
+- Play button disabled for non-video mimeTypes and DRM-protected items; VideoPlayer replaces poster in hero section
+- 6 new streaming tests covering: 404 for missing item, 404 for inaccessible file, 200 full response, 206 range request, 206 open-ended range, 416 out-of-bounds
+- **Learnings for future iterations:**
+  - `createReadStream` from `node:fs` + `Readable.toWeb()` from `node:stream` converts a Node.js stream to a web ReadableStream for Hono `c.body()`
+  - Range request pattern: parse `Range: bytes=start-end` header; respond 206 with `Content-Range: bytes start-end/total` and `Content-Length: chunkSize`
+  - In tests, mock `node:fs` with `createReadStream: vi.fn()` returning `Readable.from(["data"])` — `Readable.toWeb()` works on `Readable.from()` streams
+  - Add `stat: vi.fn()` to the `node:fs/promises` mock factory for streaming route tests; mock `node:fs` separately
+  - Biome `useNumberNamespace`: use `Number.parseInt` not global `parseInt`
+  - Biome a11y `useMediaCaption`: suppress with `biome-ignore lint/a11y/useMediaCaption: ...` comment on `<video>` elements without static captions
+---
+
 ## 2026-03-27 - US-032
 - Added inline metadata editing to media detail page
 - Files changed: apps/web/src/pages/MediaDetail.tsx (edit form with title/description/tags), MediaDetail.module.css (edit form styles, tags display, titleRow layout)
