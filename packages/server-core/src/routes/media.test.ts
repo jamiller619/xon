@@ -117,6 +117,118 @@ describe("Media API - Detail endpoint", () => {
   });
 });
 
+describe("Media API - PUT /api/v1/media/:id", () => {
+  let client: Client;
+  let db: LibSQLDatabase;
+  let app: ReturnType<typeof createApp>;
+  let mediaItemId: string;
+
+  beforeEach(async () => {
+    ({ client, db } = await openDatabase(":memory:"));
+    await migrateDatabase(db);
+    app = createApp(db);
+
+    const libId = crypto.randomUUID();
+    const now = new Date();
+    await db.insert(libraries).values({
+      id: libId,
+      name: "Test Library",
+      allowedMediaTypes: "[]",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const sourceId = crypto.randomUUID();
+    await db.insert(dataSources).values({
+      id: sourceId,
+      libraryId: libId,
+      type: "local",
+      path: "/media",
+      recursive: true,
+      enabled: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    mediaItemId = crypto.randomUUID();
+    await db.insert(mediaItems).values({
+      id: mediaItemId,
+      libraryId: libId,
+      dataSourceId: sourceId,
+      filePath: "/media/movie.mp4",
+      fileName: "movie.mp4",
+      fileSize: 5000,
+      mimeType: "video/mp4",
+      mediaCategory: "Movies",
+      title: "Original Title",
+      description: "Original description",
+      metadata: JSON.stringify({ director: "Someone", tags: ["action"] }),
+      thumbnailPaths: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+  });
+
+  afterEach(() => {
+    client.close();
+  });
+
+  it("updates title", async () => {
+    const res = await app.request(`/api/v1/media/${mediaItemId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "New Title" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.title).toBe("New Title");
+    expect(body.description).toBe("Original description");
+  });
+
+  it("updates description", async () => {
+    const res = await app.request(`/api/v1/media/${mediaItemId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ description: "New description" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.description).toBe("New description");
+    expect(body.title).toBe("Original Title");
+  });
+
+  it("updates tags within metadata preserving other fields", async () => {
+    const res = await app.request(`/api/v1/media/${mediaItemId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ tags: ["action", "drama"] }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    const meta = JSON.parse(body.metadata) as Record<string, unknown>;
+    expect(meta.tags).toEqual(["action", "drama"]);
+    expect(meta.director).toBe("Someone");
+  });
+
+  it("returns 404 for unknown id", async () => {
+    const res = await app.request("/api/v1/media/nonexistent-id", {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "X" }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 400 for invalid payload", async () => {
+    const res = await app.request(`/api/v1/media/${mediaItemId}`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ title: "" }),
+    });
+    expect(res.status).toBe(400);
+  });
+});
+
 describe("Media API - Thumbnail endpoint", () => {
   let client: Client;
   let db: LibSQLDatabase;

@@ -1,7 +1,9 @@
 import { readFile } from "node:fs/promises";
+import { zValidator } from "@hono/zod-validator";
 import { asc, desc, eq } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
+import { z } from "zod";
 import type { MediaItem } from "../schema.js";
 import { mediaItems } from "../schema.js";
 import type { ThumbnailPaths } from "../thumbnails.js";
@@ -55,6 +57,40 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     const item = rows[0];
     if (!item) return c.json({ error: "Not found" }, 404);
     return c.json(withThumbnailUrls(item));
+  });
+
+  const updateMediaSchema = z.object({
+    title: z.string().min(1).optional(),
+    description: z.string().optional(),
+    tags: z.array(z.string()).optional(),
+  });
+
+  // PUT /media/:id — update editable metadata fields
+  router.put("/:id", zValidator("json", updateMediaSchema), async (c) => {
+    const id = c.req.param("id");
+    const body = c.req.valid("json");
+
+    const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id));
+    const item = rows[0];
+    if (!item) return c.json({ error: "Not found" }, 404);
+
+    const updates: Partial<typeof mediaItems.$inferInsert> = { updatedAt: new Date() };
+    if (body.title !== undefined) updates.title = body.title;
+    if (body.description !== undefined) updates.description = body.description;
+    if (body.tags !== undefined) {
+      let meta: Record<string, unknown> = {};
+      try {
+        meta = JSON.parse(item.metadata) as Record<string, unknown>;
+      } catch {
+        // ignore
+      }
+      meta.tags = body.tags;
+      updates.metadata = JSON.stringify(meta);
+    }
+
+    await db.update(mediaItems).set(updates).where(eq(mediaItems.id, id));
+    const updated = await db.select().from(mediaItems).where(eq(mediaItems.id, id));
+    return c.json(withThumbnailUrls(updated[0] as MediaItem));
   });
 
   // GET /media/:id/thumbnail?size=small|medium|large
