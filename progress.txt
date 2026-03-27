@@ -1,3 +1,16 @@
+## 2026-03-27 - US-009
+- Implemented Data Sources CRUD API endpoints nested under libraries
+- Files changed: packages/server-core/src/routes/sources.ts (new), src/routes/sources.test.ts (new), src/routes/libraries.ts (added sources sub-router mount)
+- POST/GET/PUT/DELETE /api/v1/libraries/:libraryId/sources with Zod validation
+- Local type path validation uses `node:fs/promises` `access()` — returns 400 if path inaccessible
+- Sources router mounted via `router.route("/:libraryId/sources", makeSourcesRouter(db))` in libraries router
+- 17 new tests all passing (total 51 tests in server-core)
+- **Learnings for future iterations:**
+  - When sub-router uses params from parent route (e.g., `:libraryId`), TypeScript types `c.req.param("libraryId")` as `string | undefined` — use `as string` cast since route guarantees it
+  - Drizzle boolean `{ mode: "boolean" }` returns JS `true`/`false` (not `1`/`0`) in select results — test assertions must use `toBe(false)` not `toBe(0)`
+  - `node:fs/promises` `access(path)` throws if path doesn't exist — wrap in try/catch for validation
+---
+
 ## 2026-03-27 - US-008
 - Implemented Libraries CRUD API endpoints with Zod validation
 - Files changed: packages/server-core/src/app.ts (createApp factory), src/server.ts (async boot with db), src/routes/libraries.ts (new), src/routes/libraries.test.ts (new), package.json (added zod, @hono/zod-validator)
@@ -37,6 +50,8 @@
 - Hono: use `new Hono().basePath("/api/v1")` for prefixed routes; test with `app.request("/api/v1/...")` (no server needed)
 - @hono/node-server: `serve({ fetch: app.fetch, port }, callback)` returns a Node.js HTTP server with `.close()`
 - Packages with cross-package deps need `references` in their own tsconfig.json (not just root tsconfig.json)
+- Hono sub-router params from parent routes (e.g., `:libraryId` in parent `/:libraryId/sources`) type as `string | undefined` — use `as string` cast; mount sub-routers with `router.route("/:parentParam/sub", makeSubRouter(db))`
+- Drizzle boolean `{ mode: "boolean" }` returns JS `true`/`false`, not `1`/`0` — use `toBe(false)` in tests, not `toBe(0)`
 
 ---
 
