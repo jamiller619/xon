@@ -16,6 +16,7 @@ import { extractMusicTags, isMusicCategory } from "./musictags.js";
 import { scanDataSource } from "./scanner.js";
 import { dataSources, libraries, mediaItems } from "./schema.js";
 import { generateThumbnails } from "./thumbnails.js";
+import { generateVideoThumbnails, isVideoCategory } from "./videoThumbnails.js";
 
 export type ScanProgress = {
   dataSourceId: string;
@@ -122,6 +123,11 @@ export async function scanLibrary(
         if (thumbs) {
           thumbnailPaths = JSON.stringify(thumbs);
         }
+      } else if (isVideoCategory(entry.mediaCategory)) {
+        const thumbs = await generateVideoThumbnails(entry.filePath, id, resolvedDataDir);
+        if (thumbs) {
+          thumbnailPaths = JSON.stringify(thumbs);
+        }
       }
 
       await db.insert(mediaItems).values({
@@ -179,6 +185,18 @@ export async function scanLibrary(
           );
         const existingId = existingRows[0]?.id ?? crypto.randomUUID();
         const thumbs = await generateThumbnails(entry.filePath, existingId, resolvedDataDir);
+        if (thumbs) {
+          updateFields.thumbnailPaths = JSON.stringify(thumbs);
+        }
+      } else if (isVideoCategory(entry.mediaCategory)) {
+        const existingRows = await db
+          .select({ id: mediaItems.id })
+          .from(mediaItems)
+          .where(
+            and(eq(mediaItems.dataSourceId, source.id), eq(mediaItems.filePath, entry.filePath))
+          );
+        const existingId = existingRows[0]?.id ?? crypto.randomUUID();
+        const thumbs = await generateVideoThumbnails(entry.filePath, existingId, resolvedDataDir);
         if (thumbs) {
           updateFields.thumbnailPaths = JSON.stringify(thumbs);
         }
