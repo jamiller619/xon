@@ -392,3 +392,16 @@
   - Biome import order: node: built-ins always sort before third-party packages
   - `delete process.env.X` triggers Biome lint/performance/noDelete — use `process.env.X = undefined` instead
 ---
+
+## 2026-03-27 - US-024
+- Implemented static file serving for the web client
+- Files changed: packages/server-core/src/staticFiles.ts (new), src/server.ts (uses WEB_CLIENT_DIR env var)
+- `makeStaticMiddleware(dir)` returns a Hono MiddlewareHandler that: reads files from `dir`, sets Content-Type from extension map, sets Cache-Control (no-cache for HTML, immutable for /assets/*, short cache for others), falls back to index.html for SPA routing
+- `server.ts`: reads `WEB_CLIENT_DIR` from env; if set, wraps API app in root Hono instance and adds static middleware
+- Hashing detection: files under `/assets/` (Vite convention) get `public, max-age=31536000, immutable`; HTML gets `no-cache`
+- No new tests (acceptance criteria only required typecheck, not test pass)
+- **Learnings for future iterations:**
+  - Hono middleware must skip API paths (`/api/`) to avoid intercepting API requests; check `urlPath.startsWith("/api/")`
+  - For composing a root Hono app with basePath sub-apps: create `new Hono()`, call `app.route("/", apiApp)`, then `app.use("/*", middleware)`
+  - Biome import sorting: local imports (./scheduler.js before ./staticFiles.js) go alphabetically
+---
