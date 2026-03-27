@@ -42,6 +42,7 @@ export {
   type Model3DMetadata,
   type ArchiveMetadata,
 } from "./miscmeta.js";
+export { detectDrm } from "./drm.js";
 export { generateThumbnails, type ThumbnailPaths } from "./thumbnails.js";
 export { generateVideoThumbnails, isVideoCategory } from "./videoThumbnails.js";
 export { scanDataSource, type FileEntry, type ScanResult } from "./scanner.js";

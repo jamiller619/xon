@@ -1,5 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
+import { detectDrm } from "./drm.js";
 import { emitEvent } from "./events.js";
 import { extractExiftoolMetadata, isImageCategory } from "./exiftool.js";
 import { extractFfprobeMetadata, isAudioVideoCategory } from "./ffprobe.js";
@@ -117,6 +118,7 @@ export async function scanLibrary(
       }
 
       const id = crypto.randomUUID();
+      const drmProtected = await detectDrm(entry.filePath);
 
       let thumbnailPaths: string | null = null;
       if (isImageCategory(entry.mediaCategory)) {
@@ -142,6 +144,7 @@ export async function scanLibrary(
         mediaCategory: entry.mediaCategory,
         metadata,
         thumbnailPaths,
+        drmProtected,
         createdAt: now,
         updatedAt: now,
         scannedAt: now,
@@ -156,10 +159,12 @@ export async function scanLibrary(
       progress.currentFile = entry.filePath;
       onProgress?.(progress);
 
+      const drmProtectedUpdate = await detectDrm(entry.filePath);
       const updateFields: Record<string, unknown> = {
         fileSize: entry.fileSize,
         mimeType: entry.mimeType ?? null,
         mediaCategory: entry.mediaCategory,
+        drmProtected: drmProtectedUpdate,
         updatedAt: now,
         scannedAt: now,
       };
