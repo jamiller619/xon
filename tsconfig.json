@@ -19,7 +19,8 @@
     "exactOptionalPropertyTypes": true
   },
   "references": [
-    { "path": "./packages/shared" }
+    { "path": "./packages/shared" },
+    { "path": "./packages/media-types" }
   ],
   "exclude": [
     "node_modules",
