@@ -1,0 +1,16 @@
+scripts/ralph
+tasks
+
+node_modules/
+dist/
+build/
+*.js.map
+*.d.ts.map
+*.tsbuildinfo
+.yarn/cache
+.yarn/unplugged
+.yarn/build-state.yml
+.yarn/install-state.gz
+
+.data/
+prd.json
