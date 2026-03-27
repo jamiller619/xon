@@ -24,6 +24,18 @@
 
 ---
 
+## 2026-03-27 - US-007
+- Defined media_items table with Drizzle ORM in server-core
+- Files changed: packages/server-core/src/schema.ts, src/schema.test.ts, src/index.ts, drizzle/0001_loving_excalibur.sql
+- mediaItems: id (pk), libraryId (FK→libraries CASCADE), dataSourceId (FK→dataSources CASCADE), filePath, fileName, fileSize, mimeType, mediaCategory, title, description, metadata (text/JSON default "{}"), drmProtected (boolean default false), createdAt, updatedAt, scannedAt (nullable)
+- Indexes on libraryId, mediaCategory, and filePath using `index()` from drizzle-orm/sqlite-core
+- 6 new tests: insert/retrieve, defaults, JSON metadata, drmProtected flag, cascade delete via library, cascade delete via data source
+- **Learnings for future iterations:**
+  - Drizzle SQLite indexes: use `index("name").on(table.col)` in the third arg of `sqliteTable()` as an array
+  - Biome trailing comma: in arrow-function table definitions, trailing comma after `]` inside `()` gets removed — run `biome check --write` after adding indexed tables
+  - Cascade delete from parent (library) also cascades through data_source to media_items (multi-level FK cascade)
+---
+
 ## 2026-03-27 - US-006
 - Defined libraries and data_sources tables with Drizzle ORM in server-core
 - Files changed: packages/server-core/src/schema.ts (new), src/migrate.ts (new), src/schema.test.ts (new), src/index.ts (exports), drizzle/0000_curious_unus.sql (generated migration)
