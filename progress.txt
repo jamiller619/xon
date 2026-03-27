@@ -1,3 +1,17 @@
+## 2026-03-27 - US-028
+- Implemented library browser page at /libraries/:id with responsive grid view
+- Files created: apps/web/src/pages/LibraryBrowser.tsx, LibraryBrowser.module.css
+- Files changed: apps/web/src/App.tsx (import LibraryBrowser for /libraries/:id route), apps/web/src/components/MediaCard.tsx (added fileType display), MediaCard.module.css (added .meta and .fileType styles)
+- LibraryBrowser fetches library info (name) and media items separately; page-based pagination with prev/next buttons
+- Pagination: 40 items per page; shows next button when a full page is returned (heuristic); hides pagination when only 1 page
+- Loading skeleton: 40 shimmer skeleton cards with CSS animation while data loads
+- MediaCard now shows mimeType subtype (e.g. "MP4" from "video/mp4") as a small secondary badge
+- **Learnings for future iterations:**
+  - For page-based pagination without a total-count endpoint, use heuristic: if returned count === PAGE_SIZE, assume there may be more pages
+  - CSS shimmer skeleton: `background: linear-gradient(90deg, ...)` with `background-size: 200%` + `animation` gives smooth loading pulse
+  - `biome-ignore lint/suspicious/noArrayIndexKey` comment needed for skeleton arrays using index keys (no stable IDs available)
+---
+
 ## 2026-03-27 - US-027
 - Implemented Dashboard landing page at / route
 - Files created: apps/web/src/pages/Dashboard.tsx, Dashboard.module.css, components/MediaCard.tsx, MediaCard.module.css
