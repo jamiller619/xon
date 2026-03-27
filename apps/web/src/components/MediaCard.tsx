@@ -27,7 +27,14 @@ export default function MediaCard({ item }: MediaCardProps) {
       </div>
       <div className={styles.info ?? ""}>
         <p className={styles.title ?? ""}>{item.title}</p>
-        {item.mediaCategory && <span className={styles.badge ?? ""}>{item.mediaCategory}</span>}
+        <div className={styles.meta ?? ""}>
+          {item.mediaCategory && <span className={styles.badge ?? ""}>{item.mediaCategory}</span>}
+          {item.mimeType && (
+            <span className={styles.fileType ?? ""}>
+              {item.mimeType.split("/")[1] ?? item.mimeType}
+            </span>
+          )}
+        </div>
       </div>
     </Link>
   );
