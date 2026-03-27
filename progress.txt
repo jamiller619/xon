@@ -1,3 +1,17 @@
+## 2026-03-27 - US-011
+- Implemented scan orchestrator that saves discovered files as media items in the database
+- Files changed: packages/server-core/src/orchestrator.ts (new), src/orchestrator.test.ts (new), src/index.ts (exports)
+- `scanLibrary(db, libraryId, onProgress?)` fetches enabled data sources, calls `scanDataSource()` per source, inserts/updates/deletes media items
+- `ScanProgress` type: `{ dataSourceId, totalFiles, processedFiles, currentFile }` — callback invoked before each file insert/update
+- `ScanSummary` return: `{ libraryId, newItems, updatedItems, removedItems, totalDiscovered }`
+- Disabled data sources are skipped; throws if library not found
+- 9 new tests all passing (total 69 tests in server-core)
+- **Learnings for future iterations:**
+  - `inArray(col, values)` from drizzle-orm requires a non-empty array — always guard with `if (arr.length > 0)` before calling
+  - Unused `vi` import from vitest triggers Biome noUnusedImports — remove it if not mocking
+  - Import ordering in orchestrator: local `./scanner.js` sorts before `./schema.js` alphabetically in Biome
+---
+
 ## 2026-03-27 - US-010
 - Implemented filesystem scanner for media file discovery
 - Files changed: packages/server-core/src/scanner.ts (new), src/scanner.test.ts (new), src/index.ts (exports), package.json (added @xon/media-types dep)
