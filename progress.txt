@@ -1,3 +1,17 @@
+## 2026-03-27 - US-014
+- Implemented ExifTool metadata extraction for image media items (Pictures, Images, DesignFiles)
+- Files changed: packages/server-core/src/exiftool.ts (new), src/exiftool.test.ts (new), src/orchestrator.ts (calls exiftool on insert/update), src/index.ts (exports)
+- `extractExiftoolMetadata(filePath)` spawns `exiftool -json -n` and parses the JSON array output
+- Extracts: width, height (ImageWidth/ImageHeight), colorSpace (ColorSpace/ColorSpaceData), cameraModel (Model/CameraModelName), gpsLatitude, gpsLongitude (GPSLatitude/GPSLongitude with -n flag returns numeric values), dateTaken (DateTimeOriginal → CreateDate fallback), orientation (string or number → stored as string)
+- Returns `null` on ENOENT (exiftool not installed), non-zero exit, or JSON parse failure; returns `{}` for empty array output
+- Orchestrator updated: `else if (isImageCategory(...))` branch calls exiftool for new and changed files
+- 12 new tests in exiftool.test.ts; total 99 tests in server-core
+- **Learnings for future iterations:**
+  - ExifTool outputs a JSON *array* (one entry per file) — access `parsed[0]` for single-file invocations
+  - `exiftool -n` flag returns numeric values for GPS coords and orientation (not formatted strings); orientation becomes a number like `6` instead of `"Rotate 90 CW"`
+  - Biome may reformat multi-line named imports to single line if under 100 chars — let `biome check --write` decide
+---
+
 ## 2026-03-27 - US-013
 - Implemented FFprobe metadata extraction for audio and video media items
 - Files changed: packages/server-core/src/ffprobe.ts (new), src/ffprobe.test.ts (new), src/orchestrator.ts (calls ffprobe on insert/update), src/index.ts (exports)
