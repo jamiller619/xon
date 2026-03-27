@@ -121,11 +121,11 @@
       "title": "Libraries CRUD API endpoints",
       "description": "As a user, I want to create, read, update, and delete libraries via the API.",
       "acceptanceCriteria": [
-        "POST /api/v1/libraries — create library with name, description, allowedMediaTypes",
-        "GET /api/v1/libraries — list all libraries",
-        "GET /api/v1/libraries/:id — get single library with data sources",
-        "PUT /api/v1/libraries/:id — update library",
-        "DELETE /api/v1/libraries/:id — delete library and associated data sources",
+        "POST /api/v1/libraries \u2014 create library with name, description, allowedMediaTypes",
+        "GET /api/v1/libraries \u2014 list all libraries",
+        "GET /api/v1/libraries/:id \u2014 get single library with data sources",
+        "PUT /api/v1/libraries/:id \u2014 update library",
+        "DELETE /api/v1/libraries/:id \u2014 delete library and associated data sources",
         "Input validation with Zod schemas on all endpoints",
         "Typecheck passes",
         "Tests pass"
@@ -139,10 +139,10 @@
       "title": "Data sources CRUD API endpoints",
       "description": "As a user, I want to add, list, update, and remove data sources for a library.",
       "acceptanceCriteria": [
-        "POST /api/v1/libraries/:libraryId/sources — add data source with type, path, recursive flag",
-        "GET /api/v1/libraries/:libraryId/sources — list data sources for library",
-        "PUT /api/v1/libraries/:libraryId/sources/:id — update data source",
-        "DELETE /api/v1/libraries/:libraryId/sources/:id — remove data source",
+        "POST /api/v1/libraries/:libraryId/sources \u2014 add data source with type, path, recursive flag",
+        "GET /api/v1/libraries/:libraryId/sources \u2014 list data sources for library",
+        "PUT /api/v1/libraries/:libraryId/sources/:id \u2014 update data source",
+        "DELETE /api/v1/libraries/:libraryId/sources/:id \u2014 remove data source",
         "Validate that path exists on filesystem for local type sources",
         "Typecheck passes",
         "Tests pass"
@@ -153,7 +153,7 @@
     },
     {
       "id": "US-010",
-      "title": "Filesystem scanner — file discovery",
+      "title": "Filesystem scanner \u2014 file discovery",
       "description": "As a user, I want Xon to walk data source directories and discover media files by extension and MIME type.",
       "acceptanceCriteria": [
         "Scanner walks data source path recursively (if configured)",
@@ -190,9 +190,9 @@
       "title": "Scan trigger API endpoint",
       "description": "As a user, I want to trigger a library scan via the API.",
       "acceptanceCriteria": [
-        "POST /api/v1/libraries/:id/scan — triggers scan for a library",
+        "POST /api/v1/libraries/:id/scan \u2014 triggers scan for a library",
         "Returns scan status (started, already running)",
-        "GET /api/v1/libraries/:id/scan/status — returns current scan progress",
+        "GET /api/v1/libraries/:id/scan/status \u2014 returns current scan progress",
         "Only one scan per library runs at a time",
         "Typecheck passes",
         "Tests pass"
@@ -203,7 +203,7 @@
     },
     {
       "id": "US-013",
-      "title": "Metadata extraction — FFprobe for audio and video",
+      "title": "Metadata extraction \u2014 FFprobe for audio and video",
       "description": "As a user, I want audio and video files to have metadata extracted via FFprobe during scanning.",
       "acceptanceCriteria": [
         "FFprobe invoked for video and audio media categories",
@@ -219,7 +219,7 @@
     },
     {
       "id": "US-014",
-      "title": "Metadata extraction — ExifTool for images and photos",
+      "title": "Metadata extraction \u2014 ExifTool for images and photos",
       "description": "As a user, I want image and photo files to have EXIF/GPS metadata extracted via ExifTool.",
       "acceptanceCriteria": [
         "ExifTool invoked for Pictures, Images, and Design Files categories",
@@ -235,7 +235,7 @@
     },
     {
       "id": "US-015",
-      "title": "Metadata extraction — ID3/Vorbis tags for music",
+      "title": "Metadata extraction \u2014 ID3/Vorbis tags for music",
       "description": "As a user, I want music files to have ID3 and Vorbis tags parsed for artist, album, track info.",
       "acceptanceCriteria": [
         "ID3v2 and Vorbis comment parsing for Music and Audiobook categories",
@@ -251,7 +251,7 @@
     },
     {
       "id": "US-016",
-      "title": "Metadata extraction — documents, fonts, 3D models, archives",
+      "title": "Metadata extraction \u2014 documents, fonts, 3D models, archives",
       "description": "As a user, I want format-specific metadata extracted for documents, fonts, 3D models, and archives.",
       "acceptanceCriteria": [
         "Documents: page count, author, title from PDF metadata",
@@ -263,7 +263,7 @@
         "Tests pass"
       ],
       "priority": 16,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {
@@ -321,10 +321,10 @@
       "title": "Media items list and detail API endpoints",
       "description": "As a user, I want to browse and view media items via the API with filtering and sorting.",
       "acceptanceCriteria": [
-        "GET /api/v1/libraries/:libraryId/media — list media items with pagination",
+        "GET /api/v1/libraries/:libraryId/media \u2014 list media items with pagination",
         "Query params for filtering: mediaCategory, mimeType, drmProtected",
         "Query params for sorting: title, dateAdded, fileSize, releaseDate",
-        "GET /api/v1/media/:id — get single media item with full metadata",
+        "GET /api/v1/media/:id \u2014 get single media item with full metadata",
         "Response includes thumbnail URLs",
         "Typecheck passes",
         "Tests pass"
@@ -450,7 +450,7 @@
     },
     {
       "id": "US-028",
-      "title": "Library browser — grid view",
+      "title": "Library browser \u2014 grid view",
       "description": "As a user, I want to browse a library's media in a responsive grid of thumbnail cards.",
       "acceptanceCriteria": [
         "Grid view at /libraries/:id showing media item cards",
@@ -466,7 +466,7 @@
     },
     {
       "id": "US-029",
-      "title": "Library browser — list view",
+      "title": "Library browser \u2014 list view",
       "description": "As a user, I want to switch to a list/table view in the library browser.",
       "acceptanceCriteria": [
         "Toggle between grid and list view, preference persisted in Zustand",
@@ -482,7 +482,7 @@
     },
     {
       "id": "US-030",
-      "title": "Library browser — filtering and sorting controls",
+      "title": "Library browser \u2014 filtering and sorting controls",
       "description": "As a user, I want to filter library contents by type, genre, year, rating, and tags, and sort by various fields.",
       "acceptanceCriteria": [
         "Filter bar with dropdowns: media category, genre, year range, rating, custom tags",
@@ -515,7 +515,7 @@
     },
     {
       "id": "US-032",
-      "title": "Media detail — metadata editing",
+      "title": "Media detail \u2014 metadata editing",
       "description": "As a user, I want to edit media item metadata (title, description, tags) from the detail page.",
       "acceptanceCriteria": [
         "Edit button toggles inline editing on detail page",
@@ -548,7 +548,7 @@
     },
     {
       "id": "US-034",
-      "title": "Video player — subtitle and audio track selection",
+      "title": "Video player \u2014 subtitle and audio track selection",
       "description": "As a user, I want to select subtitle tracks and audio tracks during video playback.",
       "acceptanceCriteria": [
         "API endpoint to list available subtitle and audio tracks from FFprobe metadata",
@@ -598,7 +598,7 @@
     },
     {
       "id": "US-037",
-      "title": "Document viewer — PDF rendering",
+      "title": "Document viewer \u2014 PDF rendering",
       "description": "As a user, I want to view PDF documents in the browser.",
       "acceptanceCriteria": [
         "PDF viewer component using pdf.js or similar library",
@@ -613,7 +613,7 @@
     },
     {
       "id": "US-038",
-      "title": "Document viewer — EPUB/MOBI reader",
+      "title": "Document viewer \u2014 EPUB/MOBI reader",
       "description": "As a user, I want to read EPUB and MOBI ebooks in the browser.",
       "acceptanceCriteria": [
         "EPUB reader component with chapter navigation",
@@ -629,7 +629,7 @@
     },
     {
       "id": "US-039",
-      "title": "Font viewer — specimen and glyph browser",
+      "title": "Font viewer \u2014 specimen and glyph browser",
       "description": "As a user, I want to preview fonts with specimen text and browse individual glyphs.",
       "acceptanceCriteria": [
         "Font viewer component that loads font file via @font-face",
@@ -645,7 +645,7 @@
     },
     {
       "id": "US-040",
-      "title": "Archive viewer — content listing",
+      "title": "Archive viewer \u2014 content listing",
       "description": "As a user, I want to browse archive contents without extracting them.",
       "acceptanceCriteria": [
         "Archive content listing API: GET /api/v1/media/:id/archive-contents",
@@ -730,9 +730,9 @@
       "description": "As a user, I want a system tray icon (Windows) or menubar icon (macOS) showing server status with basic controls.",
       "acceptanceCriteria": [
         "Tray/menubar icon indicating server status: running (green), scanning (yellow), error (red)",
-        "Menu item: Open Web UI — opens default browser to http://localhost:32400",
-        "Menu item: Server Status — shows uptime, active users, scan state",
-        "Menu item: Quit — gracefully shuts down server and exits",
+        "Menu item: Open Web UI \u2014 opens default browser to http://localhost:32400",
+        "Menu item: Server Status \u2014 shows uptime, active users, scan state",
+        "Menu item: Quit \u2014 gracefully shuts down server and exits",
         "Icon tooltip shows current status text",
         "Typecheck passes"
       ],
@@ -858,7 +858,7 @@
     },
     {
       "id": "US-053",
-      "title": "Plugin database access — scoped queries",
+      "title": "Plugin database access \u2014 scoped queries",
       "description": "As a plugin developer, I want scoped database access to store and retrieve plugin-specific data.",
       "acceptanceCriteria": [
         "Plugin context provides a scoped database interface",
@@ -924,7 +924,7 @@
     },
     {
       "id": "US-057",
-      "title": "Plugin sandbox — filesystem and network restrictions",
+      "title": "Plugin sandbox \u2014 filesystem and network restrictions",
       "description": "As an admin, I want plugins sandboxed so they cannot access files or network beyond declared permissions.",
       "acceptanceCriteria": [
         "Plugin manifest declares required permissions: filesystem paths, network domains",
@@ -941,7 +941,7 @@
     },
     {
       "id": "US-058",
-      "title": "First-party metadata plugin — TMDb for movies and TV",
+      "title": "First-party metadata plugin \u2014 TMDb for movies and TV",
       "description": "As a user, I want movies and TV shows automatically matched and enriched with TMDb metadata.",
       "acceptanceCriteria": [
         "Plugin registered as MetadataSource type for Movies and TV Shows categories",
@@ -958,7 +958,7 @@
     },
     {
       "id": "US-059",
-      "title": "First-party metadata plugin — MusicBrainz for music",
+      "title": "First-party metadata plugin \u2014 MusicBrainz for music",
       "description": "As a user, I want music files matched and enriched with MusicBrainz metadata.",
       "acceptanceCriteria": [
         "Plugin registered as MetadataSource type for Music category",
@@ -975,7 +975,7 @@
     },
     {
       "id": "US-060",
-      "title": "First-party metadata plugin — OpenLibrary for documents/books",
+      "title": "First-party metadata plugin \u2014 OpenLibrary for documents/books",
       "description": "As a user, I want ebooks and documents matched against OpenLibrary for cover art and metadata.",
       "acceptanceCriteria": [
         "Plugin registered as MetadataSource type for Documents category",
@@ -990,7 +990,7 @@
     },
     {
       "id": "US-061",
-      "title": "First-party format plugin — 3D model WebGL viewer",
+      "title": "First-party format plugin \u2014 3D model WebGL viewer",
       "description": "As a user, I want to preview 3D models (OBJ, glTF, GLB) in a WebGL viewer in the browser.",
       "acceptanceCriteria": [
         "Plugin registered as FormatHandler for 3D Models category",
@@ -1023,13 +1023,13 @@
     },
     {
       "id": "US-063",
-      "title": "Authentication — login, sessions, and JWT tokens",
+      "title": "Authentication \u2014 login, sessions, and JWT tokens",
       "description": "As a user, I want to log in with credentials and receive a session token for API access.",
       "acceptanceCriteria": [
-        "POST /api/v1/auth/login — accepts username/password, returns JWT access token and refresh token",
+        "POST /api/v1/auth/login \u2014 accepts username/password, returns JWT access token and refresh token",
         "Access tokens are short-lived (15 minutes)",
-        "POST /api/v1/auth/refresh — refresh token rotation for new access token",
-        "POST /api/v1/auth/logout — invalidate refresh token",
+        "POST /api/v1/auth/refresh \u2014 refresh token rotation for new access token",
+        "POST /api/v1/auth/logout \u2014 invalidate refresh token",
         "Auth middleware on all /api/v1/ routes (except /auth/*)",
         "Typecheck passes",
         "Tests pass"
@@ -1131,8 +1131,8 @@
       "description": "As a user, I want my watch and listen progress tracked so I can resume where I left off.",
       "acceptanceCriteria": [
         "Progress table: userId, mediaItemId, position (seconds or page), duration, completed, updatedAt",
-        "PUT /api/v1/media/:id/progress — save playback position",
-        "GET /api/v1/users/me/progress — list in-progress items",
+        "PUT /api/v1/media/:id/progress \u2014 save playback position",
+        "GET /api/v1/users/me/progress \u2014 list in-progress items",
         "Video and audio players report progress periodically (every 10 seconds)",
         "Document readers save reading position on page change",
         "Typecheck passes",
@@ -1148,10 +1148,10 @@
       "description": "As a user, I want to mark media items as favorites and add them to my personal watchlist.",
       "acceptanceCriteria": [
         "Favorites table: userId, mediaItemId, createdAt",
-        "POST/DELETE /api/v1/media/:id/favorite — toggle favorite",
-        "GET /api/v1/users/me/favorites — list favorites",
+        "POST/DELETE /api/v1/media/:id/favorite \u2014 toggle favorite",
+        "GET /api/v1/users/me/favorites \u2014 list favorites",
         "Watchlist table: userId, mediaItemId, createdAt",
-        "POST/DELETE /api/v1/media/:id/watchlist — toggle watchlist",
+        "POST/DELETE /api/v1/media/:id/watchlist \u2014 toggle watchlist",
         "Heart icon on media cards and detail page",
         "Typecheck passes",
         "Verify in browser using dev-browser skill"
@@ -1166,9 +1166,9 @@
       "description": "As a user, I want to generate API tokens for programmatic access and future client app connections.",
       "acceptanceCriteria": [
         "API tokens table: id, userId, name, tokenHash, lastUsedAt, expiresAt, createdAt",
-        "POST /api/v1/users/me/tokens — generate new token (returned once)",
-        "GET /api/v1/users/me/tokens — list tokens (names only, not values)",
-        "DELETE /api/v1/users/me/tokens/:id — revoke token",
+        "POST /api/v1/users/me/tokens \u2014 generate new token (returned once)",
+        "GET /api/v1/users/me/tokens \u2014 list tokens (names only, not values)",
+        "DELETE /api/v1/users/me/tokens/:id \u2014 revoke token",
         "Auth middleware accepts Bearer token in Authorization header",
         "Typecheck passes",
         "Tests pass"
@@ -1179,7 +1179,7 @@
     },
     {
       "id": "US-072",
-      "title": "Search — FTS5 full-text index setup",
+      "title": "Search \u2014 FTS5 full-text index setup",
       "description": "As a developer, I need SQLite FTS5 configured to index media item metadata for fast search.",
       "acceptanceCriteria": [
         "FTS5 virtual table indexing: title, description, file name, tags, extracted text metadata",
@@ -1228,7 +1228,7 @@
     },
     {
       "id": "US-075",
-      "title": "Automatic grouping — TV episodes into series and seasons",
+      "title": "Automatic grouping \u2014 TV episodes into series and seasons",
       "description": "As a user, I want TV episode files automatically grouped into series and seasons based on filename and metadata.",
       "acceptanceCriteria": [
         "Groups table: id, libraryId, type (series/season/album/etc), title, parentGroupId, metadata (JSON), createdAt",
@@ -1245,7 +1245,7 @@
     },
     {
       "id": "US-076",
-      "title": "Automatic grouping — music into albums and artists",
+      "title": "Automatic grouping \u2014 music into albums and artists",
       "description": "As a user, I want music tracks automatically grouped into albums and artist discographies.",
       "acceptanceCriteria": [
         "Auto-create album groups from ID3/Vorbis album tags",
@@ -1262,7 +1262,7 @@
     },
     {
       "id": "US-077",
-      "title": "Automatic grouping — audiobooks into books and series",
+      "title": "Automatic grouping \u2014 audiobooks into books and series",
       "description": "As a user, I want audiobook files automatically grouped into books and series.",
       "acceptanceCriteria": [
         "Auto-group audiobook chapters into book groups by folder structure and metadata",
@@ -1278,7 +1278,7 @@
     },
     {
       "id": "US-078",
-      "title": "Automatic grouping — photos by date and location",
+      "title": "Automatic grouping \u2014 photos by date and location",
       "description": "As a user, I want photos automatically grouped by date, location, and event.",
       "acceptanceCriteria": [
         "Auto-group photos by date (day) using EXIF date taken",
@@ -1294,7 +1294,7 @@
     },
     {
       "id": "US-079",
-      "title": "Manual grouping — collections, playlists, albums, shelves UI",
+      "title": "Manual grouping \u2014 collections, playlists, albums, shelves UI",
       "description": "As a user, I want to create custom collections, playlists, albums, folders, and shelves from the web UI.",
       "acceptanceCriteria": [
         "Create group dialog adapts naming by media context (Collection for video, Playlist for music, Album for photos, Folder for documents, Shelf for mixed)",
@@ -1413,7 +1413,7 @@
     {
       "id": "US-086",
       "title": "AI configuration settings",
-      "description": "As an admin, I want to configure AI features — enable/disable, choose local vs cloud, set API keys.",
+      "description": "As an admin, I want to configure AI features \u2014 enable/disable, choose local vs cloud, set API keys.",
       "acceptanceCriteria": [
         "Admin settings page section for AI configuration",
         "Toggle: enable/disable AI features globally",
@@ -1430,11 +1430,11 @@
     },
     {
       "id": "US-087",
-      "title": "Metadata backup — database export and import",
+      "title": "Metadata backup \u2014 database export and import",
       "description": "As a user, I want to export and import the complete Xon database as a portable backup archive.",
       "acceptanceCriteria": [
-        "POST /api/v1/admin/backup/metadata — export database, settings, and plugin configs as ZIP",
-        "POST /api/v1/admin/restore/metadata — import backup ZIP and restore database",
+        "POST /api/v1/admin/backup/metadata \u2014 export database, settings, and plugin configs as ZIP",
+        "POST /api/v1/admin/restore/metadata \u2014 import backup ZIP and restore database",
         "Backup includes: SQLite database, server config, plugin list and settings",
         "Export progress reported via WebSocket",
         "Backup file includes version info for compatibility checking on restore",
@@ -1463,12 +1463,12 @@
     },
     {
       "id": "US-089",
-      "title": "Media file backup — full and partial",
+      "title": "Media file backup \u2014 full and partial",
       "description": "As a user, I want to back up my source media files to configured backup targets.",
       "acceptanceCriteria": [
         "Full backup: copy all media files from selected libraries to backup target",
         "Partial backup: select specific libraries, collections, media types, or individual items",
-        "POST /api/v1/admin/backup/media — start backup job with scope and target",
+        "POST /api/v1/admin/backup/media \u2014 start backup job with scope and target",
         "Backup progress tracked and reported via WebSocket",
         "Backup job history stored in database",
         "Typecheck passes",
@@ -1516,7 +1516,7 @@
       "title": "Backup verification and integrity checks",
       "description": "As a user, I want to verify that backed-up files are complete and uncorrupted.",
       "acceptanceCriteria": [
-        "POST /api/v1/admin/backup/verify/:targetId — run integrity check",
+        "POST /api/v1/admin/backup/verify/:targetId \u2014 run integrity check",
         "Checksum comparison between source and backup files",
         "Report: total files checked, passed, failed, missing",
         "Failed/missing files flagged for re-backup",
@@ -1564,14 +1564,14 @@
     },
     {
       "id": "US-095",
-      "title": "Sync profiles — full and partial sync",
+      "title": "Sync profiles \u2014 full and partial sync",
       "description": "As a user, I want to sync media and metadata to another location or device for offline use.",
       "acceptanceCriteria": [
         "Sync profiles table: id, name, type (full/partial), scope (JSON), targetPath, includeMedia (boolean)",
         "Full sync: mirror entire library metadata and optionally media files",
         "Partial sync: sync selected collections, playlists, or items",
         "API: CRUD for sync profiles at /api/v1/sync/profiles",
-        "POST /api/v1/sync/profiles/:id/run — execute sync",
+        "POST /api/v1/sync/profiles/:id/run \u2014 execute sync",
         "Typecheck passes",
         "Tests pass"
       ],
@@ -1678,7 +1678,7 @@
     },
     {
       "id": "US-102",
-      "title": "Admin settings page — server configuration",
+      "title": "Admin settings page \u2014 server configuration",
       "description": "As an admin, I want a settings page to configure server options like port, data directory, and scan defaults.",
       "acceptanceCriteria": [
         "Admin page at /admin/settings",
@@ -1695,7 +1695,7 @@
     },
     {
       "id": "US-103",
-      "title": "Admin page — system health monitoring",
+      "title": "Admin page \u2014 system health monitoring",
       "description": "As an admin, I want a dashboard showing system health: uptime, memory, CPU, storage, and active scans.",
       "acceptanceCriteria": [
         "Admin page at /admin/health or section on /admin",
@@ -1763,7 +1763,7 @@
     },
     {
       "id": "US-107",
-      "title": "Performance optimization — API response caching",
+      "title": "Performance optimization \u2014 API response caching",
       "description": "As a user, I want fast API responses via appropriate caching strategies.",
       "acceptanceCriteria": [
         "ETag-based caching for media list and detail endpoints",
@@ -1779,7 +1779,7 @@
     },
     {
       "id": "US-108",
-      "title": "Performance optimization — lazy loading and code splitting",
+      "title": "Performance optimization \u2014 lazy loading and code splitting",
       "description": "As a user, I want the web UI to load fast with lazy-loaded routes and code splitting.",
       "acceptanceCriteria": [
         "React.lazy and Suspense for route-level code splitting",
@@ -1796,7 +1796,7 @@
     },
     {
       "id": "US-109",
-      "title": "Electron desktop — auto-start on login",
+      "title": "Electron desktop \u2014 auto-start on login",
       "description": "As a user, I want the option to auto-start Xon Desktop on system login.",
       "acceptanceCriteria": [
         "Setting to enable/disable auto-start on login",
@@ -1811,7 +1811,7 @@
     },
     {
       "id": "US-110",
-      "title": "Electron desktop — notification forwarding",
+      "title": "Electron desktop \u2014 notification forwarding",
       "description": "As a user, I want desktop notifications when scans complete or new media is detected.",
       "acceptanceCriteria": [
         "Native OS notifications via Electron Notification API",

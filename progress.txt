@@ -1,3 +1,20 @@
+## 2026-03-27 - US-016
+- Implemented metadata extraction for Documents, Fonts, 3D Models, and Archives in `miscmeta.ts`
+- Files changed: packages/server-core/src/miscmeta.ts (new), src/miscmeta.test.ts (new), src/orchestrator.ts (calls misc extractors), src/index.ts (exports)
+- Documents: ExifTool extracts PageCount, Author, Title via shared `runExiftool()` helper
+- Fonts: ExifTool extracts FamilyName/FontSubfamily/NumGlyphs; subfamily string parsed into fontWeight/fontStyle
+- 3D Models: OBJ files parsed with `readFile` counting "v " (vertex) and "f " (face) lines; glTF JSON parsed via POSITION accessor count and indices/3 for face count; unsupported formats return `{}`
+- Archives: ZIP parsed by reading EOCD record from end of file then iterating central directory entries; TAR parsed with 512-byte header blocks; .tgz/.tar.gz decompressed with `gunzipSync` before TAR parsing; unsupported formats return `{}`
+- 27 new tests in miscmeta.test.ts; total 139 tests in server-core
+- **Learnings for future iterations:**
+  - Mocking `node:fs/promises` with `vi.mock("node:fs/promises", () => ({ readFile: vi.fn() }))` works cleanly alongside `node:child_process` mocks
+  - ZIP EOCD signature `0x06054b50` is at the end of file (before comment); central directory starts at cdOffset with `0x02014b50` entries at fixed 46-byte stride + variable filename/extra/comment
+  - TAR headers are 512-byte blocks; filename at bytes 0-99, size in octal at 124-135, typeflag at 156 ('0'/NUL = regular file); USTAR prefix at 345 when magic "ustar" is at 257
+  - `gunzipSync` from `node:zlib` can decompress a gzipped TAR buffer before parsing; detect gzip by magic bytes `0x1f 0x8b`
+  - ExifTool shared helper `runExiftool(filePath)` returns `Record<string, unknown> | null` — avoids repeating spawn boilerplate for doc/font extractors
+  - `block[156]` in Buffer is a number, not a character — compare with `0x30` (ASCII '0') not `'0'`
+---
+
 ## 2026-03-27 - US-015
 - Implemented `music-metadata` npm library for ID3/Vorbis tag parsing for Music and Audiobook categories
 - Files changed: packages/server-core/src/musictags.ts (new), src/musictags.test.ts (new), src/orchestrator.ts (calls extractMusicTags before ffprobe check), src/index.ts (exports), package.json (added music-metadata dep)
@@ -151,6 +168,9 @@
 - Biome `useLiteralKeys`: use dot notation (`obj.snake_case`) not bracket notation (`obj["snake_case"]`) for `Record<string, unknown>` access
 - Mocking `node:child_process` spawn: create EventEmitter with `.stdout` EventEmitter, cast to `ReturnType<typeof spawn>`
 - `music-metadata` `parseFile()` returns `{ common, format }` — `common.track`/`common.disk` always present with `.no: number | null`; `common.genre` is `string[]`; mock with `vi.mock('music-metadata', () => ({ parseFile: vi.fn() }))`, cast return as `never`
+- Mock `node:fs/promises` with `vi.mock("node:fs/promises", () => ({ readFile: vi.fn() }))` alongside `node:child_process` mocks — both work independently per test file
+- ZIP binary parsing: search for EOCD sig `0x06054b50` from end of file; CD entries at cdOffset each start with `0x02014b50` with uncompressed size at offset+24, filename length at offset+28 (46-byte fixed header + variable name/extra/comment)
+- TAR parsing: 512-byte blocks; filename at 0-99, size in octal at 124-135, typeflag at 156 (0x30='0' or 0 = regular file); USTAR prefix at 345 when "ustar" magic at 257; `gunzipSync` from `node:zlib` to decompress .tgz before parsing
 
 ---
 
