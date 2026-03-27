@@ -4,6 +4,9 @@
 - Biome for linting/formatting (not ESLint/Prettier)
 - Node version: v24.14.0 (despite PRD saying Node 22.x LTS, .nvmrc had v24.14.0)
 - tsconfig.json uses composite: true for project references support
+- Each new package needs: package.json (type:"module", exports with .js extensions), tsconfig.json (extends root), src/index.ts
+- When adding a package, add its path to root tsconfig.json "references" array and run `yarn install`
+- Use `yarn biome check <dir>` (not `yarn check`) for linting; `yarn check` validates workspace deps
 
 ---
 
@@ -17,4 +20,16 @@
   - Yarn 1.22.22 is installed and working
   - `tsc --build` works at root level for typecheck
   - Empty workspace directories are not committed to git (need .gitkeep or content)
+---
+
+## 2026-03-27 - US-002
+- Created packages/shared with core TypeScript types and constants
+- Files changed: packages/shared/package.json, packages/shared/tsconfig.json, packages/shared/src/index.ts, packages/shared/src/types.ts, packages/shared/src/constants.ts, tsconfig.json (added reference), yarn.lock
+- Types defined: Library, DataSource, MediaItem, User (all with proper fields per PRD)
+- Constants: DEFAULT_PORT=32400, MediaCategory enum (20 values), UserRole enum (admin/user/guest)
+- **Learnings for future iterations:**
+  - ESM packages require .js extensions in import paths (even for .ts source files)
+  - Package exports must use ./dist/index.js paths (not ./src/index.ts)
+  - `yarn check` validates workspace dep graph; use `yarn biome check <dir>` for linting
+  - Adding a package: create files → update root tsconfig.json references → `yarn install`
 ---
