@@ -1,3 +1,20 @@
+## 2026-03-27 - US-017
+- Implemented thumbnail generation for image media items using `sharp` library
+- Files changed: packages/server-core/src/thumbnails.ts (new), src/thumbnails.test.ts (new), src/orchestrator.ts (calls generateThumbnails for image items), src/schema.ts (added thumbnailPaths column), src/index.ts (exports), drizzle/0002_aromatic_hobgoblin.sql (migration), package.json (added sharp dep)
+- `generateThumbnails(filePath, mediaItemId, dataDir)` generates 3 sizes (small=150px, medium=300px, large=600px) using sharp's `fit: "inside", withoutEnlargement: true` mode; saves as JPEG with quality 80
+- Thumbnails stored at `<dataDir>/thumbnails/<mediaItemId>_<size>.jpg`; creates thumbnails dir with `mkdir -p`
+- Returns null on mkdir failure or sharp processing error (graceful fallback)
+- Schema updated: added `thumbnailPaths text` nullable column to `media_items`; migration 0002 adds the column via `ALTER TABLE`
+- Orchestrator: for new image items, generates thumbnails before insert and stores JSON-serialized paths; for changed items, fetches existing DB id then regenerates thumbnails
+- `scanLibrary` now accepts optional `dataDir` parameter (defaults to `process.env.DATA_DIR ?? "./data"`)
+- 6 new tests in thumbnails.test.ts; total 145 tests in server-core
+- **Learnings for future iterations:**
+  - `sharp` default import (ESM): `import sharp from "sharp"` — mock with `vi.mock("sharp", () => ({ default: mockFn }))`
+  - `sharp(file).clone().resize(w, h, { fit: "inside", withoutEnlargement: true }).jpeg().toFile(path)` pattern for batch-safe thumbnail generation; use `clone()` per size to reuse the same sharp instance
+  - Drizzle `ALTER TABLE ADD COLUMN` migration generated cleanly by drizzle-kit after schema update; `yarn workspace @xon/server-core db:generate` handles it
+  - `@types/sharp` is bundled with sharp — no separate `@types/sharp` package needed
+---
+
 ## 2026-03-27 - US-016
 - Implemented metadata extraction for Documents, Fonts, 3D Models, and Archives in `miscmeta.ts`
 - Files changed: packages/server-core/src/miscmeta.ts (new), src/miscmeta.test.ts (new), src/orchestrator.ts (calls misc extractors), src/index.ts (exports)
@@ -171,6 +188,8 @@
 - Mock `node:fs/promises` with `vi.mock("node:fs/promises", () => ({ readFile: vi.fn() }))` alongside `node:child_process` mocks — both work independently per test file
 - ZIP binary parsing: search for EOCD sig `0x06054b50` from end of file; CD entries at cdOffset each start with `0x02014b50` with uncompressed size at offset+24, filename length at offset+28 (46-byte fixed header + variable name/extra/comment)
 - TAR parsing: 512-byte blocks; filename at 0-99, size in octal at 124-135, typeflag at 156 (0x30='0' or 0 = regular file); USTAR prefix at 345 when "ustar" magic at 257; `gunzipSync` from `node:zlib` to decompress .tgz before parsing
+- `sharp` ESM default import; mock as `vi.mock("sharp", () => ({ default: vi.fn() }))`; use `.clone()` per size for batch-safe thumbnail generation; types bundled with sharp (no @types/sharp needed)
+- Drizzle `ALTER TABLE ADD COLUMN` migrations generated cleanly via `yarn workspace @xon/server-core db:generate` after schema update
 
 ---
 
