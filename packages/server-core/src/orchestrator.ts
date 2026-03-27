@@ -2,6 +2,7 @@ import { and, eq, inArray } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { extractExiftoolMetadata, isImageCategory } from "./exiftool.js";
 import { extractFfprobeMetadata, isAudioVideoCategory } from "./ffprobe.js";
+import { extractMusicTags, isMusicCategory } from "./musictags.js";
 import { scanDataSource } from "./scanner.js";
 import { dataSources, libraries, mediaItems } from "./schema.js";
 
@@ -63,7 +64,12 @@ export async function scanLibrary(
       onProgress?.(progress);
 
       let metadata = "{}";
-      if (isAudioVideoCategory(entry.mediaCategory)) {
+      if (isMusicCategory(entry.mediaCategory)) {
+        const musicMeta = await extractMusicTags(entry.filePath);
+        if (musicMeta) {
+          metadata = JSON.stringify(musicMeta);
+        }
+      } else if (isAudioVideoCategory(entry.mediaCategory)) {
         const ffMeta = await extractFfprobeMetadata(entry.filePath);
         if (ffMeta) {
           metadata = JSON.stringify(ffMeta);
@@ -106,7 +112,12 @@ export async function scanLibrary(
         scannedAt: now,
       };
 
-      if (isAudioVideoCategory(entry.mediaCategory)) {
+      if (isMusicCategory(entry.mediaCategory)) {
+        const musicMeta = await extractMusicTags(entry.filePath);
+        if (musicMeta) {
+          updateFields.metadata = JSON.stringify(musicMeta);
+        }
+      } else if (isAudioVideoCategory(entry.mediaCategory)) {
         const ffMeta = await extractFfprobeMetadata(entry.filePath);
         if (ffMeta) {
           updateFields.metadata = JSON.stringify(ffMeta);

@@ -22,6 +22,11 @@ export {
   isAudioVideoCategory,
   type FfprobeMetadata,
 } from "./ffprobe.js";
+export {
+  extractMusicTags,
+  isMusicCategory,
+  type MusicTagsMetadata,
+} from "./musictags.js";
 export { scanDataSource, type FileEntry, type ScanResult } from "./scanner.js";
 export { scanLibrary, type ScanProgress, type ScanSummary } from "./orchestrator.js";
 export { boot } from "./server.js";
