@@ -27,6 +27,20 @@ export {
   isMusicCategory,
   type MusicTagsMetadata,
 } from "./musictags.js";
+export {
+  extractDocumentMetadata,
+  extractFontMetadata,
+  extract3DModelMetadata,
+  extractArchiveMetadata,
+  isDocumentCategory,
+  isFontCategory,
+  is3DModelCategory,
+  isArchiveCategory,
+  type DocumentMetadata,
+  type FontMetadata,
+  type Model3DMetadata,
+  type ArchiveMetadata,
+} from "./miscmeta.js";
 export { scanDataSource, type FileEntry, type ScanResult } from "./scanner.js";
 export { scanLibrary, type ScanProgress, type ScanSummary } from "./orchestrator.js";
 export { boot } from "./server.js";

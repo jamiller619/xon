@@ -2,6 +2,16 @@ import { and, eq, inArray } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { extractExiftoolMetadata, isImageCategory } from "./exiftool.js";
 import { extractFfprobeMetadata, isAudioVideoCategory } from "./ffprobe.js";
+import {
+  extract3DModelMetadata,
+  extractArchiveMetadata,
+  extractDocumentMetadata,
+  extractFontMetadata,
+  is3DModelCategory,
+  isArchiveCategory,
+  isDocumentCategory,
+  isFontCategory,
+} from "./miscmeta.js";
 import { extractMusicTags, isMusicCategory } from "./musictags.js";
 import { scanDataSource } from "./scanner.js";
 import { dataSources, libraries, mediaItems } from "./schema.js";
@@ -79,6 +89,26 @@ export async function scanLibrary(
         if (exifMeta) {
           metadata = JSON.stringify(exifMeta);
         }
+      } else if (isDocumentCategory(entry.mediaCategory)) {
+        const docMeta = await extractDocumentMetadata(entry.filePath);
+        if (docMeta) {
+          metadata = JSON.stringify(docMeta);
+        }
+      } else if (isFontCategory(entry.mediaCategory)) {
+        const fontMeta = await extractFontMetadata(entry.filePath);
+        if (fontMeta) {
+          metadata = JSON.stringify(fontMeta);
+        }
+      } else if (is3DModelCategory(entry.mediaCategory)) {
+        const modelMeta = await extract3DModelMetadata(entry.filePath);
+        if (modelMeta) {
+          metadata = JSON.stringify(modelMeta);
+        }
+      } else if (isArchiveCategory(entry.mediaCategory)) {
+        const archiveMeta = await extractArchiveMetadata(entry.filePath);
+        if (archiveMeta) {
+          metadata = JSON.stringify(archiveMeta);
+        }
       }
 
       await db.insert(mediaItems).values({
@@ -126,6 +156,26 @@ export async function scanLibrary(
         const exifMeta = await extractExiftoolMetadata(entry.filePath);
         if (exifMeta) {
           updateFields.metadata = JSON.stringify(exifMeta);
+        }
+      } else if (isDocumentCategory(entry.mediaCategory)) {
+        const docMeta = await extractDocumentMetadata(entry.filePath);
+        if (docMeta) {
+          updateFields.metadata = JSON.stringify(docMeta);
+        }
+      } else if (isFontCategory(entry.mediaCategory)) {
+        const fontMeta = await extractFontMetadata(entry.filePath);
+        if (fontMeta) {
+          updateFields.metadata = JSON.stringify(fontMeta);
+        }
+      } else if (is3DModelCategory(entry.mediaCategory)) {
+        const modelMeta = await extract3DModelMetadata(entry.filePath);
+        if (modelMeta) {
+          updateFields.metadata = JSON.stringify(modelMeta);
+        }
+      } else if (isArchiveCategory(entry.mediaCategory)) {
+        const archiveMeta = await extractArchiveMetadata(entry.filePath);
+        if (archiveMeta) {
+          updateFields.metadata = JSON.stringify(archiveMeta);
         }
       }
 
