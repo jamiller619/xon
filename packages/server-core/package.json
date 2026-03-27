@@ -20,10 +20,12 @@
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
+    "@hono/zod-validator": "^0.4.3",
     "@libsql/client": "^0.14.0",
     "@xon/shared": "*",
     "drizzle-orm": "^0.40.0",
-    "hono": "^4.7.4"
+    "hono": "^4.7.4",
+    "zod": "^3.24.0"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

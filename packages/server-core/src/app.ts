@@ -1,9 +1,20 @@
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
+import { makeLibrariesRouter } from "./routes/libraries.js";
 
-const app = new Hono().basePath("/api/v1");
+export function createApp(db?: LibSQLDatabase): Hono {
+  const app = new Hono().basePath("/api/v1");
 
-app.get("/health", (c) => {
-  return c.json({ status: "ok", timestamp: new Date().toISOString() });
-});
+  app.get("/health", (c) => {
+    return c.json({ status: "ok", timestamp: new Date().toISOString() });
+  });
 
-export { app };
+  if (db) {
+    app.route("/libraries", makeLibrariesRouter(db));
+  }
+
+  return app;
+}
+
+// Default app instance (health-check only, no db) — used by existing tests
+export const app = createApp();
