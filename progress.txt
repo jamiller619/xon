@@ -1,3 +1,17 @@
+## 2026-03-27 - US-030
+- Added filter bar and active filter chips to LibraryBrowser page
+- Files changed: apps/web/src/pages/LibraryBrowser.tsx, LibraryBrowser.module.css, packages/server-core/src/routes/libraries.ts
+- Filter bar has 6 controls: Category (functional), Sort (functional), Genre/Year/Rating/Tags (disabled placeholders for future use)
+- Category filter maps to `mediaCategory` query param already supported by the library media API
+- Sort dropdown replaces/augments column-header sorting; options: Date Added, Title A-Z/Z-A, File Size, Release Date, Rating
+- Active filters shown as removable chips; "Clear all" button appears when multiple filters active
+- Server: added `rating` sort via `json_extract(metadata, '$.rating')` alongside existing `releaseDate` sort
+- **Learnings for future iterations:**
+  - `URLSearchParams` is clean for building query strings with optional params (`params.set(key, val)` only when val is set)
+  - For disabled select elements, combine `.filterSelect` + `.filterDisabled` classes; TypeScript is fine with disabled selects
+  - SORT_OPTIONS array of `{ label, col, dir }` objects + a `makeSortKey(col, dir)` string serializer is an ergonomic pattern for controlled sort dropdowns
+---
+
 ## 2026-03-27 - US-028
 - Implemented library browser page at /libraries/:id with responsive grid view
 - Files created: apps/web/src/pages/LibraryBrowser.tsx, LibraryBrowser.module.css
