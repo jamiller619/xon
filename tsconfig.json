@@ -28,6 +28,7 @@
     "dist",
     "**/dist",
     "**/*.test.ts",
-    "**/*.spec.ts"
+    "**/*.spec.ts",
+    "apps/web"
   ]
 }
