@@ -1,3 +1,20 @@
+## 2026-03-27 - US-025
+- Scaffolded `apps/web` React web app with Vite 6, React 19, React Router 7, Zustand 5, CSS Modules
+- Files created: apps/web/package.json, apps/web/tsconfig.json, apps/web/vite.config.ts, apps/web/index.html, apps/web/src/main.tsx, apps/web/src/App.tsx, apps/web/src/store/index.ts
+- Also updated root tsconfig.json to exclude apps/web (avoids NodeNext/JSX conflicts)
+- Dev server proxies `/api` to `http://localhost:32400` via vite.config.ts `server.proxy`
+- Vite build outputs to `apps/web/dist` — set `WEB_CLIENT_DIR=apps/web/dist` for server-core static serving
+- Zustand store (`src/store/index.ts`) has `sidebarOpen`/`viewMode` state as skeleton for UI stories
+- CSS Modules: Vite supports `*.module.css` natively, no extra config needed
+- App routes: /, /libraries/:id, /media/:id, /search, /admin — all with placeholder elements
+- Web app typecheck uses `tsc` with `noEmit: true` in tsconfig (not `tsc --build --noEmit`); `moduleResolution: "bundler"` for Vite
+- **Learnings for future iterations:**
+  - Root `tsc --build` scans all TS files not in `exclude` — must add `apps/web` to root tsconfig exclude to prevent NodeNext settings from being applied to JSX/DOM files
+  - Web app tsconfig uses `moduleResolution: "bundler"` + `lib: ["ES2022", "DOM", "DOM.Iterable"]` + `jsx: "react-jsx"` + `noEmit: true`; standalone (not composite, not in root references)
+  - With bundler resolution, imports don't need `.js` extensions (unlike NodeNext)
+  - CSS Modules work out-of-the-box in Vite for files named `*.module.css`
+---
+
 ## 2026-03-27 - US-023
 - Implemented DRM detection in `drm.ts` for FairPlay (M4V/M4A), Widevine (MP4/M4V), and Adobe ADEPT (EPUB)
 - Files changed: packages/server-core/src/drm.ts (new), src/drm.test.ts (new), src/orchestrator.ts (calls detectDrm for all new/changed files), src/index.ts (exports detectDrm)
@@ -298,6 +315,8 @@
 - Mock `node:fs` with `vi.mock("node:fs", () => ({ watch: vi.fn() }))` to capture fs.watch callbacks; use `mockImplementation` to capture callback for debounce tests
 - Biome `noNonNullAssertion` in test files: use `?.()` instead of `!()` for optional function calls (after `expect().toBeDefined()`)
 - `fs.watch` (from `node:fs`, not `node:fs/promises`) for filesystem watching; supports `{ recursive: boolean }` options
+- Frontend (apps/web): Vite 6 + React 19 + React Router 7 + Zustand 5; tsconfig uses `moduleResolution: "bundler"`, `lib: ["ES2022","DOM","DOM.Iterable"]`, `jsx: "react-jsx"`, `noEmit: true`; excluded from root tsconfig to avoid NodeNext/JSX conflicts
+- Root tsconfig.json exclude must include `apps/web` to prevent root `tsc --build` from applying NodeNext module resolution to browser/JSX files
 
 ---
 
