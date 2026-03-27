@@ -1,3 +1,19 @@
+## 2026-03-27 - US-020
+- Implemented media items list and detail API endpoints
+- Files changed: packages/server-core/src/routes/media.ts (added GET /:id, added withThumbnailUrls helper), src/routes/libraries.ts (added GET /:libraryId/media), src/routes/media.test.ts (3 new tests), src/routes/libraries.test.ts (9 new tests for media list)
+- `GET /api/v1/media/:id` returns full media item with computed `thumbnailUrls` field (object with small/medium/large URL strings, or null if no thumbnails)
+- `GET /api/v1/libraries/:libraryId/media` supports filtering (mediaCategory, mimeType, drmProtected), sorting (title, fileSize, releaseDate via json_extract, default dateAdded), pagination (page/limit, max 100 per page)
+- `withThumbnailUrls(item)` exported from media.ts and imported into libraries.ts to avoid duplication
+- Sorting uses ternary chain to avoid `noImplicitAnyLet` biome error (no `let orderExpr` without type annotation)
+- releaseDate sorting uses `sql\`json_extract(${mediaItems.metadata}, '$.releaseDate')\`` — passes drizzle's `asc()`/`desc()` directly
+- 12 new tests; total 179 tests in server-core
+- **Learnings for future iterations:**
+  - Biome `noImplicitAnyLet` applies to switch-assigned `let` variables too — use ternary chain or initialize with default value to avoid needing explicit type import
+  - `asc()`/`desc()` from drizzle-orm accept SQL template literals directly for computed sort expressions
+  - `withThumbnailUrls` helper pattern: spread item then add computed fields — export from one route file, import into others (no circular deps since media.ts doesn't import libraries.ts)
+  - For library-scoped list endpoints, mount directly on the libraries router with `router.get("/:libraryId/resource", ...)` — no sub-router needed for a single GET endpoint
+---
+
 ## 2026-03-27 - US-019
 - Implemented thumbnail serving API endpoint GET /api/v1/media/:id/thumbnail?size=small|medium|large
 - Files changed: packages/server-core/src/routes/media.ts (new), src/routes/media.test.ts (new), src/app.ts (mounted media router)
