@@ -4,6 +4,7 @@ import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
 import { dataSources, libraries } from "../schema.js";
+import { makeSourcesRouter } from "./sources.js";
 
 const createLibrarySchema = z.object({
   name: z.string().min(1),
@@ -79,6 +80,8 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
     await db.delete(libraries).where(eq(libraries.id, id));
     return c.json({ success: true });
   });
+
+  router.route("/:libraryId/sources", makeSourcesRouter(db));
 
   return router;
 }
