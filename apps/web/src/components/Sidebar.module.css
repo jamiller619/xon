@@ -1,0 +1,139 @@
+.sidebar {
+  width: 240px;
+  flex-shrink: 0;
+  background: #12121f;
+  border-right: 1px solid #2d2d44;
+  display: flex;
+  flex-direction: column;
+  overflow-y: auto;
+  transition: transform 0.2s ease;
+}
+
+.logo {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 18px 16px;
+  border-bottom: 1px solid #2d2d44;
+  color: #6c63ff;
+  font-size: 20px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-decoration: none;
+}
+
+.logoIcon {
+  font-size: 22px;
+}
+
+.section {
+  padding: 8px 0;
+  border-bottom: 1px solid #2d2d44;
+}
+
+.sectionTitle {
+  padding: 8px 16px 4px;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.8px;
+  color: #666;
+}
+
+.navLink {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 9px 16px;
+  color: #aaa;
+  text-decoration: none;
+  font-size: 14px;
+  border-radius: 0;
+  transition: background 0.15s, color 0.15s;
+}
+
+.navLink:hover {
+  background: #1e1e35;
+  color: #e0e0e0;
+}
+
+.navLink.active {
+  background: #1e1e35;
+  color: #6c63ff;
+  border-left: 3px solid #6c63ff;
+  padding-left: 13px;
+}
+
+.navIcon {
+  font-size: 16px;
+  width: 20px;
+  text-align: center;
+}
+
+.librariesList {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+
+.libraryLink {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 16px;
+  color: #aaa;
+  text-decoration: none;
+  font-size: 14px;
+  transition: background 0.15s, color 0.15s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.libraryLink:hover {
+  background: #1e1e35;
+  color: #e0e0e0;
+}
+
+.libraryLink.active {
+  color: #6c63ff;
+  background: #1e1e35;
+  border-left: 3px solid #6c63ff;
+  padding-left: 13px;
+}
+
+.libraryDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #6c63ff;
+  flex-shrink: 0;
+}
+
+.emptyLibraries {
+  padding: 8px 16px;
+  font-size: 13px;
+  color: #555;
+  font-style: italic;
+}
+
+.loadingLibraries {
+  padding: 8px 16px;
+  font-size: 13px;
+  color: #555;
+}
+
+@media (max-width: 768px) {
+  .sidebar {
+    position: fixed;
+    top: 0;
+    left: 0;
+    bottom: 0;
+    z-index: 200;
+    transform: translateX(-100%);
+  }
+
+  .sidebar.open {
+    transform: translateX(0);
+  }
+}
