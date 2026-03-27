@@ -4,6 +4,7 @@ import { createApp } from "./app.js";
 import { openDatabase } from "./db.js";
 import { migrateDatabase } from "./migrate.js";
 import { WS_PATH, createWsServer } from "./routes/ws.js";
+import { startScheduler } from "./scheduler.js";
 
 export function boot(): void {
   const port = Number(process.env.PORT ?? DEFAULT_PORT);
@@ -13,6 +14,7 @@ export function boot(): void {
       await migrateDatabase(db);
       const app = createApp(db);
       const { handleUpgrade } = createWsServer();
+      const scheduler = await startScheduler(db);
       const server = serve({ fetch: app.fetch, port }, (info) => {
         console.log(`Xon server listening on port ${info.port}`);
       });
@@ -26,6 +28,7 @@ export function boot(): void {
       });
 
       function shutdown(): void {
+        scheduler.stop();
         server.close(() => {
           client.close();
           process.exit(0);

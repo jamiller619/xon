@@ -6,6 +6,7 @@ export const libraries = sqliteTable("libraries", {
   name: text("name").notNull(),
   description: text("description"),
   allowedMediaTypes: text("allowed_media_types").notNull().default("[]"),
+  scanSchedule: text("scan_schedule"),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });

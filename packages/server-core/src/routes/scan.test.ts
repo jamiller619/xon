@@ -143,4 +143,54 @@ describe("Scan API", () => {
       expect(body.error).toBe("Library not found: bad-id");
     });
   });
+
+  describe("PUT /api/v1/libraries/:id/scan/schedule", () => {
+    it("sets a valid cron schedule on the library", async () => {
+      const res = await app.request(`/api/v1/libraries/${libraryId}/scan/schedule`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scanSchedule: "0 */6 * * *" }),
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.scanSchedule).toBe("0 */6 * * *");
+    });
+
+    it("clears a schedule by setting null", async () => {
+      // First set a schedule
+      await app.request(`/api/v1/libraries/${libraryId}/scan/schedule`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scanSchedule: "0 */6 * * *" }),
+      });
+
+      // Then clear it
+      const res = await app.request(`/api/v1/libraries/${libraryId}/scan/schedule`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scanSchedule: null }),
+      });
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body.scanSchedule).toBeNull();
+    });
+
+    it("returns 400 for an unsupported cron expression", async () => {
+      const res = await app.request(`/api/v1/libraries/${libraryId}/scan/schedule`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scanSchedule: "0 0 * * *" }),
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it("returns 404 for a non-existent library", async () => {
+      const res = await app.request("/api/v1/libraries/no-such-id/scan/schedule", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ scanSchedule: "0 */6 * * *" }),
+      });
+      expect(res.status).toBe(404);
+    });
+  });
 });

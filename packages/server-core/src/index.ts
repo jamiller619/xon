@@ -47,3 +47,9 @@ export { generateVideoThumbnails, isVideoCategory } from "./videoThumbnails.js";
 export { scanDataSource, type FileEntry, type ScanResult } from "./scanner.js";
 export { scanLibrary, type ScanProgress, type ScanSummary } from "./orchestrator.js";
 export { boot } from "./server.js";
+export {
+  startScheduler,
+  parseCronInterval,
+  type TriggerFn,
+  type SchedulerHandle,
+} from "./scheduler.js";

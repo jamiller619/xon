@@ -1,8 +1,13 @@
+import { zValidator } from "@hono/zod-validator";
+import { eq } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
+import { z } from "zod";
 import { emitEvent } from "../events.js";
 import type { ScanProgress, ScanSummary } from "../orchestrator.js";
 import { scanLibrary } from "../orchestrator.js";
+import { parseCronInterval } from "../scheduler.js";
+import { libraries } from "../schema.js";
 
 type ScanState = {
   status: "running" | "completed" | "failed";
@@ -11,6 +16,16 @@ type ScanState = {
   summary: ScanSummary | null;
   error: string | null;
 };
+
+const scheduleSchema = z.object({
+  scanSchedule: z
+    .string()
+    .nullable()
+    .refine(
+      (v) => v === null || parseCronInterval(v) !== null,
+      "Invalid or unsupported cron expression. Supported: '*/N * * * *' or '0 */N * * *'"
+    ),
+});
 
 export function makeScanRouter(db: LibSQLDatabase): Hono {
   const scanRegistry = new Map<string, ScanState>();
@@ -90,6 +105,23 @@ export function makeScanRouter(db: LibSQLDatabase): Hono {
       summary: state.summary,
       error: state.error,
     });
+  });
+
+  // PUT /schedule — update scan schedule for a library
+  router.put("/schedule", zValidator("json", scheduleSchema), async (c) => {
+    const libraryId = c.req.param("libraryId") as string;
+    const { scanSchedule } = c.req.valid("json");
+
+    const existing = await db.select().from(libraries).where(eq(libraries.id, libraryId));
+    if (existing.length === 0) return c.json({ error: "Not found" }, 404);
+
+    await db
+      .update(libraries)
+      .set({ scanSchedule, updatedAt: new Date() })
+      .where(eq(libraries.id, libraryId));
+
+    const updated = await db.select().from(libraries).where(eq(libraries.id, libraryId));
+    return c.json(updated[0]);
   });
 
   return router;
