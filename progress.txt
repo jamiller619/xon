@@ -11,7 +11,24 @@
 - Test framework: vitest (^2.1.0) — handles TypeScript/ESM natively without separate tsconfig; add per-package
 - noUncheckedIndexedAccess: Record<string, T> indexing returns T | undefined — use `?? fallback` pattern
 - Biome line width is 100; arrays/params exceeding this are auto-reformatted to multi-line on `biome check --write`
+- Biome prefers `process.env.PORT` (literal key) over `process.env["PORT"]` (computed key) — use dot notation
+- Hono: use `new Hono().basePath("/api/v1")` for prefixed routes; test with `app.request("/api/v1/...")` (no server needed)
+- @hono/node-server: `serve({ fetch: app.fetch, port }, callback)` returns a Node.js HTTP server with `.close()`
+- Packages with cross-package deps need `references` in their own tsconfig.json (not just root tsconfig.json)
 
+---
+
+## 2026-03-27 - US-004
+- Created packages/server-core with Hono HTTP server and boot function
+- Files changed: packages/server-core/package.json, tsconfig.json, src/app.ts, src/server.ts, src/index.ts, src/index.test.ts, root tsconfig.json (added reference), yarn.lock
+- Hono app with /api/v1/ basePath; GET /api/v1/health returns `{status:"ok", timestamp:ISO}`
+- boot() reads PORT from process.env (via Node --env-file), defaults to DEFAULT_PORT (32400)
+- Graceful shutdown on SIGTERM/SIGINT via server.close()
+- 4 tests passing with vitest using app.request() (no real server needed)
+- **Learnings for future iterations:**
+  - Biome requires `process.env.PORT` (dot notation), not `process.env["PORT"]` (computed key)
+  - Hono's `app.request()` enables in-process HTTP testing without starting a real server
+  - Package tsconfig.json needs its own `references` array when depending on other workspace packages
 ---
 
 ## 2026-03-27 - US-001
