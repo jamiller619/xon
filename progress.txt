@@ -1,3 +1,19 @@
+## 2026-03-27 - US-018
+- Implemented video thumbnail generation using FFmpeg + sharp in `videoThumbnails.ts`
+- Files changed: packages/server-core/src/videoThumbnails.ts (new), src/videoThumbnails.test.ts (new), src/orchestrator.ts (calls generateVideoThumbnails for video items), src/index.ts (exports)
+- `generateVideoThumbnails(filePath, mediaItemId, dataDir)`: 1) uses ffprobe to get duration, 2) spawns ffmpeg to extract frame at 10% of duration, 3) uses sharp to resize to 3 sizes (same as image thumbnails)
+- `isVideoCategory(category)` returns true for Movies/TVShows/Clips/HomeVideos
+- FFmpeg invoked as: `ffmpeg -ss <timestamp> -i <file> -frames:v 1 -q:v 2 -y <tmpPath>`
+- Temp frame file cleaned up after sharp resizing (both success and failure paths)
+- Falls back to timestamp=0 when ffprobe duration is unavailable; graceful null return on any failure
+- Orchestrator: calls generateVideoThumbnails for new/changed video items (else-if after image branch)
+- 13 new tests in videoThumbnails.test.ts; total 158 tests in server-core
+- **Learnings for future iterations:**
+  - When spawn is mocked with `mockReturnValueOnce`, the proc is created BEFORE the actual spawn call - any `setTimeout` scheduled at creation fires before listeners are added. Use `mockImplementation` with `Promise.resolve().then(...)` to emit events after listeners attach.
+  - `Promise.resolve().then(...)` is a microtask; it fires AFTER synchronous listener registration but BEFORE `await` yields control back — perfect for mock event emission timing.
+  - MediaCategory enum values have spaces in the string value (e.g., `TVShows = "TV Shows"`) — always use `MediaCategory.X` not the enum key string in tests.
+---
+
 ## 2026-03-27 - US-017
 - Implemented thumbnail generation for image media items using `sharp` library
 - Files changed: packages/server-core/src/thumbnails.ts (new), src/thumbnails.test.ts (new), src/orchestrator.ts (calls generateThumbnails for image items), src/schema.ts (added thumbnailPaths column), src/index.ts (exports), drizzle/0002_aromatic_hobgoblin.sql (migration), package.json (added sharp dep)
@@ -190,6 +206,8 @@
 - TAR parsing: 512-byte blocks; filename at 0-99, size in octal at 124-135, typeflag at 156 (0x30='0' or 0 = regular file); USTAR prefix at 345 when "ustar" magic at 257; `gunzipSync` from `node:zlib` to decompress .tgz before parsing
 - `sharp` ESM default import; mock as `vi.mock("sharp", () => ({ default: vi.fn() }))`; use `.clone()` per size for batch-safe thumbnail generation; types bundled with sharp (no @types/sharp needed)
 - Drizzle `ALTER TABLE ADD COLUMN` migrations generated cleanly via `yarn workspace @xon/server-core db:generate` after schema update
+- When mocking sequential spawns (ffprobe then ffmpeg), use `mockImplementation` with `Promise.resolve().then(...)` for event emission — `mockReturnValueOnce` creates the proc before spawn is called, causing setTimeout to fire before listeners attach
+- `Promise.resolve().then(...)` fires as a microtask after synchronous listener registration — ideal for mock EventEmitter event timing in async tests
 
 ---
 
