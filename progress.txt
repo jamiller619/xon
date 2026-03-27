@@ -1,3 +1,17 @@
+## 2026-03-27 - US-012
+- Implemented scan trigger API endpoints
+- Files changed: packages/server-core/src/routes/scan.ts (new), src/routes/scan.test.ts (new), src/routes/libraries.ts (mount scan router)
+- `POST /api/v1/libraries/:id/scan` — starts async scan, returns 202 `{status:"started"}` or 409 `{status:"already_running"}`
+- `GET /api/v1/libraries/:id/scan/status` — returns `{status, startedAt, progress, summary, error}` or `{status:"idle"}` if no scan
+- In-memory `Map<libraryId, ScanState>` registry in `makeScanRouter` closure; scan runs via unresolved `.then()/.catch()` chain
+- `vi.mock("../orchestrator.js")` used to control scanLibrary timing in tests; dynamic import with `await import(...)` after mock
+- 7 new tests, all passing (total 76 tests in server-core)
+- **Learnings for future iterations:**
+  - In vitest, mocked module values settle after 2x `await Promise.resolve()` — use this to flush microtask queue in tests
+  - `vi.mock(...)` is hoisted; use `await import(...)` after mock call to get typed reference to the mocked function
+  - Hono sub-router `GET /status` correctly matches `/:libraryId/scan/status` when mounted at `/:libraryId/scan`
+---
+
 ## 2026-03-27 - US-011
 - Implemented scan orchestrator that saves discovered files as media items in the database
 - Files changed: packages/server-core/src/orchestrator.ts (new), src/orchestrator.test.ts (new), src/index.ts (exports)
@@ -86,6 +100,7 @@
 - Workspace packages already built (dist/ exists) don't need tsconfig.json references; adding them breaks `--noEmit` mode
 - Biome `noImplicitAnyLet`: uninitialized `let` variables need explicit type annotations
 - `.txt` is in the Documents media category — never a safe "non-media" test file; use `.log` or `.xyz`
+- `vi.mock(module)` is hoisted; use `await import(module)` after mock to get typed mocked reference; flush microtasks with 2x `await Promise.resolve()`
 
 ---
 
