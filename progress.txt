@@ -1,3 +1,17 @@
+## 2026-03-27 - US-026
+- Implemented app shell: Layout, Sidebar, TopBar components with CSS Modules
+- Files created: apps/web/src/components/Layout.tsx, Layout.module.css, Sidebar.tsx, Sidebar.module.css, TopBar.tsx, TopBar.module.css, src/vite-env.d.ts
+- Files changed: apps/web/src/App.tsx (added Layout as layout route wrapping all routes)
+- Sidebar fetches libraries from `/api/v1/libraries` via useEffect; shows loading/empty states
+- TopBar has search input placeholder and user menu placeholder (button with avatar)
+- Responsive: sidebar is fixed-position off-screen on mobile (<768px); hamburger button in TopBar toggles it via Zustand `sidebarOpen` state; overlay closes it on click
+- CSS Modules: dark theme (#0f0f1a background, #6c63ff accent), active NavLink highlighted with left border + accent color
+- **Learnings for future iterations:**
+  - `noUncheckedIndexedAccess: true` causes CSS Module property accesses (e.g. `styles.foo`) to return `string | undefined`; use `styles.foo ?? ""` for direct className props; template literals (`\`${styles.foo}\``) produce `string` and work without fallback
+  - Add `src/vite-env.d.ts` with `/// <reference types="vite/client" />` to get CSS Module type declarations (without it, TypeScript can't resolve `*.module.css` imports)
+  - React Router v7 `<Outlet />` in a layout route: use `<Route element={<Layout />}>` wrapping child routes in App.tsx
+---
+
 ## 2026-03-27 - US-025
 - Scaffolded `apps/web` React web app with Vite 6, React 19, React Router 7, Zustand 5, CSS Modules
 - Files created: apps/web/package.json, apps/web/tsconfig.json, apps/web/vite.config.ts, apps/web/index.html, apps/web/src/main.tsx, apps/web/src/App.tsx, apps/web/src/store/index.ts
@@ -317,6 +331,9 @@
 - `fs.watch` (from `node:fs`, not `node:fs/promises`) for filesystem watching; supports `{ recursive: boolean }` options
 - Frontend (apps/web): Vite 6 + React 19 + React Router 7 + Zustand 5; tsconfig uses `moduleResolution: "bundler"`, `lib: ["ES2022","DOM","DOM.Iterable"]`, `jsx: "react-jsx"`, `noEmit: true`; excluded from root tsconfig to avoid NodeNext/JSX conflicts
 - Root tsconfig.json exclude must include `apps/web` to prevent root `tsc --build` from applying NodeNext module resolution to browser/JSX files
+- CSS Modules with `noUncheckedIndexedAccess: true`: `styles.foo` returns `string | undefined`; use `styles.foo ?? ""` for direct className props or use template literals (always return `string`)
+- Add `src/vite-env.d.ts` with `/// <reference types="vite/client" />` to enable CSS Module imports in TypeScript
+- React Router v7 layout routes: `<Route element={<Layout />}>` wrapping child routes; `<Outlet />` renders child content inside the layout
 
 ---
 
