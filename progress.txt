@@ -1,3 +1,21 @@
+## 2026-03-27 - US-021
+- Implemented WebSocket channel for real-time events at /api/v1/ws
+- Files changed: packages/server-core/src/events.ts (new), src/events.test.ts (new), src/routes/ws.ts (new), src/routes/ws.test.ts (new), src/routes/scan.ts (emits scan events), src/orchestrator.ts (emits media:added/removed), src/server.ts (sets up WebSocket upgrade handler), src/index.ts (exports events), package.json (added ws + @types/ws)
+- `events.ts`: module-level EventEmitter `eventBus` + `emitEvent(event: XonEvent)` helper; `XonEvent` union type covers scan:progress, scan:complete, scan:error, media:added, media:removed
+- `routes/ws.ts`: `createWsServer()` factory using `ws` package with `noServer: true`; maintains per-connection event listener; cleans up on close
+- `server.ts`: after `serve()`, sets up `upgrade` event handler to route `/api/v1/ws` to the WebSocket server
+- scan.ts: emits scan:progress (with percentComplete calc), scan:complete, scan:error events via eventBus
+- orchestrator.ts: emits media:added after each insert; queries IDs before delete to emit media:removed per item
+- `@hono/node-server` v1.19.11 has no `/ws` export — used `ws` npm package directly with noServer mode and HTTP upgrade event
+- 11 new tests (7 in events.test.ts, 4 in ws.test.ts); total 190 tests in server-core
+- **Learnings for future iterations:**
+  - `@hono/node-server` v1.19.11 (latest stable) has no WebSocket support — use `ws` package with `noServer: true` + `server.on("upgrade", ...)` pattern
+  - `ws.WebSocketServer({ noServer: true })` + `handleUpgrade(req, socket, head, cb)` gives full control over which HTTP upgrade requests become WebSocket connections
+  - Module-level `EventEmitter` (eventBus) is the cleanest way to decouple event producers (scan, orchestrator) from consumers (WebSocket clients)
+  - To test WebSocket logic: create a raw `http.createServer()`, attach the WebSocketServer upgrade handler, listen on port 0, connect with `ws.WebSocket` client
+  - `collectMessages(ws, count)` pattern with a timeout fallback avoids hanging tests when fewer messages arrive than expected
+---
+
 ## 2026-03-27 - US-020
 - Implemented media items list and detail API endpoints
 - Files changed: packages/server-core/src/routes/media.ts (added GET /:id, added withThumbnailUrls helper), src/routes/libraries.ts (added GET /:libraryId/media), src/routes/media.test.ts (3 new tests), src/routes/libraries.test.ts (9 new tests for media list)
@@ -239,6 +257,8 @@
 - `Promise.resolve().then(...)` fires as a microtask after synchronous listener registration — ideal for mock EventEmitter event timing in async tests
 - Hono `c.body()` accepts `Uint8Array<ArrayBuffer>` not `Buffer<ArrayBufferLike>` — use `new Uint8Array(buffer)` to convert Node.js Buffer for binary responses
 - Biome `noNonNullAssertion`: avoid `arr[0]!` — use `const x = arr[0]; if (!x) return;` pattern instead
+- `@hono/node-server` v1.x has no WebSocket support — use `ws` npm package with `noServer: true` + `server.on("upgrade", ...)` to handle WebSocket upgrades alongside Hono HTTP routes
+- Module-level EventEmitter pattern (`eventBus`) decouples event producers from consumers; use `emitEvent(event: XonEvent)` wrapper for type safety
 
 ---
 
