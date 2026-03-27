@@ -12,4 +12,5 @@ export {
   type MediaItem,
   type NewMediaItem,
 } from "./schema.js";
+export { scanDataSource, type FileEntry, type ScanResult } from "./scanner.js";
 export { boot } from "./server.js";
