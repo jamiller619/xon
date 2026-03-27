@@ -12,6 +12,11 @@ export {
   type MediaItem,
   type NewMediaItem,
 } from "./schema.js";
+export {
+  extractFfprobeMetadata,
+  isAudioVideoCategory,
+  type FfprobeMetadata,
+} from "./ffprobe.js";
 export { scanDataSource, type FileEntry, type ScanResult } from "./scanner.js";
 export { scanLibrary, type ScanProgress, type ScanSummary } from "./orchestrator.js";
 export { boot } from "./server.js";

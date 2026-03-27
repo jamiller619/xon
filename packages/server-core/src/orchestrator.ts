@@ -1,5 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
+import { extractFfprobeMetadata, isAudioVideoCategory } from "./ffprobe.js";
 import { scanDataSource } from "./scanner.js";
 import { dataSources, libraries, mediaItems } from "./schema.js";
 
@@ -60,6 +61,14 @@ export async function scanLibrary(
       progress.currentFile = entry.filePath;
       onProgress?.(progress);
 
+      let metadata = "{}";
+      if (isAudioVideoCategory(entry.mediaCategory)) {
+        const ffMeta = await extractFfprobeMetadata(entry.filePath);
+        if (ffMeta) {
+          metadata = JSON.stringify(ffMeta);
+        }
+      }
+
       await db.insert(mediaItems).values({
         id: crypto.randomUUID(),
         libraryId,
@@ -69,6 +78,7 @@ export async function scanLibrary(
         fileSize: entry.fileSize,
         mimeType: entry.mimeType ?? null,
         mediaCategory: entry.mediaCategory,
+        metadata,
         createdAt: now,
         updatedAt: now,
         scannedAt: now,
@@ -82,15 +92,24 @@ export async function scanLibrary(
       progress.currentFile = entry.filePath;
       onProgress?.(progress);
 
+      const updateFields: Record<string, unknown> = {
+        fileSize: entry.fileSize,
+        mimeType: entry.mimeType ?? null,
+        mediaCategory: entry.mediaCategory,
+        updatedAt: now,
+        scannedAt: now,
+      };
+
+      if (isAudioVideoCategory(entry.mediaCategory)) {
+        const ffMeta = await extractFfprobeMetadata(entry.filePath);
+        if (ffMeta) {
+          updateFields.metadata = JSON.stringify(ffMeta);
+        }
+      }
+
       await db
         .update(mediaItems)
-        .set({
-          fileSize: entry.fileSize,
-          mimeType: entry.mimeType ?? null,
-          mediaCategory: entry.mediaCategory,
-          updatedAt: now,
-          scannedAt: now,
-        })
+        .set(updateFields)
         .where(
           and(eq(mediaItems.dataSourceId, source.id), eq(mediaItems.filePath, entry.filePath))
         );
