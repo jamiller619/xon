@@ -1,3 +1,21 @@
+## 2026-03-27 - US-034
+- Added subtitle and audio track selection to the video player
+- Files changed: packages/server-core/src/ffprobe.ts (added `extractStreamTracks` returning all audio + subtitle streams)
+- Files changed: packages/server-core/src/routes/media.ts (GET /api/v1/media/:id/tracks, GET /api/v1/media/:id/subtitle endpoints)
+- Files changed: apps/web/src/components/VideoPlayer.tsx (fetch tracks on mount, subtitle <track> elements, subtitle/audio dropdowns)
+- Files changed: apps/web/src/components/VideoPlayer.module.css (trackControls, trackLabel, trackSelect styles)
+- Files changed: packages/server-core/src/routes/media.test.ts (11 new tests; total 240 in server-core)
+- `/tracks` endpoint: runs ffprobe via `extractStreamTracks`, scans dir for .srt/.vtt matching base name; returns `{ audioTracks, subtitleTracks }`
+- `/subtitle` endpoint: security validates no path traversal + .srt/.vtt only; serves as `text/vtt`; prepends WEBVTT header to .srt files
+- VideoPlayer: fetches tracks on mount; injects `<track>` elements for external .vtt files; subtitle dropdown syncs via `textTracks[i].mode`; audio dropdown uses `audioTracks` API (Safari/future support) with graceful fallback
+- **Learnings for future iterations:**
+  - `vi.mock("../ffprobe.js", ...)` is the clean way to mock ffprobe calls in route tests — avoids needing to mock `node:child_process` in media.test.ts
+  - Add `readdir: vi.fn()` to the `node:fs/promises` mock factory when testing directory scanning endpoints
+  - `string | undefined` in object literal is NOT assignable to `{prop?: string}` declared type — use conditional spread `...(val ? { prop: val } : {})` instead
+  - HTML5 `audioTracks` API exists only in Safari; for Chrome/Firefox, audio track switching requires MSE/HLS — show dropdown but degrade gracefully
+  - `<track>` elements must be children of `<video>`; set `track.mode = "showing"` via `videoElement.textTracks[i]` to activate
+---
+
 ## 2026-03-27 - US-033
 - Implemented HTML5 video player with streaming endpoint and keyboard shortcuts
 - Files changed: packages/server-core/src/routes/media.ts (GET /api/v1/media/:id/stream with range request support), src/routes/media.test.ts (6 new streaming tests; total 229 in server-core)
