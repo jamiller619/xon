@@ -1,0 +1,20 @@
+## Codebase Patterns
+- Monorepo with Yarn 1.22 workspaces: apps/*, packages/*, plugins/*
+- TypeScript with strict mode, NodeNext module resolution (ESM)
+- Biome for linting/formatting (not ESLint/Prettier)
+- Node version: v24.14.0 (despite PRD saying Node 22.x LTS, .nvmrc had v24.14.0)
+- tsconfig.json uses composite: true for project references support
+
+---
+
+## 2026-03-27 - US-001
+- Implemented monorepo scaffold with Yarn 1.22 workspaces
+- Files changed: package.json, tsconfig.json, biome.json, yarn.lock, .nvmrc (pre-existing), .gitignore (pre-existing)
+- Created workspace directories: apps/, packages/, plugins/
+- **Learnings for future iterations:**
+  - .nvmrc already existed with v24.14.0 (not Node 22.x as PRD stated)
+  - tsconfig.json has no references[] yet — add entries as packages are created
+  - Yarn 1.22.22 is installed and working
+  - `tsc --build` works at root level for typecheck
+  - Empty workspace directories are not committed to git (need .gitkeep or content)
+---
