@@ -8,6 +8,7 @@ import { asc, desc, eq } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
+import { listArchiveContents } from "../archive.js";
 import { extractStreamTracks } from "../ffprobe.js";
 import { convertMobiToEpub } from "../mobi.js";
 import type { MediaItem } from "../schema.js";
@@ -366,6 +367,17 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       const family = basename(item.filePath, ext);
       return c.json({ family, subfamily: "Unknown", glyphCount: null, unitsPerEm: null });
     }
+  });
+
+  // GET /media/:id/archive-contents — list files inside a ZIP, TAR, or 7z archive
+  router.get("/:id/archive-contents", async (c) => {
+    const id = c.req.param("id");
+    const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id));
+    const item = rows[0];
+    if (!item) return c.json({ error: "Not found" }, 404);
+
+    const entries = await listArchiveContents(item.filePath);
+    return c.json({ entries });
   });
 
   // GET /media/:id/reading-position — retrieve saved reading position
