@@ -5,6 +5,9 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "../app.js";
 import { openDatabase } from "../db.js";
 import { migrateDatabase } from "../migrate.js";
+import { signAccessToken } from "./auth.js";
+
+const AUTH = `Bearer ${await signAccessToken("test-id", "testuser", "admin")}`;
 
 describe("Data Sources CRUD API", () => {
   let client: Client;
@@ -20,7 +23,7 @@ describe("Data Sources CRUD API", () => {
     // Create a library to use in tests
     const res = await app.request("/api/v1/libraries", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: AUTH },
       body: JSON.stringify({ name: "Test Library" }),
     });
     const lib = await res.json();
@@ -43,7 +46,7 @@ describe("Data Sources CRUD API", () => {
   ) {
     return app.request(sourcesUrl(libId), {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: AUTH },
       body: JSON.stringify(data),
     });
   }
@@ -80,7 +83,7 @@ describe("Data Sources CRUD API", () => {
     it("returns 400 for missing type", async () => {
       const res = await app.request(sourcesUrl(), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: AUTH },
         body: JSON.stringify({ path: "/some/path" }),
       });
       expect(res.status).toBe(400);
@@ -89,7 +92,7 @@ describe("Data Sources CRUD API", () => {
     it("returns 400 for invalid type", async () => {
       const res = await app.request(sourcesUrl(), {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: AUTH },
         body: JSON.stringify({ type: "ftp", path: "/some/path" }),
       });
       expect(res.status).toBe(400);
@@ -116,7 +119,7 @@ describe("Data Sources CRUD API", () => {
 
   describe("GET /api/v1/libraries/:libraryId/sources", () => {
     it("returns empty array when no sources", async () => {
-      const res = await app.request(sourcesUrl());
+      const res = await app.request(sourcesUrl(), { headers: { Authorization: AUTH } });
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body).toEqual([]);
@@ -125,14 +128,16 @@ describe("Data Sources CRUD API", () => {
     it("lists all sources for the library", async () => {
       await createSource({ type: "network", path: "//nas/movies" });
       await createSource({ type: "network", path: "//nas/tv" });
-      const res = await app.request(sourcesUrl());
+      const res = await app.request(sourcesUrl(), { headers: { Authorization: AUTH } });
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body).toHaveLength(2);
     });
 
     it("returns 404 for non-existent library", async () => {
-      const res = await app.request(sourcesUrl("nonexistent"));
+      const res = await app.request(sourcesUrl("nonexistent"), {
+        headers: { Authorization: AUTH },
+      });
       expect(res.status).toBe(404);
     });
   });
@@ -142,7 +147,7 @@ describe("Data Sources CRUD API", () => {
       const created = await (await createSource({ type: "network", path: "//nas/old" })).json();
       const res = await app.request(`${sourcesUrl()}/${created.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: AUTH },
         body: JSON.stringify({ path: "//nas/new" }),
       });
       expect(res.status).toBe(200);
@@ -154,7 +159,7 @@ describe("Data Sources CRUD API", () => {
       const created = await (await createSource({ type: "network", path: "//nas/media" })).json();
       const res = await app.request(`${sourcesUrl()}/${created.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: AUTH },
         body: JSON.stringify({ enabled: false }),
       });
       expect(res.status).toBe(200);
@@ -166,7 +171,7 @@ describe("Data Sources CRUD API", () => {
       const created = await (await createSource({ type: "local", path: tmpDir })).json();
       const res = await app.request(`${sourcesUrl()}/${created.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: AUTH },
         body: JSON.stringify({ path: "/no/such/path/ever" }),
       });
       expect(res.status).toBe(400);
@@ -175,7 +180,7 @@ describe("Data Sources CRUD API", () => {
     it("returns 404 for non-existent source", async () => {
       const res = await app.request(`${sourcesUrl()}/nonexistent`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: AUTH },
         body: JSON.stringify({ path: "//nas/new" }),
       });
       expect(res.status).toBe(404);
@@ -187,6 +192,7 @@ describe("Data Sources CRUD API", () => {
       const created = await (await createSource({ type: "network", path: "//nas/media" })).json();
       const res = await app.request(`${sourcesUrl()}/${created.id}`, {
         method: "DELETE",
+        headers: { Authorization: AUTH },
       });
       expect(res.status).toBe(200);
       const body = await res.json();
@@ -195,8 +201,11 @@ describe("Data Sources CRUD API", () => {
 
     it("deleted source no longer appears in list", async () => {
       const created = await (await createSource({ type: "network", path: "//nas/media" })).json();
-      await app.request(`${sourcesUrl()}/${created.id}`, { method: "DELETE" });
-      const res = await app.request(sourcesUrl());
+      await app.request(`${sourcesUrl()}/${created.id}`, {
+        method: "DELETE",
+        headers: { Authorization: AUTH },
+      });
+      const res = await app.request(sourcesUrl(), { headers: { Authorization: AUTH } });
       const body = await res.json();
       expect(body).toHaveLength(0);
     });
@@ -204,6 +213,7 @@ describe("Data Sources CRUD API", () => {
     it("returns 404 for non-existent source", async () => {
       const res = await app.request(`${sourcesUrl()}/nonexistent`, {
         method: "DELETE",
+        headers: { Authorization: AUTH },
       });
       expect(res.status).toBe(404);
     });

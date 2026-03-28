@@ -4,6 +4,9 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../app.js";
 import { openDatabase } from "../db.js";
 import { migrateDatabase } from "../migrate.js";
+import { signAccessToken } from "./auth.js";
+
+const AUTH = `Bearer ${await signAccessToken("test-id", "testuser", "admin")}`;
 
 vi.mock("../orchestrator.js", () => ({
   scanLibrary: vi.fn(),
@@ -26,7 +29,7 @@ describe("Scan API", () => {
     // Create a library for scan tests
     const res = await app.request("/api/v1/libraries", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: AUTH },
       body: JSON.stringify({ name: "Scan Test Library" }),
     });
     const body = await res.json();
@@ -45,6 +48,7 @@ describe("Scan API", () => {
 
       const res = await app.request(`/api/v1/libraries/${libraryId}/scan`, {
         method: "POST",
+        headers: { Authorization: AUTH },
       });
       expect(res.status).toBe(202);
       const body = await res.json();
@@ -54,9 +58,15 @@ describe("Scan API", () => {
     it("returns 409 with already_running if scan is in progress", async () => {
       mockScanLibrary.mockReturnValue(new Promise(() => {}));
 
-      await app.request(`/api/v1/libraries/${libraryId}/scan`, { method: "POST" });
+      await app.request(`/api/v1/libraries/${libraryId}/scan`, {
+        method: "POST",
+        headers: { Authorization: AUTH },
+      });
 
-      const res = await app.request(`/api/v1/libraries/${libraryId}/scan`, { method: "POST" });
+      const res = await app.request(`/api/v1/libraries/${libraryId}/scan`, {
+        method: "POST",
+        headers: { Authorization: AUTH },
+      });
       expect(res.status).toBe(409);
       const body = await res.json();
       expect(body.status).toBe("already_running");
@@ -72,12 +82,18 @@ describe("Scan API", () => {
       };
       mockScanLibrary.mockResolvedValue(summary);
 
-      await app.request(`/api/v1/libraries/${libraryId}/scan`, { method: "POST" });
+      await app.request(`/api/v1/libraries/${libraryId}/scan`, {
+        method: "POST",
+        headers: { Authorization: AUTH },
+      });
       // Wait for the promise chain to settle
       await Promise.resolve();
       await Promise.resolve();
 
-      const res = await app.request(`/api/v1/libraries/${libraryId}/scan`, { method: "POST" });
+      const res = await app.request(`/api/v1/libraries/${libraryId}/scan`, {
+        method: "POST",
+        headers: { Authorization: AUTH },
+      });
       expect(res.status).toBe(202);
       const body = await res.json();
       expect(body.status).toBe("started");
@@ -86,7 +102,9 @@ describe("Scan API", () => {
 
   describe("GET /api/v1/libraries/:id/scan/status", () => {
     it("returns idle when no scan has been triggered", async () => {
-      const res = await app.request(`/api/v1/libraries/${libraryId}/scan/status`);
+      const res = await app.request(`/api/v1/libraries/${libraryId}/scan/status`, {
+        headers: { Authorization: AUTH },
+      });
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body.status).toBe("idle");
@@ -95,9 +113,14 @@ describe("Scan API", () => {
     it("returns running status while scan is in progress", async () => {
       mockScanLibrary.mockReturnValue(new Promise(() => {}));
 
-      await app.request(`/api/v1/libraries/${libraryId}/scan`, { method: "POST" });
+      await app.request(`/api/v1/libraries/${libraryId}/scan`, {
+        method: "POST",
+        headers: { Authorization: AUTH },
+      });
 
-      const res = await app.request(`/api/v1/libraries/${libraryId}/scan/status`);
+      const res = await app.request(`/api/v1/libraries/${libraryId}/scan/status`, {
+        headers: { Authorization: AUTH },
+      });
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body.status).toBe("running");
@@ -117,12 +140,17 @@ describe("Scan API", () => {
       };
       mockScanLibrary.mockResolvedValue(summary);
 
-      await app.request(`/api/v1/libraries/${libraryId}/scan`, { method: "POST" });
+      await app.request(`/api/v1/libraries/${libraryId}/scan`, {
+        method: "POST",
+        headers: { Authorization: AUTH },
+      });
       // Flush promise microtasks
       await Promise.resolve();
       await Promise.resolve();
 
-      const res = await app.request(`/api/v1/libraries/${libraryId}/scan/status`);
+      const res = await app.request(`/api/v1/libraries/${libraryId}/scan/status`, {
+        headers: { Authorization: AUTH },
+      });
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body.status).toBe("completed");
@@ -132,11 +160,16 @@ describe("Scan API", () => {
     it("returns failed status with error message when scan throws", async () => {
       mockScanLibrary.mockRejectedValue(new Error("Library not found: bad-id"));
 
-      await app.request(`/api/v1/libraries/${libraryId}/scan`, { method: "POST" });
+      await app.request(`/api/v1/libraries/${libraryId}/scan`, {
+        method: "POST",
+        headers: { Authorization: AUTH },
+      });
       await Promise.resolve();
       await Promise.resolve();
 
-      const res = await app.request(`/api/v1/libraries/${libraryId}/scan/status`);
+      const res = await app.request(`/api/v1/libraries/${libraryId}/scan/status`, {
+        headers: { Authorization: AUTH },
+      });
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body.status).toBe("failed");
@@ -148,7 +181,7 @@ describe("Scan API", () => {
     it("sets a valid cron schedule on the library", async () => {
       const res = await app.request(`/api/v1/libraries/${libraryId}/scan/schedule`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: AUTH },
         body: JSON.stringify({ scanSchedule: "0 */6 * * *" }),
       });
       expect(res.status).toBe(200);
@@ -160,14 +193,14 @@ describe("Scan API", () => {
       // First set a schedule
       await app.request(`/api/v1/libraries/${libraryId}/scan/schedule`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: AUTH },
         body: JSON.stringify({ scanSchedule: "0 */6 * * *" }),
       });
 
       // Then clear it
       const res = await app.request(`/api/v1/libraries/${libraryId}/scan/schedule`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: AUTH },
         body: JSON.stringify({ scanSchedule: null }),
       });
       expect(res.status).toBe(200);
@@ -178,7 +211,7 @@ describe("Scan API", () => {
     it("returns 400 for an unsupported cron expression", async () => {
       const res = await app.request(`/api/v1/libraries/${libraryId}/scan/schedule`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: AUTH },
         body: JSON.stringify({ scanSchedule: "0 0 * * *" }),
       });
       expect(res.status).toBe(400);
@@ -187,7 +220,7 @@ describe("Scan API", () => {
     it("returns 404 for a non-existent library", async () => {
       const res = await app.request("/api/v1/libraries/no-such-id/scan/schedule", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: AUTH },
         body: JSON.stringify({ scanSchedule: "0 */6 * * *" }),
       });
       expect(res.status).toBe(404);

@@ -3,6 +3,9 @@ import type { PluginContext, PluginManifest, RouteDefinition } from "@xon/plugin
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { createApp } from "./app.js";
 import { _registerPlugin, _resetForTesting } from "./pluginManager.js";
+import { signAccessToken } from "./routes/auth.js";
+
+const AUTH = `Bearer ${await signAccessToken("test-id", "testuser", "admin")}`;
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -19,10 +22,7 @@ class SimplePlugin extends BasePlugin {
   readonly manifest = baseManifest;
 }
 
-function makeActiveEntry(
-  routes: RouteDefinition[] = [],
-  manifest: PluginManifest = baseManifest
-) {
+function makeActiveEntry(routes: RouteDefinition[] = [], manifest: PluginManifest = baseManifest) {
   return _registerPlugin({
     manifest,
     pluginDir: "/fake/plugins/test-plugin",
@@ -47,7 +47,9 @@ afterEach(() => {
 describe("pluginRouteDispatcher — basic routing", () => {
   it("returns 404 when plugin not in registry", async () => {
     const app = createApp();
-    const res = await app.request("/api/v1/plugins/unknown-plugin/status");
+    const res = await app.request("/api/v1/plugins/unknown-plugin/status", {
+      headers: { Authorization: AUTH },
+    });
     expect(res.status).toBe(404);
     const body = await res.json();
     expect(body).toMatchObject({ error: expect.any(String) });
@@ -64,7 +66,9 @@ describe("pluginRouteDispatcher — basic routing", () => {
       uiComponents: [],
     });
     const app = createApp();
-    const res = await app.request("/api/v1/plugins/test-plugin/status");
+    const res = await app.request("/api/v1/plugins/test-plugin/status", {
+      headers: { Authorization: AUTH },
+    });
     expect(res.status).toBe(404);
   });
 
@@ -77,7 +81,9 @@ describe("pluginRouteDispatcher — basic routing", () => {
       },
     ]);
     const app = createApp();
-    const res = await app.request("/api/v1/plugins/test-plugin/status");
+    const res = await app.request("/api/v1/plugins/test-plugin/status", {
+      headers: { Authorization: AUTH },
+    });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toEqual({ ok: true });
@@ -94,7 +100,7 @@ describe("pluginRouteDispatcher — basic routing", () => {
     const app = createApp();
     const res = await app.request("/api/v1/plugins/test-plugin/items", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: AUTH },
       body: JSON.stringify({}),
     });
     expect(res.status).toBe(201);
@@ -113,6 +119,7 @@ describe("pluginRouteDispatcher — basic routing", () => {
     const app = createApp();
     const res = await app.request("/api/v1/plugins/test-plugin/status", {
       method: "POST",
+      headers: { Authorization: AUTH },
     });
     expect(res.status).toBe(404);
   });
@@ -126,7 +133,9 @@ describe("pluginRouteDispatcher — basic routing", () => {
       },
     ]);
     const app = createApp();
-    const res = await app.request("/api/v1/plugins/test-plugin/other");
+    const res = await app.request("/api/v1/plugins/test-plugin/other", {
+      headers: { Authorization: AUTH },
+    });
     expect(res.status).toBe(404);
   });
 });
@@ -145,7 +154,9 @@ describe("pluginRouteDispatcher — path params", () => {
       },
     ]);
     const app = createApp();
-    const res = await app.request("/api/v1/plugins/test-plugin/items/abc123");
+    const res = await app.request("/api/v1/plugins/test-plugin/items/abc123", {
+      headers: { Authorization: AUTH },
+    });
     expect(res.status).toBe(200);
     expect(capturedId).toBe("abc123");
     const body = await res.json();
@@ -165,9 +176,9 @@ describe("pluginRouteDispatcher — path params", () => {
       },
     ]);
     const app = createApp();
-    const res = await app.request(
-      "/api/v1/plugins/test-plugin/categories/movies/items/42"
-    );
+    const res = await app.request("/api/v1/plugins/test-plugin/categories/movies/items/42", {
+      headers: { Authorization: AUTH },
+    });
     expect(res.status).toBe(200);
     expect(capturedParams).toEqual({ cat: "movies", id: "42" });
   });
@@ -187,9 +198,9 @@ describe("pluginRouteDispatcher — query params", () => {
       },
     ]);
     const app = createApp();
-    const res = await app.request(
-      "/api/v1/plugins/test-plugin/search?q=hello"
-    );
+    const res = await app.request("/api/v1/plugins/test-plugin/search?q=hello", {
+      headers: { Authorization: AUTH },
+    });
     expect(res.status).toBe(200);
     expect(capturedQuery).toBe("hello");
   });
@@ -207,7 +218,9 @@ describe("pluginRouteDispatcher — routes removed on deactivation", () => {
     const app = createApp();
 
     // Route is accessible while active
-    const res1 = await app.request("/api/v1/plugins/test-plugin/status");
+    const res1 = await app.request("/api/v1/plugins/test-plugin/status", {
+      headers: { Authorization: AUTH },
+    });
     expect(res1.status).toBe(200);
 
     // Simulate deactivation by clearing routes and setting status
@@ -215,7 +228,9 @@ describe("pluginRouteDispatcher — routes removed on deactivation", () => {
     entry.status = "inactive";
 
     // Route is no longer accessible
-    const res2 = await app.request("/api/v1/plugins/test-plugin/status");
+    const res2 = await app.request("/api/v1/plugins/test-plugin/status", {
+      headers: { Authorization: AUTH },
+    });
     expect(res2.status).toBe(404);
   });
 });
@@ -252,11 +267,15 @@ describe("pluginRouteDispatcher — multiple plugins", () => {
 
     const app = createApp();
 
-    const res1 = await app.request("/api/v1/plugins/test-plugin/status");
+    const res1 = await app.request("/api/v1/plugins/test-plugin/status", {
+      headers: { Authorization: AUTH },
+    });
     const body1 = await res1.json();
     expect(body1).toEqual({ plugin: "test" });
 
-    const res2 = await app.request("/api/v1/plugins/other-plugin/status");
+    const res2 = await app.request("/api/v1/plugins/other-plugin/status", {
+      headers: { Authorization: AUTH },
+    });
     const body2 = await res2.json();
     expect(body2).toEqual({ plugin: "other" });
   });
@@ -275,7 +294,9 @@ describe("pluginRouteDispatcher — async handlers", () => {
       },
     ]);
     const app = createApp();
-    const res = await app.request("/api/v1/plugins/test-plugin/async");
+    const res = await app.request("/api/v1/plugins/test-plugin/async", {
+      headers: { Authorization: AUTH },
+    });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toEqual({ async: true });
@@ -313,7 +334,9 @@ describe("pluginRouteDispatcher — context registered via activatePlugin", () =
     expect(entry.status).toBe("active");
 
     const app = createApp();
-    const res = await app.request("/api/v1/plugins/test-plugin/hello");
+    const res = await app.request("/api/v1/plugins/test-plugin/hello", {
+      headers: { Authorization: AUTH },
+    });
     expect(res.status).toBe(200);
     const body = await res.json();
     expect(body).toEqual({ hello: "world" });

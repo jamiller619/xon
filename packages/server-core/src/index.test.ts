@@ -24,8 +24,8 @@ describe("GET /api/v1/health", () => {
 });
 
 describe("unknown routes", () => {
-  it("returns 404 for unknown paths", async () => {
+  it("returns 401 for unknown paths", async () => {
     const res = await app.request("/api/v1/unknown");
-    expect(res.status).toBe(404);
+    expect(res.status).toBe(401);
   });
 });

@@ -5,6 +5,9 @@ import { createApp } from "../app.js";
 import { openDatabase } from "../db.js";
 import { migrateDatabase } from "../migrate.js";
 import { dataSources, libraries, mediaItems } from "../schema.js";
+import { signAccessToken } from "./auth.js";
+
+const AUTH = `Bearer ${await signAccessToken("test-id", "testuser", "admin")}`;
 
 describe("Libraries CRUD API", () => {
   let client: Client;
@@ -29,7 +32,7 @@ describe("Libraries CRUD API", () => {
   ) {
     return app.request("/api/v1/libraries", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: { "Content-Type": "application/json", Authorization: AUTH },
       body: JSON.stringify(data),
     });
   }
@@ -64,7 +67,7 @@ describe("Libraries CRUD API", () => {
     it("returns 400 for missing name", async () => {
       const res = await app.request("/api/v1/libraries", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: AUTH },
         body: JSON.stringify({ description: "no name" }),
       });
       expect(res.status).toBe(400);
@@ -73,7 +76,7 @@ describe("Libraries CRUD API", () => {
     it("returns 400 for empty name", async () => {
       const res = await app.request("/api/v1/libraries", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: AUTH },
         body: JSON.stringify({ name: "" }),
       });
       expect(res.status).toBe(400);
@@ -82,7 +85,7 @@ describe("Libraries CRUD API", () => {
 
   describe("GET /api/v1/libraries", () => {
     it("returns empty array when no libraries exist", async () => {
-      const res = await app.request("/api/v1/libraries");
+      const res = await app.request("/api/v1/libraries", { headers: { Authorization: AUTH } });
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body).toEqual([]);
@@ -91,7 +94,7 @@ describe("Libraries CRUD API", () => {
     it("lists all libraries", async () => {
       await createLibrary({ name: "Library 1" });
       await createLibrary({ name: "Library 2" });
-      const res = await app.request("/api/v1/libraries");
+      const res = await app.request("/api/v1/libraries", { headers: { Authorization: AUTH } });
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body).toHaveLength(2);
@@ -103,7 +106,9 @@ describe("Libraries CRUD API", () => {
   describe("GET /api/v1/libraries/:id", () => {
     it("returns library with empty dataSources array", async () => {
       const created = await (await createLibrary({ name: "Detail Library" })).json();
-      const res = await app.request(`/api/v1/libraries/${created.id}`);
+      const res = await app.request(`/api/v1/libraries/${created.id}`, {
+        headers: { Authorization: AUTH },
+      });
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body.id).toBe(created.id);
@@ -112,7 +117,9 @@ describe("Libraries CRUD API", () => {
     });
 
     it("returns 404 for unknown id", async () => {
-      const res = await app.request("/api/v1/libraries/nonexistent");
+      const res = await app.request("/api/v1/libraries/nonexistent", {
+        headers: { Authorization: AUTH },
+      });
       expect(res.status).toBe(404);
     });
   });
@@ -122,7 +129,7 @@ describe("Libraries CRUD API", () => {
       const created = await (await createLibrary({ name: "Old Name" })).json();
       const res = await app.request(`/api/v1/libraries/${created.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: AUTH },
         body: JSON.stringify({ name: "New Name" }),
       });
       expect(res.status).toBe(200);
@@ -134,7 +141,7 @@ describe("Libraries CRUD API", () => {
       const created = await (await createLibrary({ name: "Library" })).json();
       const res = await app.request(`/api/v1/libraries/${created.id}`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: AUTH },
         body: JSON.stringify({ allowedMediaTypes: ["Movies", "TV Shows"] }),
       });
       expect(res.status).toBe(200);
@@ -145,7 +152,7 @@ describe("Libraries CRUD API", () => {
     it("returns 404 for unknown id", async () => {
       const res = await app.request("/api/v1/libraries/nonexistent", {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", Authorization: AUTH },
         body: JSON.stringify({ name: "Updated" }),
       });
       expect(res.status).toBe(404);
@@ -157,6 +164,7 @@ describe("Libraries CRUD API", () => {
       const created = await (await createLibrary({ name: "To Delete" })).json();
       const res = await app.request(`/api/v1/libraries/${created.id}`, {
         method: "DELETE",
+        headers: { Authorization: AUTH },
       });
       expect(res.status).toBe(200);
       const body = await res.json();
@@ -165,14 +173,20 @@ describe("Libraries CRUD API", () => {
 
     it("deleted library is no longer found", async () => {
       const created = await (await createLibrary({ name: "Gone" })).json();
-      await app.request(`/api/v1/libraries/${created.id}`, { method: "DELETE" });
-      const res = await app.request(`/api/v1/libraries/${created.id}`);
+      await app.request(`/api/v1/libraries/${created.id}`, {
+        method: "DELETE",
+        headers: { Authorization: AUTH },
+      });
+      const res = await app.request(`/api/v1/libraries/${created.id}`, {
+        headers: { Authorization: AUTH },
+      });
       expect(res.status).toBe(404);
     });
 
     it("returns 404 for unknown id", async () => {
       const res = await app.request("/api/v1/libraries/nonexistent", {
         method: "DELETE",
+        headers: { Authorization: AUTH },
       });
       expect(res.status).toBe(404);
     });
@@ -236,21 +250,27 @@ describe("Libraries Media List API", () => {
 
   describe("GET /api/v1/libraries/:libraryId/media", () => {
     it("returns all media items for the library", async () => {
-      const res = await app.request(`/api/v1/libraries/${libId}/media`);
+      const res = await app.request(`/api/v1/libraries/${libId}/media`, {
+        headers: { Authorization: AUTH },
+      });
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body).toHaveLength(3);
     });
 
     it("includes thumbnailUrls field on each item", async () => {
-      const res = await app.request(`/api/v1/libraries/${libId}/media`);
+      const res = await app.request(`/api/v1/libraries/${libId}/media`, {
+        headers: { Authorization: AUTH },
+      });
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body[0]).toHaveProperty("thumbnailUrls");
     });
 
     it("returns 404 for unknown library", async () => {
-      const res = await app.request("/api/v1/libraries/nonexistent/media");
+      const res = await app.request("/api/v1/libraries/nonexistent/media", {
+        headers: { Authorization: AUTH },
+      });
       expect(res.status).toBe(404);
     });
 
@@ -270,7 +290,9 @@ describe("Libraries Media List API", () => {
         updatedAt: now,
       });
 
-      const res = await app.request(`/api/v1/libraries/${libId}/media?mediaCategory=Documents`);
+      const res = await app.request(`/api/v1/libraries/${libId}/media?mediaCategory=Documents`, {
+        headers: { Authorization: AUTH },
+      });
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body).toHaveLength(1);
@@ -278,33 +300,43 @@ describe("Libraries Media List API", () => {
     });
 
     it("filters by mimeType", async () => {
-      const res = await app.request(`/api/v1/libraries/${libId}/media?mimeType=image/jpeg`);
+      const res = await app.request(`/api/v1/libraries/${libId}/media?mimeType=image/jpeg`, {
+        headers: { Authorization: AUTH },
+      });
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body).toHaveLength(3);
     });
 
     it("filters by drmProtected=false", async () => {
-      const res = await app.request(`/api/v1/libraries/${libId}/media?drmProtected=false`);
+      const res = await app.request(`/api/v1/libraries/${libId}/media?drmProtected=false`, {
+        headers: { Authorization: AUTH },
+      });
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body).toHaveLength(3);
     });
 
     it("paginates results with page and limit", async () => {
-      const res = await app.request(`/api/v1/libraries/${libId}/media?limit=2&page=1`);
+      const res = await app.request(`/api/v1/libraries/${libId}/media?limit=2&page=1`, {
+        headers: { Authorization: AUTH },
+      });
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body).toHaveLength(2);
 
-      const res2 = await app.request(`/api/v1/libraries/${libId}/media?limit=2&page=2`);
+      const res2 = await app.request(`/api/v1/libraries/${libId}/media?limit=2&page=2`, {
+        headers: { Authorization: AUTH },
+      });
       expect(res2.status).toBe(200);
       const body2 = await res2.json();
       expect(body2).toHaveLength(1);
     });
 
     it("sorts by fileSize", async () => {
-      const res = await app.request(`/api/v1/libraries/${libId}/media?sortBy=fileSize&order=desc`);
+      const res = await app.request(`/api/v1/libraries/${libId}/media?sortBy=fileSize&order=desc`, {
+        headers: { Authorization: AUTH },
+      });
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body[0].fileSize).toBe(3000);
@@ -321,7 +353,9 @@ describe("Libraries Media List API", () => {
         createdAt: now,
         updatedAt: now,
       });
-      const res = await app.request(`/api/v1/libraries/${emptyLibId}/media`);
+      const res = await app.request(`/api/v1/libraries/${emptyLibId}/media`, {
+        headers: { Authorization: AUTH },
+      });
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body).toHaveLength(0);

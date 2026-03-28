@@ -1,7 +1,9 @@
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
+import { authMiddleware } from "./authMiddleware.js";
 import { pluginRouteDispatcher } from "./pluginRoutes.js";
 import { makeAdminPluginsRouter } from "./routes/adminPlugins.js";
+import { makeAuthRouter } from "./routes/auth.js";
 import { makeLibrariesRouter } from "./routes/libraries.js";
 import { makeMediaRouter } from "./routes/media.js";
 import { makePluginsRouter } from "./routes/plugins.js";
@@ -10,11 +12,15 @@ import { makeThemesRouter } from "./routes/themes.js";
 export function createApp(db?: LibSQLDatabase): Hono {
   const app = new Hono().basePath("/api/v1");
 
+  // Auth middleware on all routes (skips /api/v1/auth/* internally)
+  app.use("/*", authMiddleware);
+
   app.get("/health", (c) => {
     return c.json({ status: "ok", timestamp: new Date().toISOString() });
   });
 
   if (db) {
+    app.route("/auth", makeAuthRouter(db));
     app.route("/libraries", makeLibrariesRouter(db));
     app.route("/media", makeMediaRouter(db));
   }
