@@ -1,0 +1,30 @@
+{
+  "name": "@xon/plugin-3d-model-viewer",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "xon": {
+    "id": "3d-model-viewer",
+    "name": "3D Model Viewer",
+    "version": "1.0.0",
+    "description": "WebGL viewer for OBJ, glTF, and GLB 3D models using Three.js",
+    "author": "Xon",
+    "category": "FormatHandler",
+    "mediaCategories": ["3D Models"],
+    "main": "dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "typecheck": "tsc --build --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@xon/plugin-sdk": "*",
+    "@xon/shared": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "*",
+    "vitest": "^2.1.0"
+  }
+}
