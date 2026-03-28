@@ -1,3 +1,23 @@
+## 2026-03-28 - US-078
+- Implemented automatic photo grouping by date and GPS location
+- Files changed: packages/server-core/src/grouping.ts (added groupPhotos, parseExifDate, parseExifTimestamp, clusterCoordinate), packages/server-core/src/grouping.test.ts (added 18 new tests), packages/server-core/src/orchestrator.ts (calls groupPhotos after scan), packages/server-core/src/index.ts (exports new functions)
+- `groupPhotos(db, libraryId)`: reads Pictures + Images category items, parses dateTaken/gpsLatitude/gpsLongitude from metadata JSON
+- Date groups: `grp:photo-date:{libraryId}:{YYYY-MM-DD}` — one per unique day; photos sorted by Unix timestamp (chronological within day)
+- Location groups: `grp:photo-location:{libraryId}:{lat}:{lon}` — one per GPS cluster (~11km grid cell by rounding to 1 decimal degree)
+- `parseExifDate`: EXIF "YYYY:MM:DD HH:MM:SS" → "YYYY-MM-DD"
+- `parseExifTimestamp`: EXIF datetime → Unix seconds for sort order
+- `clusterCoordinate`: rounds to 1 decimal place for ~11km GPS clustering
+- Location group title = "{lat}, {lon}" (coordinate-based; reverse geocoding is future work)
+- Photos without dateTaken are not date-grouped; photos without GPS are not location-grouped
+- A single photo can be in both a date group AND a location group (different groupId:mediaItemId pairs)
+- 577 tests passing; biome clean; server-core typecheck clean
+- **Learnings for future iterations:**
+  - Photo groupMembers deduplication requires tracking `groupId:mediaItemId` pairs (not just mediaItemId) since one photo can be in multiple groups
+  - EXIF date format: "YYYY:MM:DD HH:MM:SS" (colons as date separators, not dashes) — parse with regex, not Date constructor
+  - GPS clustering: rounding to 1 decimal place gives ~11km precision for lat (~11.1km) and ~8-11km for lon (varies by latitude)
+  - `inArray(col, [v1, v2])` works for filtering by multiple enum values in Drizzle
+---
+
 ## 2026-03-28 - US-077
 - Implemented automatic audiobook grouping into book and series groups
 - Files changed: packages/server-core/src/grouping.ts (added resolveAudiobookInfo, groupAudiobooks), packages/server-core/src/grouping.test.ts (added 14 new tests), packages/server-core/src/orchestrator.ts (calls groupAudiobooks after scan), packages/server-core/src/index.ts (exports groupAudiobooks, resolveAudiobookInfo)
@@ -1144,6 +1164,9 @@
 - JWT auth middleware: check `c.req.path.startsWith("/api/v1/auth/")` for full path (includes basePath); also exempt `/api/v1/health`
 - Auth test pattern: top-level `const AUTH = \`Bearer \${await signAccessToken(...)}\`` in ESM test files; add `Authorization: AUTH` to all test requests
 - React Router v7 layout routes: `<Route element={<Layout />}>` wrapping child routes; `<Outlet />` renders child content inside the layout
+- groupMembers deduplication when a media item can join multiple groups: track `groupId:mediaItemId` composite keys, not just `mediaItemId`
+- EXIF date format uses colons as date separators: "YYYY:MM:DD HH:MM:SS" — parse with regex `/^(\d{4}):(\d{2}):(\d{2})/`, convert to ISO for Date constructor
+- GPS clustering to ~11km grid cells: round to 1 decimal degree with `(Math.round(coord * 10) / 10).toFixed(1)`
 
 ---
 
