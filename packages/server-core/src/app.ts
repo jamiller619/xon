@@ -2,6 +2,7 @@ import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { authMiddleware } from "./authMiddleware.js";
 import { pluginRouteDispatcher } from "./pluginRoutes.js";
+import { requireRole } from "./rbac.js";
 import { makeAdminPluginsRouter } from "./routes/adminPlugins.js";
 import { makeAdminUsersRouter } from "./routes/adminUsers.js";
 import { makeAuthRouter } from "./routes/auth.js";
@@ -25,6 +26,9 @@ export function createApp(db?: LibSQLDatabase): Hono {
     app.route("/libraries", makeLibrariesRouter(db));
     app.route("/media", makeMediaRouter(db));
   }
+
+  // Admin-only: require admin role for all /admin/* routes
+  app.use("/admin/*", requireRole("admin"));
 
   // Admin: user management
   if (db) {

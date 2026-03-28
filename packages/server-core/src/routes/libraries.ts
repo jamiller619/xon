@@ -3,6 +3,7 @@ import { and, asc, desc, eq, sql } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
+import { requireRole } from "../rbac.js";
 import { dataSources, libraries, mediaItems } from "../schema.js";
 import { withThumbnailUrls } from "./media.js";
 import { makeScanRouter } from "./scan.js";
@@ -23,8 +24,8 @@ const updateLibrarySchema = z.object({
 export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
   const router = new Hono();
 
-  // POST /libraries — create library
-  router.post("/", zValidator("json", createLibrarySchema), async (c) => {
+  // POST /libraries — create library (manager+)
+  router.post("/", requireRole("manager"), zValidator("json", createLibrarySchema), async (c) => {
     const body = c.req.valid("json");
     const id = crypto.randomUUID();
     const now = new Date();
@@ -55,8 +56,8 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
     return c.json({ ...rows[0], dataSources: sources });
   });
 
-  // PUT /libraries/:id — update library
-  router.put("/:id", zValidator("json", updateLibrarySchema), async (c) => {
+  // PUT /libraries/:id — update library (manager+)
+  router.put("/:id", requireRole("manager"), zValidator("json", updateLibrarySchema), async (c) => {
     const id = c.req.param("id");
     const body = c.req.valid("json");
     const existing = await db.select().from(libraries).where(eq(libraries.id, id));
@@ -74,8 +75,8 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
     return c.json(updated[0]);
   });
 
-  // DELETE /libraries/:id — delete library and associated data sources
-  router.delete("/:id", async (c) => {
+  // DELETE /libraries/:id — delete library and associated data sources (manager+)
+  router.delete("/:id", requireRole("manager"), async (c) => {
     const id = c.req.param("id");
     const existing = await db.select().from(libraries).where(eq(libraries.id, id));
     if (existing.length === 0) return c.json({ error: "Not found" }, 404);

@@ -1,7 +1,6 @@
 import { zValidator } from "@hono/zod-validator";
 import { eq } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
-import type { Context } from "hono";
 import { Hono } from "hono";
 import { z } from "zod";
 import { hashPassword } from "../password.js";
@@ -22,21 +21,11 @@ const updateUserSchema = z.object({
   password: z.string().min(1).optional(),
 });
 
-function requireAdmin(c: Context): Response | null {
-  const user = c.get("user");
-  if (!user || user.role !== "admin") {
-    return c.json({ error: "Forbidden" }, 403) as unknown as Response;
-  }
-  return null;
-}
-
 export function makeAdminUsersRouter(db: LibSQLDatabase): Hono {
   const router = new Hono();
 
   // GET /admin/users — list all users
   router.get("/", async (c) => {
-    const forbidden = requireAdmin(c);
-    if (forbidden) return forbidden;
     const rows = await db
       .select({
         id: users.id,
@@ -54,8 +43,6 @@ export function makeAdminUsersRouter(db: LibSQLDatabase): Hono {
 
   // POST /admin/users — create user
   router.post("/", zValidator("json", createUserSchema), async (c) => {
-    const forbidden = requireAdmin(c);
-    if (forbidden) return forbidden;
     const body = c.req.valid("json");
 
     const id = crypto.randomUUID();
@@ -91,8 +78,6 @@ export function makeAdminUsersRouter(db: LibSQLDatabase): Hono {
 
   // PUT /admin/users/:id — update user
   router.put("/:id", zValidator("json", updateUserSchema), async (c) => {
-    const forbidden = requireAdmin(c);
-    if (forbidden) return forbidden;
     const id = c.req.param("id");
     const body = c.req.valid("json");
 
@@ -124,8 +109,6 @@ export function makeAdminUsersRouter(db: LibSQLDatabase): Hono {
 
   // DELETE /admin/users/:id — delete user
   router.delete("/:id", async (c) => {
-    const forbidden = requireAdmin(c);
-    if (forbidden) return forbidden;
     const id = c.req.param("id");
 
     const existing = await db.select().from(users).where(eq(users.id, id));

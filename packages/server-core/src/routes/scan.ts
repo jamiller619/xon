@@ -7,6 +7,7 @@ import { emitEvent } from "../events.js";
 import type { ScanProgress, ScanSummary } from "../orchestrator.js";
 import { scanLibrary } from "../orchestrator.js";
 import { emitPluginEvent } from "../pluginManager.js";
+import { requireRole } from "../rbac.js";
 import { parseCronInterval } from "../scheduler.js";
 import { libraries } from "../schema.js";
 
@@ -32,8 +33,8 @@ export function makeScanRouter(db: LibSQLDatabase): Hono {
   const scanRegistry = new Map<string, ScanState>();
   const router = new Hono();
 
-  // POST / — trigger scan (mounted at /:libraryId/scan)
-  router.post("/", (c) => {
+  // POST / — trigger scan (mounted at /:libraryId/scan) (manager+)
+  router.post("/", requireRole("manager"), (c) => {
     const libraryId = c.req.param("libraryId") as string;
 
     const current = scanRegistry.get(libraryId);
@@ -113,8 +114,8 @@ export function makeScanRouter(db: LibSQLDatabase): Hono {
     });
   });
 
-  // PUT /schedule — update scan schedule for a library
-  router.put("/schedule", zValidator("json", scheduleSchema), async (c) => {
+  // PUT /schedule — update scan schedule for a library (manager+)
+  router.put("/schedule", requireRole("manager"), zValidator("json", scheduleSchema), async (c) => {
     const libraryId = c.req.param("libraryId") as string;
     const { scanSchedule } = c.req.valid("json");
 

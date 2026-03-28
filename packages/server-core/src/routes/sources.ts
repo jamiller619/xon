@@ -4,6 +4,7 @@ import { and, eq } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
+import { requireRole } from "../rbac.js";
 import { dataSources, libraries } from "../schema.js";
 
 const createSourceSchema = z.object({
@@ -23,8 +24,8 @@ const updateSourceSchema = z.object({
 export function makeSourcesRouter(db: LibSQLDatabase): Hono {
   const router = new Hono();
 
-  // POST /:libraryId/sources — add data source
-  router.post("/", zValidator("json", createSourceSchema), async (c) => {
+  // POST /:libraryId/sources — add data source (manager+)
+  router.post("/", requireRole("manager"), zValidator("json", createSourceSchema), async (c) => {
     // libraryId comes from parent route /:libraryId/sources
     const libraryId = c.req.param("libraryId") as string;
     const body = c.req.valid("json");
@@ -67,8 +68,8 @@ export function makeSourcesRouter(db: LibSQLDatabase): Hono {
     return c.json(rows);
   });
 
-  // PUT /:libraryId/sources/:id — update data source
-  router.put("/:id", zValidator("json", updateSourceSchema), async (c) => {
+  // PUT /:libraryId/sources/:id — update data source (manager+)
+  router.put("/:id", requireRole("manager"), zValidator("json", updateSourceSchema), async (c) => {
     const libraryId = c.req.param("libraryId") as string;
     const id = c.req.param("id");
     const body = c.req.valid("json");
@@ -104,8 +105,8 @@ export function makeSourcesRouter(db: LibSQLDatabase): Hono {
     return c.json(updated[0]);
   });
 
-  // DELETE /:libraryId/sources/:id — remove data source
-  router.delete("/:id", async (c) => {
+  // DELETE /:libraryId/sources/:id — remove data source (manager+)
+  router.delete("/:id", requireRole("manager"), async (c) => {
     const libraryId = c.req.param("libraryId") as string;
     const id = c.req.param("id");
 
