@@ -1,3 +1,17 @@
+## 2026-03-28 - US-062
+- Implemented users table schema and Argon2id password hashing
+- Files created: packages/server-core/src/password.ts, packages/server-core/src/password.test.ts, packages/server-core/src/userInit.ts, packages/server-core/src/userInit.test.ts, packages/server-core/drizzle/0005_furry_retro_girl.sql
+- Files changed: packages/server-core/src/schema.ts (added users table), packages/server-core/src/server.ts (calls ensureAdminUser on boot), packages/server-core/src/index.ts (exports users, hashPassword, verifyPassword), packages/server-core/package.json (added @node-rs/argon2)
+- `users` table: id, username (unique), email (unique), displayName, avatarUrl, passwordHash, role (admin/manager/user/guest), createdAt, updatedAt
+- `hashPassword` / `verifyPassword` via `@node-rs/argon2` (prebuilt Rust binaries, no native build step needed); 64 MiB memory, 3 time cost, 1 parallelism
+- `ensureAdminUser(db)`: checks if any user exists; if not, creates default admin (username: admin, password: admin) and logs a warning to change password
+- 396 tests passing; biome clean
+- **Learnings for future iterations:**
+  - `argon2` npm package requires native compilation (gyp); use `@node-rs/argon2` instead — it ships prebuilt binaries for Linux/Mac/Windows
+  - `@node-rs/argon2` v2.x: import `{ hash, verify }` from `"@node-rs/argon2"`; `hash(password, options)` returns `$argon2id$...` hash; `verify(hash, password)` returns boolean
+  - `ensureAdminUser` guards with `db.select({ id: users.id }).from(users).limit(1)` — cheap existence check before expensive hash operation
+---
+
 ## 2026-03-28 - US-061
 - Implemented first-party 3D model WebGL viewer plugin using Three.js
 - Files created: plugins/3d-model-viewer/package.json, plugins/3d-model-viewer/tsconfig.json, plugins/3d-model-viewer/src/index.ts, plugins/3d-model-viewer/src/index.test.ts, plugins/3d-model-viewer/assets/viewer.js
