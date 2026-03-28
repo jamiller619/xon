@@ -4,9 +4,13 @@ import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { openDatabase } from "./db.js";
 import {
+  clusterCoordinate,
   groupAudiobooks,
   groupMusicTracks,
+  groupPhotos,
   groupTvEpisodes,
+  parseExifDate,
+  parseExifTimestamp,
   parseTvEpisode,
   resolveAudiobookInfo,
   resolveSeriesName,
@@ -855,5 +859,294 @@ describe("groupAudiobooks", () => {
     expect(allGroups).toHaveLength(1);
     expect(members).toHaveLength(1);
     expect(members[0]?.mediaItemId).toBe("ch-1");
+  });
+});
+
+describe("parseExifDate", () => {
+  it("parses standard EXIF date format", () => {
+    expect(parseExifDate("2023:10:05 14:32:10")).toBe("2023-10-05");
+  });
+
+  it("parses date-only EXIF string", () => {
+    expect(parseExifDate("2023:10:05")).toBe("2023-10-05");
+  });
+
+  it("returns null for unparseable strings", () => {
+    expect(parseExifDate("not a date")).toBeNull();
+    expect(parseExifDate("")).toBeNull();
+  });
+});
+
+describe("parseExifTimestamp", () => {
+  it("returns a numeric Unix timestamp for valid EXIF datetime", () => {
+    const ts = parseExifTimestamp("2023:10:05 00:00:00");
+    expect(ts).toBeGreaterThan(0);
+  });
+
+  it("returns 0 for unparseable strings", () => {
+    expect(parseExifTimestamp("not a date")).toBe(0);
+    expect(parseExifTimestamp("2023:10:05")).toBe(0);
+  });
+
+  it("orders earlier photos before later photos", () => {
+    const ts1 = parseExifTimestamp("2023:10:05 08:00:00");
+    const ts2 = parseExifTimestamp("2023:10:05 18:30:00");
+    expect(ts1).toBeLessThan(ts2);
+  });
+});
+
+describe("clusterCoordinate", () => {
+  it("rounds to 1 decimal place", () => {
+    expect(clusterCoordinate(37.774)).toBe("37.8");
+    expect(clusterCoordinate(-122.419)).toBe("-122.4");
+    expect(clusterCoordinate(0)).toBe("0.0");
+  });
+
+  it("clusters nearby coordinates to the same value", () => {
+    expect(clusterCoordinate(37.71)).toBe(clusterCoordinate(37.74));
+  });
+
+  it("keeps distant coordinates in different clusters", () => {
+    expect(clusterCoordinate(37.1)).not.toBe(clusterCoordinate(37.2));
+  });
+});
+
+describe("groupPhotos", () => {
+  let client: Client;
+  let db: LibSQLDatabase;
+
+  beforeEach(async () => {
+    ({ client, db } = await openDatabase(":memory:"));
+    await migrateDatabase(db);
+
+    await db.insert(libraries).values({ id: "lib-1", name: "Photos", allowedMediaTypes: "[]" });
+    await db.insert(dataSources).values({
+      id: "ds-1",
+      libraryId: "lib-1",
+      type: "local",
+      path: "/photos",
+    });
+  });
+
+  afterEach(() => {
+    client.close();
+  });
+
+  it("creates date groups for photos with EXIF dateTaken", async () => {
+    await db.insert(mediaItems).values([
+      {
+        id: "photo-1",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/photos/img001.jpg",
+        fileName: "img001.jpg",
+        fileSize: 2000,
+        mediaCategory: MediaCategory.Pictures,
+        metadata: JSON.stringify({ dateTaken: "2023:10:05 10:00:00" }),
+      },
+      {
+        id: "photo-2",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/photos/img002.jpg",
+        fileName: "img002.jpg",
+        fileSize: 2000,
+        mediaCategory: MediaCategory.Pictures,
+        metadata: JSON.stringify({ dateTaken: "2023:10:05 15:30:00" }),
+      },
+      {
+        id: "photo-3",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/photos/img003.jpg",
+        fileName: "img003.jpg",
+        fileSize: 2000,
+        mediaCategory: MediaCategory.Pictures,
+        metadata: JSON.stringify({ dateTaken: "2023:10:06 09:00:00" }),
+      },
+    ]);
+
+    await groupPhotos(db, "lib-1");
+
+    const allGroups = await db.select().from(groups);
+    const dateGroups = allGroups.filter((g) => g.type === "photo-date");
+
+    expect(dateGroups).toHaveLength(2);
+    const titles = dateGroups.map((g) => g.title).sort();
+    expect(titles).toEqual(["2023-10-05", "2023-10-06"]);
+  });
+
+  it("assigns photos to date groups with timestamp sort order", async () => {
+    await db.insert(mediaItems).values([
+      {
+        id: "photo-1",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/photos/img001.jpg",
+        fileName: "img001.jpg",
+        fileSize: 2000,
+        mediaCategory: MediaCategory.Pictures,
+        metadata: JSON.stringify({ dateTaken: "2023:10:05 10:00:00" }),
+      },
+      {
+        id: "photo-2",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/photos/img002.jpg",
+        fileName: "img002.jpg",
+        fileSize: 2000,
+        mediaCategory: MediaCategory.Pictures,
+        metadata: JSON.stringify({ dateTaken: "2023:10:05 15:30:00" }),
+      },
+    ]);
+
+    await groupPhotos(db, "lib-1");
+
+    const members = await db.select().from(groupMembers);
+    expect(members).toHaveLength(2);
+    const sorted = [...members].sort((a, b) => a.sortOrder - b.sortOrder);
+    expect(sorted[0]?.mediaItemId).toBe("photo-1");
+    expect(sorted[1]?.mediaItemId).toBe("photo-2");
+  });
+
+  it("creates location groups for photos with GPS data", async () => {
+    await db.insert(mediaItems).values([
+      {
+        id: "photo-1",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/photos/img001.jpg",
+        fileName: "img001.jpg",
+        fileSize: 2000,
+        mediaCategory: MediaCategory.Pictures,
+        metadata: JSON.stringify({ gpsLatitude: 37.774, gpsLongitude: -122.419 }),
+      },
+      {
+        id: "photo-2",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/photos/img002.jpg",
+        fileName: "img002.jpg",
+        fileSize: 2000,
+        mediaCategory: MediaCategory.Pictures,
+        metadata: JSON.stringify({ gpsLatitude: 37.776, gpsLongitude: -122.421 }),
+      },
+      {
+        id: "photo-3",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/photos/img003.jpg",
+        fileName: "img003.jpg",
+        fileSize: 2000,
+        mediaCategory: MediaCategory.Pictures,
+        metadata: JSON.stringify({ gpsLatitude: 48.856, gpsLongitude: 2.352 }),
+      },
+    ]);
+
+    await groupPhotos(db, "lib-1");
+
+    const allGroups = await db.select().from(groups);
+    const locGroups = allGroups.filter((g) => g.type === "photo-location");
+
+    // photo-1 and photo-2 are within same ~11km grid cell; photo-3 is far away
+    expect(locGroups).toHaveLength(2);
+  });
+
+  it("groups both Pictures and Images categories", async () => {
+    await db.insert(mediaItems).values([
+      {
+        id: "pic-1",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/photos/img001.jpg",
+        fileName: "img001.jpg",
+        fileSize: 2000,
+        mediaCategory: MediaCategory.Pictures,
+        metadata: JSON.stringify({ dateTaken: "2023:10:05 10:00:00" }),
+      },
+      {
+        id: "img-1",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/photos/render.png",
+        fileName: "render.png",
+        fileSize: 2000,
+        mediaCategory: MediaCategory.Images,
+        metadata: JSON.stringify({ dateTaken: "2023:10:05 11:00:00" }),
+      },
+    ]);
+
+    await groupPhotos(db, "lib-1");
+
+    const members = await db.select().from(groupMembers);
+    expect(members).toHaveLength(2);
+  });
+
+  it("skips photos without dateTaken (no date group created)", async () => {
+    await db.insert(mediaItems).values([
+      {
+        id: "photo-1",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/photos/img001.jpg",
+        fileName: "img001.jpg",
+        fileSize: 2000,
+        mediaCategory: MediaCategory.Pictures,
+        metadata: "{}",
+      },
+    ]);
+
+    await groupPhotos(db, "lib-1");
+
+    const allGroups = await db.select().from(groups);
+    expect(allGroups).toHaveLength(0);
+  });
+
+  it("is idempotent on repeated calls", async () => {
+    await db.insert(mediaItems).values([
+      {
+        id: "photo-1",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/photos/img001.jpg",
+        fileName: "img001.jpg",
+        fileSize: 2000,
+        mediaCategory: MediaCategory.Pictures,
+        metadata: JSON.stringify({
+          dateTaken: "2023:10:05 10:00:00",
+          gpsLatitude: 37.774,
+          gpsLongitude: -122.419,
+        }),
+      },
+    ]);
+
+    await groupPhotos(db, "lib-1");
+    await groupPhotos(db, "lib-1");
+
+    const allGroups = await db.select().from(groups);
+    const members = await db.select().from(groupMembers);
+
+    expect(allGroups).toHaveLength(2); // 1 date + 1 location
+    expect(members).toHaveLength(2); // 1 in date group + 1 in location group
+  });
+
+  it("does not group non-photo categories", async () => {
+    await db.insert(mediaItems).values([
+      {
+        id: "movie-1",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/photos/movie.mp4",
+        fileName: "movie.mp4",
+        fileSize: 5000,
+        mediaCategory: MediaCategory.Movies,
+        metadata: JSON.stringify({ dateTaken: "2023:10:05 10:00:00" }),
+      },
+    ]);
+
+    await groupPhotos(db, "lib-1");
+
+    const allGroups = await db.select().from(groups);
+    expect(allGroups).toHaveLength(0);
   });
 });

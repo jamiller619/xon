@@ -579,3 +579,188 @@ export async function groupMusicTracks(db: LibSQLDatabase, libraryId: string): P
     await db.insert(groupMembers).values(memberInserts);
   }
 }
+
+function makePhotoDateGroupId(libraryId: string, dateStr: string): string {
+  return `grp:photo-date:${libraryId}:${dateStr}`;
+}
+
+function makePhotoLocationGroupId(libraryId: string, lat: string, lon: string): string {
+  return `grp:photo-location:${libraryId}:${lat}:${lon}`;
+}
+
+/**
+ * Parses the date portion from an EXIF dateTaken string.
+ * EXIF format: "YYYY:MM:DD HH:MM:SS"
+ * Returns "YYYY-MM-DD" or null if not parseable.
+ */
+export function parseExifDate(dateTaken: string): string | null {
+  const match = dateTaken.match(/^(\d{4}):(\d{2}):(\d{2})/);
+  if (!match) return null;
+  return `${match[1]}-${match[2]}-${match[3]}`;
+}
+
+/**
+ * Parses an EXIF date string into a Unix timestamp (seconds) for sort ordering.
+ * Returns 0 if not parseable.
+ */
+export function parseExifTimestamp(dateTaken: string): number {
+  const match = dateTaken.match(/^(\d{4}):(\d{2}):(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/);
+  if (!match) return 0;
+  const d = new Date(`${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:${match[6]}Z`);
+  return Math.floor(d.getTime() / 1000);
+}
+
+/**
+ * Clusters a GPS coordinate to a ~11km grid cell by rounding to 1 decimal place.
+ * Returns the rounded value formatted to 1 decimal place.
+ */
+export function clusterCoordinate(coord: number): string {
+  return (Math.round(coord * 10) / 10).toFixed(1);
+}
+
+interface PhotoData {
+  id: string;
+  dateStr: string | null;
+  timestamp: number;
+  latCluster: string | null;
+  lonCluster: string | null;
+}
+
+/**
+ * Auto-creates date and location groups for Pictures/Images media items.
+ * Date groups: one per unique day (EXIF DateTimeOriginal), photos sorted by time.
+ * Location groups: one per GPS cluster (rounded to 1 decimal degree, ~11 km).
+ * Idempotent: safe to call after every scan.
+ */
+export async function groupPhotos(db: LibSQLDatabase, libraryId: string): Promise<void> {
+  const photoItems = await db
+    .select({ id: mediaItems.id, metadata: mediaItems.metadata })
+    .from(mediaItems)
+    .where(
+      and(
+        eq(mediaItems.libraryId, libraryId),
+        inArray(mediaItems.mediaCategory, [MediaCategory.Pictures, MediaCategory.Images])
+      )
+    );
+
+  if (photoItems.length === 0) return;
+
+  const photos: PhotoData[] = [];
+  for (const item of photoItems) {
+    let meta: Record<string, unknown> = {};
+    try {
+      meta = JSON.parse(item.metadata ?? "{}");
+    } catch {
+      // ignore parse errors
+    }
+
+    const dateTaken = typeof meta.dateTaken === "string" ? meta.dateTaken : null;
+    const dateStr = dateTaken ? parseExifDate(dateTaken) : null;
+    const timestamp = dateTaken ? parseExifTimestamp(dateTaken) : 0;
+
+    const lat = typeof meta.gpsLatitude === "number" ? meta.gpsLatitude : null;
+    const lon = typeof meta.gpsLongitude === "number" ? meta.gpsLongitude : null;
+    const latCluster = lat !== null ? clusterCoordinate(lat) : null;
+    const lonCluster = lon !== null ? clusterCoordinate(lon) : null;
+
+    photos.push({ id: item.id, dateStr, timestamp, latCluster, lonCluster });
+  }
+
+  // Build unique date groups
+  const dateGroupMap = new Map<string, string>(); // groupId → dateStr
+  for (const photo of photos) {
+    if (photo.dateStr) {
+      const gid = makePhotoDateGroupId(libraryId, photo.dateStr);
+      if (!dateGroupMap.has(gid)) {
+        dateGroupMap.set(gid, photo.dateStr);
+      }
+    }
+  }
+
+  // Build unique location groups
+  const locationGroupMap = new Map<string, { lat: string; lon: string }>();
+  for (const photo of photos) {
+    if (photo.latCluster !== null && photo.lonCluster !== null) {
+      const gid = makePhotoLocationGroupId(libraryId, photo.latCluster, photo.lonCluster);
+      if (!locationGroupMap.has(gid)) {
+        locationGroupMap.set(gid, { lat: photo.latCluster, lon: photo.lonCluster });
+      }
+    }
+  }
+
+  const allGroupIds = [...dateGroupMap.keys(), ...locationGroupMap.keys()];
+  if (allGroupIds.length === 0) return;
+
+  // Fetch existing groups to avoid duplicates
+  const existingGroups = await db
+    .select({ id: groups.id })
+    .from(groups)
+    .where(inArray(groups.id, allGroupIds));
+  const existingGroupIdSet = new Set(existingGroups.map((g) => g.id));
+
+  // Insert missing date groups
+  const dateInserts: Array<typeof groups.$inferInsert> = [];
+  for (const [gid, dateStr] of dateGroupMap) {
+    if (!existingGroupIdSet.has(gid)) {
+      dateInserts.push({
+        id: gid,
+        libraryId,
+        type: "photo-date",
+        title: dateStr,
+        parentGroupId: null,
+        metadata: "{}",
+      });
+    }
+  }
+  if (dateInserts.length > 0) {
+    await db.insert(groups).values(dateInserts);
+  }
+
+  // Insert missing location groups
+  const locationInserts: Array<typeof groups.$inferInsert> = [];
+  for (const [gid, { lat, lon }] of locationGroupMap) {
+    if (!existingGroupIdSet.has(gid)) {
+      locationInserts.push({
+        id: gid,
+        libraryId,
+        type: "photo-location",
+        title: `${lat}, ${lon}`,
+        parentGroupId: null,
+        metadata: JSON.stringify({ lat, lon }),
+      });
+    }
+  }
+  if (locationInserts.length > 0) {
+    await db.insert(groups).values(locationInserts);
+  }
+
+  // Fetch existing members to avoid duplicates (track by groupId:mediaItemId)
+  const photoIds = photos.map((p) => p.id);
+  const existingMembers = await db
+    .select({ groupId: groupMembers.groupId, mediaItemId: groupMembers.mediaItemId })
+    .from(groupMembers)
+    .where(inArray(groupMembers.mediaItemId, photoIds));
+  const existingMemberKeys = new Set(existingMembers.map((m) => `${m.groupId}:${m.mediaItemId}`));
+
+  // Insert missing memberships
+  const memberInserts: Array<typeof groupMembers.$inferInsert> = [];
+  for (const photo of photos) {
+    if (photo.dateStr) {
+      const gid = makePhotoDateGroupId(libraryId, photo.dateStr);
+      const key = `${gid}:${photo.id}`;
+      if (!existingMemberKeys.has(key)) {
+        memberInserts.push({ groupId: gid, mediaItemId: photo.id, sortOrder: photo.timestamp });
+      }
+    }
+    if (photo.latCluster !== null && photo.lonCluster !== null) {
+      const gid = makePhotoLocationGroupId(libraryId, photo.latCluster, photo.lonCluster);
+      const key = `${gid}:${photo.id}`;
+      if (!existingMemberKeys.has(key)) {
+        memberInserts.push({ groupId: gid, mediaItemId: photo.id, sortOrder: 0 });
+      }
+    }
+  }
+  if (memberInserts.length > 0) {
+    await db.insert(groupMembers).values(memberInserts);
+  }
+}

@@ -47,6 +47,10 @@ export {
   groupMusicTracks,
   groupAudiobooks,
   resolveAudiobookInfo,
+  groupPhotos,
+  parseExifDate,
+  parseExifTimestamp,
+  clusterCoordinate,
   type TvEpisodeInfo,
 } from "./grouping.js";
 export { hashPassword, verifyPassword } from "./password.js";
