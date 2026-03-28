@@ -1,3 +1,18 @@
+## 2026-03-28 - US-047
+- Implemented Electron headless fallback for when no display server is available
+- Files changed: apps/desktop/src/main.ts (added hasDisplayServer(), runHeadless module-level var, display detection in whenReady)
+- `hasDisplayServer()`: Linux checks `DISPLAY`/`WAYLAND_DISPLAY` env vars; macOS calls `screen.getAllDisplays()` after ready; Windows always returns true
+- `runHeadless` hoisted to module scope (initialized to `headless`) so `window-all-closed` handler can also use it
+- When display unavailable: logs "No display server detected. Xon desktop activating headless fallback.", skips createWindow() and createTray()
+- Server-core `boot()` always called regardless of display availability
+- `window-all-closed` updated to use `runHeadless` (covers both explicit env var and display-fallback cases) on macOS
+- **Learnings for future iterations:**
+  - Linux display detection: `process.env.DISPLAY` (X11) or `process.env.WAYLAND_DISPLAY` (Wayland) — check before trying to create windows
+  - macOS display detection: `screen.getAllDisplays().length > 0` via Electron screen API — must be called after `app.whenReady()`
+  - Module-level `let runHeadless = headless` pattern allows event handlers registered before `whenReady` to access the final computed value
+  - `screen` is importable from `electron` alongside `BrowserWindow`, `app` — no separate import needed
+---
+
 ## 2026-03-28 - US-046
 - Implemented headless CLI entry point for running Xon server without Electron
 - Files created: apps/headless/src/main.ts (logs startup URL, calls boot())
