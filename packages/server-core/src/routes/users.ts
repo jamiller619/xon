@@ -1,7 +1,7 @@
 import { and, desc, eq, isNull, or } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
-import { mediaItems, mediaProgress } from "../schema.js";
+import { favorites, mediaItems, mediaProgress, watchlist } from "../schema.js";
 import { withThumbnailUrls } from "./media.js";
 
 export function makeUsersRouter(db: LibSQLDatabase): Hono {
@@ -41,6 +41,30 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
         mediaItem: withThumbnailUrls(r.mediaItem),
       }))
     );
+  });
+
+  // GET /users/me/favorites — list favorited items for the current user
+  router.get("/me/favorites", async (c) => {
+    const user = c.get("user");
+    const rows = await db
+      .select({ mediaItem: mediaItems })
+      .from(favorites)
+      .innerJoin(mediaItems, eq(favorites.mediaItemId, mediaItems.id))
+      .where(eq(favorites.userId, user.id))
+      .orderBy(desc(favorites.createdAt));
+    return c.json(rows.map((r) => withThumbnailUrls(r.mediaItem)));
+  });
+
+  // GET /users/me/watchlist — list watchlist items for the current user
+  router.get("/me/watchlist", async (c) => {
+    const user = c.get("user");
+    const rows = await db
+      .select({ mediaItem: mediaItems })
+      .from(watchlist)
+      .innerJoin(mediaItems, eq(watchlist.mediaItemId, mediaItems.id))
+      .where(eq(watchlist.userId, user.id))
+      .orderBy(desc(watchlist.createdAt));
+    return c.json(rows.map((r) => withThumbnailUrls(r.mediaItem)));
   });
 
   return router;

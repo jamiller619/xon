@@ -15,12 +15,14 @@ import { convertMobiToEpub } from "../mobi.js";
 import { convertRawToJpeg, isRawImage } from "../raw.js";
 import type { MediaItem } from "../schema.js";
 import {
+  favorites,
   getAllowedRatings,
   libraryAccess,
   mediaItems,
   mediaProgress,
   readingPositions,
   users,
+  watchlist,
 } from "../schema.js";
 import type { ThumbnailPaths } from "../thumbnails.js";
 import { generateHlsPlaylist, needsTranscoding, spawnTranscodeSegment } from "../transcode.js";
@@ -628,6 +630,52 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     }
 
     return c.json({ ok: true });
+  });
+
+  // POST /media/:id/favorite — add to favorites (idempotent)
+  router.post("/:id/favorite", async (c) => {
+    const user = c.get("user");
+    const id = c.req.param("id");
+    const [item] = await db
+      .select({ id: mediaItems.id })
+      .from(mediaItems)
+      .where(eq(mediaItems.id, id));
+    if (!item) return c.json({ error: "Not found" }, 404);
+    await db.insert(favorites).values({ userId: user.id, mediaItemId: id }).onConflictDoNothing();
+    return c.json({ favorited: true });
+  });
+
+  // DELETE /media/:id/favorite — remove from favorites
+  router.delete("/:id/favorite", async (c) => {
+    const user = c.get("user");
+    const id = c.req.param("id");
+    await db
+      .delete(favorites)
+      .where(and(eq(favorites.userId, user.id), eq(favorites.mediaItemId, id)));
+    return c.json({ favorited: false });
+  });
+
+  // POST /media/:id/watchlist — add to watchlist (idempotent)
+  router.post("/:id/watchlist", async (c) => {
+    const user = c.get("user");
+    const id = c.req.param("id");
+    const [item] = await db
+      .select({ id: mediaItems.id })
+      .from(mediaItems)
+      .where(eq(mediaItems.id, id));
+    if (!item) return c.json({ error: "Not found" }, 404);
+    await db.insert(watchlist).values({ userId: user.id, mediaItemId: id }).onConflictDoNothing();
+    return c.json({ watchlisted: true });
+  });
+
+  // DELETE /media/:id/watchlist — remove from watchlist
+  router.delete("/:id/watchlist", async (c) => {
+    const user = c.get("user");
+    const id = c.req.param("id");
+    await db
+      .delete(watchlist)
+      .where(and(eq(watchlist.userId, user.id), eq(watchlist.mediaItemId, id)));
+    return c.json({ watchlisted: false });
   });
 
   return router;

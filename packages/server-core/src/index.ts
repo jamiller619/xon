@@ -10,6 +10,8 @@ export {
   refreshTokens,
   libraryAccess,
   mediaProgress,
+  favorites,
+  watchlist,
   type Library,
   type NewLibrary,
   type DataSource,
@@ -24,6 +26,10 @@ export {
   type NewLibraryAccess,
   type MediaProgress,
   type NewMediaProgress,
+  type Favorite,
+  type NewFavorite,
+  type Watchlist,
+  type NewWatchlist,
 } from "./schema.js";
 export { hashPassword, verifyPassword } from "./password.js";
 export {

@@ -64,6 +64,9 @@ export default function MediaDetail() {
   const [showArchiveViewer, setShowArchiveViewer] = useState(false);
   const [imageSiblings, setImageSiblings] = useState<ImageSibling[]>([]);
 
+  const [isFavorited, setIsFavorited] = useState(false);
+  const [isWatchlisted, setIsWatchlisted] = useState(false);
+
   const playTrack = useAudioStore((s) => s.playTrack);
   const addToQueue = useAudioStore((s) => s.addToQueue);
 
@@ -92,6 +95,41 @@ export default function MediaDetail() {
         setLoading(false);
       });
   }, [id]);
+
+  // Load favorite/watchlist state
+  useEffect(() => {
+    if (!id) return;
+    apiFetch("/api/v1/users/me/favorites")
+      .then((r) => r.json())
+      .then((data: unknown) => {
+        if (Array.isArray(data)) {
+          setIsFavorited((data as { id: string }[]).some((m) => m.id === id));
+        }
+      })
+      .catch(() => {});
+    apiFetch("/api/v1/users/me/watchlist")
+      .then((r) => r.json())
+      .then((data: unknown) => {
+        if (Array.isArray(data)) {
+          setIsWatchlisted((data as { id: string }[]).some((m) => m.id === id));
+        }
+      })
+      .catch(() => {});
+  }, [id]);
+
+  async function toggleFavorite() {
+    if (!id) return;
+    const method = isFavorited ? "DELETE" : "POST";
+    const res = await apiFetch(`/api/v1/media/${id}/favorite`, { method });
+    if (res.ok) setIsFavorited(!isFavorited);
+  }
+
+  async function toggleWatchlist() {
+    if (!id) return;
+    const method = isWatchlisted ? "DELETE" : "POST";
+    const res = await apiFetch(`/api/v1/media/${id}/watchlist`, { method });
+    if (res.ok) setIsWatchlisted(!isWatchlisted);
+  }
 
   // Fetch sibling images from same library for slideshow
   useEffect(() => {
@@ -565,16 +603,18 @@ export default function MediaDetail() {
                 <button
                   type="button"
                   className={styles.btnSecondary ?? ""}
-                  title="Add to favorites"
+                  title={isFavorited ? "Remove from favorites" : "Add to favorites"}
+                  onClick={toggleFavorite}
                 >
-                  ♡ Favorite
+                  {isFavorited ? "♥ Favorited" : "♡ Favorite"}
                 </button>
                 <button
                   type="button"
                   className={styles.btnSecondary ?? ""}
-                  title="Add to collection"
+                  title={isWatchlisted ? "Remove from watchlist" : "Add to watchlist"}
+                  onClick={toggleWatchlist}
                 >
-                  + Collection
+                  {isWatchlisted ? "✓ Watchlisted" : "+ Watchlist"}
                 </button>
               </div>
             </>

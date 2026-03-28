@@ -88,6 +88,35 @@
   text-transform: uppercase;
 }
 
+/* Favorite heart button overlay */
+.favoriteBtn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  background: rgba(0, 0, 0, 0.55);
+  border: none;
+  color: #ff6b8a;
+  font-size: 16px;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition: opacity 0.15s;
+  z-index: 2;
+}
+
+.card:hover .favoriteBtn {
+  opacity: 1;
+}
+
+.favoriteBtn:hover {
+  background: rgba(0, 0, 0, 0.8);
+}
+
 /* Audio overlay on grid cards */
 .audioOverlay {
   position: absolute;

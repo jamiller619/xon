@@ -15,6 +15,8 @@ export interface MediaCardItem {
 interface MediaCardProps {
   item: MediaCardItem;
   listView?: boolean;
+  isFavorited?: boolean;
+  onToggleFavorite?: (id: string, currentlyFavorited: boolean) => void;
 }
 
 function formatBytes(bytes: number | null): string {
@@ -31,7 +33,12 @@ function formatDate(ts: number | string | null): string {
   return d.toLocaleDateString();
 }
 
-export default function MediaCard({ item, listView }: MediaCardProps) {
+export default function MediaCard({
+  item,
+  listView,
+  isFavorited,
+  onToggleFavorite,
+}: MediaCardProps) {
   const playTrack = useAudioStore((s) => s.playTrack);
   const addToQueue = useAudioStore((s) => s.addToQueue);
   const isAudio = item.mimeType?.startsWith("audio/") ?? false;
@@ -46,6 +53,12 @@ export default function MediaCard({ item, listView }: MediaCardProps) {
     e.preventDefault();
     e.stopPropagation();
     addToQueue({ id: item.id, title: item.title, mimeType: item.mimeType ?? "audio/mpeg" });
+  }
+
+  function handleToggleFavorite(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    onToggleFavorite?.(item.id, isFavorited ?? false);
   }
 
   if (listView) {
@@ -101,6 +114,16 @@ export default function MediaCard({ item, listView }: MediaCardProps) {
           <div className={styles.thumbPlaceholder ?? ""}>
             <span>{isAudio ? "♪" : "▶"}</span>
           </div>
+        )}
+        {onToggleFavorite && (
+          <button
+            type="button"
+            className={styles.favoriteBtn ?? ""}
+            onClick={handleToggleFavorite}
+            title={isFavorited ? "Remove from favorites" : "Add to favorites"}
+          >
+            {isFavorited ? "♥" : "♡"}
+          </button>
         )}
         {isAudio && (
           <div className={styles.audioOverlay ?? ""}>
