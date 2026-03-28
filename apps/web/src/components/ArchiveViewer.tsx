@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { apiFetch } from "../apiFetch.js";
 import styles from "./ArchiveViewer.module.css";
 
 interface Props {
@@ -198,7 +199,7 @@ export default function ArchiveViewer({ mediaId, title, onClose }: Props) {
   useEffect(() => {
     setLoading(true);
     setError(null);
-    fetch(`/api/v1/media/${mediaId}/archive-contents`)
+    apiFetch(`/api/v1/media/${mediaId}/archive-contents`)
       .then((r) => {
         if (!r.ok) throw new Error("Failed to load archive contents");
         return r.json();

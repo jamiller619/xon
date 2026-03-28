@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { apiFetch } from "../apiFetch.js";
 import PluginSlot from "../components/PluginSlot.js";
 import { useThemeStore } from "../store/index.js";
 import styles from "./Settings.module.css";
@@ -18,7 +19,7 @@ export default function Settings() {
   const setActiveTheme = useThemeStore((s) => s.setActiveTheme);
 
   useEffect(() => {
-    fetch("/api/v1/themes")
+    apiFetch("/api/v1/themes")
       .then((r) => r.json() as Promise<ThemeInfo[]>)
       .then(setThemes)
       .catch(() => {});

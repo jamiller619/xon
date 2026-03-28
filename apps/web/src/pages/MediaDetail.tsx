@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { apiFetch } from "../apiFetch.js";
 import ArchiveViewer from "../components/ArchiveViewer.js";
 import EpubViewer from "../components/EpubViewer.js";
 import FontViewer from "../components/FontViewer.js";
@@ -77,7 +78,7 @@ export default function MediaDetail() {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    fetch(`/api/v1/media/${id}`)
+    apiFetch(`/api/v1/media/${id}`)
       .then((r) => {
         if (!r.ok) throw new Error("Not found");
         return r.json();
@@ -95,7 +96,7 @@ export default function MediaDetail() {
   // Fetch sibling images from same library for slideshow
   useEffect(() => {
     if (!item || !item.mimeType?.startsWith("image/") || !item.libraryId) return;
-    fetch(
+    apiFetch(
       `/api/v1/libraries/${item.libraryId}/media?mediaCategory=${encodeURIComponent(item.mediaCategory ?? "Pictures")}&limit=100`
     )
       .then((r) => r.json())
@@ -147,7 +148,7 @@ export default function MediaDetail() {
     payload.tags = tags;
 
     try {
-      const res = await fetch(`/api/v1/media/${id}`, {
+      const res = await apiFetch(`/api/v1/media/${id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),

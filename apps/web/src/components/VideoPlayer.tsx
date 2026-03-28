@@ -1,5 +1,6 @@
 import Hls from "hls.js";
 import { useEffect, useRef, useState } from "react";
+import { apiFetch } from "../apiFetch.js";
 import styles from "./VideoPlayer.module.css";
 
 type AudioTrack = {
@@ -54,7 +55,7 @@ export default function VideoPlayer({ mediaId, mimeType, onClose }: VideoPlayerP
   });
 
   useEffect(() => {
-    fetch(`/api/v1/media/${mediaId}/tracks`)
+    apiFetch(`/api/v1/media/${mediaId}/tracks`)
       .then((r) => r.json())
       .then((data: TracksResponse) => {
         setTracks(data);

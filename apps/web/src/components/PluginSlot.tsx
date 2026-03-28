@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { apiFetch } from "../apiFetch.js";
 
 export type UIInjectionPoint =
   | "dashboard-widget"
@@ -38,7 +39,7 @@ let fetchPromise: Promise<PluginUIComponent[]> | null = null;
 async function fetchPluginComponents(): Promise<PluginUIComponent[]> {
   if (componentsCache !== null) return componentsCache;
   if (!fetchPromise) {
-    fetchPromise = fetch("/api/v1/plugins/ui-components")
+    fetchPromise = apiFetch("/api/v1/plugins/ui-components")
       .then((r) => r.json() as Promise<PluginUIComponent[]>)
       .then((data) => {
         componentsCache = data;

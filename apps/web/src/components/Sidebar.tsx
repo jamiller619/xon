@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
+import { apiFetch } from "../apiFetch.js";
 import PluginSlot from "./PluginSlot.js";
 import styles from "./Sidebar.module.css";
 
@@ -17,7 +18,7 @@ export default function Sidebar({ open }: SidebarProps) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("/api/v1/libraries")
+    apiFetch("/api/v1/libraries")
       .then((r) => r.json())
       .then((data: Library[]) => setLibraries(data))
       .catch(() => setLibraries([]))

@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { apiFetch } from "../apiFetch.js";
 import MediaCard, { type MediaCardItem } from "../components/MediaCard";
 import PluginSlot from "../components/PluginSlot";
 import styles from "./Dashboard.module.css";
@@ -18,8 +19,8 @@ export default function Dashboard() {
   useEffect(() => {
     const fetchData = async () => {
       const [mediaRes, libsRes] = await Promise.all([
-        fetch("/api/v1/media?order=desc&limit=20"),
-        fetch("/api/v1/libraries"),
+        apiFetch("/api/v1/media?order=desc&limit=20"),
+        apiFetch("/api/v1/libraries"),
       ]);
       const media = (await mediaRes.json()) as MediaCardItem[];
       const libs = (await libsRes.json()) as Library[];
@@ -28,7 +29,7 @@ export default function Dashboard() {
 
       const entries = await Promise.all(
         libs.map(async (lib) => {
-          const res = await fetch(`/api/v1/libraries/${lib.id}/media?order=desc&limit=8`);
+          const res = await apiFetch(`/api/v1/libraries/${lib.id}/media?order=desc&limit=8`);
           const items = (await res.json()) as MediaCardItem[];
           return [lib.id, items] as const;
         })

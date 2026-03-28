@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { useParams } from "react-router-dom";
+import { apiFetch } from "../apiFetch.js";
 import MediaCard, { type MediaCardItem } from "../components/MediaCard";
 import { useAppStore } from "../store/index";
 import styles from "./LibraryBrowser.module.css";
@@ -81,7 +82,7 @@ export default function LibraryBrowser() {
 
   useEffect(() => {
     if (!id) return;
-    fetch(`/api/v1/libraries/${id}`)
+    apiFetch(`/api/v1/libraries/${id}`)
       .then((r) => r.json())
       .then((lib) => setLibrary(lib as Library))
       .catch(() => setError("Failed to load library"));
@@ -90,10 +91,7 @@ export default function LibraryBrowser() {
   useEffect(() => {
     if (!id) return;
     setLoading(true);
-    const apiSortBy =
-      sortCol === "mediaCategory"
-        ? "createdAt"
-        : sortCol;
+    const apiSortBy = sortCol === "mediaCategory" ? "createdAt" : sortCol;
     const params = new URLSearchParams({
       order: sortDir,
       sortBy: apiSortBy,
@@ -101,7 +99,7 @@ export default function LibraryBrowser() {
       page: String(page),
     });
     if (filterCategory) params.set("mediaCategory", filterCategory);
-    fetch(`/api/v1/libraries/${id}/media?${params.toString()}`)
+    apiFetch(`/api/v1/libraries/${id}/media?${params.toString()}`)
       .then((r) => r.json())
       .then((data) => {
         const mediaList = data as MediaCardItem[];
@@ -146,9 +144,7 @@ export default function LibraryBrowser() {
 
   function sortIndicator(col: SortColumn) {
     if (col !== sortCol) return null;
-    return (
-      <span className={styles.sortArrow ?? ""}>{sortDir === "asc" ? " ▲" : " ▼"}</span>
-    );
+    return <span className={styles.sortArrow ?? ""}>{sortDir === "asc" ? " ▲" : " ▼"}</span>;
   }
 
   const currentSortKey = makeSortKey(sortCol, sortDir);
@@ -233,7 +229,11 @@ export default function LibraryBrowser() {
           <label className={styles.filterLabel ?? ""} htmlFor="filter-genre">
             Genre
           </label>
-          <select id="filter-genre" className={`${styles.filterSelect ?? ""} ${styles.filterDisabled ?? ""}`} disabled>
+          <select
+            id="filter-genre"
+            className={`${styles.filterSelect ?? ""} ${styles.filterDisabled ?? ""}`}
+            disabled
+          >
             <option value="">All</option>
           </select>
         </div>
@@ -242,7 +242,11 @@ export default function LibraryBrowser() {
           <label className={styles.filterLabel ?? ""} htmlFor="filter-year">
             Year
           </label>
-          <select id="filter-year" className={`${styles.filterSelect ?? ""} ${styles.filterDisabled ?? ""}`} disabled>
+          <select
+            id="filter-year"
+            className={`${styles.filterSelect ?? ""} ${styles.filterDisabled ?? ""}`}
+            disabled
+          >
             <option value="">All</option>
           </select>
         </div>
@@ -251,7 +255,11 @@ export default function LibraryBrowser() {
           <label className={styles.filterLabel ?? ""} htmlFor="filter-rating">
             Rating
           </label>
-          <select id="filter-rating" className={`${styles.filterSelect ?? ""} ${styles.filterDisabled ?? ""}`} disabled>
+          <select
+            id="filter-rating"
+            className={`${styles.filterSelect ?? ""} ${styles.filterDisabled ?? ""}`}
+            disabled
+          >
             <option value="">All</option>
           </select>
         </div>
@@ -260,7 +268,11 @@ export default function LibraryBrowser() {
           <label className={styles.filterLabel ?? ""} htmlFor="filter-tags">
             Tags
           </label>
-          <select id="filter-tags" className={`${styles.filterSelect ?? ""} ${styles.filterDisabled ?? ""}`} disabled>
+          <select
+            id="filter-tags"
+            className={`${styles.filterSelect ?? ""} ${styles.filterDisabled ?? ""}`}
+            disabled
+          >
             <option value="">All</option>
           </select>
         </div>
@@ -336,18 +348,14 @@ export default function LibraryBrowser() {
                 <th
                   className={`${styles.th ?? ""} ${styles.thSortable ?? ""}`}
                   onClick={() => handleSort("fileSize")}
-                  onKeyDown={(e) =>
-                    (e.key === "Enter" || e.key === " ") && handleSort("fileSize")
-                  }
+                  onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && handleSort("fileSize")}
                 >
                   Size{sortIndicator("fileSize")}
                 </th>
                 <th
                   className={`${styles.th ?? ""} ${styles.thSortable ?? ""}`}
                   onClick={() => handleSort("createdAt")}
-                  onKeyDown={(e) =>
-                    (e.key === "Enter" || e.key === " ") && handleSort("createdAt")
-                  }
+                  onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && handleSort("createdAt")}
                 >
                   Date Added{sortIndicator("createdAt")}
                 </th>

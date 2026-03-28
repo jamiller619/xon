@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { apiFetch } from "../apiFetch.js";
 import PluginSlot from "../components/PluginSlot.js";
 import styles from "./AdminPlugins.module.css";
 
@@ -17,7 +18,7 @@ export default function AdminPlugins() {
   const [toggling, setToggling] = useState<Set<string>>(new Set());
 
   useEffect(() => {
-    fetch("/api/v1/admin/plugins")
+    apiFetch("/api/v1/admin/plugins")
       .then((r) => r.json() as Promise<PluginInfo[]>)
       .then(setPlugins)
       .catch(() => {})
@@ -26,7 +27,7 @@ export default function AdminPlugins() {
 
   function toggle(id: string) {
     setToggling((prev) => new Set([...prev, id]));
-    fetch(`/api/v1/admin/plugins/${id}/toggle`, { method: "PUT" })
+    apiFetch(`/api/v1/admin/plugins/${id}/toggle`, { method: "PUT" })
       .then((r) => r.json() as Promise<{ id: string; status: string }>)
       .then((updated) => {
         setPlugins((prev) =>

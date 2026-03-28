@@ -2,10 +2,13 @@ import { zValidator } from "@hono/zod-validator";
 import { eq, lt } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
+import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { sign, verify } from "hono/jwt";
 import { z } from "zod";
 import { verifyPassword } from "../password.js";
 import { refreshTokens, users } from "../schema.js";
+
+const REFRESH_COOKIE_NAME = "rt";
 
 const ACCESS_TOKEN_TTL_SECONDS = 15 * 60; // 15 minutes
 const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60; // 7 days
@@ -90,13 +93,21 @@ export function makeAuthRouter(db: LibSQLDatabase): Hono {
       // Clean up expired tokens for this user
       await db.delete(refreshTokens).where(lt(refreshTokens.expiresAt, new Date()));
 
+      setCookie(c, REFRESH_COOKIE_NAME, refreshToken, {
+        httpOnly: true,
+        sameSite: "Strict",
+        path: "/api/v1/auth",
+        maxAge: REFRESH_TOKEN_TTL_SECONDS,
+      });
+
       return c.json({ accessToken, refreshToken });
     }
   );
 
   router.post("/refresh", async (c) => {
     const body = await c.req.json().catch(() => null);
-    const rawToken = body?.refreshToken as string | undefined;
+    const rawToken =
+      (body?.refreshToken as string | undefined) ?? getCookie(c, REFRESH_COOKIE_NAME);
     if (!rawToken) {
       return c.json({ error: "Missing refresh token" }, 400);
     }
@@ -150,12 +161,23 @@ export function makeAuthRouter(db: LibSQLDatabase): Hono {
     const accessToken = await signAccessToken(user.id, user.username, user.role);
     const newRefreshToken = await signRefreshToken(newTokenId, user.id);
 
+    setCookie(c, REFRESH_COOKIE_NAME, newRefreshToken, {
+      httpOnly: true,
+      sameSite: "Strict",
+      path: "/api/v1/auth",
+      maxAge: REFRESH_TOKEN_TTL_SECONDS,
+    });
+
     return c.json({ accessToken, refreshToken: newRefreshToken });
   });
 
   router.post("/logout", async (c) => {
     const body = await c.req.json().catch(() => null);
-    const rawToken = body?.refreshToken as string | undefined;
+    const rawToken =
+      (body?.refreshToken as string | undefined) ?? getCookie(c, REFRESH_COOKIE_NAME);
+
+    deleteCookie(c, REFRESH_COOKIE_NAME, { path: "/api/v1/auth" });
+
     if (!rawToken) {
       return c.json({ error: "Missing refresh token" }, 400);
     }

@@ -1,9 +1,11 @@
 import { Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
+import RequireAuth from "./components/RequireAuth";
 import ThemeLoader from "./components/ThemeLoader";
 import AdminPlugins from "./pages/AdminPlugins";
 import Dashboard from "./pages/Dashboard";
 import LibraryBrowser from "./pages/LibraryBrowser";
+import Login from "./pages/Login";
 import MediaDetail from "./pages/MediaDetail";
 import Settings from "./pages/Settings";
 
@@ -12,7 +14,14 @@ export default function App() {
     <>
       <ThemeLoader />
       <Routes>
-        <Route element={<Layout />}>
+        <Route path="/login" element={<Login />} />
+        <Route
+          element={
+            <RequireAuth>
+              <Layout />
+            </RequireAuth>
+          }
+        >
           <Route path="/" element={<Dashboard />} />
           <Route path="/libraries/:id" element={<LibraryBrowser />} />
           <Route path="/media/:id" element={<MediaDetail />} />

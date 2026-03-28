@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { apiFetch } from "../apiFetch.js";
 import styles from "./FontViewer.module.css";
 
 interface Props {
@@ -64,7 +65,7 @@ export default function FontViewer({ mediaId, title, onClose }: Props) {
     const run = async () => {
       try {
         // Load font metadata
-        const metaRes = await fetch(`/api/v1/media/${mediaId}/font-metadata`);
+        const metaRes = await apiFetch(`/api/v1/media/${mediaId}/font-metadata`);
         if (!metaRes.ok) throw new Error("Failed to load font metadata");
         const metaData = (await metaRes.json()) as FontMeta;
         if (cancelled) return;
