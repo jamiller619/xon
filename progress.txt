@@ -1,3 +1,23 @@
+## 2026-03-27 - US-042
+- Implemented RAW camera image preview via server-side dcraw conversion
+- Files created: packages/server-core/src/raw.ts (isRawImage, convertRawToJpeg, runDcraw)
+- Files created: packages/server-core/src/raw.test.ts (10 tests covering isRawImage, fast path, fallback, ENOENT)
+- Files changed: packages/media-types/src/categories.ts (added CR2, CR3, NEF, ARW, DNG, ORF, RAF to Pictures category with MIME types)
+- Files changed: packages/server-core/src/routes/media.ts (RAW detection in stream endpoint, converts via dcraw, serves image/jpeg)
+- Files changed: packages/server-core/src/thumbnails.ts (convertRawToJpeg before sharp for RAW files)
+- Files changed: packages/server-core/src/routes/media.test.ts (3 new RAW stream tests in new describe block)
+- raw.ts: `isRawImage(filePath)` checks `extname(filePath).toLowerCase()` against RAW_EXTENSIONS Set
+- raw.ts: `convertRawToJpeg(filePath)` tries `dcraw -c -e` (embedded JPEG preview, preserves EXIF) first; falls back to `dcraw -c -w -T` (TIFF) → sharp JPEG
+- raw.ts: ENOENT on first attempt propagates immediately (dcraw not installed), does not attempt fallback
+- Graceful error: returns HTTP 500 with "dcraw not found. Install dcraw to enable RAW image preview." when dcraw absent
+- **Learnings for future iterations:**
+  - `dcraw -c -e <file>` extracts embedded JPEG preview to stdout (fast, preserves EXIF) — most modern cameras embed a full-res preview
+  - `dcraw -c -w -T <file>` outputs TIFF to stdout for full RAW decode; pipe to sharp for JPEG conversion
+  - Distinguish ENOENT (tool not installed) from non-zero exit (operation failed) — only fall back on operation failure, not on ENOENT
+  - RAW MIME types: `image/x-canon-cr2`, `image/x-canon-cr3`, `image/x-nikon-nef`, `image/x-sony-arw`, `image/x-adobe-dng`, `image/x-olympus-orf`, `image/x-fujifilm-raf`
+  - `sharp` (libvips 8.17.3) does NOT have libraw — cannot read RAW files directly; must pre-convert via dcraw
+---
+
 ## 2026-03-27 - US-041
 - Implemented on-the-fly video transcoding via FFmpeg with HLS streaming
 - Files created: packages/server-core/src/transcode.ts (needsTranscoding, generateHlsPlaylist, spawnTranscodeSegment)
