@@ -1,3 +1,18 @@
+## 2026-03-28 - US-061
+- Implemented first-party 3D model WebGL viewer plugin using Three.js
+- Files created: plugins/3d-model-viewer/package.json, plugins/3d-model-viewer/tsconfig.json, plugins/3d-model-viewer/src/index.ts, plugins/3d-model-viewer/src/index.test.ts, plugins/3d-model-viewer/assets/viewer.js
+- Files changed: tsconfig.json (added plugins/3d-model-viewer reference)
+- `ModelViewerPlugin`: FormatHandler for 3D Models category; `init()` calls `context.registerUI()` to inject `detail-panel` UI component; bundleUrl points to `/api/v1/plugins/3d-model-viewer/assets/viewer.js`
+- `viewer.js` (browser ESM bundle): imports THREE + OBJLoader + GLTFLoader + OrbitControls from `esm.sh/three@0.167.1`; render function checks `mediaCategory === "3D Models"`, fetches `/api/v1/media/:id` for fileName to detect extension, loads model from `/api/v1/media/:id/stream`; `fitToView()` normalizes model scale/position; ambient + directional + fill lighting; GridHelper floor; ResizeObserver for responsive canvas; returns cleanup function disposing renderer/controls/observer
+- 8 tests passing; typecheck and biome clean; all 390 server-core tests still pass
+- **Learnings for future iterations:**
+  - UI-only FormatHandler plugins (no event hooks, no API routes) are very minimal — just `registerUI()` in `init()`
+  - `viewer.js` is a static browser ESM file in `assets/` — not compiled by tsc; use plain JS with `// @ts-nocheck` comment to avoid issues
+  - esm.sh CDN rewrites bare `import 'three'` specifiers in example modules to point to the same version URL — avoids split-module issues between THREE core and addons
+  - `THREE.Box3.setFromObject()` after scaling/translating requires re-computing to get accurate floor position for grid
+  - `ResizeObserver` on the container handles responsive canvas resizing without window resize events
+---
+
 ## 2026-03-28 - US-060
 - Implemented first-party OpenLibrary metadata plugin for documents/books
 - Files created: plugins/openlibrary-metadata/package.json, plugins/openlibrary-metadata/tsconfig.json, plugins/openlibrary-metadata/src/bookParser.ts, plugins/openlibrary-metadata/src/openLibraryClient.ts, plugins/openlibrary-metadata/src/index.ts, plugins/openlibrary-metadata/src/index.test.ts
