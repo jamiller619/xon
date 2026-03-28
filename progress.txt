@@ -1,3 +1,25 @@
+## 2026-03-28 - US-050
+- Implemented plugin lifecycle manager in packages/server-core/src/pluginManager.ts
+- Files created: packages/server-core/src/pluginManager.ts, packages/server-core/src/pluginManager.test.ts
+- Files changed: packages/server-core/src/index.ts (exports for manager functions)
+- `registry`: module-level Map<pluginId, PluginEntry> tracking all loaded plugins
+- `loadPlugin(pluginDir, manifest)`: dynamically imports plugin module, finds BasePlugin subclass (default or named export), registers in registry with status "loaded"
+- `activatePlugin(id)`: calls init() then activate() with a built PluginContext; sets status "active"; idempotent
+- `deactivatePlugin(id)`: calls deactivate(), removes all registered hooks from pluginEventHandlers, clears routes/uiComponents arrays; sets status "inactive"; no-op if not active
+- `uninstallPlugin(id)`: deactivates if active, calls uninstall(), removes from registry
+- `discoverAndActivatePlugins(dir)`: wraps discoverPluginManifests + loadPlugin + activatePlugin; errors per-plugin logged and don't block others
+- `emitPluginEvent(event, payload)`: dispatches to all registered handlers; errors logged, not rethrown
+- `buildContext(entry)`: builds PluginContext with scoped logger, db stub (US-053), on(), registerRoute(), registerUI()
+- `_registerPlugin` and `_resetForTesting` for test isolation without file I/O
+- 22 tests covering registry, lifecycle transitions, hook cleanup, route cleanup, multi-plugin isolation, error handling
+- **Learnings for future iterations:**
+  - `pluginEventHandlers` is module-level state — provide `_resetForTesting()` to clear it between tests
+  - `_registerPlugin(entry)` helper allows lifecycle tests without file-system or dynamic import mocks
+  - `vi.mock("./pluginLoader.js", factory)` inside test body mocks discoverPluginManifests for discoverAndActivatePlugins tests
+  - Hook cleanup: track `[event, handler]` pairs in entry.hooks, remove from Set in pluginEventHandlers on deactivate
+  - `emitPluginEvent` wraps handler calls in `Promise.resolve().catch()` to prevent async errors from escaping
+---
+
 ## 2026-03-28 - US-049
 - Implemented plugin manifest loader in packages/server-core/src/pluginLoader.ts
 - Files created: packages/server-core/src/pluginLoader.ts, packages/server-core/src/pluginLoader.test.ts
