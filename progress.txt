@@ -1,3 +1,21 @@
+## 2026-03-28 - US-072
+- Implemented FTS5 full-text index setup for media items
+- Files created: packages/server-core/drizzle/0012_media_fts.sql, packages/server-core/src/routes/fts.test.ts
+- Files changed: packages/server-core/drizzle/meta/_journal.json, packages/server-core/drizzle/meta/0012_snapshot.json
+- FTS5 virtual table `media_fts` indexes: title, description, file_name, tags (from metadata JSON $.tags), text_metadata (full metadata JSON)
+- id column is UNINDEXED (stored but not FTS-indexed) to allow retrieval by text id from search results
+- FTS5 rowid synced to media_items.rowid for reliable DELETE; `DELETE FROM media_fts WHERE rowid = old.rowid` in triggers
+- Three triggers: media_fts_insert (AFTER INSERT), media_fts_update (delete+re-insert AFTER UPDATE), media_fts_delete (AFTER DELETE)
+- Backfill INSERT in migration populates FTS from existing media_items at migration time
+- 514 tests passing; biome clean
+- **Learnings for future iterations:**
+  - FTS5 `DELETE FROM fts WHERE col = val` on UNINDEXED columns may not work reliably — always delete by `rowid` for guaranteed correctness
+  - Sync FTS5 rowid to the source table's rowid (new.rowid in INSERT/UPDATE trigger) so DELETE can use `WHERE rowid = old.rowid`
+  - FTS5 supports explicit rowid: `INSERT INTO fts(rowid, ...)` — use this to keep rowids in sync with source table
+  - Watch out for search terms matching file_name column — a test file named "oldtitle.mkv" will FTS-match the query "OldTitle"
+  - `WHERE fts_table MATCH ?` uses unicode61 tokenizer by default: case-insensitive, splits on punctuation/whitespace, so "OldTitle" → "oldtitle" token
+---
+
 ## 2026-03-28 - US-071
 - Implemented API token authentication for programmatic access
 - Files changed: packages/server-core/src/schema.ts (added apiTokens table), packages/server-core/src/authMiddleware.ts (refactored to makeAuthMiddleware(db) factory; supports JWT + API token auth), packages/server-core/src/routes/users.ts (added POST/GET/DELETE /me/tokens; hashApiToken helper), packages/server-core/src/app.ts (passes db to makeAuthMiddleware), packages/server-core/src/index.ts (exported apiTokens, ApiToken, NewApiToken)
