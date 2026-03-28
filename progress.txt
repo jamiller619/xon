@@ -1,3 +1,18 @@
+## 2026-03-28 - US-060
+- Implemented first-party OpenLibrary metadata plugin for documents/books
+- Files created: plugins/openlibrary-metadata/package.json, plugins/openlibrary-metadata/tsconfig.json, plugins/openlibrary-metadata/src/bookParser.ts, plugins/openlibrary-metadata/src/openLibraryClient.ts, plugins/openlibrary-metadata/src/index.ts, plugins/openlibrary-metadata/src/index.test.ts
+- Files changed: tsconfig.json (added plugins/openlibrary-metadata reference); fixed bug in bookParser.ts extractIsbn and exactOptionalPropertyTypes issues in openLibraryClient.ts
+- `parseBookPath(filePath)`: extracts isbn/title/author from filename patterns (Author - Title.epub, Title (Year).epub, ISBN Title.epub) and directory structure (Author/Title.epub); ISBN-13 and ISBN-10 extraction
+- `OpenLibraryClient`: `searchByIsbn(isbn)` → `/isbn/:isbn.json` + author keys; `searchByTitleAuthor(title, author?)` → `/search.json`; cover URLs from `covers.openlibrary.org`; no rate limiting needed
+- `OpenLibraryMetadataPlugin`: creates `plugin_openlibrary_metadata_books` table on init; hooks `media:created` + `media:updated`; prefers ISBN lookup, falls back to title/author search; stores cover_url, authors, author_bio, subjects, publish_year, page_count; GET `/metadata/:mediaId` route
+- 26 tests passing; typecheck clean
+- **Learnings for future iterations:**
+  - `extractIsbn` bug fix: normalizing the full text before running `\b`-anchored regex strips word boundaries (e.g. `9780061120084 Title` → `9780061120084Title`, breaking `\b` after ISBN) — try raw text first, then normalized
+  - OpenLibrary author bio can be `string | { value: string }` — must handle both shapes
+  - OpenLibrary `searchByIsbn` uses `/isbn/:isbn.json`; author names require separate fetches to `/authors/:key.json`
+  - Covers API: `covers.openlibrary.org/b/id/:coverId-L.jpg` or `covers.openlibrary.org/b/isbn/:isbn-L.jpg`
+---
+
 ## 2026-03-28 - US-059
 - Implemented first-party MusicBrainz metadata plugin for music
 - Files created: plugins/musicbrainz-metadata/package.json, plugins/musicbrainz-metadata/tsconfig.json, plugins/musicbrainz-metadata/src/musicParser.ts, plugins/musicbrainz-metadata/src/musicBrainzClient.ts, plugins/musicbrainz-metadata/src/index.ts, plugins/musicbrainz-metadata/src/index.test.ts
