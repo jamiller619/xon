@@ -1,3 +1,19 @@
+## 2026-03-28 - US-051
+- Implemented plugin API route registration — dynamic dispatcher under /api/v1/plugins/:pluginId/*
+- Files created: packages/server-core/src/pluginRoutes.ts, packages/server-core/src/pluginRoutes.test.ts
+- Files changed: packages/server-core/src/app.ts (mounted plugin dispatcher), packages/plugin-sdk/src/index.ts (exported PluginRouteContext + PluginRouteResponse)
+- `pluginRouteDispatcher`: Hono wildcard handler that looks up plugin in registry at request time, matches method+path, builds PluginRouteContext, calls handler
+- `matchPath(pattern, path)`: segment-by-segment matcher that extracts named params (`:id` style); returns null on mismatch
+- Routes are removed automatically on deactivation because `cleanupHooksAndRoutes` already clears `entry.routes = []`
+- Plugin namespace isolation: each plugin's routes are only reachable under its own `/plugins/:pluginId/` prefix
+- 13 tests covering: 404 for inactive/unknown plugins, GET/POST dispatch, method mismatch, path params, query params, deactivation cleanup, multi-plugin isolation, async handlers, routes via activatePlugin context
+- **Learnings for future iterations:**
+  - `PluginRouteContext` and `PluginRouteResponse` were defined in plugin-sdk/src/types.ts but not exported from index.ts — added them
+  - `c.req.param(key)` returns `string | undefined` in generic Hono Context; cast to `string | undefined` and guard before use
+  - Dynamic dispatch (lookup registry at request time) is cleaner than Hono sub-routers for plugin routes because plugins can be deactivated
+  - `PluginRouteResponse` is structurally compatible with Hono's `Response` — use `as unknown as PluginRouteResponse` / `as unknown as Response` to bridge the two type systems
+---
+
 ## 2026-03-28 - US-050
 - Implemented plugin lifecycle manager in packages/server-core/src/pluginManager.ts
 - Files created: packages/server-core/src/pluginManager.ts, packages/server-core/src/pluginManager.test.ts
