@@ -1,3 +1,28 @@
+## 2026-03-27 - US-038
+- Implemented EPUB/MOBI reader with chapter navigation, reading customization, and position bookmarking
+- Files created: apps/web/src/components/EpubViewer.tsx, EpubViewer.module.css
+- Files created: packages/server-core/src/mobi.ts (MOBI→EPUB conversion via calibre ebook-convert)
+- Files changed: packages/server-core/src/schema.ts (added `readingPositions` table: id, mediaItemId unique FK, cfi, chapterTitle, updatedAt)
+- Files changed: packages/server-core/drizzle/0004_wise_ghost_rider.sql (CREATE TABLE reading_positions + unique index)
+- Files changed: packages/server-core/src/routes/media.ts (GET /media/:id/epub, GET/PUT /media/:id/reading-position)
+- Files changed: apps/web/src/pages/MediaDetail.tsx (EpubViewer import, showEpubViewer state, isEpub flag, 📖 Read button, poster placeholder, overlay render)
+- EpubViewer: full-screen `<dialog open>` overlay; epubjs renders into div; scrolled-doc flow
+- TOC sidebar: toggleable with ☰; chapter list from `book.loaded.navigation.toc`; active chapter highlighting
+- Font size: 7 levels (12–28px); line height: 4 levels (1.3–2.0); applied via `rendition.themes.register`
+- Themes: light (white), dark (dark navy), sepia (warm tan); inline `style` on dialog + themes API for content
+- Reading position: on `relocated` event, saves CFI to `/api/v1/media/:id/reading-position`; restored on open
+- MOBI conversion: `packages/server-core/src/mobi.ts` calls `ebook-convert` (calibre); gracefully returns 500 if not installed
+- Keyboard shortcuts: Escape=close, ArrowLeft/Up=prev, ArrowRight/Down=next
+- **Learnings for future iterations:**
+  - epubjs `Epub(url)` accepts a full URL string — `/api/v1/media/:id/epub` endpoint serves EPUB binary
+  - `book.renderTo(element, { flow: "scrolled-doc" })` renders into a div; `flow: "paginated"` is default but scroll is more browser-friendly
+  - `rendition.themes.register(name, cssObj)` + `.select(name)` injects CSS into iframe content
+  - `rendition.on("relocated", fn)` fires on every page/scroll change with a `Location` object: `{ start: { cfi }, atStart, atEnd }`
+  - The init `useEffect` must only depend on `mediaId` — use `biome-ignore lint/correctness/useExhaustiveDependencies` to suppress the warning
+  - `book.loaded.navigation` is a Promise; `.toc` is `NavItem[]` with `id`, `href`, `label`, optional `subitems`
+  - MOBI conversion requires calibre's `ebook-convert` — document as optional system dependency; return 500 with clear message if absent
+---
+
 ## 2026-03-27 - US-037
 - Implemented PDF viewer component using pdfjs-dist
 - Files created: apps/web/src/components/PdfViewer.tsx, PdfViewer.module.css
