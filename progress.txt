@@ -1,3 +1,24 @@
+## 2026-03-28 - US-067
+- Implemented per-library access control: schema, migrations, admin API, access-filtered library/media queries, admin UI
+- Files created: packages/server-core/src/routes/adminLibraryAccess.ts, packages/server-core/src/routes/adminLibraryAccess.test.ts, packages/server-core/drizzle/0007_tricky_boom_boom.sql, apps/web/src/pages/AdminLibraryAccess.tsx
+- Files changed: packages/server-core/src/schema.ts (added libraryAccess table + types), packages/server-core/src/index.ts (exported libraryAccess), packages/server-core/src/app.ts (mounted admin library access router), packages/server-core/src/routes/libraries.ts (getAccessibleLibraryIds helper; filters GET /libraries, GET /libraries/:id, GET /libraries/:libraryId/media), packages/server-core/src/routes/media.ts (added inArray import, getAccessibleLibraryIds; filters GET /media and GET /media/:id), apps/web/src/App.tsx (added /admin/library-access route), apps/web/src/components/Sidebar.tsx (added Users + Library Access nav links)
+- `libraryAccess` table: composite PK (userId, libraryId); FKs to users + libraries with cascade delete; grantedAt + grantedBy columns
+- Admin routes at `/admin/libraries/:libraryId/access`: GET (list users with access, joins users table), POST (grant, idempotent via onConflictDoNothing), DELETE /:userId (revoke scoped to libraryId)
+- All routes under `/admin/*` protected by `requireRole("admin")` middleware already applied in app.ts
+- `getAccessibleLibraryIds(db, userId, role)`: returns `null` (all) for admin/manager, or array of granted libraryIds for user/guest
+- `GET /libraries` returns only accessible libraries; `GET /libraries/:id` and `GET /libraries/:libraryId/media` return 404 if no access
+- `GET /media` scoped by inArray filter; early return `[]` when accessibleIds.length === 0 (avoids empty inArray error)
+- `GET /media/:id` checks accessible libraries after item fetch
+- `AdminLibraryAccess` page: dropdown to select library, dropdown to grant user (filtered to exclude already-granted), table of granted users with Revoke (two-step confirm), reuses AdminUsers.module.css
+- 453 tests passing; biome clean
+- **Learnings for future iterations:**
+  - Drizzle composite primary key: use `primaryKey({ columns: [table.col1, table.col2] })` in third arg of `sqliteTable()`, imported from `drizzle-orm/sqlite-core`
+  - `db.insert(...).values(...).onConflictDoNothing()` — idempotent upsert for junction tables
+  - Drizzle `inArray(col, [])` (empty array) — behavior may be undefined; always guard with early return when the array is empty
+  - Access-checking helper returning `null` (meaning "all") vs array (meaning "these only") keeps if-branches at each query site readable
+  - Admin routes mounted under the existing `app.use("/admin/*", requireRole("admin"))` middleware in app.ts — no per-route auth needed
+---
+
 ## 2026-03-28 - US-065
 - Implemented user management admin page (list, create, edit, delete)
 - Files created: packages/server-core/src/routes/adminUsers.ts, packages/server-core/src/routes/adminUsers.test.ts, apps/web/src/pages/AdminUsers.tsx, apps/web/src/pages/AdminUsers.module.css
