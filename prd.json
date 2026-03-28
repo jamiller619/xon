@@ -1053,7 +1053,7 @@
         "Verify in browser using dev-browser skill"
       ],
       "priority": 64,
-      "passes": false,
+      "passes": true,
       "notes": ""
     },
     {

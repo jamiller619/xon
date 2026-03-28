@@ -1,3 +1,23 @@
+## 2026-03-28 - US-064
+- Implemented login page UI with auth token flow
+- Files created: apps/web/src/pages/Login.tsx, apps/web/src/pages/Login.module.css, apps/web/src/components/RequireAuth.tsx, apps/web/src/apiFetch.ts
+- Files changed: apps/web/src/App.tsx (added /login route + RequireAuth wrapper), apps/web/src/store/index.ts (added useAuthStore), packages/server-core/src/routes/auth.ts (setCookie/getCookie/deleteCookie for httpOnly rt cookie)
+- `useAuthStore`: Zustand store with `accessToken`, `username`, `role` in memory (not persisted); `setAuth(token, username, role)` / `clearAuth()`
+- `Login.tsx`: form with username+password, calls POST /api/v1/auth/login, decodes JWT payload via `atob()` for username/role, stores token in useAuthStore, redirects to /
+- `RequireAuth`: renders children if authenticated; useEffect redirects to /login if no accessToken
+- `apiFetch(url, init?)`: reads token from `useAuthStore.getState().accessToken` and sets `Authorization: Bearer ...` header — wraps all existing API fetch calls across 12 files
+- Server auth.ts: login/refresh set `rt` httpOnly cookie (`SameSite=Strict`, `path=/api/v1/auth`, 7-day maxAge); refresh/logout also reads from cookie if body missing token; logout calls `deleteCookie`
+- JWT payload decoded client-side with `atob()` — no library needed for username/role extraction
+- 413 tests passing; typecheck and biome clean
+- **Learnings for future iterations:**
+  - `useAuthStore.getState()` (not the hook) works outside React components — safe to call in plain TS utility like apiFetch.ts
+  - `atob(payloadB64)` decodes JWT payload without a library; split on `"."` and take index 1
+  - Hono's `setCookie(c, name, value, options)` / `getCookie(c, name)` / `deleteCookie(c, name, options)` from `hono/cookie`
+  - httpOnly cookies can only be set server-side; JS `document.cookie` cannot set httpOnly — must modify the server auth route
+  - `RequireAuth` as a layout wrapper: `<Route element={<RequireAuth><Layout /></RequireAuth>}>` — RequireAuth renders children (Layout), which renders `<Outlet />` for nested routes
+  - biome line length lint: long `??` expressions like `(x as T | undefined) ?? getCookie(...)` must be wrapped to a new line
+---
+
 ## 2026-03-28 - US-063
 - Implemented JWT authentication: login, refresh token rotation, logout, and auth middleware
 - Files created: packages/server-core/src/routes/auth.ts, packages/server-core/src/routes/auth.test.ts, packages/server-core/src/authMiddleware.ts, packages/server-core/drizzle/0006_mixed_tag.sql
