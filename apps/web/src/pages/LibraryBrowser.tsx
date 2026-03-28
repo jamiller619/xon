@@ -1,6 +1,7 @@
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useCallback, useEffect, useState } from "react";
+import { Link, useParams } from "react-router-dom";
 import { apiFetch } from "../apiFetch.js";
+import GroupDialog from "../components/GroupDialog";
 import MediaCard, { type MediaCardItem } from "../components/MediaCard";
 import { useAppStore } from "../store/index";
 import styles from "./LibraryBrowser.module.css";
@@ -9,6 +10,14 @@ interface Library {
   id: string;
   name: string;
 }
+
+interface Group {
+  id: string;
+  type: string;
+  title: string;
+}
+
+type TabMode = "media" | "groups";
 
 type SortColumn = "title" | "mediaCategory" | "fileSize" | "createdAt" | "releaseDate" | "rating";
 type SortDir = "asc" | "desc";
@@ -79,6 +88,10 @@ export default function LibraryBrowser() {
   const [sortCol, setSortCol] = useState<SortColumn>("createdAt");
   const [sortDir, setSortDir] = useState<SortDir>("desc");
   const [filterCategory, setFilterCategory] = useState("");
+  const [tab, setTab] = useState<TabMode>("media");
+  const [groups, setGroups] = useState<Group[]>([]);
+  const [groupsLoading, setGroupsLoading] = useState(false);
+  const [showGroupDialog, setShowGroupDialog] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -116,6 +129,27 @@ export default function LibraryBrowser() {
         setLoading(false);
       });
   }, [id, page, sortCol, sortDir, filterCategory]);
+
+  const loadGroups = useCallback(() => {
+    if (!id) return;
+    setGroupsLoading(true);
+    apiFetch(`/api/v1/groups?libraryId=${id}`)
+      .then((r) => r.json())
+      .then((data) => setGroups(data as Group[]))
+      .catch(() => {
+        /* ignore */
+      })
+      .finally(() => setGroupsLoading(false));
+  }, [id]);
+
+  useEffect(() => {
+    if (tab === "groups") loadGroups();
+  }, [tab, loadGroups]);
+
+  function handleGroupCreated(group: Group) {
+    setShowGroupDialog(false);
+    setGroups((prev) => [...prev, group]);
+  }
 
   function handleSort(col: SortColumn) {
     if (col === sortCol) {
@@ -186,223 +220,289 @@ export default function LibraryBrowser() {
         </div>
       </header>
 
-      {/* Filter bar */}
-      <div className={styles.filterBar ?? ""}>
-        <div className={styles.filterGroup ?? ""}>
-          <label className={styles.filterLabel ?? ""} htmlFor="filter-category">
-            Category
-          </label>
-          <select
-            id="filter-category"
-            className={styles.filterSelect ?? ""}
-            value={filterCategory}
-            onChange={(e) => handleCategoryFilter(e.target.value)}
-          >
-            <option value="">All</option>
-            {MEDIA_CATEGORIES.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className={styles.filterGroup ?? ""}>
-          <label className={styles.filterLabel ?? ""} htmlFor="filter-sort">
-            Sort
-          </label>
-          <select
-            id="filter-sort"
-            className={styles.filterSelect ?? ""}
-            value={currentSortKey}
-            onChange={(e) => handleSortOption(e.target.value)}
-          >
-            {SORT_OPTIONS.map((opt) => (
-              <option key={makeSortKey(opt.col, opt.dir)} value={makeSortKey(opt.col, opt.dir)}>
-                {opt.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className={styles.filterGroup ?? ""}>
-          <label className={styles.filterLabel ?? ""} htmlFor="filter-genre">
-            Genre
-          </label>
-          <select
-            id="filter-genre"
-            className={`${styles.filterSelect ?? ""} ${styles.filterDisabled ?? ""}`}
-            disabled
-          >
-            <option value="">All</option>
-          </select>
-        </div>
-
-        <div className={styles.filterGroup ?? ""}>
-          <label className={styles.filterLabel ?? ""} htmlFor="filter-year">
-            Year
-          </label>
-          <select
-            id="filter-year"
-            className={`${styles.filterSelect ?? ""} ${styles.filterDisabled ?? ""}`}
-            disabled
-          >
-            <option value="">All</option>
-          </select>
-        </div>
-
-        <div className={styles.filterGroup ?? ""}>
-          <label className={styles.filterLabel ?? ""} htmlFor="filter-rating">
-            Rating
-          </label>
-          <select
-            id="filter-rating"
-            className={`${styles.filterSelect ?? ""} ${styles.filterDisabled ?? ""}`}
-            disabled
-          >
-            <option value="">All</option>
-          </select>
-        </div>
-
-        <div className={styles.filterGroup ?? ""}>
-          <label className={styles.filterLabel ?? ""} htmlFor="filter-tags">
-            Tags
-          </label>
-          <select
-            id="filter-tags"
-            className={`${styles.filterSelect ?? ""} ${styles.filterDisabled ?? ""}`}
-            disabled
-          >
-            <option value="">All</option>
-          </select>
-        </div>
+      {/* Tab strip */}
+      <div className={styles.tabs ?? ""}>
+        <button
+          type="button"
+          className={`${styles.tab ?? ""} ${tab === "media" ? (styles.tabActive ?? "") : ""}`}
+          onClick={() => setTab("media")}
+        >
+          Media
+        </button>
+        <button
+          type="button"
+          className={`${styles.tab ?? ""} ${tab === "groups" ? (styles.tabActive ?? "") : ""}`}
+          onClick={() => setTab("groups")}
+        >
+          Groups
+        </button>
       </div>
 
-      {/* Active filter chips */}
-      {activeFilters.length > 0 && (
-        <div className={styles.chips ?? ""}>
-          {activeFilters.map((f) => (
-            <span key={f.key} className={styles.chip ?? ""}>
-              {f.label}
-              <button
-                type="button"
-                className={styles.chipRemove ?? ""}
-                onClick={f.onRemove}
-                aria-label={`Remove ${f.label} filter`}
-              >
-                ×
-              </button>
+      {tab === "groups" && (
+        <div className={styles.groupsSection ?? ""}>
+          <div className={styles.groupsHeader ?? ""}>
+            <span className={styles.groupsCount ?? ""}>
+              {groups.length} group{groups.length !== 1 ? "s" : ""}
             </span>
-          ))}
-          {activeFilters.length > 1 && (
             <button
               type="button"
-              className={styles.clearAll ?? ""}
-              onClick={() => handleCategoryFilter("")}
+              className={styles.newGroupBtn ?? ""}
+              onClick={() => setShowGroupDialog(true)}
             >
-              Clear all
+              + New Group
             </button>
+          </div>
+          {groupsLoading && <p className={styles.groupsLoading ?? ""}>Loading…</p>}
+          {!groupsLoading && groups.length === 0 && (
+            <p className={styles.groupsEmpty ?? ""}>No groups yet. Create one to get started.</p>
+          )}
+          {!groupsLoading && groups.length > 0 && (
+            <div className={styles.groupGrid ?? ""}>
+              {groups.map((g) => (
+                <Link key={g.id} to={`/groups/${g.id}`} className={styles.groupCard ?? ""}>
+                  <span className={styles.groupTypeLabel ?? ""}>
+                    {g.type.charAt(0).toUpperCase() + g.type.slice(1)}
+                  </span>
+                  <span className={styles.groupTitle ?? ""}>{g.title}</span>
+                </Link>
+              ))}
+            </div>
+          )}
+          {showGroupDialog && (
+            <GroupDialog
+              libraryId={id ?? ""}
+              onCreated={handleGroupCreated}
+              onClose={() => setShowGroupDialog(false)}
+            />
           )}
         </div>
       )}
 
-      {viewMode === "grid" ? (
-        loading ? (
-          <div className={styles.grid ?? ""}>
-            {Array.from({ length: PAGE_SIZE }).map((_, i) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders
-              <SkeletonCard key={i} />
-            ))}
-          </div>
-        ) : items.length === 0 ? (
-          <p className={styles.empty ?? ""}>No media in this library yet.</p>
-        ) : (
-          <div className={styles.grid ?? ""}>
-            {items.map((item) => (
-              <MediaCard key={item.id} item={item} />
-            ))}
-          </div>
-        )
-      ) : (
-        <div className={styles.tableWrapper ?? ""}>
-          <table className={styles.table ?? ""}>
-            <thead>
-              <tr>
-                <th className={`${styles.th ?? ""} ${styles.thThumb ?? ""}`} />
-                <th
-                  className={`${styles.th ?? ""} ${styles.thSortable ?? ""}`}
-                  onClick={() => handleSort("title")}
-                  onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && handleSort("title")}
-                >
-                  Title{sortIndicator("title")}
-                </th>
-                <th
-                  className={`${styles.th ?? ""} ${styles.thSortable ?? ""}`}
-                  onClick={() => handleSort("mediaCategory")}
-                  onKeyDown={(e) =>
-                    (e.key === "Enter" || e.key === " ") && handleSort("mediaCategory")
-                  }
-                >
-                  Category{sortIndicator("mediaCategory")}
-                </th>
-                <th
-                  className={`${styles.th ?? ""} ${styles.thSortable ?? ""}`}
-                  onClick={() => handleSort("fileSize")}
-                  onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && handleSort("fileSize")}
-                >
-                  Size{sortIndicator("fileSize")}
-                </th>
-                <th
-                  className={`${styles.th ?? ""} ${styles.thSortable ?? ""}`}
-                  onClick={() => handleSort("createdAt")}
-                  onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && handleSort("createdAt")}
-                >
-                  Date Added{sortIndicator("createdAt")}
-                </th>
-              </tr>
-            </thead>
-            <tbody>
-              {loading ? (
-                Array.from({ length: 10 }).map((_, i) => (
-                  // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders
-                  <SkeletonRow key={i} />
-                ))
-              ) : items.length === 0 ? (
-                <tr>
-                  <td colSpan={5} className={styles.emptyCell ?? ""}>
-                    No media in this library yet.
-                  </td>
-                </tr>
-              ) : (
-                items.map((item) => <MediaCard key={item.id} item={item} listView />)
-              )}
-            </tbody>
-          </table>
-        </div>
-      )}
+      {tab === "media" && (
+        <>
+          {/* Filter bar */}
+          <div className={styles.filterBar ?? ""}>
+            <div className={styles.filterGroup ?? ""}>
+              <label className={styles.filterLabel ?? ""} htmlFor="filter-category">
+                Category
+              </label>
+              <select
+                id="filter-category"
+                className={styles.filterSelect ?? ""}
+                value={filterCategory}
+                onChange={(e) => handleCategoryFilter(e.target.value)}
+              >
+                <option value="">All</option>
+                {MEDIA_CATEGORIES.map((cat) => (
+                  <option key={cat} value={cat}>
+                    {cat}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-      {totalPages > 1 && (
-        <div className={styles.pagination ?? ""}>
-          <button
-            type="button"
-            className={styles.pageBtn ?? ""}
-            onClick={() => setPage((p) => Math.max(1, p - 1))}
-            disabled={page === 1}
-          >
-            ← Prev
-          </button>
-          <span className={styles.pageInfo ?? ""}>
-            Page {page} of {totalPages}
-          </span>
-          <button
-            type="button"
-            className={styles.pageBtn ?? ""}
-            onClick={() => setPage((p) => p + 1)}
-            disabled={page >= totalPages}
-          >
-            Next →
-          </button>
-        </div>
+            <div className={styles.filterGroup ?? ""}>
+              <label className={styles.filterLabel ?? ""} htmlFor="filter-sort">
+                Sort
+              </label>
+              <select
+                id="filter-sort"
+                className={styles.filterSelect ?? ""}
+                value={currentSortKey}
+                onChange={(e) => handleSortOption(e.target.value)}
+              >
+                {SORT_OPTIONS.map((opt) => (
+                  <option key={makeSortKey(opt.col, opt.dir)} value={makeSortKey(opt.col, opt.dir)}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            <div className={styles.filterGroup ?? ""}>
+              <label className={styles.filterLabel ?? ""} htmlFor="filter-genre">
+                Genre
+              </label>
+              <select
+                id="filter-genre"
+                className={`${styles.filterSelect ?? ""} ${styles.filterDisabled ?? ""}`}
+                disabled
+              >
+                <option value="">All</option>
+              </select>
+            </div>
+
+            <div className={styles.filterGroup ?? ""}>
+              <label className={styles.filterLabel ?? ""} htmlFor="filter-year">
+                Year
+              </label>
+              <select
+                id="filter-year"
+                className={`${styles.filterSelect ?? ""} ${styles.filterDisabled ?? ""}`}
+                disabled
+              >
+                <option value="">All</option>
+              </select>
+            </div>
+
+            <div className={styles.filterGroup ?? ""}>
+              <label className={styles.filterLabel ?? ""} htmlFor="filter-rating">
+                Rating
+              </label>
+              <select
+                id="filter-rating"
+                className={`${styles.filterSelect ?? ""} ${styles.filterDisabled ?? ""}`}
+                disabled
+              >
+                <option value="">All</option>
+              </select>
+            </div>
+
+            <div className={styles.filterGroup ?? ""}>
+              <label className={styles.filterLabel ?? ""} htmlFor="filter-tags">
+                Tags
+              </label>
+              <select
+                id="filter-tags"
+                className={`${styles.filterSelect ?? ""} ${styles.filterDisabled ?? ""}`}
+                disabled
+              >
+                <option value="">All</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Active filter chips */}
+          {activeFilters.length > 0 && (
+            <div className={styles.chips ?? ""}>
+              {activeFilters.map((f) => (
+                <span key={f.key} className={styles.chip ?? ""}>
+                  {f.label}
+                  <button
+                    type="button"
+                    className={styles.chipRemove ?? ""}
+                    onClick={f.onRemove}
+                    aria-label={`Remove ${f.label} filter`}
+                  >
+                    ×
+                  </button>
+                </span>
+              ))}
+              {activeFilters.length > 1 && (
+                <button
+                  type="button"
+                  className={styles.clearAll ?? ""}
+                  onClick={() => handleCategoryFilter("")}
+                >
+                  Clear all
+                </button>
+              )}
+            </div>
+          )}
+
+          {viewMode === "grid" ? (
+            loading ? (
+              <div className={styles.grid ?? ""}>
+                {Array.from({ length: PAGE_SIZE }).map((_, i) => (
+                  // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders
+                  <SkeletonCard key={i} />
+                ))}
+              </div>
+            ) : items.length === 0 ? (
+              <p className={styles.empty ?? ""}>No media in this library yet.</p>
+            ) : (
+              <div className={styles.grid ?? ""}>
+                {items.map((item) => (
+                  <MediaCard key={item.id} item={item} />
+                ))}
+              </div>
+            )
+          ) : (
+            <div className={styles.tableWrapper ?? ""}>
+              <table className={styles.table ?? ""}>
+                <thead>
+                  <tr>
+                    <th className={`${styles.th ?? ""} ${styles.thThumb ?? ""}`} />
+                    <th
+                      className={`${styles.th ?? ""} ${styles.thSortable ?? ""}`}
+                      onClick={() => handleSort("title")}
+                      onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && handleSort("title")}
+                    >
+                      Title{sortIndicator("title")}
+                    </th>
+                    <th
+                      className={`${styles.th ?? ""} ${styles.thSortable ?? ""}`}
+                      onClick={() => handleSort("mediaCategory")}
+                      onKeyDown={(e) =>
+                        (e.key === "Enter" || e.key === " ") && handleSort("mediaCategory")
+                      }
+                    >
+                      Category{sortIndicator("mediaCategory")}
+                    </th>
+                    <th
+                      className={`${styles.th ?? ""} ${styles.thSortable ?? ""}`}
+                      onClick={() => handleSort("fileSize")}
+                      onKeyDown={(e) =>
+                        (e.key === "Enter" || e.key === " ") && handleSort("fileSize")
+                      }
+                    >
+                      Size{sortIndicator("fileSize")}
+                    </th>
+                    <th
+                      className={`${styles.th ?? ""} ${styles.thSortable ?? ""}`}
+                      onClick={() => handleSort("createdAt")}
+                      onKeyDown={(e) =>
+                        (e.key === "Enter" || e.key === " ") && handleSort("createdAt")
+                      }
+                    >
+                      Date Added{sortIndicator("createdAt")}
+                    </th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {loading ? (
+                    Array.from({ length: 10 }).map((_, i) => (
+                      // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders
+                      <SkeletonRow key={i} />
+                    ))
+                  ) : items.length === 0 ? (
+                    <tr>
+                      <td colSpan={5} className={styles.emptyCell ?? ""}>
+                        No media in this library yet.
+                      </td>
+                    </tr>
+                  ) : (
+                    items.map((item) => <MediaCard key={item.id} item={item} listView />)
+                  )}
+                </tbody>
+              </table>
+            </div>
+          )}
+
+          {totalPages > 1 && (
+            <div className={styles.pagination ?? ""}>
+              <button
+                type="button"
+                className={styles.pageBtn ?? ""}
+                onClick={() => setPage((p) => Math.max(1, p - 1))}
+                disabled={page === 1}
+              >
+                ← Prev
+              </button>
+              <span className={styles.pageInfo ?? ""}>
+                Page {page} of {totalPages}
+              </span>
+              <button
+                type="button"
+                className={styles.pageBtn ?? ""}
+                onClick={() => setPage((p) => p + 1)}
+                disabled={page >= totalPages}
+              >
+                Next →
+              </button>
+            </div>
+          )}
+        </>
       )}
     </div>
   );

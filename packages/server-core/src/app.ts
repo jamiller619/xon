@@ -7,6 +7,7 @@ import { makeAdminLibraryAccessRouter } from "./routes/adminLibraryAccess.js";
 import { makeAdminPluginsRouter } from "./routes/adminPlugins.js";
 import { makeAdminUsersRouter } from "./routes/adminUsers.js";
 import { makeAuthRouter } from "./routes/auth.js";
+import { makeGroupsRouter } from "./routes/groups.js";
 import { makeLibrariesRouter } from "./routes/libraries.js";
 import { makeMediaRouter } from "./routes/media.js";
 import { makePluginsRouter } from "./routes/plugins.js";
@@ -28,6 +29,7 @@ export function createApp(db?: LibSQLDatabase): Hono {
   if (db) {
     app.route("/auth", makeAuthRouter(db));
     app.route("/libraries", makeLibrariesRouter(db));
+    app.route("/groups", makeGroupsRouter(db));
     app.route("/media", makeMediaRouter(db));
     app.route("/search", makeSearchRouter(db));
     app.route("/users", makeUsersRouter(db));

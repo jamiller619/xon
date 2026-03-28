@@ -6,6 +6,7 @@ import AdminLibraryAccess from "./pages/AdminLibraryAccess";
 import AdminPlugins from "./pages/AdminPlugins";
 import AdminUsers from "./pages/AdminUsers";
 import Dashboard from "./pages/Dashboard";
+import GroupDetail from "./pages/GroupDetail";
 import LibraryBrowser from "./pages/LibraryBrowser";
 import Login from "./pages/Login";
 import MediaDetail from "./pages/MediaDetail";
@@ -28,6 +29,7 @@ export default function App() {
           <Route path="/" element={<Dashboard />} />
           <Route path="/libraries/:id" element={<LibraryBrowser />} />
           <Route path="/media/:id" element={<MediaDetail />} />
+          <Route path="/groups/:id" element={<GroupDetail />} />
           <Route path="/search" element={<Search />} />
           <Route path="/admin/plugins" element={<AdminPlugins />} />
           <Route path="/admin/users" element={<AdminUsers />} />

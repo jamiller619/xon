@@ -281,3 +281,105 @@
   font-size: 0.875rem;
   color: #888;
 }
+
+/* Tabs */
+.tabs {
+  display: flex;
+  gap: 0;
+  border-bottom: 1px solid #2d2d44;
+}
+
+.tab {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 14px;
+  padding: 8px 20px;
+  margin-bottom: -1px;
+}
+
+.tab:hover {
+  color: #e0e0f0;
+}
+
+.tabActive {
+  border-bottom-color: #7986cb;
+  color: #e0e0f0;
+}
+
+/* Groups section */
+.groupsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.groupsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.groupsCount {
+  color: #888;
+  font-size: 13px;
+}
+
+.newGroupBtn {
+  background: #5c6bc0;
+  border: none;
+  border-radius: 4px;
+  color: #fff;
+  cursor: pointer;
+  font-size: 13px;
+  padding: 7px 14px;
+}
+
+.newGroupBtn:hover {
+  background: #7986cb;
+}
+
+.groupsLoading,
+.groupsEmpty {
+  color: #aaa;
+  font-size: 14px;
+  text-align: center;
+  padding: 20px 0;
+}
+
+.groupGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 12px;
+}
+
+.groupCard {
+  background: #12122a;
+  border: 1px solid #2d2d44;
+  border-radius: 8px;
+  padding: 16px;
+  text-decoration: none;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  transition: border-color 0.15s;
+}
+
+.groupCard:hover {
+  border-color: #5c6bc0;
+}
+
+.groupTypeLabel {
+  color: #7986cb;
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.groupTitle {
+  color: #e0e0f0;
+  font-size: 14px;
+  font-weight: 500;
+}

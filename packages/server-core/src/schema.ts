@@ -216,7 +216,17 @@ export const apiTokens = sqliteTable("api_tokens", {
 export type ApiToken = typeof apiTokens.$inferSelect;
 export type NewApiToken = typeof apiTokens.$inferInsert;
 
-export const GROUP_TYPES = ["series", "season", "album", "artist", "book-series"] as const;
+export const GROUP_TYPES = [
+  "series",
+  "season",
+  "album",
+  "artist",
+  "book-series",
+  "collection",
+  "playlist",
+  "shelf",
+  "folder",
+] as const;
 export type GroupType = (typeof GROUP_TYPES)[number];
 
 export const groups = sqliteTable(
