@@ -1,3 +1,19 @@
+## 2026-03-28 - US-055
+- Implemented theme plugin support — client-only CSS/JS theming with per-user selection
+- Files created: packages/server-core/src/routes/themes.ts, apps/web/src/components/ThemeLoader.tsx, apps/web/src/pages/Settings.tsx, apps/web/src/pages/Settings.module.css
+- Files changed: packages/plugin-sdk/src/types.ts (added themeAssets to PluginManifest), packages/server-core/src/app.ts (mounted makeThemesRouter), apps/web/src/store/index.ts (added useThemeStore with localStorage persistence), apps/web/src/App.tsx (added ThemeLoader + /settings route), apps/web/src/components/Sidebar.tsx (added Settings nav link)
+- `GET /api/v1/themes`: returns all Theme-category plugins with cssUrl/jsUrl built from plugin assets endpoint
+- `PluginManifest.themeAssets`: optional `{ cssFile?, jsFile? }` — Theme plugins declare their CSS/JS asset filenames relative to their assets/ directory
+- `ThemeLoader`: React component (renders null) that reads activeThemeId from Zustand store, fetches /api/v1/themes, injects `<link>` (CSS) and `<script type="module">` (JS) into document.head with cleanup on theme change
+- `useThemeStore`: Zustand store persisted to `localStorage["xon:activeTheme"]`; only one theme active at a time — selecting a new theme removes old injected elements
+- Settings page at /settings: radio list of available themes + "Default (no theme)" option; empty state message when no theme plugins installed; PluginSlot for settings:page injection point
+- **Learnings for future iterations:**
+  - `localStorage.getItem(key)` can be called safely in Zustand store initializer (browser context) — no SSR concerns in this Vite SPA
+  - ThemeLoader `useEffect` cleanup must be a closure capturing `injected[]` — the injected array is populated asynchronously after fetch, so the cleanup must reference the same array via closure
+  - Theme plugin manifest only needs `themeAssets` — no server-side plugin entry point required (category "Theme" + themeAssets is sufficient)
+  - Assets are served via the existing `/api/v1/plugins/:pluginId/assets/*` endpoint — no new static serving needed
+---
+
 ## 2026-03-28 - US-054
 - Implemented plugin UI component injection system
 - Files created: packages/server-core/src/routes/plugins.ts, apps/web/src/components/PluginSlot.tsx
