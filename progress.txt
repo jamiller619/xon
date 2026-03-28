@@ -1,3 +1,19 @@
+## 2026-03-28 - US-074
+- Implemented Search UI with type-ahead dropdown and full search results page
+- Files created: apps/web/src/pages/Search.tsx, apps/web/src/pages/Search.module.css
+- Files changed: apps/web/src/components/TopBar.tsx (debounced type-ahead, recent history, keyboard nav), apps/web/src/components/TopBar.module.css (dropdown styles), apps/web/src/App.tsx (mounted Search page)
+- Search page at /search?q=...&category=...&page=... — reads URL params, shows MediaCard grid/list, category tabs, pagination
+- TopBar: debounced (300ms) fetch to /api/v1/search?limit=5 for suggestions; recent search history in localStorage (key: xon:searchHistory, max 10); keyboard nav (ArrowUp/Down/Enter/Escape); close on outside click
+- Search results mapped to MediaCardItem with null mimeType/fileSize (fields not in search API response)
+- createdAt conversion: search API returns ISO string → converted to epoch seconds for MediaCardItem
+- 525 tests passing; biome clean
+- **Learnings for future iterations:**
+  - Biome lint/a11y/useSemanticElements rejects `role="listbox"` on div and `role="option"` on button — use plain div/button without roles, or use `tabIndex` for focusable
+  - `useSearchParams` + `setSearchParams(prev => {...})` pattern for URL-driven filter state (category, page)
+  - `localStorage` for recent search history: parse/serialize with try/catch, store as JSON array
+  - Type-ahead close on outside click: `document.addEventListener("mousedown", ...)` with `wrapperRef.current.contains(e.target)` check in useEffect cleanup
+---
+
 ## 2026-03-28 - US-073
 - Implemented Search API endpoint with FTS5-backed full-text search and scoped results
 - Files created: packages/server-core/src/routes/search.ts, packages/server-core/src/routes/search.test.ts
