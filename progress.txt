@@ -1167,6 +1167,10 @@
 - groupMembers deduplication when a media item can join multiple groups: track `groupId:mediaItemId` composite keys, not just `mediaItemId`
 - EXIF date format uses colons as date separators: "YYYY:MM:DD HH:MM:SS" — parse with regex `/^(\d{4}):(\d{2}):(\d{2})/`, convert to ISO for Date constructor
 - GPS clustering to ~11km grid cells: round to 1 decimal degree with `(Math.round(coord * 10) / 10).toFixed(1)`
+- Biome `useKeyWithClickEvents`: modal overlay divs with `onClick` need `onKeyDown` too — add `onKeyDown={(e) => e.key === "Escape" && onClose()}` on backdrop, `onKeyDown={(e) => e.stopPropagation()}` on inner dialog div
+- `useCallback` required for functions used in React `useEffect` deps to satisfy biome `useExhaustiveDependencies`
+- Manual group protection: check `MANUAL_GROUP_TYPES.includes(group.type)` before allowing mutations so auto-generated groups (series, season, artist, etc.) can't be deleted via the API
+- Drizzle upsert: `db.insert().values().onConflictDoUpdate({ target: [col1, col2], set: { ... } })` for update-on-conflict semantics
 
 ---
 
@@ -1326,4 +1330,24 @@
   - `app.use("/admin/*", requireRole("admin"))` in app.ts cleanly protects all admin sub-routes without touching individual route files
   - `requireRole` as a middleware arg in Hono route: `router.post("/", requireRole("manager"), zValidator(...), handler)` — middleware runs before validator, which runs before handler
   - Role rank map pattern: `const ROLE_RANK: Record<string, number> = { guest: 0, user: 1, manager: 2, admin: 3 }` — allows numeric comparison for hierarchy checks
+---
+
+## 2026-03-28 - US-079
+- Implemented manual grouping — collections, playlists, albums, shelves, folders
+- Files changed: packages/server-core/src/schema.ts (added collection/playlist/shelf/folder to GROUP_TYPES), packages/server-core/src/routes/groups.ts (new), packages/server-core/src/app.ts (mounted /groups router), apps/web/src/components/GroupDialog.tsx + GroupDialog.module.css (new), apps/web/src/pages/GroupDetail.tsx + GroupDetail.module.css (new), apps/web/src/pages/LibraryBrowser.tsx (Groups tab), apps/web/src/App.tsx (/groups/:id route)
+- `makeGroupsRouter(db)`: POST/GET/PUT/DELETE /api/v1/groups + POST/PUT/DELETE /api/v1/groups/:id/items
+- MANUAL_GROUP_TYPES = ["collection", "playlist", "album", "shelf", "folder"] — only these can be created/edited/deleted via API; auto-generated types (series, season, artist, book-series) are protected
+- `inferGroupType(categories)`: maps media categories to group type — video→collection, music→playlist, photos→album, docs→folder, mixed→shelf
+- GroupDialog: context-sensitive "New Collection / Playlist / Album / Folder / Shelf" heading; dropdown to override type; ESC closes
+- GroupDetail page: drag-and-drop reorder (HTML5 native DnD), remove items, add items via multi-select modal, delete group
+- LibraryBrowser: "Media" / "Groups" tab strip; Groups tab lists manual groups with "New Group" button; group cards link to /groups/:id
+- Sort order persisted via PUT /api/v1/groups/:id/items after drag-and-drop drop event
+- Access control: admins/managers see all libraries; regular users limited to granted libraries
+- 577 tests passing; biome clean; web typecheck clean
+- **Learnings for future iterations:**
+  - Biome `useKeyWithClickEvents`: modal overlay divs with `onClick` also need `onKeyDown` — use `onKeyDown={(e) => e.key === "Escape" && onClose()}` on overlay and `onKeyDown={(e) => e.stopPropagation()}` on inner dialog
+  - `useCallback` required for functions used in `useEffect` deps to satisfy `useExhaustiveDependencies` — wrap fetch helpers with `useCallback([id])` pattern
+  - Manual group IDs use `grp:manual:{libraryId}:{uuid}` — no determinism needed since user-created; contrast with auto-group deterministic IDs
+  - `onConflictDoUpdate` for upsert in Drizzle: `{ target: [col1, col2], set: { ... } }` — use for sortOrder updates when re-adding existing items
+  - Groups protection pattern: check `MANUAL_GROUP_TYPES.includes(group.type)` before allowing PUT/DELETE so auto-generated groups (series, season, etc.) can't be accidentally deleted via the API
 ---
