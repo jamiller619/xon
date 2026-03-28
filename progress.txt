@@ -1,3 +1,22 @@
+## 2026-03-27 - US-037
+- Implemented PDF viewer component using pdfjs-dist
+- Files created: apps/web/src/components/PdfViewer.tsx, PdfViewer.module.css
+- Files changed: apps/web/src/pages/MediaDetail.tsx (import PdfViewer, showPdfViewer state, isPdf flag, PDF open button in action bar, PdfViewer overlay, PDF poster placeholder)
+- PdfViewer: full-screen `<dialog open>` overlay; renders PDF via pdfjs-dist canvas API
+- Toolbar: close button, title, prev/next page nav, page counter (current/total), zoom in/out/reset buttons
+- Thumbnail sidebar: renders all pages at THUMBNAIL_SCALE=0.15; active page highlighted with purple border; clicking navigates to page
+- Keyboard shortcuts: Escape=close, Arrow keys=prev/next page, +/-=zoom in/out
+- Zoom levels: [0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0]; defaults to 1.0
+- Worker configured via `new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href`
+- MediaDetail: isPdf added alongside isImage; PDF items get 📄 Open button and open PdfViewer overlay
+- Fixed pre-existing exactOptionalPropertyTypes error in ImageViewer siblings prop (conditional spread)
+- **Learnings for future iterations:**
+  - pdfjs-dist v5 `RenderParameters` requires `canvas: HTMLCanvasElement | null` as a required field (not just `canvasContext`)
+  - Use `new URL('pdfjs-dist/build/pdf.worker.min.mjs', import.meta.url).href` for Vite-compatible worker URL
+  - `exactOptionalPropertyTypes: true` means `prop={undefined}` is rejected for optional props — use conditional spread `{...(val ? { prop: val } : {})}` instead
+  - Cancel in-flight render tasks with `renderTask.cancel()` before starting a new render on the same canvas
+---
+
 ## 2026-03-27 - US-036
 - Implemented image viewer with zoom, pan, pinch, and slideshow
 - Files created: apps/web/src/components/ImageViewer.tsx, ImageViewer.module.css
