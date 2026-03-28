@@ -1,3 +1,20 @@
+## 2026-03-27 - US-036
+- Implemented image viewer with zoom, pan, pinch, and slideshow
+- Files created: apps/web/src/components/ImageViewer.tsx, ImageViewer.module.css
+- Files changed: apps/web/src/pages/MediaDetail.tsx (added libraryId to item type, fetch image siblings, View button for image items, render ImageViewer overlay, clickable poster image for images)
+- Files changed: apps/web/src/pages/MediaDetail.module.css (posterImgClickable style)
+- ImageViewer: full-screen `<dialog>` overlay; zoom with mouse wheel (min 1x, max 8x); pan by dragging when zoomed; pinch-to-zoom with two touch points; touch pan with one finger when zoomed
+- Slideshow: Space to toggle; auto-advances every 4s; wraps around sibling list; pauses on close/navigation
+- Navigation: prev/next buttons + ArrowLeft/ArrowRight keyboard shortcuts; counter shows position in list
+- Siblings fetched from `/api/v1/libraries/:libraryId/media?mediaCategory=...&limit=100` on mount when item is an image with a libraryId
+- Clicking the thumbnail poster image also opens the viewer directly
+- **Learnings for future iterations:**
+  - Biome `useSemanticElements`: use `<dialog open>` instead of `<div role="dialog">` to avoid lint error
+  - Biome a11y `useKeyWithClickEvents`: `<img onClick>` must also have `onKeyDown` + `tabIndex` for keyboard accessibility — or use a `<button>` wrapper instead
+  - Wrap `resetTransform` in `useCallback` when it's used as a dependency in other `useCallback` hooks to satisfy exhaustive-deps lint rule
+  - `<dialog>` default browser styles add max-width/height and margin; override all with CSS to get a true full-screen overlay
+---
+
 ## 2026-03-27 - US-035
 - Implemented persistent audio player bar with queue management
 - Files created: apps/web/src/components/AudioPlayer.tsx, AudioPlayer.module.css
