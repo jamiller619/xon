@@ -1,3 +1,19 @@
+## 2026-03-28 - US-059
+- Implemented first-party MusicBrainz metadata plugin for music
+- Files created: plugins/musicbrainz-metadata/package.json, plugins/musicbrainz-metadata/tsconfig.json, plugins/musicbrainz-metadata/src/musicParser.ts, plugins/musicbrainz-metadata/src/musicBrainzClient.ts, plugins/musicbrainz-metadata/src/index.ts, plugins/musicbrainz-metadata/src/index.test.ts
+- Files changed: tsconfig.json (added plugins/musicbrainz-metadata reference)
+- `parseMusicPath(filePath)`: extracts artist/album/title/trackNumber from directory structure (Artist/Album/TrackNo - Title.mp3) and filename patterns (Artist - Title.mp3); uses a `make()` helper to handle `exactOptionalPropertyTypes: true`
+- `MusicBrainzClient`: 1100ms rate limiter via queue-based RateLimiter class; `searchRecording(title, artist?, album?)` → `/ws/2/recording?query=recording:"T" AND artist:"A"&inc=artist-credits+releases+genres`; `fetchReleaseDetails(mbid)` → `/ws/2/release/:mbid?inc=artist-credits+labels+genres+release-groups`; `fetchCoverArtUrl(mbid)` → HEAD request to `coverartarchive.org/release/:mbid/front-250`
+- `MusicBrainzMetadataPlugin`: creates `plugin_musicbrainz_metadata_tracks` table on init; hooks `media:created` + `media:updated`; searchRecording → fetchReleaseDetails (merges label/genres/coverArt); stores enriched data; GET `/metadata/:mediaId` route
+- Compilation detection: Various Artists name match OR multiple artist credits in recording; also checks release-group primary-type/secondary-types
+- 33 tests passing; typecheck and biome clean
+- **Learnings for future iterations:**
+  - MusicBrainz API requires User-Agent header and 1 req/sec rate limit — implemented as queue-based RateLimiter with 1100ms minimum interval
+  - Cover Art Archive: HEAD request to `/release/:mbid/front-250` to check existence; redirects (301/302/307) count as "exists"
+  - `exactOptionalPropertyTypes: true` also affects function parameter object literals — passing `{ trackNumber: number | undefined }` to `{ trackNumber?: number }` fails; must add `| undefined` to the parameter type
+  - Rate limiter tests take ~1100ms per throttled call — tests with multiple calls are slow; design tests to minimize chained throttle calls
+---
+
 ## 2026-03-28 - US-058
 - Implemented first-party TMDb metadata plugin for movies and TV shows
 - Files created: plugins/tmdb-metadata/package.json, plugins/tmdb-metadata/tsconfig.json, plugins/tmdb-metadata/src/titleParser.ts, plugins/tmdb-metadata/src/tmdbClient.ts, plugins/tmdb-metadata/src/index.ts, plugins/tmdb-metadata/src/index.test.ts
