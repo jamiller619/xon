@@ -1,10 +1,18 @@
 import { zValidator } from "@hono/zod-validator";
-import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
 import { requireRole } from "../rbac.js";
-import { dataSources, libraries, libraryAccess, mediaItems } from "../schema.js";
+import {
+  dataSources,
+  getAllowedRatings,
+  libraries,
+  libraryAccess,
+  mediaItems,
+  users,
+} from "../schema.js";
 import { withThumbnailUrls } from "./media.js";
 import { makeScanRouter } from "./scan.js";
 import { makeSourcesRouter } from "./sources.js";
@@ -23,6 +31,26 @@ async function getAccessibleLibraryIds(
     .from(libraryAccess)
     .where(eq(libraryAccess.userId, userId));
   return rows.map((r) => r.libraryId);
+}
+
+/** Builds a Drizzle WHERE condition restricting media items by the user's maxContentRating. */
+async function getContentRatingCondition(db: LibSQLDatabase, userId: string) {
+  const userRows = await db
+    .select({ maxContentRating: users.maxContentRating })
+    .from(users)
+    .where(eq(users.id, userId));
+  const maxRating = userRows[0]?.maxContentRating ?? "none";
+  const allowed = getAllowedRatings(maxRating);
+  if (allowed === null) return null; // no restriction
+  if (allowed.length === 0) return isNull(mediaItems.contentRating);
+  const unratedAllowed = (allowed as string[]).includes("unrated");
+  if (unratedAllowed) {
+    return or(
+      isNull(mediaItems.contentRating),
+      inArray(mediaItems.contentRating, allowed)
+    ) as SQL<unknown>;
+  }
+  return inArray(mediaItems.contentRating, allowed);
 }
 
 const createLibrarySchema = z.object({
@@ -134,12 +162,15 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
     const limitNum = Math.min(Math.max(1, Number(limit) || 20), 100);
     const offset = (pageNum - 1) * limitNum;
 
+    const ratingCond = await getContentRatingCondition(db, user.id);
+
     const conditions = [eq(mediaItems.libraryId, libraryId)];
     if (mediaCategory) conditions.push(eq(mediaItems.mediaCategory, mediaCategory));
     if (mimeType) conditions.push(eq(mediaItems.mimeType, mimeType));
     if (drmProtected !== undefined && drmProtected !== "") {
       conditions.push(eq(mediaItems.drmProtected, drmProtected === "true"));
     }
+    if (ratingCond !== null) conditions.push(ratingCond);
 
     const sortDir = order === "desc" ? desc : asc;
     const orderExpr =

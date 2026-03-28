@@ -8,11 +8,14 @@ interface UserInfo {
   email: string;
   displayName: string;
   role: "admin" | "manager" | "user" | "guest";
+  maxContentRating: "G" | "PG" | "PG-13" | "R" | "unrated" | "none";
   createdAt: number;
 }
 
 type UserRole = "admin" | "manager" | "user" | "guest";
 const ROLES: UserRole[] = ["admin", "manager", "user", "guest"];
+type ContentRatingMax = "G" | "PG" | "PG-13" | "R" | "unrated" | "none";
+const CONTENT_RATINGS: ContentRatingMax[] = ["G", "PG", "PG-13", "R", "unrated", "none"];
 
 interface CreateForm {
   username: string;
@@ -26,6 +29,7 @@ interface EditForm {
   displayName: string;
   email: string;
   role: UserRole;
+  maxContentRating: ContentRatingMax;
   password: string;
 }
 
@@ -50,6 +54,7 @@ export default function AdminUsers() {
     displayName: "",
     email: "",
     role: "user",
+    maxContentRating: "none",
     password: "",
   });
   const [saving, setSaving] = useState(false);
@@ -72,6 +77,7 @@ export default function AdminUsers() {
       displayName: user.displayName,
       email: user.email,
       role: user.role,
+      maxContentRating: user.maxContentRating,
       password: "",
     });
     setSaveError("");
@@ -90,6 +96,7 @@ export default function AdminUsers() {
       displayName: editForm.displayName,
       email: editForm.email,
       role: editForm.role,
+      maxContentRating: editForm.maxContentRating,
     };
     if (editForm.password) body.password = editForm.password;
     try {
@@ -254,6 +261,7 @@ export default function AdminUsers() {
               <th className={styles.th ?? ""}>Display Name</th>
               <th className={styles.th ?? ""}>Email</th>
               <th className={styles.th ?? ""}>Role</th>
+              <th className={styles.th ?? ""}>Max Rating</th>
               <th className={styles.th ?? ""}>Actions</th>
             </tr>
           </thead>
@@ -293,6 +301,24 @@ export default function AdminUsers() {
                     </select>
                   </td>
                   <td className={styles.td ?? ""}>
+                    <select
+                      className={styles.inlineInput ?? ""}
+                      value={editForm.maxContentRating}
+                      onChange={(e) =>
+                        setEditForm((f) => ({
+                          ...f,
+                          maxContentRating: e.target.value as ContentRatingMax,
+                        }))
+                      }
+                    >
+                      {CONTENT_RATINGS.map((r) => (
+                        <option key={r} value={r}>
+                          {r === "none" ? "No restriction" : r}
+                        </option>
+                      ))}
+                    </select>
+                  </td>
+                  <td className={styles.td ?? ""}>
                     <div className={styles.inlineActions ?? ""}>
                       <input
                         className={styles.inlineInput ?? ""}
@@ -324,6 +350,11 @@ export default function AdminUsers() {
                   <td className={styles.td ?? ""}>
                     <span className={`${styles.badge ?? ""} ${styles[`role_${user.role}`] ?? ""}`}>
                       {user.role}
+                    </span>
+                  </td>
+                  <td className={styles.td ?? ""}>
+                    <span className={styles.badge ?? ""}>
+                      {user.maxContentRating === "none" ? "No restriction" : user.maxContentRating}
                     </span>
                   </td>
                   <td className={styles.td ?? ""}>

@@ -3,7 +3,8 @@ import { readFile, readdir, stat } from "node:fs/promises";
 import { basename, dirname, extname, join } from "node:path";
 import { Readable } from "node:stream";
 import { zValidator } from "@hono/zod-validator";
-import { asc, desc, eq, inArray } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, isNull, or } from "drizzle-orm";
+import type { SQL } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { parse as parseFont } from "opentype.js";
@@ -13,7 +14,13 @@ import { extractFfprobeMetadata, extractStreamTracks } from "../ffprobe.js";
 import { convertMobiToEpub } from "../mobi.js";
 import { convertRawToJpeg, isRawImage } from "../raw.js";
 import type { MediaItem } from "../schema.js";
-import { libraryAccess, mediaItems, readingPositions } from "../schema.js";
+import {
+  getAllowedRatings,
+  libraryAccess,
+  mediaItems,
+  readingPositions,
+  users,
+} from "../schema.js";
 import type { ThumbnailPaths } from "../thumbnails.js";
 import { generateHlsPlaylist, needsTranscoding, spawnTranscodeSegment } from "../transcode.js";
 
@@ -45,6 +52,30 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     return rows.map((r) => r.libraryId);
   }
 
+  /** Builds a Drizzle WHERE condition restricting items by the user's maxContentRating. */
+  async function getContentRatingCondition(userId: string) {
+    const userRows = await db
+      .select({ maxContentRating: users.maxContentRating })
+      .from(users)
+      .where(eq(users.id, userId));
+    const maxRating = userRows[0]?.maxContentRating ?? "none";
+    const allowed = getAllowedRatings(maxRating);
+    if (allowed === null) return null; // no restriction
+    if (allowed.length === 0) {
+      // Only unrated items with null contentRating are visible
+      return isNull(mediaItems.contentRating);
+    }
+    // Items with null contentRating are treated as unrated; include them if "unrated" is allowed
+    const unratedAllowed = (allowed as string[]).includes("unrated");
+    if (unratedAllowed) {
+      return or(
+        isNull(mediaItems.contentRating),
+        inArray(mediaItems.contentRating, allowed)
+      ) as SQL<unknown>;
+    }
+    return inArray(mediaItems.contentRating, allowed);
+  }
+
   // GET /media — list media items scoped to accessible libraries
   router.get("/", async (c) => {
     const { sortBy, order, page, limit } = c.req.query();
@@ -66,11 +97,14 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       return c.json([]);
     }
 
+    const ratingCond = await getContentRatingCondition(user.id);
+
+    const libraryFilter =
+      accessibleIds !== null ? inArray(mediaItems.libraryId, accessibleIds) : undefined;
+    const whereClause = and(libraryFilter, ratingCond ?? undefined);
+
     const baseQuery = db.select().from(mediaItems);
-    const scopedQuery =
-      accessibleIds === null
-        ? baseQuery
-        : baseQuery.where(inArray(mediaItems.libraryId, accessibleIds));
+    const scopedQuery = whereClause ? baseQuery.where(whereClause) : baseQuery;
     const rows = await scopedQuery.orderBy(orderExpr).limit(limitNum).offset(offset);
 
     return c.json(rows.map(withThumbnailUrls));
@@ -87,6 +121,16 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     const accessibleIds = await getAccessibleLibraryIds(user.id, user.role);
     if (accessibleIds !== null && !accessibleIds.includes(item.libraryId)) {
       return c.json({ error: "Not found" }, 404);
+    }
+
+    const ratingCond = await getContentRatingCondition(user.id);
+    if (ratingCond !== null) {
+      // Check if this item passes the content rating filter
+      const allowed = await db
+        .select({ id: mediaItems.id })
+        .from(mediaItems)
+        .where(and(eq(mediaItems.id, id), ratingCond));
+      if (allowed.length === 0) return c.json({ error: "Not found" }, 404);
     }
 
     return c.json(withThumbnailUrls(item));

@@ -18,6 +18,7 @@ const updateUserSchema = z.object({
   displayName: z.string().min(1).optional(),
   email: z.string().email().optional(),
   role: z.enum(["admin", "manager", "user", "guest"]).optional(),
+  maxContentRating: z.enum(["G", "PG", "PG-13", "R", "unrated", "none"]).optional(),
   password: z.string().min(1).optional(),
 });
 
@@ -34,6 +35,7 @@ export function makeAdminUsersRouter(db: LibSQLDatabase): Hono {
         displayName: users.displayName,
         avatarUrl: users.avatarUrl,
         role: users.role,
+        maxContentRating: users.maxContentRating,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
       })
@@ -68,6 +70,7 @@ export function makeAdminUsersRouter(db: LibSQLDatabase): Hono {
         displayName: users.displayName,
         avatarUrl: users.avatarUrl,
         role: users.role,
+        maxContentRating: users.maxContentRating,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
       })
@@ -88,6 +91,7 @@ export function makeAdminUsersRouter(db: LibSQLDatabase): Hono {
     if (body.displayName !== undefined) updates.displayName = body.displayName;
     if (body.email !== undefined) updates.email = body.email;
     if (body.role !== undefined) updates.role = body.role;
+    if (body.maxContentRating !== undefined) updates.maxContentRating = body.maxContentRating;
     if (body.password !== undefined) updates.passwordHash = await hashPassword(body.password);
 
     await db.update(users).set(updates).where(eq(users.id, id));
@@ -99,6 +103,7 @@ export function makeAdminUsersRouter(db: LibSQLDatabase): Hono {
         displayName: users.displayName,
         avatarUrl: users.avatarUrl,
         role: users.role,
+        maxContentRating: users.maxContentRating,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
       })
