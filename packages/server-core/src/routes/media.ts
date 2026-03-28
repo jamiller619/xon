@@ -11,6 +11,7 @@ import { z } from "zod";
 import { listArchiveContents } from "../archive.js";
 import { extractFfprobeMetadata, extractStreamTracks } from "../ffprobe.js";
 import { convertMobiToEpub } from "../mobi.js";
+import { convertRawToJpeg, isRawImage } from "../raw.js";
 import type { MediaItem } from "../schema.js";
 import { mediaItems, readingPositions } from "../schema.js";
 import type { ThumbnailPaths } from "../thumbnails.js";
@@ -114,6 +115,21 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       fileSize = stats.size;
     } catch {
       return c.json({ error: "File not accessible" }, 404);
+    }
+
+    // RAW camera images: convert to JPEG on-the-fly via dcraw
+    if (isRawImage(item.filePath)) {
+      let jpegBuffer: Buffer;
+      try {
+        jpegBuffer = await convertRawToJpeg(item.filePath);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "RAW conversion failed";
+        return c.json({ error: msg }, 500);
+      }
+      return c.body(new Uint8Array(jpegBuffer), 200, {
+        "Content-Type": "image/jpeg",
+        "Cache-Control": "public, max-age=3600",
+      });
     }
 
     // Check if format needs transcoding — if so, redirect to HLS playlist

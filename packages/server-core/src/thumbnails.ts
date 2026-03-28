@@ -1,6 +1,7 @@
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import sharp from "sharp";
+import { convertRawToJpeg, isRawImage } from "./raw.js";
 
 export type ThumbnailPaths = {
   small: string;
@@ -34,7 +35,13 @@ export async function generateThumbnails(
   };
 
   try {
-    const img = sharp(filePath);
+    let img: ReturnType<typeof sharp>;
+    if (isRawImage(filePath)) {
+      const rawBuffer = await convertRawToJpeg(filePath);
+      img = sharp(rawBuffer);
+    } else {
+      img = sharp(filePath);
+    }
     await Promise.all([
       img
         .clone()

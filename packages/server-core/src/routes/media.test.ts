@@ -31,12 +31,18 @@ vi.mock("../transcode.js", () => ({
   spawnTranscodeSegment: vi.fn(),
 }));
 
+vi.mock("../raw.js", () => ({
+  isRawImage: vi.fn(),
+  convertRawToJpeg: vi.fn(),
+}));
+
 const { readFile, stat, readdir } = await import("node:fs/promises");
 const { createReadStream } = await import("node:fs");
 const { extractStreamTracks, extractFfprobeMetadata } = await import("../ffprobe.js");
 const { needsTranscoding, generateHlsPlaylist, spawnTranscodeSegment } = await import(
   "../transcode.js"
 );
+const { isRawImage, convertRawToJpeg } = await import("../raw.js");
 const mockReadFile = vi.mocked(readFile);
 const mockStat = vi.mocked(stat);
 const mockCreateReadStream = vi.mocked(createReadStream);
@@ -46,6 +52,8 @@ const mockExtractFfprobeMetadata = vi.mocked(extractFfprobeMetadata);
 const mockNeedsTranscoding = vi.mocked(needsTranscoding);
 const mockGenerateHlsPlaylist = vi.mocked(generateHlsPlaylist);
 const mockSpawnTranscodeSegment = vi.mocked(spawnTranscodeSegment);
+const mockIsRawImage = vi.mocked(isRawImage);
+const mockConvertRawToJpeg = vi.mocked(convertRawToJpeg);
 
 describe("Media API - Detail endpoint", () => {
   let client: Client;
@@ -918,5 +926,99 @@ describe("Media API - HLS transcoding endpoints", () => {
       expect(res.headers.get("Content-Type")).toBe("video/mp2t");
       expect(mockSpawnTranscodeSegment).toHaveBeenCalledWith("/media/movie.mkv", 2, 6);
     });
+  });
+});
+
+describe("Media API - RAW image stream endpoint", () => {
+  let client: Client;
+  let db: LibSQLDatabase;
+  let app: ReturnType<typeof createApp>;
+  let rawItemId: string;
+
+  beforeEach(async () => {
+    ({ client, db } = await openDatabase(":memory:"));
+    await migrateDatabase(db);
+    app = createApp(db);
+
+    const libId = crypto.randomUUID();
+    const now = new Date();
+    await db.insert(libraries).values({
+      id: libId,
+      name: "Test Library",
+      allowedMediaTypes: "[]",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const sourceId = crypto.randomUUID();
+    await db.insert(dataSources).values({
+      id: sourceId,
+      libraryId: libId,
+      type: "local",
+      path: "/media",
+      recursive: true,
+      enabled: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    rawItemId = crypto.randomUUID();
+    await db.insert(mediaItems).values({
+      id: rawItemId,
+      libraryId: libId,
+      dataSourceId: sourceId,
+      filePath: "/media/photo.cr2",
+      fileName: "photo.cr2",
+      fileSize: 25000000,
+      mimeType: "image/x-canon-cr2",
+      mediaCategory: "Pictures",
+      thumbnailPaths: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    vi.clearAllMocks();
+  });
+
+  afterEach(() => {
+    client.close();
+  });
+
+  it("returns converted JPEG for RAW image file", async () => {
+    const jpegData = Buffer.from("fake-jpeg-data");
+    mockStat.mockResolvedValueOnce({ size: 25000000 } as never);
+    mockIsRawImage.mockReturnValueOnce(true);
+    mockConvertRawToJpeg.mockResolvedValueOnce(jpegData);
+
+    const res = await app.request(`/api/v1/media/${rawItemId}/stream`);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("Content-Type")).toBe("image/jpeg");
+    expect(mockConvertRawToJpeg).toHaveBeenCalledWith("/media/photo.cr2");
+  });
+
+  it("returns 500 with error message when dcraw is not installed", async () => {
+    mockStat.mockResolvedValueOnce({ size: 25000000 } as never);
+    mockIsRawImage.mockReturnValueOnce(true);
+    mockConvertRawToJpeg.mockRejectedValueOnce(
+      new Error("dcraw not found. Install dcraw to enable RAW image preview.")
+    );
+
+    const res = await app.request(`/api/v1/media/${rawItemId}/stream`);
+    expect(res.status).toBe(500);
+    const body = await res.json();
+    expect(body.error).toContain("dcraw not found");
+  });
+
+  it("skips RAW path for non-RAW files and serves directly", async () => {
+    mockStat.mockResolvedValueOnce({ size: 10000 } as never);
+    mockIsRawImage.mockReturnValueOnce(false);
+    mockExtractFfprobeMetadata.mockResolvedValueOnce(null);
+    mockNeedsTranscoding.mockReturnValue(false);
+    const fakeStream = Readable.from(["jpeg data"]);
+    mockCreateReadStream.mockReturnValueOnce(fakeStream as never);
+
+    const res = await app.request(`/api/v1/media/${rawItemId}/stream`);
+    expect(res.status).toBe(200);
+    expect(mockConvertRawToJpeg).not.toHaveBeenCalled();
   });
 });
