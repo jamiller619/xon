@@ -24,7 +24,8 @@
     { "path": "./packages/server-core" },
     { "path": "./packages/plugin-sdk" },
     { "path": "./apps/desktop" },
-    { "path": "./apps/headless" }
+    { "path": "./apps/headless" },
+    { "path": "./plugins/tmdb-metadata" }
   ],
   "exclude": ["node_modules", "dist", "**/dist", "**/*.test.ts", "**/*.spec.ts", "apps/web"]
 }
