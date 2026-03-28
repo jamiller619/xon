@@ -1,3 +1,20 @@
+## 2026-03-28 - US-065
+- Implemented user management admin page (list, create, edit, delete)
+- Files created: packages/server-core/src/routes/adminUsers.ts, packages/server-core/src/routes/adminUsers.test.ts, apps/web/src/pages/AdminUsers.tsx, apps/web/src/pages/AdminUsers.module.css
+- Files changed: packages/server-core/src/app.ts (added `/admin/users` route under db guard), apps/web/src/App.tsx (added `/admin/users` route)
+- `makeAdminUsersRouter(db)`: GET/POST/PUT/DELETE on `/admin/users` and `/admin/users/:id`; uses inline `requireAdmin(c)` helper that reads `c.get("user").role === "admin"` and returns 403 otherwise
+- Response objects exclude `passwordHash` — select only the safe columns explicitly
+- PUT supports optional password reset: only hashes if `body.password` is provided
+- DELETE includes 404 guard before deleting
+- `AdminUsers.tsx`: lists users in table; inline row editing (displayName, email, role, optional new password); two-step delete confirmation (click Delete → "Delete? Yes/No")
+- 424 tests passing; biome clean
+- **Learnings for future iterations:**
+  - Admin-only routes: use a `requireAdmin(c: Context)` helper that returns `c.json({error:"Forbidden"},403) as unknown as Response` or `null`; avoids repeating auth check in each handler
+  - To exclude sensitive columns from SELECT, enumerate the columns explicitly: `db.select({ id: users.id, username: users.username, ... }).from(users)` — no passwordHash exposed
+  - Inline table row editing with React state: keep `editingId` + `editForm` separate from the main list; toggle between display row and edit row by `editingId === user.id`
+  - Two-step delete confirmation: `confirmDeleteId` state (set on first click, shown as "Yes/No" buttons, cleared on cancel or completion)
+---
+
 ## 2026-03-28 - US-064
 - Implemented login page UI with auth token flow
 - Files created: apps/web/src/pages/Login.tsx, apps/web/src/pages/Login.module.css, apps/web/src/components/RequireAuth.tsx, apps/web/src/apiFetch.ts
