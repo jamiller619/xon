@@ -952,3 +952,17 @@
   - orchestrator.ts `changedFiles` loop had duplicate DB lookups for images and videos (to get existingId for thumbnails) — consolidated to one lookup at top of loop
   - `server:boot` is emitted inside the serve() callback (after port bind), not before — this is correct because plugins may rely on the server being up
 ---
+
+## 2026-03-28 - US-056
+- Implemented plugin management admin page at /admin/plugins
+- Files created: packages/server-core/src/routes/adminPlugins.ts, apps/web/src/pages/AdminPlugins.tsx, apps/web/src/pages/AdminPlugins.module.css
+- Files changed: packages/server-core/src/pluginManager.ts (added pluginErrors map + _resetForTesting clears it), packages/server-core/src/app.ts (mounted makeAdminPluginsRouter at /admin/plugins), apps/web/src/App.tsx (replaced AdminPage placeholder with AdminPlugins at /admin/plugins), apps/web/src/components/Sidebar.tsx (updated nav link to /admin/plugins)
+- `GET /api/v1/admin/plugins`: returns all registry plugins + any failed-load entries from pluginErrors map; fields: id, name, version, type, status, error?
+- `PUT /api/v1/admin/plugins/:name/toggle`: activates if inactive/loaded, deactivates if active; returns {id, status}
+- `pluginErrors` Map: keyed by plugin id (or dir basename for manifest-read failures); populated in discoverAndActivatePlugins on error
+- `AdminPlugins` page: table of all plugins with status badges (active/inactive/loaded/error), Enable/Disable toggle buttons, error details section below table for plugins with status "error"
+- **Learnings for future iterations:**
+  - When removing the AdminPage component from App.tsx, also remove its PluginSlot import if it's no longer used elsewhere (moved PluginSlot to AdminPlugins.tsx instead)
+  - Badge CSS classes with dynamic names (badge_active, badge_error) work fine with CSS Modules as long as the class names are in the stylesheet — bracket notation `styles[`badge_${status}`]` resolves correctly
+  - For `pluginErrors`, use basename() from node:path to derive a fallback id when the manifest failed to parse (no manifest.id available)
+---
