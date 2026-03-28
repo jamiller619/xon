@@ -1,6 +1,7 @@
 import { createReadStream } from "node:fs";
 import { readFile, readdir, stat } from "node:fs/promises";
 import { basename, dirname, extname, join } from "node:path";
+import { parse as parseFont } from "opentype.js";
 import { Readable } from "node:stream";
 import { zValidator } from "@hono/zod-validator";
 import { asc, desc, eq } from "drizzle-orm";
@@ -324,6 +325,47 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       "Content-Type": "application/epub+zip",
       "Cache-Control": "no-store",
     });
+  });
+
+  // GET /media/:id/font-metadata — parse font file and return name/weight/style/glyph count
+  router.get("/:id/font-metadata", async (c) => {
+    const id = c.req.param("id");
+    const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id));
+    const item = rows[0];
+    if (!item) return c.json({ error: "Not found" }, 404);
+
+    const ext = extname(item.filePath).toLowerCase();
+    const fontExts = [".ttf", ".otf", ".woff", ".woff2", ".eot"];
+    if (!fontExts.includes(ext)) {
+      return c.json({ error: "Not a font file" }, 400);
+    }
+
+    let buffer: Buffer;
+    try {
+      buffer = await readFile(item.filePath);
+    } catch {
+      return c.json({ error: "File not accessible" }, 404);
+    }
+
+    try {
+      const font = parseFont(buffer.buffer as ArrayBuffer);
+      const names = font.names;
+      const family =
+        names.fontFamily?.en ??
+        Object.values(names.fontFamily ?? {})[0] ??
+        basename(item.filePath, ext);
+      const subfamily =
+        names.fontSubfamily?.en ??
+        Object.values(names.fontSubfamily ?? {})[0] ??
+        "Regular";
+      const glyphCount = font.glyphs.length;
+      const unitsPerEm = font.unitsPerEm;
+      return c.json({ family, subfamily, glyphCount, unitsPerEm });
+    } catch {
+      // WOFF2 or unsupported format — return what we can from the filename
+      const family = basename(item.filePath, ext);
+      return c.json({ family, subfamily: "Unknown", glyphCount: null, unitsPerEm: null });
+    }
   });
 
   // GET /media/:id/reading-position — retrieve saved reading position

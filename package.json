@@ -2,11 +2,7 @@
   "name": "xon",
   "version": "0.0.0",
   "private": true,
-  "workspaces": [
-    "apps/*",
-    "packages/*",
-    "plugins/*"
-  ],
+  "workspaces": ["apps/*", "packages/*", "plugins/*"],
   "scripts": {
     "typecheck": "tsc --build",
     "lint": "biome lint .",

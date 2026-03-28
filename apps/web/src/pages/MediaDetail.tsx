@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import EpubViewer from "../components/EpubViewer.js";
+import FontViewer from "../components/FontViewer.js";
 import ImageViewer, { type ImageSibling } from "../components/ImageViewer.js";
 import PdfViewer from "../components/PdfViewer.js";
 import VideoPlayer from "../components/VideoPlayer.js";
@@ -56,6 +57,7 @@ export default function MediaDetail() {
   const [showImageViewer, setShowImageViewer] = useState(false);
   const [showPdfViewer, setShowPdfViewer] = useState(false);
   const [showEpubViewer, setShowEpubViewer] = useState(false);
+  const [showFontViewer, setShowFontViewer] = useState(false);
   const [imageSiblings, setImageSiblings] = useState<ImageSibling[]>([]);
 
   const playTrack = useAudioStore((s) => s.playTrack);
@@ -207,6 +209,9 @@ export default function MediaDetail() {
     item.mimeType === "application/epub+zip" ||
     item.mimeType === "application/x-mobipocket-ebook" ||
     item.mimeType === "application/vnd.amazon.ebook";
+  const isFont =
+    item.mimeType?.startsWith("font/") ||
+    item.mimeType === "application/vnd.ms-fontobject";
 
   return (
     <div className={styles.page ?? ""}>
@@ -230,6 +235,13 @@ export default function MediaDetail() {
           mediaId={id}
           title={item.title ?? item.fileName}
           onClose={() => setShowEpubViewer(false)}
+        />
+      )}
+      {showFontViewer && id && (
+        <FontViewer
+          mediaId={id}
+          title={item.title ?? item.fileName}
+          onClose={() => setShowFontViewer(false)}
         />
       )}
       <div className={styles.breadcrumb ?? ""}>
@@ -295,6 +307,15 @@ export default function MediaDetail() {
                   title="Open EPUB reader"
                 >
                   <span className={styles.posterIcon ?? ""}>📖</span>
+                </button>
+              ) : isFont && !item.drmProtected ? (
+                <button
+                  type="button"
+                  className={styles.posterPlaceholder ?? ""}
+                  onClick={() => setShowFontViewer(true)}
+                  title="Open font viewer"
+                >
+                  <span className={styles.posterIcon ?? ""}>🔤</span>
                 </button>
               ) : (
                 <div className={styles.posterPlaceholder ?? ""}>
@@ -437,6 +458,16 @@ export default function MediaDetail() {
                     onClick={() => setShowEpubViewer(true)}
                   >
                     📖 Read
+                  </button>
+                ) : isFont ? (
+                  <button
+                    type="button"
+                    className={`${styles.btnPlay ?? ""} ${item.drmProtected ? (styles.btnDisabled ?? "") : ""}`}
+                    disabled={item.drmProtected}
+                    title={item.drmProtected ? "Preview unavailable — DRM protected" : "Preview font"}
+                    onClick={() => setShowFontViewer(true)}
+                  >
+                    🔤 Preview
                   </button>
                 ) : item.mimeType?.startsWith("audio/") ? (
                   <>
