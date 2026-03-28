@@ -1,3 +1,20 @@
+## 2026-03-28 - US-048
+- Created packages/plugin-sdk with base classes and type definitions for Xon plugin development
+- Files created: packages/plugin-sdk/package.json, tsconfig.json, src/index.ts, src/BasePlugin.ts, src/types.ts, src/index.test.ts
+- Files changed: tsconfig.json (added packages/plugin-sdk to project references)
+- BasePlugin: abstract class with manifest property + optional async lifecycle methods (init, activate, deactivate, uninstall) — all default to no-ops
+- PluginManifest: typed interface matching package.json xon field schema with id, name, version, description, author, category, optional mediaCategories/minServerVersion/main
+- PluginCategory: union type for MediaProvider, MetadataSource, FormatHandler, Processor, Theme, UIExtension, BackupTarget
+- PluginContext: interface with db (query), on (event hooks), registerRoute, registerUI, logger methods
+- PluginEvent + PluginEventPayloads: typed event system for scan:start/complete, media:created/updated/deleted, server:boot/shutdown
+- RouteHandler uses custom PluginRouteContext instead of native Request/Response (not in ES2022 lib)
+- 10 tests covering BasePlugin defaults, lifecycle overrides, manifest types, and context interface
+- **Learnings for future iterations:**
+  - ES2022 lib (as set in root tsconfig.json) does NOT include `Request`/`Response` Web Fetch types — use custom interfaces or add DOM lib
+  - `tsc --build --noEmit` with project references still fails TS6310 (see US-046 notes) — use `tsc --build` to verify types
+  - plugin-sdk has no Hono dependency — define minimal compatible interfaces rather than importing Hono types
+---
+
 ## 2026-03-28 - US-047
 - Implemented Electron headless fallback for when no display server is available
 - Files changed: apps/desktop/src/main.ts (added hasDisplayServer(), runHeadless module-level var, display detection in whenReady)
