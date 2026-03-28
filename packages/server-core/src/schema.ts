@@ -66,6 +66,20 @@ export const readingPositions = sqliteTable("reading_positions", {
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
+export const users = sqliteTable("users", {
+  id: text("id").primaryKey(),
+  username: text("username").notNull().unique(),
+  email: text("email").notNull().unique(),
+  displayName: text("display_name").notNull(),
+  avatarUrl: text("avatar_url"),
+  passwordHash: text("password_hash").notNull(),
+  role: text("role", { enum: ["admin", "manager", "user", "guest"] })
+    .notNull()
+    .default("user"),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+
 export type Library = typeof libraries.$inferSelect;
 export type NewLibrary = typeof libraries.$inferInsert;
 export type DataSource = typeof dataSources.$inferSelect;
@@ -74,3 +88,5 @@ export type MediaItem = typeof mediaItems.$inferSelect;
 export type NewMediaItem = typeof mediaItems.$inferInsert;
 export type ReadingPosition = typeof readingPositions.$inferSelect;
 export type NewReadingPosition = typeof readingPositions.$inferInsert;
+export type User = typeof users.$inferSelect;
+export type NewUser = typeof users.$inferInsert;

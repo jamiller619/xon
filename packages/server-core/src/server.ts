@@ -8,6 +8,7 @@ import { emitPluginEvent, setPluginDatabase } from "./pluginManager.js";
 import { WS_PATH, createWsServer } from "./routes/ws.js";
 import { startScheduler } from "./scheduler.js";
 import { makeStaticMiddleware } from "./staticFiles.js";
+import { ensureAdminUser } from "./userInit.js";
 
 export function boot(): void {
   const port = Number(process.env.PORT ?? DEFAULT_PORT);
@@ -17,6 +18,7 @@ export function boot(): void {
   openDatabase()
     .then(async ({ client, db }) => {
       await migrateDatabase(db);
+      await ensureAdminUser(db);
       setPluginDatabase(client);
       const apiApp = createApp(db);
       const app = new Hono();

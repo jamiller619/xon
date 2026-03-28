@@ -74,12 +74,8 @@
           "name": "data_sources_library_id_libraries_id_fk",
           "tableFrom": "data_sources",
           "tableTo": "libraries",
-          "columnsFrom": [
-            "library_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["library_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }

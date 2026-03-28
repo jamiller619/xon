@@ -6,13 +6,17 @@ export {
   libraries,
   dataSources,
   mediaItems,
+  users,
   type Library,
   type NewLibrary,
   type DataSource,
   type NewDataSource,
   type MediaItem,
   type NewMediaItem,
+  type User,
+  type NewUser,
 } from "./schema.js";
+export { hashPassword, verifyPassword } from "./password.js";
 export {
   extractExiftoolMetadata,
   isImageCategory,

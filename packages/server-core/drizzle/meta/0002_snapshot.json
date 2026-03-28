@@ -74,12 +74,8 @@
           "name": "data_sources_library_id_libraries_id_fk",
           "tableFrom": "data_sources",
           "tableTo": "libraries",
-          "columnsFrom": [
-            "library_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["library_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -266,23 +262,17 @@
       "indexes": {
         "media_items_library_id_idx": {
           "name": "media_items_library_id_idx",
-          "columns": [
-            "library_id"
-          ],
+          "columns": ["library_id"],
           "isUnique": false
         },
         "media_items_media_category_idx": {
           "name": "media_items_media_category_idx",
-          "columns": [
-            "media_category"
-          ],
+          "columns": ["media_category"],
           "isUnique": false
         },
         "media_items_file_path_idx": {
           "name": "media_items_file_path_idx",
-          "columns": [
-            "file_path"
-          ],
+          "columns": ["file_path"],
           "isUnique": false
         }
       },
@@ -291,12 +281,8 @@
           "name": "media_items_library_id_libraries_id_fk",
           "tableFrom": "media_items",
           "tableTo": "libraries",
-          "columnsFrom": [
-            "library_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["library_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -304,12 +290,8 @@
           "name": "media_items_data_source_id_data_sources_id_fk",
           "tableFrom": "media_items",
           "tableTo": "data_sources",
-          "columnsFrom": [
-            "data_source_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
+          "columnsFrom": ["data_source_id"],
+          "columnsTo": ["id"],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
