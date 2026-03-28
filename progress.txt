@@ -1,3 +1,24 @@
+## 2026-03-27 - US-039
+- Implemented font viewer with specimen text, character map, and font metadata
+- Files created: apps/web/src/components/FontViewer.tsx, FontViewer.module.css
+- Files changed: packages/server-core/src/routes/media.ts (GET /media/:id/font-metadata endpoint)
+- Files changed: packages/server-core/package.json (added opentype.js + @types/opentype.js deps)
+- Files changed: apps/web/src/pages/MediaDetail.tsx (FontViewer import, showFontViewer state, isFont flag, 🔤 Preview button, poster placeholder, overlay render)
+- FontViewer: full-screen `<dialog open>` overlay; two tabs: Specimen and Character Map
+- Specimen tab: 5 rows (Pangram, Uppercase, Lowercase, Digits, Symbols) rendered at selected size (14/18/24/36/48/72px); size selector buttons
+- Character Map tab: grid of 318 characters from ASCII printable + Latin-1 Supplement + Latin Extended-A; hover shows U+XXXX code point
+- Font loaded via browser `FontFace` API: `new FontFace(name, url)` + `document.fonts.add(ff)` — no client-side library needed
+- Font metadata: server-side parsing via `opentype.js`; returns family, subfamily, glyphCount, unitsPerEm; WOFF2 parse failures return partial data (filename as family, glyphCount: null)
+- Sidebar shows font metadata (family, style, glyphs, units/em)
+- **Learnings for future iterations:**
+  - `FontFace` API is browser-native: `new FontFace(name, 'url(...)')` + `.load()` Promise + `document.fonts.add(ff)` — no library needed for CSS @font-face injection
+  - Clean up registered FontFace in useEffect cleanup: iterate `document.fonts` to find by family name and call `document.fonts.delete(ff)`
+  - opentype.js `parse(buffer.buffer)` accepts `ArrayBuffer` (use `buffer.buffer` to convert Node.js Buffer); throws on WOFF2 (no Brotli support) — always wrap in try/catch
+  - `font.names.fontFamily` is `LocalizedName` = `{ [lang: string]: string }` — use `.en` for English or `Object.values()[0]` as fallback
+  - `opentype.js` package has no TypeScript types bundled — install `@types/opentype.js` separately as devDep
+  - `import { parse as parseFont } from "opentype.js"` works (CJS with `__esModule: true` and named exports)
+---
+
 ## 2026-03-27 - US-038
 - Implemented EPUB/MOBI reader with chapter navigation, reading customization, and position bookmarking
 - Files created: apps/web/src/components/EpubViewer.tsx, EpubViewer.module.css
