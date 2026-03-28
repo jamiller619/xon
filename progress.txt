@@ -1,3 +1,24 @@
+## 2026-03-27 - US-040
+- Implemented archive viewer with file tree and detail panel
+- Files created: packages/server-core/src/archive.ts (listArchiveContents for ZIP/TAR/7z)
+- Files created: packages/server-core/src/archive.test.ts (10 tests for ZIP, TAR, 7z, unsupported)
+- Files created: apps/web/src/components/ArchiveViewer.tsx, ArchiveViewer.module.css
+- Files changed: packages/server-core/src/routes/media.ts (GET /media/:id/archive-contents endpoint)
+- Files changed: apps/web/src/pages/MediaDetail.tsx (ArchiveViewer import, showArchiveViewer state, isArchive detection, 📦 poster placeholder, 📦 Browse button)
+- archive.ts: ZIP binary parsing via EOCD+CD, TAR 512-byte block parsing with USTAR prefix support, 7z via `7z l -slt` spawn + key-value output parsing
+- ArchiveViewer: full-screen `<dialog open>` overlay; toolbar with close + stats (file count, total size); split layout — tree pane on left, detail panel on right
+- File tree: buildTree() builds nested TreeNode[] from flat ArchiveEntry[] paths; directories sorted first, then alphabetical; expand/collapse folders
+- Each tree row uses `<button>` element for keyboard/click accessibility; aria-expanded for folder state
+- Detail panel: shows icon, name, path, type, size for selected file
+- isArchive check: mimeType=application/zip, application/x-7z-compressed, application/x-tar, OR mediaCategory=Archives
+- **Learnings for future iterations:**
+  - `role="row"` on a div triggers `useSemanticElements` lint error (should be `<tr>`) — use `<button>` for clickable tree items instead
+  - `role="grid"` on a div triggers error (should be `<table>`) — use `role="tree"` with `aria-label` for tree containers
+  - `tabIndex` on a div with interactive role triggers `noNoninteractiveTabindex` — using `<button>` avoids this entirely
+  - 7z `l -slt` output: split by `----------` on its own line; key = value pairs; Folder = "+" means directory
+  - Reuse `makeZipBuffer`/`makeTarBuffer` helper pattern from miscmeta.test.ts in new test files for binary archive testing
+---
+
 ## 2026-03-27 - US-039
 - Implemented font viewer with specimen text, character map, and font metadata
 - Files created: apps/web/src/components/FontViewer.tsx, FontViewer.module.css
