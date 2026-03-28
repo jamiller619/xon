@@ -5,7 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createApp } from "../app.js";
 import { openDatabase } from "../db.js";
 import { migrateDatabase } from "../migrate.js";
-import { dataSources, libraries, mediaItems } from "../schema.js";
+import { dataSources, groups, libraries, mediaItems } from "../schema.js";
 import { signAccessToken } from "./auth.js";
 
 const AUTH = `Bearer ${await signAccessToken("test-id", "testuser", "admin")}`;
@@ -1099,5 +1099,178 @@ describe("Media API - RAW image stream endpoint", () => {
     });
     expect(res.status).toBe(200);
     expect(mockConvertRawToJpeg).not.toHaveBeenCalled();
+  });
+});
+
+describe("Media API - POST /api/v1/media/bulk", () => {
+  let client: Client;
+  let db: LibSQLDatabase;
+  let app: ReturnType<typeof createApp>;
+  let libId: string;
+  let itemId1: string;
+  let itemId2: string;
+
+  beforeEach(async () => {
+    ({ client, db } = await openDatabase(":memory:"));
+    await migrateDatabase(db);
+    app = createApp(db);
+
+    libId = crypto.randomUUID();
+    const now = new Date();
+    await db.insert(libraries).values({
+      id: libId,
+      name: "Bulk Test Library",
+      allowedMediaTypes: "[]",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const sourceId = crypto.randomUUID();
+    await db.insert(dataSources).values({
+      id: sourceId,
+      libraryId: libId,
+      type: "local",
+      path: "/media",
+      recursive: true,
+      enabled: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    itemId1 = crypto.randomUUID();
+    itemId2 = crypto.randomUUID();
+    for (const [id, title] of [
+      [itemId1, "Movie A"],
+      [itemId2, "Movie B"],
+    ]) {
+      await db.insert(mediaItems).values({
+        id,
+        libraryId: libId,
+        dataSourceId: sourceId,
+        filePath: `/media/${title}.mp4`,
+        fileName: `${title}.mp4`,
+        fileSize: 1000,
+        mimeType: "video/mp4",
+        mediaCategory: "Movies",
+        title,
+        metadata: "{}",
+        thumbnailPaths: null,
+        createdAt: now,
+        updatedAt: now,
+      });
+    }
+  });
+
+  afterEach(() => {
+    client.close();
+  });
+
+  it("bulk deletes items from the database", async () => {
+    const res = await app.request("/api/v1/media/bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: AUTH },
+      body: JSON.stringify({ action: "delete", ids: [itemId1, itemId2] }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.deleted).toBe(2);
+
+    const remaining = await db.select().from(mediaItems);
+    expect(remaining).toHaveLength(0);
+  });
+
+  it("bulk updates genre and tags in metadata", async () => {
+    const res = await app.request("/api/v1/media/bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: AUTH },
+      body: JSON.stringify({
+        action: "update",
+        ids: [itemId1, itemId2],
+        updates: { genre: "Action", tags: ["blockbuster"] },
+      }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.updated).toBe(2);
+
+    const rows = await db.select().from(mediaItems);
+    for (const row of rows) {
+      const meta = JSON.parse(row.metadata) as Record<string, unknown>;
+      expect(meta.genre).toBe("Action");
+      expect(meta.tags).toEqual(["blockbuster"]);
+    }
+  });
+
+  it("bulk updates contentRating", async () => {
+    const res = await app.request("/api/v1/media/bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: AUTH },
+      body: JSON.stringify({
+        action: "update",
+        ids: [itemId1],
+        updates: { contentRating: "PG-13" },
+      }),
+    });
+    expect(res.status).toBe(200);
+
+    const rows = await db
+      .select({ id: mediaItems.id, cr: mediaItems.contentRating })
+      .from(mediaItems);
+    const item1 = rows.find((r) => r.id === itemId1);
+    expect(item1?.cr).toBe("PG-13");
+    const item2 = rows.find((r) => r.id === itemId2);
+    expect(item2?.cr).toBeNull();
+  });
+
+  it("bulk moves items to a group", async () => {
+    const groupId = crypto.randomUUID();
+    const now = new Date();
+    await db.insert(groups).values({
+      id: groupId,
+      libraryId: libId,
+      type: "collection",
+      title: "My Collection",
+      createdAt: now,
+    });
+
+    const res = await app.request("/api/v1/media/bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: AUTH },
+      body: JSON.stringify({
+        action: "move-to-group",
+        ids: [itemId1, itemId2],
+        groupId,
+      }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.moved).toBe(2);
+  });
+
+  it("returns 404 when no matching items found", async () => {
+    const res = await app.request("/api/v1/media/bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: AUTH },
+      body: JSON.stringify({ action: "delete", ids: ["nonexistent-id"] }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("returns 400 for update action with no updates", async () => {
+    const res = await app.request("/api/v1/media/bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: AUTH },
+      body: JSON.stringify({ action: "update", ids: [itemId1] }),
+    });
+    expect(res.status).toBe(400);
+  });
+
+  it("returns 400 for move-to-group without groupId", async () => {
+    const res = await app.request("/api/v1/media/bulk", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: AUTH },
+      body: JSON.stringify({ action: "move-to-group", ids: [itemId1] }),
+    });
+    expect(res.status).toBe(400);
   });
 });

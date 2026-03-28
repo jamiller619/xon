@@ -17,6 +17,9 @@ interface MediaCardProps {
   listView?: boolean;
   isFavorited?: boolean;
   onToggleFavorite?: (id: string, currentlyFavorited: boolean) => void;
+  selectMode?: boolean;
+  selected?: boolean;
+  onToggleSelect?: (id: string) => void;
 }
 
 function formatBytes(bytes: number | null): string {
@@ -38,6 +41,9 @@ export default function MediaCard({
   listView,
   isFavorited,
   onToggleFavorite,
+  selectMode,
+  selected,
+  onToggleSelect,
 }: MediaCardProps) {
   const playTrack = useAudioStore((s) => s.playTrack);
   const addToQueue = useAudioStore((s) => s.addToQueue);
@@ -63,20 +69,53 @@ export default function MediaCard({
 
   if (listView) {
     return (
-      <tr className={styles.listRow ?? ""}>
+      <tr
+        className={`${styles.listRow ?? ""} ${selected ? (styles.listRowSelected ?? "") : ""}`}
+        onClick={selectMode ? () => onToggleSelect?.(item.id) : undefined}
+        onKeyDown={
+          selectMode
+            ? (e) => (e.key === "Enter" || e.key === " ") && onToggleSelect?.(item.id)
+            : undefined
+        }
+        style={selectMode ? { cursor: "pointer" } : undefined}
+      >
+        {selectMode && (
+          <td className={styles.listCheckCell ?? ""}>
+            <input
+              type="checkbox"
+              checked={selected ?? false}
+              onChange={() => onToggleSelect?.(item.id)}
+              onClick={(e) => e.stopPropagation()}
+            />
+          </td>
+        )}
         <td className={styles.listThumbCell ?? ""}>
-          <Link to={`/media/${item.id}`} className={styles.listThumbLink ?? ""}>
-            {item.thumbnailUrls ? (
-              <img src={item.thumbnailUrls.small} alt="" className={styles.listThumbImg ?? ""} />
-            ) : (
-              <div className={styles.listThumbPlaceholder ?? ""}>{isAudio ? "♪" : "▶"}</div>
-            )}
-          </Link>
+          {selectMode ? (
+            <div className={styles.listThumbLink ?? ""}>
+              {item.thumbnailUrls ? (
+                <img src={item.thumbnailUrls.small} alt="" className={styles.listThumbImg ?? ""} />
+              ) : (
+                <div className={styles.listThumbPlaceholder ?? ""}>{isAudio ? "♪" : "▶"}</div>
+              )}
+            </div>
+          ) : (
+            <Link to={`/media/${item.id}`} className={styles.listThumbLink ?? ""}>
+              {item.thumbnailUrls ? (
+                <img src={item.thumbnailUrls.small} alt="" className={styles.listThumbImg ?? ""} />
+              ) : (
+                <div className={styles.listThumbPlaceholder ?? ""}>{isAudio ? "♪" : "▶"}</div>
+              )}
+            </Link>
+          )}
         </td>
         <td className={styles.listTitleCell ?? ""}>
-          <Link to={`/media/${item.id}`} className={styles.listTitle ?? ""}>
-            {item.title}
-          </Link>
+          {selectMode ? (
+            <span className={styles.listTitle ?? ""}>{item.title}</span>
+          ) : (
+            <Link to={`/media/${item.id}`} className={styles.listTitle ?? ""}>
+              {item.title}
+            </Link>
+          )}
           {item.mimeType && (
             <span className={styles.listFileType ?? ""}>
               {item.mimeType.split("/")[1] ?? item.mimeType}
@@ -105,8 +144,8 @@ export default function MediaCard({
     );
   }
 
-  return (
-    <Link to={`/media/${item.id}`} className={styles.card ?? ""}>
+  const cardContent = (
+    <>
       <div className={styles.thumb ?? ""}>
         {item.thumbnailUrls ? (
           <img src={item.thumbnailUrls.medium} alt={item.title} className={styles.thumbImg ?? ""} />
@@ -115,7 +154,18 @@ export default function MediaCard({
             <span>{isAudio ? "♪" : "▶"}</span>
           </div>
         )}
-        {onToggleFavorite && (
+        {selectMode && (
+          <div className={styles.selectOverlay ?? ""}>
+            <input
+              type="checkbox"
+              checked={selected ?? false}
+              onChange={() => onToggleSelect?.(item.id)}
+              onClick={(e) => e.stopPropagation()}
+              className={styles.selectCheckbox ?? ""}
+            />
+          </div>
+        )}
+        {!selectMode && onToggleFavorite && (
           <button
             type="button"
             className={styles.favoriteBtn ?? ""}
@@ -125,7 +175,7 @@ export default function MediaCard({
             {isFavorited ? "♥" : "♡"}
           </button>
         )}
-        {isAudio && (
+        {!selectMode && isAudio && (
           <div className={styles.audioOverlay ?? ""}>
             <button
               type="button"
@@ -157,6 +207,25 @@ export default function MediaCard({
           )}
         </div>
       </div>
+    </>
+  );
+
+  if (selectMode) {
+    return (
+      <div
+        className={`${styles.card ?? ""} ${selected ? (styles.cardSelected ?? "") : ""}`}
+        onClick={() => onToggleSelect?.(item.id)}
+        onKeyDown={(e) => (e.key === "Enter" || e.key === " ") && onToggleSelect?.(item.id)}
+        aria-label={`${selected ? "Deselect" : "Select"} ${item.title}`}
+      >
+        {cardContent}
+      </div>
+    );
+  }
+
+  return (
+    <Link to={`/media/${item.id}`} className={styles.card ?? ""}>
+      {cardContent}
     </Link>
   );
 }

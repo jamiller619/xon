@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { apiFetch } from "../apiFetch.js";
+import BulkEditDialog from "../components/BulkEditDialog";
 import GroupDialog from "../components/GroupDialog";
 import MediaCard, { type MediaCardItem } from "../components/MediaCard";
 import { useAppStore } from "../store/index";
@@ -92,6 +93,9 @@ export default function LibraryBrowser() {
   const [groups, setGroups] = useState<Group[]>([]);
   const [groupsLoading, setGroupsLoading] = useState(false);
   const [showGroupDialog, setShowGroupDialog] = useState(false);
+  const [selectMode, setSelectMode] = useState(false);
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [showBulkDialog, setShowBulkDialog] = useState(false);
 
   useEffect(() => {
     if (!id) return;
@@ -151,6 +155,40 @@ export default function LibraryBrowser() {
     setGroups((prev) => [...prev, group]);
   }
 
+  function toggleSelectMode() {
+    setSelectMode((prev) => !prev);
+    setSelectedIds(new Set());
+  }
+
+  function toggleSelectItem(itemId: string) {
+    setSelectedIds((prev) => {
+      const next = new Set(prev);
+      if (next.has(itemId)) {
+        next.delete(itemId);
+      } else {
+        next.add(itemId);
+      }
+      return next;
+    });
+  }
+
+  function selectAll() {
+    setSelectedIds(new Set(items.map((item) => item.id)));
+  }
+
+  function clearSelection() {
+    setSelectedIds(new Set());
+  }
+
+  function handleBulkDone() {
+    setShowBulkDialog(false);
+    setSelectMode(false);
+    setSelectedIds(new Set());
+    // Reload items
+    setPage(1);
+    setTotalPages(1);
+  }
+
   function handleSort(col: SortColumn) {
     if (col === sortCol) {
       setSortDir((d) => (d === "asc" ? "desc" : "asc"));
@@ -201,6 +239,14 @@ export default function LibraryBrowser() {
       <header className={styles.header ?? ""}>
         <h1 className={styles.title ?? ""}>{library?.name ?? "Library"}</h1>
         <div className={styles.viewToggle ?? ""}>
+          <button
+            type="button"
+            className={`${styles.toggleBtn ?? ""} ${selectMode ? (styles.toggleActive ?? "") : ""}`}
+            onClick={toggleSelectMode}
+            title="Toggle selection mode"
+          >
+            ☑
+          </button>
           <button
             type="button"
             className={`${styles.toggleBtn ?? ""} ${viewMode === "grid" ? (styles.toggleActive ?? "") : ""}`}
@@ -400,6 +446,27 @@ export default function LibraryBrowser() {
             </div>
           )}
 
+          {selectMode && (
+            <div className={styles.selectToolbar ?? ""}>
+              <span className={styles.selectCount ?? ""}>{selectedIds.size} selected</span>
+              <button type="button" className={styles.selectBtn ?? ""} onClick={selectAll}>
+                Select All
+              </button>
+              <button type="button" className={styles.selectBtn ?? ""} onClick={clearSelection}>
+                Clear
+              </button>
+              {selectedIds.size > 0 && (
+                <button
+                  type="button"
+                  className={styles.bulkEditBtn ?? ""}
+                  onClick={() => setShowBulkDialog(true)}
+                >
+                  Edit {selectedIds.size} item{selectedIds.size !== 1 ? "s" : ""}
+                </button>
+              )}
+            </div>
+          )}
+
           {viewMode === "grid" ? (
             loading ? (
               <div className={styles.grid ?? ""}>
@@ -413,7 +480,13 @@ export default function LibraryBrowser() {
             ) : (
               <div className={styles.grid ?? ""}>
                 {items.map((item) => (
-                  <MediaCard key={item.id} item={item} />
+                  <MediaCard
+                    key={item.id}
+                    item={item}
+                    selectMode={selectMode}
+                    selected={selectedIds.has(item.id)}
+                    onToggleSelect={toggleSelectItem}
+                  />
                 ))}
               </div>
             )
@@ -422,6 +495,16 @@ export default function LibraryBrowser() {
               <table className={styles.table ?? ""}>
                 <thead>
                   <tr>
+                    {selectMode && (
+                      <th className={`${styles.th ?? ""} ${styles.thCheck ?? ""}`}>
+                        <input
+                          type="checkbox"
+                          checked={selectedIds.size === items.length && items.length > 0}
+                          onChange={(e) => (e.target.checked ? selectAll() : clearSelection())}
+                          title="Select all"
+                        />
+                      </th>
+                    )}
                     <th className={`${styles.th ?? ""} ${styles.thThumb ?? ""}`} />
                     <th
                       className={`${styles.th ?? ""} ${styles.thSortable ?? ""}`}
@@ -472,7 +555,16 @@ export default function LibraryBrowser() {
                       </td>
                     </tr>
                   ) : (
-                    items.map((item) => <MediaCard key={item.id} item={item} listView />)
+                    items.map((item) => (
+                      <MediaCard
+                        key={item.id}
+                        item={item}
+                        listView
+                        selectMode={selectMode}
+                        selected={selectedIds.has(item.id)}
+                        onToggleSelect={toggleSelectItem}
+                      />
+                    ))
                   )}
                 </tbody>
               </table>
@@ -503,6 +595,14 @@ export default function LibraryBrowser() {
             </div>
           )}
         </>
+      )}
+      {showBulkDialog && (
+        <BulkEditDialog
+          selectedIds={[...selectedIds]}
+          libraryId={id ?? ""}
+          onDone={handleBulkDone}
+          onClose={() => setShowBulkDialog(false)}
+        />
       )}
     </div>
   );

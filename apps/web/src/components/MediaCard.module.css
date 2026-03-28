@@ -280,3 +280,32 @@
   color: #888;
   white-space: nowrap;
 }
+
+/* Selection mode */
+.cardSelected {
+  outline: 2px solid #7c6af7;
+  outline-offset: -2px;
+}
+
+.listRowSelected {
+  background: rgba(108, 99, 255, 0.1);
+}
+
+.listCheckCell {
+  padding: 8px 8px 8px 12px;
+  width: 32px;
+}
+
+.selectOverlay {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  z-index: 3;
+}
+
+.selectCheckbox {
+  width: 18px;
+  height: 18px;
+  cursor: pointer;
+  accent-color: #7c6af7;
+}

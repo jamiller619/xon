@@ -17,6 +17,8 @@ import type { MediaItem } from "../schema.js";
 import {
   favorites,
   getAllowedRatings,
+  groupMembers,
+  groups,
   libraryAccess,
   mediaItems,
   mediaProgress,
@@ -171,6 +173,104 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     await db.update(mediaItems).set(updates).where(eq(mediaItems.id, id));
     const updated = await db.select().from(mediaItems).where(eq(mediaItems.id, id));
     return c.json(withThumbnailUrls(updated[0] as MediaItem));
+  });
+
+  const bulkSchema = z.object({
+    action: z.enum(["update", "delete", "move-to-group"]),
+    ids: z.array(z.string().min(1)).min(1).max(100),
+    updates: z
+      .object({
+        genre: z.string().optional(),
+        tags: z.array(z.string()).optional(),
+        contentRating: z.enum(["G", "PG", "PG-13", "R", "unrated"]).optional(),
+      })
+      .optional(),
+    groupId: z.string().optional(),
+  });
+
+  // POST /media/bulk — bulk update, delete, or move media items
+  router.post("/bulk", zValidator("json", bulkSchema), async (c) => {
+    const body = c.req.valid("json");
+    const user = c.get("user");
+
+    // Scope to accessible libraries
+    const accessibleIds = await getAccessibleLibraryIds(user.id, user.role);
+    if (accessibleIds !== null && accessibleIds.length === 0) {
+      return c.json({ error: "No accessible libraries" }, 403);
+    }
+
+    const libraryFilter =
+      accessibleIds !== null ? inArray(mediaItems.libraryId, accessibleIds) : undefined;
+
+    // Fetch requested items (access-check + existence)
+    const baseQuery = db
+      .select({ id: mediaItems.id, metadata: mediaItems.metadata })
+      .from(mediaItems)
+      .where(
+        libraryFilter
+          ? and(inArray(mediaItems.id, body.ids), libraryFilter)
+          : inArray(mediaItems.id, body.ids)
+      );
+    const rows = await baseQuery;
+    const foundIds = rows.map((r) => r.id);
+
+    if (foundIds.length === 0) {
+      return c.json({ error: "No matching items found" }, 404);
+    }
+
+    if (body.action === "delete") {
+      await db.delete(mediaItems).where(inArray(mediaItems.id, foundIds));
+      return c.json({ deleted: foundIds.length });
+    }
+
+    if (body.action === "update") {
+      const upd = body.updates ?? {};
+      const hasUpdates =
+        upd.genre !== undefined || upd.tags !== undefined || upd.contentRating !== undefined;
+      if (!hasUpdates) return c.json({ error: "No updates provided" }, 400);
+
+      for (const row of rows) {
+        const updates: Partial<typeof mediaItems.$inferInsert> = { updatedAt: new Date() };
+
+        if (upd.contentRating !== undefined) {
+          updates.contentRating = upd.contentRating;
+        }
+
+        if (upd.genre !== undefined || upd.tags !== undefined) {
+          let meta: Record<string, unknown> = {};
+          try {
+            meta = JSON.parse(row.metadata) as Record<string, unknown>;
+          } catch {
+            // ignore
+          }
+          if (upd.genre !== undefined) meta.genre = upd.genre;
+          if (upd.tags !== undefined) meta.tags = upd.tags;
+          updates.metadata = JSON.stringify(meta);
+        }
+
+        await db.update(mediaItems).set(updates).where(eq(mediaItems.id, row.id));
+      }
+
+      return c.json({ updated: foundIds.length });
+    }
+
+    // action === "move-to-group"
+    if (!body.groupId) return c.json({ error: "groupId required for move-to-group" }, 400);
+
+    const groupRows = await db
+      .select({ id: groups.id })
+      .from(groups)
+      .where(eq(groups.id, body.groupId));
+    if (!groupRows[0]) return c.json({ error: "Group not found" }, 404);
+
+    for (const id of foundIds) {
+      await db
+        .insert(groupMembers)
+        .values({ groupId: body.groupId, mediaItemId: id, sortOrder: 0 })
+        .onConflictDoNothing();
+    }
+
+    return c.json({ moved: foundIds.length });
   });
 
   // GET /media/:id/stream — serve media file with HTTP range request support
