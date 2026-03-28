@@ -1,3 +1,27 @@
+## 2026-03-27 - US-041
+- Implemented on-the-fly video transcoding via FFmpeg with HLS streaming
+- Files created: packages/server-core/src/transcode.ts (needsTranscoding, generateHlsPlaylist, spawnTranscodeSegment)
+- Files created: packages/server-core/src/transcode.test.ts (15 tests for pure functions)
+- Files changed: packages/server-core/src/routes/media.ts (2 new HLS endpoints, modified stream endpoint to redirect for non-native formats)
+- Files changed: packages/server-core/src/routes/media.test.ts (16 new HLS/transcode tests)
+- Files changed: apps/web/src/components/VideoPlayer.tsx (hls.js integration, mimeType prop, useHls state)
+- Files changed: apps/web/src/pages/MediaDetail.tsx (pass mimeType to VideoPlayer)
+- Files changed: apps/web/package.json + yarn.lock (added hls.js ^1.0.0)
+- transcode.ts: `needsTranscoding(videoCodec, audioCodec)` checks against sets of natively-supported browser codecs (H.264, VP8/9, AV1, Theora for video; AAC, MP3, Opus, Vorbis, FLAC for audio)
+- transcode.ts: `generateHlsPlaylist(duration, segmentDuration=6)` generates m3u8 content with relative `segment-N.ts` URLs
+- transcode.ts: `spawnTranscodeSegment(filePath, segmentIndex, segmentDuration)` spawns `ffmpeg -ss START -i FILE -t DUR -c:v libx264 -c:a aac -preset veryfast -f mpegts pipe:1`
+- GET /media/:id/stream: runs ffprobe after stat check; redirects 307 to HLS playlist if codec needs transcoding
+- GET /media/:id/hls/playlist.m3u8: uses ffprobe to get duration, returns generated m3u8 manifest
+- GET /media/:id/hls/:segment: validates segment-N.ts pattern, spawns FFmpeg transcode, streams mpegts output via ReadableStream
+- VideoPlayer: `useState(() => !browserCanPlay(mimeType))` initializes useHls synchronously before first render; useEffect sets up hls.js when useHls=true; video src conditionally set via `{...(useHls ? {} : { src: ... })}`
+- **Learnings for future iterations:**
+  - `vi.mock("../transcode.js", () => ({ needsTranscoding: vi.fn(), ... }))` mocks transcode for route tests; must add to mock imports alongside ffprobe mock
+  - `useState(() => syncValue)` lazy initializer pattern avoids flicker vs useEffect for upfront binary state derived from synchronous browser API (`canPlayType`)
+  - Hls.isSupported() checks for MSE API support; fallback `video.canPlayType("application/vnd.apple.mpegurl")` covers Safari native HLS
+  - biome `suppressions/unused` fires when a biome-ignore comment is no longer needed (rule doesn't trigger) — remove the comment
+  - Yarn workspaces hoist packages to root `node_modules/`; `yarn add PKG --cwd WORKSPACE` + `yarn install` at root resolves hoisting correctly
+---
+
 ## 2026-03-27 - US-040
 - Implemented archive viewer with file tree and detail panel
 - Files created: packages/server-core/src/archive.ts (listArchiveContents for ZIP/TAR/7z)
