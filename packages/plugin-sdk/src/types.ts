@@ -64,7 +64,9 @@ export interface PluginRouteResponse {
 }
 
 // Route handler type (Hono-compatible)
-export type RouteHandler = (c: PluginRouteContext) => PluginRouteResponse | Promise<PluginRouteResponse>;
+export type RouteHandler = (
+  c: PluginRouteContext
+) => PluginRouteResponse | Promise<PluginRouteResponse>;
 
 export interface RouteDefinition {
   method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
@@ -74,6 +76,10 @@ export interface RouteDefinition {
 
 // UI injection point types
 export type UIInjectionPoint =
+  | "dashboard-widget"
+  | "detail-panel"
+  | "admin-page"
+  | "nav-item"
   | "sidebar:top"
   | "sidebar:bottom"
   | "mediaDetail:actions"
@@ -85,6 +91,19 @@ export interface UIComponent {
   injectionPoint: UIInjectionPoint;
   /** Client-side JS bundle URL served by the plugin */
   bundleUrl: string;
+  /** Display label shown in nav or admin contexts */
+  label?: string;
+}
+
+/** Props passed to plugin UI components at render time */
+export interface PluginComponentProps {
+  mediaItem?: {
+    id: string;
+    title: string | null;
+    mediaCategory: string | null;
+    libraryId: string | null;
+  };
+  libraryId?: string;
 }
 
 // Database access interface exposed to plugins
@@ -102,7 +121,7 @@ export interface PluginContext {
   /** Register an event hook */
   on: <E extends PluginEvent>(
     event: E,
-    handler: (payload: PluginEventPayloads[E]) => void | Promise<void>,
+    handler: (payload: PluginEventPayloads[E]) => void | Promise<void>
   ) => void;
   /** Register an API route under /api/v1/plugins/:pluginId/ */
   registerRoute: (route: RouteDefinition) => void;

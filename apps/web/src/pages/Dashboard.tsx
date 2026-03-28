@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import MediaCard, { type MediaCardItem } from "../components/MediaCard";
+import PluginSlot from "../components/PluginSlot";
 import styles from "./Dashboard.module.css";
 
 interface Library {
@@ -49,6 +50,7 @@ export default function Dashboard() {
 
   return (
     <div className={styles.dashboard ?? ""}>
+      <PluginSlot injectionPoint="dashboard-widget" />
       <section className={styles.section ?? ""}>
         <h2 className={styles.sectionTitle ?? ""}>Continue Watching</h2>
         <p className={styles.emptyHint ?? ""}>Nothing in progress yet.</p>

@@ -1,8 +1,18 @@
 import { Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
+import PluginSlot from "./components/PluginSlot";
 import Dashboard from "./pages/Dashboard";
 import LibraryBrowser from "./pages/LibraryBrowser";
 import MediaDetail from "./pages/MediaDetail";
+
+function AdminPage() {
+  return (
+    <div>
+      <h1>Admin</h1>
+      <PluginSlot injectionPoint="admin-page" />
+    </div>
+  );
+}
 
 export default function App() {
   return (
@@ -12,7 +22,7 @@ export default function App() {
         <Route path="/libraries/:id" element={<LibraryBrowser />} />
         <Route path="/media/:id" element={<MediaDetail />} />
         <Route path="/search" element={<div>Search</div>} />
-        <Route path="/admin" element={<div>Admin</div>} />
+        <Route path="/admin" element={<AdminPage />} />
       </Route>
     </Routes>
   );

@@ -12,4 +12,5 @@ export type {
   RouteDefinition,
   UIInjectionPoint,
   UIComponent,
+  PluginComponentProps,
 } from "./types.js";

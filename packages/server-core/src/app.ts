@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { pluginRouteDispatcher } from "./pluginRoutes.js";
 import { makeLibrariesRouter } from "./routes/libraries.js";
 import { makeMediaRouter } from "./routes/media.js";
+import { makePluginsRouter } from "./routes/plugins.js";
 
 export function createApp(db?: LibSQLDatabase): Hono {
   const app = new Hono().basePath("/api/v1");
@@ -16,7 +17,10 @@ export function createApp(db?: LibSQLDatabase): Hono {
     app.route("/media", makeMediaRouter(db));
   }
 
-  // Plugin routes: dispatched dynamically to registered plugin route handlers
+  // Plugin UI component listing and static asset serving
+  app.route("/plugins", makePluginsRouter());
+
+  // Plugin API routes: dispatched dynamically to registered plugin route handlers
   app.all("/plugins/:pluginId/*", pluginRouteDispatcher);
 
   return app;

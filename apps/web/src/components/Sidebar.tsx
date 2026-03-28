@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { NavLink } from "react-router-dom";
+import PluginSlot from "./PluginSlot.js";
 import styles from "./Sidebar.module.css";
 
 interface Library {
@@ -53,6 +54,7 @@ export default function Sidebar({ open }: SidebarProps) {
           <span className={styles.navIcon ?? ""}>⚙</span>
           Admin
         </NavLink>
+        <PluginSlot injectionPoint="nav-item" />
       </div>
 
       <div className={styles.section ?? ""}>

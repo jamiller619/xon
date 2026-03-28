@@ -5,6 +5,7 @@ import EpubViewer from "../components/EpubViewer.js";
 import FontViewer from "../components/FontViewer.js";
 import ImageViewer, { type ImageSibling } from "../components/ImageViewer.js";
 import PdfViewer from "../components/PdfViewer.js";
+import PluginSlot from "../components/PluginSlot.js";
 import VideoPlayer from "../components/VideoPlayer.js";
 import { useAudioStore } from "../store/index";
 import styles from "./MediaDetail.module.css";
@@ -271,7 +272,7 @@ export default function MediaDetail() {
           {showPlayer && id ? (
             <VideoPlayer
               mediaId={id}
-              mimeType={item.mimeType ?? undefined}
+              {...(item.mimeType ? { mimeType: item.mimeType } : {})}
               onClose={() => setShowPlayer(false)}
             />
           ) : (
@@ -601,6 +602,20 @@ export default function MediaDetail() {
           )}
         </div>
       </div>
+
+      {/* Plugin-injected detail panels */}
+      <PluginSlot
+        injectionPoint="detail-panel"
+        props={{
+          mediaItem: {
+            id: item.id,
+            title: item.title,
+            mediaCategory: item.mediaCategory,
+            libraryId: item.libraryId,
+          },
+          ...(item.libraryId ? { libraryId: item.libraryId } : {}),
+        }}
+      />
 
       {/* Related items placeholder */}
       <section className={styles.related ?? ""}>
