@@ -1,3 +1,25 @@
+## 2026-03-27 - US-035
+- Implemented persistent audio player bar with queue management
+- Files created: apps/web/src/components/AudioPlayer.tsx, AudioPlayer.module.css
+- Files changed: apps/web/src/store/index.ts (added `useAudioStore` with full queue state and actions)
+- Files changed: apps/web/src/components/Layout.tsx (renders AudioPlayer, adds padding-bottom when queue active)
+- Files changed: apps/web/src/components/Layout.module.css (added `.contentWithPlayer` padding-bottom class)
+- Files changed: apps/web/src/components/MediaCard.tsx (play/add-to-queue buttons on audio items in grid and list view)
+- Files changed: apps/web/src/components/MediaCard.module.css (overlay and list audio button styles)
+- Files changed: apps/web/src/pages/MediaDetail.tsx (play/add-to-queue actions for audio items on detail page)
+- Files changed: apps/web/src/components/TopBar.tsx (fixed pre-existing biome lint errors: added `type="button"` to buttons)
+- AudioPlayer: fixed-bottom bar; play/pause, prev/next, seek bar, volume, shuffle, repeat (none/all/one)
+- Queue panel: toggle with count, list of tracks, reorder up/down, remove, clear all, highlights active track
+- useAudioStore: Zustand store with playTrack (play immediately), addToQueue, removeFromQueue, clearQueue, moveUp/moveDown, shuffle logic
+- Player hidden when queue is empty; persists across page navigation via Zustand global state
+- **Learnings for future iterations:**
+  - Zustand store is the right approach for persistent cross-page UI state like an audio queue
+  - Use a `playingRef` to avoid re-running the track-load effect when play/pause changes
+  - `audio.play()` returns a Promise — always `.catch()` to handle autoplay policy rejections
+  - Content area needs `padding-bottom` matching the player bar height (64px + 24px = 88px) to avoid content hidden behind bar
+  - Pre-existing biome errors in TopBar.tsx (missing `type="button"`) were blocking `yarn lint` — fix them alongside the story
+---
+
 ## 2026-03-27 - US-034
 - Added subtitle and audio track selection to the video player
 - Files changed: packages/server-core/src/ffprobe.ts (added `extractStreamTracks` returning all audio + subtitle streams)
