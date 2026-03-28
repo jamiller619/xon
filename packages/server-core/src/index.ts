@@ -65,6 +65,7 @@ export {
   uninstallPlugin,
   loadPlugin,
   emitPluginEvent,
+  setPluginDatabase,
   registry as pluginRegistry,
   type PluginEntry,
   type PluginStatus,

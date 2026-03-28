@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import { createApp } from "./app.js";
 import { openDatabase } from "./db.js";
 import { migrateDatabase } from "./migrate.js";
-import { emitPluginEvent } from "./pluginManager.js";
+import { emitPluginEvent, setPluginDatabase } from "./pluginManager.js";
 import { WS_PATH, createWsServer } from "./routes/ws.js";
 import { startScheduler } from "./scheduler.js";
 import { makeStaticMiddleware } from "./staticFiles.js";
@@ -17,6 +17,7 @@ export function boot(): void {
   openDatabase()
     .then(async ({ client, db }) => {
       await migrateDatabase(db);
+      setPluginDatabase(client);
       const apiApp = createApp(db);
       const app = new Hono();
       app.route("/", apiApp);

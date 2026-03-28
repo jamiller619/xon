@@ -1,4 +1,5 @@
 import { join } from "node:path";
+import type { Client } from "@libsql/client";
 import { BasePlugin } from "@xon/plugin-sdk";
 import type {
   PluginContext,
@@ -8,6 +9,7 @@ import type {
   RouteDefinition,
   UIComponent,
 } from "@xon/plugin-sdk";
+import { createPluginDatabaseAccess } from "./pluginDb.js";
 import { discoverPluginManifests } from "./pluginLoader.js";
 
 type AnyPluginEventHandler = (payload: unknown) => void | Promise<void>;
@@ -35,6 +37,17 @@ export const registry = new Map<string, PluginEntry>();
 /** Per-event handler sets for plugin event hooks */
 const pluginEventHandlers = new Map<PluginEvent, Set<AnyPluginEventHandler>>();
 
+/** Optional raw libSQL client for scoped plugin database access */
+let _pluginClient: Client | undefined;
+
+/**
+ * Set the libSQL client to be used for plugin database access.
+ * Must be called before activating plugins that need database access.
+ */
+export function setPluginDatabase(client: Client): void {
+  _pluginClient = client;
+}
+
 /** Emit a plugin event to all registered hooks. Errors in hooks are logged, not thrown. */
 export function emitPluginEvent<E extends PluginEvent>(
   event: E,
@@ -50,14 +63,15 @@ export function emitPluginEvent<E extends PluginEvent>(
 }
 
 function buildContext(entry: PluginEntry): PluginContext {
+  const db = _pluginClient
+    ? createPluginDatabaseAccess(entry.manifest.id, _pluginClient)
+    : {
+        query: async (_sql: string, _params?: unknown[]) => [],
+      };
+
   return {
     manifest: entry.manifest,
-    db: {
-      query: async (_sql: string, _params?: unknown[]) => {
-        // Placeholder: scoped DB access implemented in US-053
-        return [];
-      },
-    },
+    db,
     on<E extends PluginEvent>(
       event: E,
       handler: (payload: PluginEventPayloads[E]) => void | Promise<void>
@@ -244,4 +258,5 @@ export async function discoverAndActivatePlugins(pluginDir: string): Promise<voi
 export function _resetForTesting(): void {
   registry.clear();
   pluginEventHandlers.clear();
+  _pluginClient = undefined;
 }
