@@ -1,6 +1,6 @@
 import { boot } from "@xon/server-core";
 import { DEFAULT_PORT } from "@xon/shared";
-import { BrowserWindow, app } from "electron";
+import { BrowserWindow, app, screen } from "electron";
 import { type TrayHandle, createTray } from "./tray.js";
 
 const headless = process.env.XON_HEADLESS === "1" || process.env.XON_HEADLESS === "true";
@@ -8,6 +8,29 @@ const headless = process.env.XON_HEADLESS === "1" || process.env.XON_HEADLESS ==
 let mainWindow: BrowserWindow | null = null;
 let trayHandle: TrayHandle | null = null;
 let isQuitting = false;
+// Set to true if either XON_HEADLESS is set or no display server is detected at startup
+let runHeadless = headless;
+
+/**
+ * Detect whether a display server is available.
+ * On Linux: checks DISPLAY (X11) or WAYLAND_DISPLAY environment variables.
+ * On macOS: checks Electron's screen module for connected displays (call after app.whenReady).
+ * On Windows: always returns true (display is always available).
+ */
+function hasDisplayServer(): boolean {
+  if (process.platform === "linux") {
+    return !!(process.env.DISPLAY || process.env.WAYLAND_DISPLAY);
+  }
+  if (process.platform === "win32") {
+    return true;
+  }
+  // macOS: check if any displays are connected via Electron screen API
+  try {
+    return screen.getAllDisplays().length > 0;
+  } catch {
+    return false;
+  }
+}
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -30,22 +53,29 @@ function createWindow(): void {
 app.whenReady().then(() => {
   boot();
 
-  if (!headless) {
+  const displayAvailable = hasDisplayServer();
+  runHeadless = headless || !displayAvailable;
+
+  if (!displayAvailable) {
+    console.log("No display server detected. Xon desktop activating headless fallback.");
+  }
+
+  if (!runHeadless) {
     createWindow();
     trayHandle = createTray();
-  } else {
+  } else if (headless) {
     console.log("Xon desktop running in headless mode");
   }
 
   app.on("activate", () => {
-    if (!headless && BrowserWindow.getAllWindows().length === 0) {
+    if (!runHeadless && BrowserWindow.getAllWindows().length === 0) {
       createWindow();
     }
   });
 });
 
 app.on("window-all-closed", () => {
-  if (process.platform !== "darwin" || headless) {
+  if (process.platform !== "darwin" || runHeadless) {
     app.quit();
   }
 });
