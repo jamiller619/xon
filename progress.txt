@@ -1,3 +1,18 @@
+## 2026-03-28 - US-049
+- Implemented plugin manifest loader in packages/server-core/src/pluginLoader.ts
+- Files created: packages/server-core/src/pluginLoader.ts, packages/server-core/src/pluginLoader.test.ts
+- Files changed: packages/server-core/src/index.ts (export discoverPluginManifests + PluginLoadResult), packages/server-core/package.json (added @xon/plugin-sdk dep), packages/server-core/tsconfig.json (added plugin-sdk reference)
+- discoverPluginManifests(pluginDir): scans subdirectories, returns PluginLoadResult[] (success/failure per plugin)
+- loadManifestFromDir: tries package.json#xon → xon.config.json → xon.config.ts (dynamic import)
+- validateManifest: checks all required fields (id, name, version, description, author, category), validates category against known set, checks optional field types
+- One failed plugin does not affect others — errors captured per-plugin, not thrown
+- 12 tests covering all paths: missing dir, empty dir, non-directory entries, all 3 manifest sources, validation failures, mixed success/failure
+- **Learnings for future iterations:**
+  - When catching "file not found" for dynamic import() of .ts files in vitest, check for "Does the file exist" and "Failed to load url" error messages (not just ENOENT code)
+  - `readdir(path, { withFileTypes: true })` returns `Dirent<string>[]` in newer @types/node; cast to `Dirent[]` for backward compat with strict TS
+  - server-core can depend on plugin-sdk without circular deps (plugin-sdk only depends on @xon/shared)
+---
+
 ## 2026-03-28 - US-048
 - Created packages/plugin-sdk with base classes and type definitions for Xon plugin development
 - Files created: packages/plugin-sdk/package.json, tsconfig.json, src/index.ts, src/BasePlugin.ts, src/types.ts, src/index.test.ts
