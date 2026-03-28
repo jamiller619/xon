@@ -11,6 +11,7 @@ import { makeStaticMiddleware } from "./staticFiles.js";
 export function boot(): void {
   const port = Number(process.env.PORT ?? DEFAULT_PORT);
   const webClientDir = process.env.WEB_CLIENT_DIR;
+  const webSsrBundle = process.env.WEB_SSR_BUNDLE;
 
   openDatabase()
     .then(async ({ client, db }) => {
@@ -19,7 +20,7 @@ export function boot(): void {
       const app = new Hono();
       app.route("/", apiApp);
       if (webClientDir) {
-        app.use("/*", makeStaticMiddleware(webClientDir));
+        app.use("/*", makeStaticMiddleware(webClientDir, webSsrBundle));
       }
       const { handleUpgrade } = createWsServer();
       const scheduler = await startScheduler(db);
