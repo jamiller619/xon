@@ -1117,3 +1117,17 @@
   - Badge CSS classes with dynamic names (badge_active, badge_error) work fine with CSS Modules as long as the class names are in the stylesheet — bracket notation `styles[`badge_${status}`]` resolves correctly
   - For `pluginErrors`, use basename() from node:path to derive a fallback id when the manifest failed to parse (no manifest.id available)
 ---
+
+## 2026-03-28 - US-066
+- Implemented RBAC middleware with role hierarchy: guest < user < manager < admin
+- Files created: packages/server-core/src/rbac.ts, packages/server-core/src/rbac.test.ts
+- Files changed: packages/server-core/src/app.ts (global `/admin/*` guard), packages/server-core/src/routes/adminUsers.ts (removed inline requireAdmin), packages/server-core/src/routes/libraries.ts (requireRole("manager") on POST/PUT/DELETE), packages/server-core/src/routes/sources.ts (requireRole("manager") on POST/PUT/DELETE), packages/server-core/src/routes/scan.ts (requireRole("manager") on POST trigger and PUT schedule)
+- `requireRole(minRole)`: factory returning Hono MiddlewareHandler; compares ROLE_RANK map (guest:0, user:1, manager:2, admin:3); returns 403 with "Forbidden: requires X role or higher"
+- app.ts: `app.use("/admin/*", requireRole("admin"))` applied before route mounting — covers both adminUsers and adminPlugins routers
+- Removed inline `requireAdmin(c)` helper from adminUsers.ts (now redundant)
+- 440 tests passing; biome clean
+- **Learnings for future iterations:**
+  - `app.use("/admin/*", requireRole("admin"))` in app.ts cleanly protects all admin sub-routes without touching individual route files
+  - `requireRole` as a middleware arg in Hono route: `router.post("/", requireRole("manager"), zValidator(...), handler)` — middleware runs before validator, which runs before handler
+  - Role rank map pattern: `const ROLE_RANK: Record<string, number> = { guest: 0, user: 1, manager: 2, admin: 3 }` — allows numeric comparison for hierarchy checks
+---
