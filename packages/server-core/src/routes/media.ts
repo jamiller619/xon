@@ -18,6 +18,7 @@ import {
   getAllowedRatings,
   libraryAccess,
   mediaItems,
+  mediaProgress,
   readingPositions,
   users,
 } from "../schema.js";
@@ -577,6 +578,52 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
         mediaItemId: id,
         cfi: body.cfi,
         ...(body.chapterTitle !== undefined ? { chapterTitle: body.chapterTitle } : {}),
+      });
+    }
+
+    return c.json({ ok: true });
+  });
+
+  const progressSchema = z.object({
+    position: z.number().int().min(0),
+    duration: z.number().int().min(0).optional(),
+    completed: z.boolean().optional(),
+  });
+
+  // PUT /media/:id/progress — save playback/reading position
+  router.put("/:id/progress", zValidator("json", progressSchema), async (c) => {
+    const id = c.req.param("id");
+    const user = c.get("user");
+    const body = c.req.valid("json");
+
+    const rows = await db
+      .select({ id: mediaItems.id })
+      .from(mediaItems)
+      .where(eq(mediaItems.id, id));
+    if (!rows[0]) return c.json({ error: "Not found" }, 404);
+
+    const existing = await db
+      .select()
+      .from(mediaProgress)
+      .where(and(eq(mediaProgress.userId, user.id), eq(mediaProgress.mediaItemId, id)));
+
+    if (existing[0]) {
+      await db
+        .update(mediaProgress)
+        .set({
+          position: body.position,
+          ...(body.duration !== undefined ? { duration: body.duration } : {}),
+          ...(body.completed !== undefined ? { completed: body.completed } : {}),
+          updatedAt: new Date(),
+        })
+        .where(and(eq(mediaProgress.userId, user.id), eq(mediaProgress.mediaItemId, id)));
+    } else {
+      await db.insert(mediaProgress).values({
+        userId: user.id,
+        mediaItemId: id,
+        position: body.position,
+        duration: body.duration ?? 0,
+        completed: body.completed ?? false,
       });
     }
 

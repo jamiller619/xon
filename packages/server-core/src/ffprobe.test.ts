@@ -7,11 +7,7 @@ vi.mock("node:child_process", () => ({
 
 import { spawn } from "node:child_process";
 import { MediaCategory } from "@xon/shared";
-import {
-  type FfprobeMetadata,
-  extractFfprobeMetadata,
-  isAudioVideoCategory,
-} from "./ffprobe.js";
+import { type FfprobeMetadata, extractFfprobeMetadata, isAudioVideoCategory } from "./ffprobe.js";
 
 type FakeChildProcess = EventEmitter & { stdout: EventEmitter };
 

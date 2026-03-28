@@ -9,6 +9,7 @@ export {
   users,
   refreshTokens,
   libraryAccess,
+  mediaProgress,
   type Library,
   type NewLibrary,
   type DataSource,
@@ -21,6 +22,8 @@ export {
   type NewRefreshToken,
   type LibraryAccess,
   type NewLibraryAccess,
+  type MediaProgress,
+  type NewMediaProgress,
 } from "./schema.js";
 export { hashPassword, verifyPassword } from "./password.js";
 export {

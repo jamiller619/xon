@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from "react";
+import { apiFetch } from "../apiFetch.js";
 import type { QueueItem } from "../store/index";
 import { useAudioStore } from "../store/index";
 import styles from "./AudioPlayer.module.css";
@@ -65,6 +66,33 @@ export default function AudioPlayer() {
     setCurrentTime(0);
     setDuration(0);
   }, [currentTrack, setPlaying]);
+
+  // Report progress every 10 seconds while playing
+  useEffect(() => {
+    if (!currentTrack) return;
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    const trackId = currentTrack.id;
+    const interval = setInterval(() => {
+      if (!audio.paused && audio.duration > 0) {
+        const completed = audio.currentTime >= audio.duration - 1;
+        apiFetch(`/api/v1/media/${trackId}/progress`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            position: Math.floor(audio.currentTime),
+            duration: Math.floor(audio.duration),
+            completed,
+          }),
+        }).catch(() => {
+          // best-effort save
+        });
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
+  }, [currentTrack]);
 
   if (queue.length === 0) return null;
 

@@ -11,6 +11,7 @@ import { makeLibrariesRouter } from "./routes/libraries.js";
 import { makeMediaRouter } from "./routes/media.js";
 import { makePluginsRouter } from "./routes/plugins.js";
 import { makeThemesRouter } from "./routes/themes.js";
+import { makeUsersRouter } from "./routes/users.js";
 
 export function createApp(db?: LibSQLDatabase): Hono {
   const app = new Hono().basePath("/api/v1");
@@ -26,6 +27,7 @@ export function createApp(db?: LibSQLDatabase): Hono {
     app.route("/auth", makeAuthRouter(db));
     app.route("/libraries", makeLibrariesRouter(db));
     app.route("/media", makeMediaRouter(db));
+    app.route("/users", makeUsersRouter(db));
   }
 
   // Admin-only: require admin role for all /admin/* routes

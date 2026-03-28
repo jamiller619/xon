@@ -38,6 +38,20 @@ function browserCanPlay(mimeType: string): boolean {
   return result === "probably" || result === "maybe";
 }
 
+function saveProgress(mediaId: string, position: number, duration: number, completed: boolean) {
+  apiFetch(`/api/v1/media/${mediaId}/progress`, {
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      position: Math.floor(position),
+      duration: Math.floor(duration),
+      completed,
+    }),
+  }).catch(() => {
+    // best-effort save
+  });
+}
+
 export default function VideoPlayer({ mediaId, mimeType, onClose }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [tracks, setTracks] = useState<TracksResponse | null>(null);
@@ -63,6 +77,21 @@ export default function VideoPlayer({ mediaId, mimeType, onClose }: VideoPlayerP
       .catch(() => {
         // tracks unavailable
       });
+  }, [mediaId]);
+
+  // Report progress every 10 seconds while playing
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    const interval = setInterval(() => {
+      if (!video.paused && video.duration > 0) {
+        const completed = video.currentTime >= video.duration - 1;
+        saveProgress(mediaId, video.currentTime, video.duration, completed);
+      }
+    }, 10000);
+
+    return () => clearInterval(interval);
   }, [mediaId]);
 
   // HLS setup via hls.js when native playback is not supported

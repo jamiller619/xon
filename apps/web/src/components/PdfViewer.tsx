@@ -1,6 +1,7 @@
-import { useCallback, useEffect, useRef, useState } from "react";
 import * as pdfjsLib from "pdfjs-dist";
 import type { PDFDocumentProxy, PDFPageProxy, RenderTask } from "pdfjs-dist";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { apiFetch } from "../apiFetch.js";
 import styles from "./PdfViewer.module.css";
 
 // Configure worker
@@ -107,6 +108,19 @@ export default function PdfViewer({ mediaId, title, onClose }: Props) {
     if (!pdfDoc) return;
     renderPage(pdfDoc, currentPage, zoom);
   }, [pdfDoc, currentPage, zoom, renderPage]);
+
+  // Save reading progress on page change
+  useEffect(() => {
+    if (!pdfDoc || numPages === 0) return;
+    const completed = currentPage >= numPages;
+    apiFetch(`/api/v1/media/${mediaId}/progress`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ position: currentPage, duration: numPages, completed }),
+    }).catch(() => {
+      // best-effort save
+    });
+  }, [mediaId, currentPage, numPages, pdfDoc]);
 
   // Render thumbnail for a given page index
   const renderThumbnail = useCallback(async (doc: PDFDocumentProxy, pageNum: number) => {

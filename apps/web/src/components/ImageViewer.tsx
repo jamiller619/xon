@@ -23,11 +23,18 @@ function clamp(value: number, min: number, max: number): number {
 
 export default function ImageViewer({ mediaId, title, onClose, siblings }: ImageViewerProps) {
   // Find starting index in siblings list
-  const startIndex = siblings ? Math.max(0, siblings.findIndex((s) => s.id === mediaId)) : 0;
+  const startIndex = siblings
+    ? Math.max(
+        0,
+        siblings.findIndex((s) => s.id === mediaId)
+      )
+    : 0;
   const [currentIndex, setCurrentIndex] = useState(startIndex);
 
-  const currentId = siblings && siblings.length > 0 ? (siblings[currentIndex]?.id ?? mediaId) : mediaId;
-  const currentTitle = siblings && siblings.length > 0 ? (siblings[currentIndex]?.title ?? title) : title;
+  const currentId =
+    siblings && siblings.length > 0 ? (siblings[currentIndex]?.id ?? mediaId) : mediaId;
+  const currentTitle =
+    siblings && siblings.length > 0 ? (siblings[currentIndex]?.title ?? title) : title;
 
   const [scale, setScale] = useState(1);
   const [translateX, setTranslateX] = useState(0);
@@ -57,7 +64,7 @@ export default function ImageViewer({ mediaId, title, onClose, siblings }: Image
 
   const goPrev = useCallback(() => {
     if (!hasSiblings) return;
-    setCurrentIndex((i) => ((i - 1) + (siblings?.length ?? 1)) % (siblings?.length ?? 1));
+    setCurrentIndex((i) => (i - 1 + (siblings?.length ?? 1)) % (siblings?.length ?? 1));
     resetTransform();
     setLoaded(false);
   }, [hasSiblings, siblings?.length, resetTransform]);
@@ -154,7 +161,11 @@ export default function ImageViewer({ mediaId, title, onClose, siblings }: Image
       const t2 = e.touches[1];
       if (!t1 || !t2) return;
       const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-      const newScale = clamp(pinchRef.current.scale * (dist / pinchRef.current.dist), MIN_SCALE, MAX_SCALE);
+      const newScale = clamp(
+        pinchRef.current.scale * (dist / pinchRef.current.dist),
+        MIN_SCALE,
+        MAX_SCALE
+      );
       setScale(newScale);
       if (newScale === MIN_SCALE) {
         setTranslateX(0);
