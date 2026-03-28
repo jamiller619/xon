@@ -1,3 +1,22 @@
+## 2026-03-28 - US-077
+- Implemented automatic audiobook grouping into book and series groups
+- Files changed: packages/server-core/src/grouping.ts (added resolveAudiobookInfo, groupAudiobooks), packages/server-core/src/grouping.test.ts (added 14 new tests), packages/server-core/src/orchestrator.ts (calls groupAudiobooks after scan), packages/server-core/src/index.ts (exports groupAudiobooks, resolveAudiobookInfo)
+- `groupAudiobooks(db, libraryId)`: reads Audiobooks category items, parses album/artist/series/trackNumber from metadata JSON
+- Book groups: `grp:book:{libraryId}:{bookTitle}` — one per unique book title
+- Series groups: `grp:audiobook-series:{libraryId}:{seriesTitle}` — parent of book groups when series detected
+- `resolveAudiobookInfo(filePath, tags)`: book title from album tag → parent folder; series from series tag → parent folder (when distinct from album) → grandparent folder (when no album tag)
+- Narrator stored as JSON in book group metadata: `{ narrator: "..." }`
+- Chapter sort order = trackNumber (0 when not set)
+- Only processes `MediaCategory.Audiobooks` items (not Music)
+- Idempotent: deterministic IDs + pre-fetch existing groups/members to avoid duplicates
+- 561 tests passing; biome clean
+- **Learnings for future iterations:**
+  - `resolveAudiobookInfo` pattern: album tag wins for title; series detected from tags.series first, then folder hierarchy
+  - Parent folder as series: when `parentDir !== albumTag && parentDir !== "."` — the folder is likely a series container
+  - Grandparent folder as series: when no album tag, grandparent is the likely series (covers deep folder structure like `/Series/Book/chapter.mp3`)
+  - Narrator stored in group metadata JSON; not a separate column — use `JSON.parse(group.metadata).narrator`
+---
+
 ## 2026-03-28 - US-076
 - Implemented automatic music grouping into artist and album groups
 - Files changed: packages/server-core/src/grouping.ts (added groupMusicTracks function), packages/server-core/src/grouping.test.ts (added 7 new tests), packages/server-core/src/orchestrator.ts (calls groupMusicTracks after scan), packages/server-core/src/index.ts (exports groupMusicTracks)
