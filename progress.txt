@@ -1,3 +1,36 @@
+## 2026-03-28 - US-058
+- Implemented first-party TMDb metadata plugin for movies and TV shows
+- Files created: plugins/tmdb-metadata/package.json, plugins/tmdb-metadata/tsconfig.json, plugins/tmdb-metadata/src/titleParser.ts, plugins/tmdb-metadata/src/tmdbClient.ts, plugins/tmdb-metadata/src/index.ts, plugins/tmdb-metadata/src/index.test.ts
+- Files changed: tsconfig.json (added plugins/tmdb-metadata reference)
+- `parseMediaTitle(filePath)`: extracts ParsedMovie (title + optional year) or ParsedTvShow (seriesTitle, season, episode) from filename; S##E## and ##x## patterns for TV; "(Year)" and ".Year." patterns for movies
+- `TmdbClient`: in-memory cache (1hr TTL) keyed by path+params; `fetchMovieMetadata` → `/search/movie` + `/movie/:id?append_to_response=credits`; `fetchTvMetadata` → `/search/tv` + `/tv/:id?append_to_response=credits` + episode endpoint
+- `TmdbMetadataPlugin`: creates `plugin_tmdb_metadata_movies` and `plugin_tmdb_metadata_tv` tables on init; hooks `media:created` + `media:updated`; stores enriched data (poster, backdrop, synopsis, cast, crew, genres, rating, release date); GET `/metadata/:mediaId` route
+- API key from `process.env.TMDB_API_KEY`; plugin logs warn and skips enrichment if unset
+- 26 tests passing; typecheck and biome clean
+- **Learnings for future iterations:**
+  - First plugin in `plugins/` directory — workspace package with `"type": "module"`, manifest in `package.json#xon`, tsconfig extends root with references to plugin-sdk and shared
+  - Plugin tables use prefix `plugin_<id>_` with hyphens normalized to underscores — `tmdb-metadata` → `plugin_tmdb_metadata_`
+  - `context.db.query()` works for DDL (CREATE TABLE IF NOT EXISTS) and DML (INSERT OR REPLACE) on plugin tables, despite the "read-only" comment in the type definition
+  - `vi.stubEnv("KEY", value)` + `vi.unstubAllEnvs()` in beforeEach for clean env var mocking in vitest
+  - Cache with `Map<string, CacheEntry<unknown>>` and cast at read site avoids the `any` biome error
+  - Biome requires `Number.parseInt` instead of global `parseInt` (useNumberNamespace rule)
+---
+
+## 2026-03-28 - US-057
+- Implemented plugin sandbox — filesystem and network restrictions
+- Files created: packages/server-core/src/pluginSandbox.ts, packages/server-core/src/pluginSandbox.test.ts
+- Files changed: packages/plugin-sdk/src/types.ts (added permissions to PluginManifest, added fs/fetch to PluginContext), packages/server-core/src/pluginManager.ts (buildContext uses sandboxed fs/fetch)
+- `isPathAllowed(targetPath, allowedDirs)`: normalizes + resolves paths before comparison; uses `startsWith(dir + "/")` to prevent sibling-directory prefix attacks
+- `createSandboxedFs(pluginId, pluginDir, allowedPaths)`: wraps readFile/writeFile/readdir/stat/mkdir/unlink; pluginDir always included; throws + warns on violations
+- `createSandboxedFetch(pluginId, allowedDomains)`: parses URL hostname; allows exact match or subdomain; blocks all if empty; throws + warns on violations
+- 29 tests passing; all 390 tests pass
+- **Learnings for future iterations:**
+  - Path traversal prevention: use `normalize(resolve(path))` and check `startsWith(dir + "/")` (with trailing slash) to avoid matching sibling dirs like `/plugins/my-plugin-evil` against `/plugins/my-plugin`
+  - Subdomain matching: `hostname === domain || hostname.endsWith("." + domain)` — simple and correct
+  - `globalThis.fetch` stub in tests: assign/restore in beforeEach/afterEach; vi.mock doesn't work for globals
+  - `exactOptionalPropertyTypes: true`: use `entry.manifest.permissions?.filesystem ?? []` to safely access optional nested fields
+---
+
 ## 2026-03-28 - US-055
 - Implemented theme plugin support — client-only CSS/JS theming with per-user selection
 - Files created: packages/server-core/src/routes/themes.ts, apps/web/src/components/ThemeLoader.tsx, apps/web/src/pages/Settings.tsx, apps/web/src/pages/Settings.module.css
