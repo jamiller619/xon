@@ -1,6 +1,6 @@
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
-import { authMiddleware } from "./authMiddleware.js";
+import { makeAuthMiddleware } from "./authMiddleware.js";
 import { pluginRouteDispatcher } from "./pluginRoutes.js";
 import { requireRole } from "./rbac.js";
 import { makeAdminLibraryAccessRouter } from "./routes/adminLibraryAccess.js";
@@ -17,7 +17,8 @@ export function createApp(db?: LibSQLDatabase): Hono {
   const app = new Hono().basePath("/api/v1");
 
   // Auth middleware on all routes (skips /api/v1/auth/* internally)
-  app.use("/*", authMiddleware);
+  // Passes db so API tokens can be verified alongside JWT access tokens
+  app.use("/*", makeAuthMiddleware(db));
 
   app.get("/health", (c) => {
     return c.json({ status: "ok", timestamp: new Date().toISOString() });

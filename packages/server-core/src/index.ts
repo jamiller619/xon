@@ -12,6 +12,7 @@ export {
   mediaProgress,
   favorites,
   watchlist,
+  apiTokens,
   type Library,
   type NewLibrary,
   type DataSource,
@@ -30,6 +31,8 @@ export {
   type NewFavorite,
   type Watchlist,
   type NewWatchlist,
+  type ApiToken,
+  type NewApiToken,
 } from "./schema.js";
 export { hashPassword, verifyPassword } from "./password.js";
 export {
