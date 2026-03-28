@@ -21,14 +21,8 @@
   "references": [
     { "path": "./packages/shared" },
     { "path": "./packages/media-types" },
-    { "path": "./packages/server-core" }
+    { "path": "./packages/server-core" },
+    { "path": "./apps/desktop" }
   ],
-  "exclude": [
-    "node_modules",
-    "dist",
-    "**/dist",
-    "**/*.test.ts",
-    "**/*.spec.ts",
-    "apps/web"
-  ]
+  "exclude": ["node_modules", "dist", "**/dist", "**/*.test.ts", "**/*.spec.ts", "apps/web"]
 }
