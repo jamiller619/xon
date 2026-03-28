@@ -1,3 +1,19 @@
+## 2026-03-27 - US-045
+- Implemented system tray / menubar integration for Electron desktop app
+- Files created: apps/desktop/src/tray.ts (createTray, makeColorIcon, TrayHandle interface)
+- Files changed: apps/desktop/src/main.ts (import createTray, create tray on boot, destroy on quit)
+- tray.ts: `makeColorIcon(r,g,b)` generates 16x16 BGRA buffer and calls `nativeImage.createFromBuffer` — creates colored square icons without external PNG files
+- tray.ts: icons lazily created inside `createTray()` so `nativeImage` is called after Electron is ready
+- tray.ts: `Menu.buildFromTemplate` with separator type, enabled:false for status item, shell.openExternal for Open Web UI
+- tray.ts: `destroy()` method cleans up tray on before-quit
+- main.ts: `trayHandle?.destroy()` in before-quit handler before emitting SIGTERM
+- **Learnings for future iterations:**
+  - `nativeImage.createFromBuffer(buf, { width, height })` creates icons from raw BGRA pixel data — no PNG file needed; create icons inside `createTray()` not at module scope (must be after Electron ready)
+  - Biome import sort: `type` imports before value imports within same specifier (`{ type TrayHandle, createTray }`)
+  - `satisfies Record<ServerStatus, ...>` on the icons object provides exhaustiveness checking with inferred literal types
+  - `tray.setContextMenu` must be called to update the menu (not just re-assigned); rebuild menu on each refresh call
+---
+
 ## 2026-03-27 - US-044
 - Scaffolded Electron desktop app that imports and boots server-core
 - Files created: apps/desktop/package.json (electron ^33.0.0 devDep, @xon/server-core dep, type:module)
