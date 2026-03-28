@@ -58,3 +58,14 @@ export {
   discoverPluginManifests,
   type PluginLoadResult,
 } from "./pluginLoader.js";
+export {
+  discoverAndActivatePlugins,
+  activatePlugin,
+  deactivatePlugin,
+  uninstallPlugin,
+  loadPlugin,
+  emitPluginEvent,
+  registry as pluginRegistry,
+  type PluginEntry,
+  type PluginStatus,
+} from "./pluginManager.js";
