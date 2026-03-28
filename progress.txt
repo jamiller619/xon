@@ -1,3 +1,21 @@
+## 2026-03-28 - US-076
+- Implemented automatic music grouping into artist and album groups
+- Files changed: packages/server-core/src/grouping.ts (added groupMusicTracks function), packages/server-core/src/grouping.test.ts (added 7 new tests), packages/server-core/src/orchestrator.ts (calls groupMusicTracks after scan), packages/server-core/src/index.ts (exports groupMusicTracks)
+- `groupMusicTracks(db, libraryId)`: reads Music category items, parses album/artist/trackNumber/discNumber from metadata JSON
+- Artist groups: `grp:artist:{libraryId}:{artistName}` — one per unique album artist
+- Album groups: `grp:album:{libraryId}:{albumArtist}:{albumTitle}` — child of artist group
+- Compilation detection: if multiple distinct artists appear on same album title → albumArtist = "Various Artists"
+- Sort order: `discNumber * 1000 + trackNumber` — naturally orders multi-disc albums
+- Only processes `MediaCategory.Music` items (not Audiobooks, which is US-077)
+- Idempotent: deterministic IDs + pre-fetch existing groups/members to avoid duplicates
+- 547 tests passing; biome clean
+- **Learnings for future iterations:**
+  - Compilation detection: collect `albumTitle → Set<artistName>` across all tracks; if set.size > 1, use "Various Artists"
+  - `discNumber * 1000 + trackNumber` sort order handles multi-disc albums correctly (disc 2 track 1 = 2001 > disc 1 track 10 = 1010)
+  - Parse metadata JSON carefully: `Record<string, unknown>` + type guards (`typeof tags.album === "string"`)
+  - Must filter by `mediaCategory` when fetching for music-specific grouping to avoid processing audiobooks
+---
+
 ## 2026-03-28 - US-075
 - Implemented automatic TV episode grouping into series and season groups
 - Files created: packages/server-core/src/grouping.ts, packages/server-core/src/grouping.test.ts, packages/server-core/drizzle/0013_groups.sql
