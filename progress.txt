@@ -893,3 +893,15 @@
   - Biome formatter is strict about trailing commas in template literals inside fetch() — let biome --write auto-fix formatting issues
   - `MediaCardItem` can render as either a grid card (`<Link>`) or list row (`<tr>`) via a `listView` prop — the component must return the right element type for table context
 ---
+## 2026-03-28 - US-052
+- Wired plugin event hooks to actual server lifecycle and scan/media events
+- Files changed: packages/server-core/src/server.ts (server:boot on listen, server:shutdown before close), packages/server-core/src/routes/scan.ts (scan:start before scanLibrary, scan:complete after), packages/server-core/src/orchestrator.ts (media:created after insert, media:updated after update, media:deleted per removed row)
+- The hook registration/dispatch system (emitPluginEvent, context.on, cleanup on deactivate) was already implemented in US-050 via pluginManager.ts
+- Refactored changed-files loop: unified existing-ID lookup to one query per file (was duplicated inside isImage/isVideo branches)
+- For media:deleted events: added filePath to the removedRows select so PluginEventPayloads["media:deleted"] gets correct data
+- 335 tests pass, typecheck clean, biome lint clean
+- **Learnings for future iterations:**
+  - The two event systems are separate: `emitEvent` (events.ts/eventBus) = WebSocket broadcast to browser; `emitPluginEvent` (pluginManager.ts) = plugin hook dispatch — both must be called where relevant
+  - orchestrator.ts `changedFiles` loop had duplicate DB lookups for images and videos (to get existingId for thumbnails) — consolidated to one lookup at top of loop
+  - `server:boot` is emitted inside the serve() callback (after port bind), not before — this is correct because plugins may rely on the server being up
+---
