@@ -3,6 +3,7 @@ import Layout from "./components/Layout";
 import RequireAuth from "./components/RequireAuth";
 import ThemeLoader from "./components/ThemeLoader";
 import AdminPlugins from "./pages/AdminPlugins";
+import AdminUsers from "./pages/AdminUsers";
 import Dashboard from "./pages/Dashboard";
 import LibraryBrowser from "./pages/LibraryBrowser";
 import Login from "./pages/Login";
@@ -27,6 +28,7 @@ export default function App() {
           <Route path="/media/:id" element={<MediaDetail />} />
           <Route path="/search" element={<div>Search</div>} />
           <Route path="/admin/plugins" element={<AdminPlugins />} />
+          <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
       </Routes>
