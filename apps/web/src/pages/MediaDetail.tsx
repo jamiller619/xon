@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import ImageViewer, { type ImageSibling } from "../components/ImageViewer.js";
+import PdfViewer from "../components/PdfViewer.js";
 import VideoPlayer from "../components/VideoPlayer.js";
 import { useAudioStore } from "../store/index";
 import styles from "./MediaDetail.module.css";
@@ -52,6 +53,7 @@ export default function MediaDetail() {
 
   const [showPlayer, setShowPlayer] = useState(false);
   const [showImageViewer, setShowImageViewer] = useState(false);
+  const [showPdfViewer, setShowPdfViewer] = useState(false);
   const [imageSiblings, setImageSiblings] = useState<ImageSibling[]>([]);
 
   const playTrack = useAudioStore((s) => s.playTrack);
@@ -92,9 +94,9 @@ export default function MediaDetail() {
       .then((r) => r.json())
       .then((data: unknown) => {
         if (Array.isArray(data)) {
-          const siblings: ImageSibling[] = (data as { id: string; title: string | null; fileName: string }[]).map(
-            (m) => ({ id: m.id, title: m.title ?? m.fileName })
-          );
+          const siblings: ImageSibling[] = (
+            data as { id: string; title: string | null; fileName: string }[]
+          ).map((m) => ({ id: m.id, title: m.title ?? m.fileName }));
           setImageSiblings(siblings);
         }
       })
@@ -198,6 +200,7 @@ export default function MediaDetail() {
   const tags = Array.isArray(parsedMeta.tags) ? (parsedMeta.tags as string[]) : [];
 
   const isImage = item.mimeType?.startsWith("image/");
+  const isPdf = item.mimeType === "application/pdf";
 
   return (
     <div className={styles.page ?? ""}>
@@ -206,7 +209,14 @@ export default function MediaDetail() {
           mediaId={id}
           title={item.title ?? item.fileName}
           onClose={() => setShowImageViewer(false)}
-          siblings={imageSiblings.length > 1 ? imageSiblings : undefined}
+          {...(imageSiblings.length > 1 ? { siblings: imageSiblings } : {})}
+        />
+      )}
+      {showPdfViewer && id && (
+        <PdfViewer
+          mediaId={id}
+          title={item.title ?? item.fileName}
+          onClose={() => setShowPdfViewer(false)}
         />
       )}
       <div className={styles.breadcrumb ?? ""}>
@@ -234,7 +244,9 @@ export default function MediaDetail() {
                   src={item.thumbnailUrls.large}
                   alt={item.title ?? item.fileName}
                   className={`${styles.posterImg ?? ""} ${isImage && !item.drmProtected ? (styles.posterImgClickable ?? "") : ""}`}
-                  onClick={isImage && !item.drmProtected ? () => setShowImageViewer(true) : undefined}
+                  onClick={
+                    isImage && !item.drmProtected ? () => setShowImageViewer(true) : undefined
+                  }
                   onKeyDown={
                     isImage && !item.drmProtected
                       ? (e) => {
@@ -252,6 +264,15 @@ export default function MediaDetail() {
                   title="Open image viewer"
                 >
                   <span className={styles.posterIcon ?? ""}>🖼</span>
+                </button>
+              ) : isPdf && !item.drmProtected ? (
+                <button
+                  type="button"
+                  className={styles.posterPlaceholder ?? ""}
+                  onClick={() => setShowPdfViewer(true)}
+                  title="Open PDF viewer"
+                >
+                  <span className={styles.posterIcon ?? ""}>📄</span>
                 </button>
               ) : (
                 <div className={styles.posterPlaceholder ?? ""}>
@@ -374,6 +395,16 @@ export default function MediaDetail() {
                     onClick={() => setShowImageViewer(true)}
                   >
                     🖼 View
+                  </button>
+                ) : isPdf ? (
+                  <button
+                    type="button"
+                    className={`${styles.btnPlay ?? ""} ${item.drmProtected ? (styles.btnDisabled ?? "") : ""}`}
+                    disabled={item.drmProtected}
+                    title={item.drmProtected ? "Viewing unavailable — DRM protected" : "Open PDF"}
+                    onClick={() => setShowPdfViewer(true)}
+                  >
+                    📄 Open
                   </button>
                 ) : item.mimeType?.startsWith("audio/") ? (
                   <>
