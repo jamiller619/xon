@@ -1,3 +1,19 @@
+## 2026-03-28 - US-054
+- Implemented plugin UI component injection system
+- Files created: packages/server-core/src/routes/plugins.ts, apps/web/src/components/PluginSlot.tsx
+- Files changed: packages/plugin-sdk/src/types.ts (added dashboard-widget/detail-panel/admin-page/nav-item injection points, PluginComponentProps), packages/plugin-sdk/src/index.ts (exports PluginComponentProps), packages/server-core/src/app.ts (mounted makePluginsRouter), apps/web/src/App.tsx (AdminPage with admin-page slot), apps/web/src/pages/Dashboard.tsx (dashboard-widget slot), apps/web/src/pages/MediaDetail.tsx (detail-panel slot with media props), apps/web/src/components/Sidebar.tsx (nav-item slot)
+- `GET /api/v1/plugins/ui-components`: returns all active plugin UI components from registry (pluginId, id, injectionPoint, bundleUrl, label)
+- `GET /api/v1/plugins/:pluginId/assets/*`: serves static files from `<pluginDir>/assets/` with path traversal protection and correct Content-Type headers
+- `PluginSlot` React component: fetches UI component list (module-level cache to avoid repeat fetches), filters by injectionPoint, dynamically imports each bundle via `import(bundleUrl)`, calls `render(container, props)` from default or named export, calls returned cleanup fn on unmount
+- Plugin bundle format: ES module with default export `(container: HTMLElement, props: PluginComponentProps) => () => void` — framework-agnostic, avoids React sharing issues
+- PluginComponentProps: `{ mediaItem?: { id, title, mediaCategory, libraryId }, libraryId? }` — passes context to plugin components
+- **Learnings for future iterations:**
+  - Dynamic `import(url)` works for ESM bundles served from the plugin assets endpoint; `/* @vite-ignore */` comment suppresses Vite's static analysis warning
+  - Module-level fetch cache pattern (`componentsCache`, `fetchPromise`) prevents duplicate API calls across multiple PluginSlot instances mounted simultaneously
+  - Plugin render function returns a cleanup function — call it in the useEffect cleanup to prevent memory leaks when the slot unmounts
+  - `<div data-plugin-id>` wrapper gives each plugin component an isolated DOM root for framework-agnostic rendering
+---
+
 ## 2026-03-28 - US-053
 - Implemented scoped plugin database access in packages/server-core/src/pluginDb.ts
 - Files created: packages/server-core/src/pluginDb.ts, packages/server-core/src/pluginDb.test.ts
