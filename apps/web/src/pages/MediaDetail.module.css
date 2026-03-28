@@ -73,6 +73,15 @@
   object-fit: cover;
 }
 
+.posterImgClickable {
+  cursor: pointer;
+}
+
+.posterImgClickable:hover {
+  opacity: 0.85;
+  transition: opacity 0.2s;
+}
+
 .posterPlaceholder {
   width: 100%;
   height: 100%;

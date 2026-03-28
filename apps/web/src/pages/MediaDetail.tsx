@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import ImageViewer, { type ImageSibling } from "../components/ImageViewer.js";
 import VideoPlayer from "../components/VideoPlayer.js";
 import { useAudioStore } from "../store/index";
 import styles from "./MediaDetail.module.css";
@@ -17,6 +18,7 @@ interface MediaDetailItem {
   drmProtected: boolean;
   createdAt: number | null;
   scannedAt: number | null;
+  libraryId: string | null;
   thumbnailUrls: { small: string; medium: string; large: string } | null;
 }
 
@@ -49,6 +51,8 @@ export default function MediaDetail() {
   const [error, setError] = useState<string | null>(null);
 
   const [showPlayer, setShowPlayer] = useState(false);
+  const [showImageViewer, setShowImageViewer] = useState(false);
+  const [imageSiblings, setImageSiblings] = useState<ImageSibling[]>([]);
 
   const playTrack = useAudioStore((s) => s.playTrack);
   const addToQueue = useAudioStore((s) => s.addToQueue);
@@ -78,6 +82,26 @@ export default function MediaDetail() {
         setLoading(false);
       });
   }, [id]);
+
+  // Fetch sibling images from same library for slideshow
+  useEffect(() => {
+    if (!item || !item.mimeType?.startsWith("image/") || !item.libraryId) return;
+    fetch(
+      `/api/v1/libraries/${item.libraryId}/media?mediaCategory=${encodeURIComponent(item.mediaCategory ?? "Pictures")}&limit=100`
+    )
+      .then((r) => r.json())
+      .then((data: unknown) => {
+        if (Array.isArray(data)) {
+          const siblings: ImageSibling[] = (data as { id: string; title: string | null; fileName: string }[]).map(
+            (m) => ({ id: m.id, title: m.title ?? m.fileName })
+          );
+          setImageSiblings(siblings);
+        }
+      })
+      .catch(() => {
+        // siblings unavailable — viewer will work for single image
+      });
+  }, [item]);
 
   function startEditing() {
     if (!item) return;
@@ -173,8 +197,18 @@ export default function MediaDetail() {
   );
   const tags = Array.isArray(parsedMeta.tags) ? (parsedMeta.tags as string[]) : [];
 
+  const isImage = item.mimeType?.startsWith("image/");
+
   return (
     <div className={styles.page ?? ""}>
+      {showImageViewer && id && (
+        <ImageViewer
+          mediaId={id}
+          title={item.title ?? item.fileName}
+          onClose={() => setShowImageViewer(false)}
+          siblings={imageSiblings.length > 1 ? imageSiblings : undefined}
+        />
+      )}
       <div className={styles.breadcrumb ?? ""}>
         <Link to="/" className={styles.breadcrumbLink ?? ""}>
           Dashboard
@@ -184,7 +218,7 @@ export default function MediaDetail() {
       </div>
 
       <div className={styles.hero ?? ""}>
-        {/* Video player or poster */}
+        {/* Video player, image viewer trigger, or poster */}
         <div className={styles.poster ?? ""}>
           {showPlayer && id ? (
             <VideoPlayer mediaId={id} onClose={() => setShowPlayer(false)} />
@@ -199,8 +233,26 @@ export default function MediaDetail() {
                 <img
                   src={item.thumbnailUrls.large}
                   alt={item.title ?? item.fileName}
-                  className={styles.posterImg ?? ""}
+                  className={`${styles.posterImg ?? ""} ${isImage && !item.drmProtected ? (styles.posterImgClickable ?? "") : ""}`}
+                  onClick={isImage && !item.drmProtected ? () => setShowImageViewer(true) : undefined}
+                  onKeyDown={
+                    isImage && !item.drmProtected
+                      ? (e) => {
+                          if (e.key === "Enter" || e.key === " ") setShowImageViewer(true);
+                        }
+                      : undefined
+                  }
+                  tabIndex={isImage && !item.drmProtected ? 0 : undefined}
                 />
+              ) : isImage && !item.drmProtected ? (
+                <button
+                  type="button"
+                  className={styles.posterPlaceholder ?? ""}
+                  onClick={() => setShowImageViewer(true)}
+                  title="Open image viewer"
+                >
+                  <span className={styles.posterIcon ?? ""}>🖼</span>
+                </button>
               ) : (
                 <div className={styles.posterPlaceholder ?? ""}>
                   <span className={styles.posterIcon ?? ""}>▶</span>
@@ -313,7 +365,17 @@ export default function MediaDetail() {
 
               {/* Action buttons */}
               <div className={styles.actions ?? ""}>
-                {item.mimeType?.startsWith("audio/") ? (
+                {isImage ? (
+                  <button
+                    type="button"
+                    className={`${styles.btnPlay ?? ""} ${item.drmProtected ? (styles.btnDisabled ?? "") : ""}`}
+                    disabled={item.drmProtected}
+                    title={item.drmProtected ? "Viewing unavailable — DRM protected" : "View image"}
+                    onClick={() => setShowImageViewer(true)}
+                  >
+                    🖼 View
+                  </button>
+                ) : item.mimeType?.startsWith("audio/") ? (
                   <>
                     <button
                       type="button"
