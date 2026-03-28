@@ -15,6 +15,7 @@ import {
   isFontCategory,
 } from "./miscmeta.js";
 import { extractMusicTags, isMusicCategory } from "./musictags.js";
+import { emitPluginEvent } from "./pluginManager.js";
 import { scanDataSource } from "./scanner.js";
 import { dataSources, libraries, mediaItems } from "./schema.js";
 import { generateThumbnails } from "./thumbnails.js";
@@ -151,6 +152,7 @@ export async function scanLibrary(
       });
 
       emitEvent({ type: "media:added", payload: { libraryId, mediaItemId: id } });
+      emitPluginEvent("media:created", { mediaId: id, filePath: entry.filePath });
       progress.processedFiles++;
       totalNew++;
     }
@@ -158,6 +160,14 @@ export async function scanLibrary(
     for (const entry of result.changedFiles) {
       progress.currentFile = entry.filePath;
       onProgress?.(progress);
+
+      const existingRows = await db
+        .select({ id: mediaItems.id })
+        .from(mediaItems)
+        .where(
+          and(eq(mediaItems.dataSourceId, source.id), eq(mediaItems.filePath, entry.filePath))
+        );
+      const existingId = existingRows[0]?.id ?? crypto.randomUUID();
 
       const drmProtectedUpdate = await detectDrm(entry.filePath);
       const updateFields: Record<string, unknown> = {
@@ -184,25 +194,11 @@ export async function scanLibrary(
         if (exifMeta) {
           updateFields.metadata = JSON.stringify(exifMeta);
         }
-        const existingRows = await db
-          .select({ id: mediaItems.id })
-          .from(mediaItems)
-          .where(
-            and(eq(mediaItems.dataSourceId, source.id), eq(mediaItems.filePath, entry.filePath))
-          );
-        const existingId = existingRows[0]?.id ?? crypto.randomUUID();
         const thumbs = await generateThumbnails(entry.filePath, existingId, resolvedDataDir);
         if (thumbs) {
           updateFields.thumbnailPaths = JSON.stringify(thumbs);
         }
       } else if (isVideoCategory(entry.mediaCategory)) {
-        const existingRows = await db
-          .select({ id: mediaItems.id })
-          .from(mediaItems)
-          .where(
-            and(eq(mediaItems.dataSourceId, source.id), eq(mediaItems.filePath, entry.filePath))
-          );
-        const existingId = existingRows[0]?.id ?? crypto.randomUUID();
         const thumbs = await generateVideoThumbnails(entry.filePath, existingId, resolvedDataDir);
         if (thumbs) {
           updateFields.thumbnailPaths = JSON.stringify(thumbs);
@@ -236,13 +232,14 @@ export async function scanLibrary(
           and(eq(mediaItems.dataSourceId, source.id), eq(mediaItems.filePath, entry.filePath))
         );
 
+      emitPluginEvent("media:updated", { mediaId: existingId, filePath: entry.filePath });
       progress.processedFiles++;
       totalUpdated++;
     }
 
     if (result.removedFilePaths.length > 0) {
       const removedRows = await db
-        .select({ id: mediaItems.id })
+        .select({ id: mediaItems.id, filePath: mediaItems.filePath })
         .from(mediaItems)
         .where(
           and(
@@ -260,6 +257,7 @@ export async function scanLibrary(
         );
       for (const row of removedRows) {
         emitEvent({ type: "media:removed", payload: { libraryId, mediaItemId: row.id } });
+        emitPluginEvent("media:deleted", { mediaId: row.id, filePath: row.filePath });
       }
       totalRemoved += result.removedFilePaths.length;
     }

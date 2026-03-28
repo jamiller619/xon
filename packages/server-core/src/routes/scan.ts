@@ -6,6 +6,7 @@ import { z } from "zod";
 import { emitEvent } from "../events.js";
 import type { ScanProgress, ScanSummary } from "../orchestrator.js";
 import { scanLibrary } from "../orchestrator.js";
+import { emitPluginEvent } from "../pluginManager.js";
 import { parseCronInterval } from "../scheduler.js";
 import { libraries } from "../schema.js";
 
@@ -48,6 +49,7 @@ export function makeScanRouter(db: LibSQLDatabase): Hono {
       error: null,
     };
     scanRegistry.set(libraryId, state);
+    emitPluginEvent("scan:start", { libraryId });
 
     scanLibrary(db, libraryId, (progress) => {
       state.progress = progress;
@@ -77,6 +79,10 @@ export function makeScanRouter(db: LibSQLDatabase): Hono {
             removedItems: summary.removedItems,
             totalDiscovered: summary.totalDiscovered,
           },
+        });
+        emitPluginEvent("scan:complete", {
+          libraryId,
+          itemsFound: summary.totalDiscovered,
         });
       })
       .catch((err: unknown) => {
