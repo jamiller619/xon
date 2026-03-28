@@ -50,6 +50,13 @@
       "when": 1774713214832,
       "tag": "0006_mixed_tag",
       "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1774715681138,
+      "tag": "0007_tricky_boom_boom",
+      "breakpoints": true
     }
   ]
 }

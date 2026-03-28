@@ -8,6 +8,7 @@ export {
   mediaItems,
   users,
   refreshTokens,
+  libraryAccess,
   type Library,
   type NewLibrary,
   type DataSource,
@@ -18,6 +19,8 @@ export {
   type NewUser,
   type RefreshToken,
   type NewRefreshToken,
+  type LibraryAccess,
+  type NewLibraryAccess,
 } from "./schema.js";
 export { hashPassword, verifyPassword } from "./password.js";
 export {

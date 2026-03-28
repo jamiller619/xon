@@ -3,7 +3,7 @@ import { readFile, readdir, stat } from "node:fs/promises";
 import { basename, dirname, extname, join } from "node:path";
 import { Readable } from "node:stream";
 import { zValidator } from "@hono/zod-validator";
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, desc, eq, inArray } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { parse as parseFont } from "opentype.js";
@@ -13,7 +13,7 @@ import { extractFfprobeMetadata, extractStreamTracks } from "../ffprobe.js";
 import { convertMobiToEpub } from "../mobi.js";
 import { convertRawToJpeg, isRawImage } from "../raw.js";
 import type { MediaItem } from "../schema.js";
-import { mediaItems, readingPositions } from "../schema.js";
+import { libraryAccess, mediaItems, readingPositions } from "../schema.js";
 import type { ThumbnailPaths } from "../thumbnails.js";
 import { generateHlsPlaylist, needsTranscoding, spawnTranscodeSegment } from "../transcode.js";
 
@@ -34,12 +34,24 @@ export function withThumbnailUrls(item: MediaItem) {
 export function makeMediaRouter(db: LibSQLDatabase): Hono {
   const router = new Hono();
 
-  // GET /media — list all media items with optional sort and limit
+  const PRIVILEGED_ROLES = ["admin", "manager"] as const;
+
+  async function getAccessibleLibraryIds(userId: string, role: string): Promise<string[] | null> {
+    if ((PRIVILEGED_ROLES as readonly string[]).includes(role)) return null; // null = all
+    const rows = await db
+      .select({ libraryId: libraryAccess.libraryId })
+      .from(libraryAccess)
+      .where(eq(libraryAccess.userId, userId));
+    return rows.map((r) => r.libraryId);
+  }
+
+  // GET /media — list media items scoped to accessible libraries
   router.get("/", async (c) => {
     const { sortBy, order, page, limit } = c.req.query();
     const pageNum = Math.max(1, Number(page) || 1);
     const limitNum = Math.min(Math.max(1, Number(limit) || 20), 100);
     const offset = (pageNum - 1) * limitNum;
+    const user = c.get("user");
 
     const sortDir = order === "asc" ? asc : desc;
     const orderExpr =
@@ -49,22 +61,34 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
           ? sortDir(mediaItems.fileSize)
           : sortDir(mediaItems.createdAt);
 
-    const rows = await db
-      .select()
-      .from(mediaItems)
-      .orderBy(orderExpr)
-      .limit(limitNum)
-      .offset(offset);
+    const accessibleIds = await getAccessibleLibraryIds(user.id, user.role);
+    if (accessibleIds !== null && accessibleIds.length === 0) {
+      return c.json([]);
+    }
+
+    const baseQuery = db.select().from(mediaItems);
+    const scopedQuery =
+      accessibleIds === null
+        ? baseQuery
+        : baseQuery.where(inArray(mediaItems.libraryId, accessibleIds));
+    const rows = await scopedQuery.orderBy(orderExpr).limit(limitNum).offset(offset);
 
     return c.json(rows.map(withThumbnailUrls));
   });
 
-  // GET /media/:id — get single media item with full metadata and thumbnail URLs
+  // GET /media/:id — get single media item (scoped to accessible libraries)
   router.get("/:id", async (c) => {
     const id = c.req.param("id");
+    const user = c.get("user");
     const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id));
     const item = rows[0];
     if (!item) return c.json({ error: "Not found" }, 404);
+
+    const accessibleIds = await getAccessibleLibraryIds(user.id, user.role);
+    if (accessibleIds !== null && !accessibleIds.includes(item.libraryId)) {
+      return c.json({ error: "Not found" }, 404);
+    }
+
     return c.json(withThumbnailUrls(item));
   });
 

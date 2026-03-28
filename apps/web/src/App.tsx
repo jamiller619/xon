@@ -2,6 +2,7 @@ import { Route, Routes } from "react-router-dom";
 import Layout from "./components/Layout";
 import RequireAuth from "./components/RequireAuth";
 import ThemeLoader from "./components/ThemeLoader";
+import AdminLibraryAccess from "./pages/AdminLibraryAccess";
 import AdminPlugins from "./pages/AdminPlugins";
 import AdminUsers from "./pages/AdminUsers";
 import Dashboard from "./pages/Dashboard";
@@ -29,6 +30,7 @@ export default function App() {
           <Route path="/search" element={<div>Search</div>} />
           <Route path="/admin/plugins" element={<AdminPlugins />} />
           <Route path="/admin/users" element={<AdminUsers />} />
+          <Route path="/admin/library-access" element={<AdminLibraryAccess />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
       </Routes>

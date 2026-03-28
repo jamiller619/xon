@@ -1,13 +1,29 @@
 import { zValidator } from "@hono/zod-validator";
-import { and, asc, desc, eq, sql } from "drizzle-orm";
+import { and, asc, desc, eq, inArray, sql } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
 import { requireRole } from "../rbac.js";
-import { dataSources, libraries, mediaItems } from "../schema.js";
+import { dataSources, libraries, libraryAccess, mediaItems } from "../schema.js";
 import { withThumbnailUrls } from "./media.js";
 import { makeScanRouter } from "./scan.js";
 import { makeSourcesRouter } from "./sources.js";
+
+const PRIVILEGED_ROLES = ["admin", "manager"] as const;
+
+/** Returns library IDs accessible to the requesting user. Admins/managers see all. */
+async function getAccessibleLibraryIds(
+  db: LibSQLDatabase,
+  userId: string,
+  role: string
+): Promise<string[] | null> {
+  if ((PRIVILEGED_ROLES as readonly string[]).includes(role)) return null; // null = all
+  const rows = await db
+    .select({ libraryId: libraryAccess.libraryId })
+    .from(libraryAccess)
+    .where(eq(libraryAccess.userId, userId));
+  return rows.map((r) => r.libraryId);
+}
 
 const createLibrarySchema = z.object({
   name: z.string().min(1),
@@ -41,17 +57,32 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
     return c.json(rows[0], 201);
   });
 
-  // GET /libraries — list all libraries
+  // GET /libraries — list accessible libraries (admin/manager see all; user/guest see granted)
   router.get("/", async (c) => {
-    const rows = await db.select().from(libraries);
+    const user = c.get("user");
+    const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role);
+    if (accessibleIds === null) {
+      const rows = await db.select().from(libraries);
+      return c.json(rows);
+    }
+    if (accessibleIds.length === 0) return c.json([]);
+    const rows = await db.select().from(libraries).where(inArray(libraries.id, accessibleIds));
     return c.json(rows);
   });
 
-  // GET /libraries/:id — get single library with data sources
+  // GET /libraries/:id — get single library with data sources (access-checked)
   router.get("/:id", async (c) => {
     const id = c.req.param("id");
+    const user = c.get("user");
+
     const rows = await db.select().from(libraries).where(eq(libraries.id, id));
     if (rows.length === 0) return c.json({ error: "Not found" }, 404);
+
+    const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role);
+    if (accessibleIds !== null && !accessibleIds.includes(id)) {
+      return c.json({ error: "Not found" }, 404);
+    }
+
     const sources = await db.select().from(dataSources).where(eq(dataSources.libraryId, id));
     return c.json({ ...rows[0], dataSources: sources });
   });
@@ -87,8 +118,15 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
   // GET /libraries/:libraryId/media — list media items with filtering, sorting, pagination
   router.get("/:libraryId/media", async (c) => {
     const libraryId = c.req.param("libraryId") as string;
+    const user = c.get("user");
+
     const lib = await db.select().from(libraries).where(eq(libraries.id, libraryId));
     if (lib.length === 0) return c.json({ error: "Not found" }, 404);
+
+    const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role);
+    if (accessibleIds !== null && !accessibleIds.includes(libraryId)) {
+      return c.json({ error: "Not found" }, 404);
+    }
 
     const { mediaCategory, mimeType, drmProtected, sortBy, order, page, limit } = c.req.query();
 
