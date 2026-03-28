@@ -1,3 +1,18 @@
+## 2026-03-28 - US-053
+- Implemented scoped plugin database access in packages/server-core/src/pluginDb.ts
+- Files created: packages/server-core/src/pluginDb.ts, packages/server-core/src/pluginDb.test.ts
+- Files changed: packages/server-core/src/pluginManager.ts (setPluginDatabase + buildContext), packages/server-core/src/server.ts (calls setPluginDatabase after openDatabase), packages/server-core/src/index.ts (exports setPluginDatabase)
+- `validatePluginSql(pluginId, sql)`: allows SELECT/PRAGMA/EXPLAIN on any table; restricts writes to `plugin_<id>_*` tables; core tables always read-only; hyphens in pluginId normalized to underscores for prefix
+- `createPluginDatabaseAccess(pluginId, client)`: returns PluginDatabaseAccess backed by raw libSQL Client; rows returned as `Record<string, unknown>[]`
+- `setPluginDatabase(client)`: module-level function on pluginManager; builds real scoped access in `buildContext` when client is set; falls back to no-op stub when unset (preserves existing test behaviour)
+- 26 tests covering: SELECT/PRAGMA/EXPLAIN allowed, CREATE TABLE enforcement, INSERT/UPDATE/DELETE/DROP restrictions, core table blocking, plugin isolation, parameterised queries, empty result sets
+- **Learnings for future iterations:**
+  - `@libsql/client` `InValue` type is `string | number | boolean | null | ArrayBuffer` — cast `unknown[]` params with `as InValue[]`
+  - `client.execute({ sql, args })` returns `ResultSet` with `columns: string[]` and `rows: Row[]`; map to objects using column index
+  - Module-level `_pluginClient: Client | undefined` pattern allows optional db in plugin manager without changing activatePlugin signature or breaking existing tests
+  - Plugin prefix: replace non-alphanumeric chars with `_` and lowercase the pluginId when building `plugin_<id>_` prefix
+---
+
 ## 2026-03-28 - US-051
 - Implemented plugin API route registration — dynamic dispatcher under /api/v1/plugins/:pluginId/*
 - Files created: packages/server-core/src/pluginRoutes.ts, packages/server-core/src/pluginRoutes.test.ts
