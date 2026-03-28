@@ -54,3 +54,7 @@ export {
   type TriggerFn,
   type SchedulerHandle,
 } from "./scheduler.js";
+export {
+  discoverPluginManifests,
+  type PluginLoadResult,
+} from "./pluginLoader.js";
