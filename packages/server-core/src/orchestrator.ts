@@ -4,7 +4,7 @@ import { detectDrm } from "./drm.js";
 import { emitEvent } from "./events.js";
 import { extractExiftoolMetadata, isImageCategory } from "./exiftool.js";
 import { extractFfprobeMetadata, isAudioVideoCategory } from "./ffprobe.js";
-import { groupMusicTracks, groupTvEpisodes } from "./grouping.js";
+import { groupAudiobooks, groupMusicTracks, groupTvEpisodes } from "./grouping.js";
 import {
   extract3DModelMetadata,
   extractArchiveMetadata,
@@ -268,6 +268,8 @@ export async function scanLibrary(
   await groupTvEpisodes(db, libraryId);
   // Auto-group music tracks into artist and album groups
   await groupMusicTracks(db, libraryId);
+  // Auto-group audiobook chapters into book and series groups
+  await groupAudiobooks(db, libraryId);
 
   return {
     libraryId,

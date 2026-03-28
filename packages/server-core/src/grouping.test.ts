@@ -4,9 +4,11 @@ import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { openDatabase } from "./db.js";
 import {
+  groupAudiobooks,
   groupMusicTracks,
   groupTvEpisodes,
   parseTvEpisode,
+  resolveAudiobookInfo,
   resolveSeriesName,
 } from "./grouping.js";
 import { migrateDatabase } from "./migrate.js";
@@ -562,5 +564,296 @@ describe("groupMusicTracks", () => {
     expect(allGroups).toHaveLength(2); // 1 artist + 1 album
     expect(members).toHaveLength(1);
     expect(members[0]?.mediaItemId).toBe("track-1");
+  });
+});
+
+describe("resolveAudiobookInfo", () => {
+  it("uses album tag as book title", () => {
+    const result = resolveAudiobookInfo("/audiobooks/chapter01.m4b", { album: "Dune" });
+    expect(result.bookTitle).toBe("Dune");
+  });
+
+  it("falls back to parent folder when no album tag", () => {
+    const result = resolveAudiobookInfo("/audiobooks/Dune/chapter01.m4b", {});
+    expect(result.bookTitle).toBe("Dune");
+  });
+
+  it("uses series tag for series name", () => {
+    const result = resolveAudiobookInfo("/audiobooks/chapter01.m4b", {
+      album: "Dune",
+      series: "Dune Chronicles",
+    });
+    expect(result.bookTitle).toBe("Dune");
+    expect(result.seriesName).toBe("Dune Chronicles");
+  });
+
+  it("uses parent folder as series when album tag differs from parent folder", () => {
+    const result = resolveAudiobookInfo("/audiobooks/Dune Chronicles/chapter01.m4b", {
+      album: "Dune",
+    });
+    expect(result.bookTitle).toBe("Dune");
+    expect(result.seriesName).toBe("Dune Chronicles");
+  });
+
+  it("uses grandparent folder as series when no album tag", () => {
+    const result = resolveAudiobookInfo("/audiobooks/Dune Chronicles/Dune/chapter01.m4b", {});
+    expect(result.bookTitle).toBe("Dune");
+    expect(result.seriesName).toBe("Dune Chronicles");
+  });
+
+  it("returns null series when album tag matches parent folder (standalone book)", () => {
+    const result = resolveAudiobookInfo("/audiobooks/Dune/chapter01.m4b", { album: "Dune" });
+    expect(result.bookTitle).toBe("Dune");
+    expect(result.seriesName).toBeNull();
+  });
+});
+
+describe("groupAudiobooks", () => {
+  let client: Client;
+  let db: LibSQLDatabase;
+
+  beforeEach(async () => {
+    ({ client, db } = await openDatabase(":memory:"));
+    await migrateDatabase(db);
+
+    await db.insert(libraries).values({ id: "lib-1", name: "Audiobooks", allowedMediaTypes: "[]" });
+    await db.insert(dataSources).values({
+      id: "ds-1",
+      libraryId: "lib-1",
+      type: "local",
+      path: "/audiobooks",
+    });
+  });
+
+  afterEach(() => {
+    client.close();
+  });
+
+  it("creates book groups for audiobook chapters", async () => {
+    await db.insert(mediaItems).values([
+      {
+        id: "ch-1",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/audiobooks/Dune/ch01.m4b",
+        fileName: "ch01.m4b",
+        fileSize: 10000,
+        mediaCategory: MediaCategory.Audiobooks,
+        metadata: JSON.stringify({ album: "Dune", artist: "Simon Vance", trackNumber: 1 }),
+      },
+      {
+        id: "ch-2",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/audiobooks/Dune/ch02.m4b",
+        fileName: "ch02.m4b",
+        fileSize: 10000,
+        mediaCategory: MediaCategory.Audiobooks,
+        metadata: JSON.stringify({ album: "Dune", artist: "Simon Vance", trackNumber: 2 }),
+      },
+    ]);
+
+    await groupAudiobooks(db, "lib-1");
+
+    const allGroups = await db.select().from(groups);
+    const bookGroups = allGroups.filter((g) => g.type === "book");
+
+    expect(bookGroups).toHaveLength(1);
+    expect(bookGroups[0]?.title).toBe("Dune");
+  });
+
+  it("stores narrator in book group metadata", async () => {
+    await db.insert(mediaItems).values({
+      id: "ch-1",
+      libraryId: "lib-1",
+      dataSourceId: "ds-1",
+      filePath: "/audiobooks/Dune/ch01.m4b",
+      fileName: "ch01.m4b",
+      fileSize: 10000,
+      mediaCategory: MediaCategory.Audiobooks,
+      metadata: JSON.stringify({ album: "Dune", artist: "Simon Vance", trackNumber: 1 }),
+    });
+
+    await groupAudiobooks(db, "lib-1");
+
+    const bookGroups = await db.select().from(groups).where();
+    expect(bookGroups).toHaveLength(1);
+    const meta = JSON.parse(bookGroups[0]?.metadata ?? "{}");
+    expect(meta.narrator).toBe("Simon Vance");
+  });
+
+  it("orders chapters by track number", async () => {
+    await db.insert(mediaItems).values([
+      {
+        id: "ch-3",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/audiobooks/Foundation/ch03.m4b",
+        fileName: "ch03.m4b",
+        fileSize: 8000,
+        mediaCategory: MediaCategory.Audiobooks,
+        metadata: JSON.stringify({ album: "Foundation", trackNumber: 3 }),
+      },
+      {
+        id: "ch-1",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/audiobooks/Foundation/ch01.m4b",
+        fileName: "ch01.m4b",
+        fileSize: 8000,
+        mediaCategory: MediaCategory.Audiobooks,
+        metadata: JSON.stringify({ album: "Foundation", trackNumber: 1 }),
+      },
+    ]);
+
+    await groupAudiobooks(db, "lib-1");
+
+    const members = await db.select().from(groupMembers);
+    const ch1 = members.find((m) => m.mediaItemId === "ch-1");
+    const ch3 = members.find((m) => m.mediaItemId === "ch-3");
+    expect(ch1?.sortOrder).toBe(1);
+    expect(ch3?.sortOrder).toBe(3);
+  });
+
+  it("creates series groups when series metadata is present", async () => {
+    await db.insert(mediaItems).values({
+      id: "ch-1",
+      libraryId: "lib-1",
+      dataSourceId: "ds-1",
+      filePath: "/audiobooks/Dune/ch01.m4b",
+      fileName: "ch01.m4b",
+      fileSize: 10000,
+      mediaCategory: MediaCategory.Audiobooks,
+      metadata: JSON.stringify({
+        album: "Dune",
+        artist: "Simon Vance",
+        series: "Dune Chronicles",
+        trackNumber: 1,
+      }),
+    });
+
+    await groupAudiobooks(db, "lib-1");
+
+    const allGroups = await db.select().from(groups);
+    const seriesGroups = allGroups.filter((g) => g.type === "audiobook-series");
+    const bookGroups = allGroups.filter((g) => g.type === "book");
+
+    expect(seriesGroups).toHaveLength(1);
+    expect(seriesGroups[0]?.title).toBe("Dune Chronicles");
+    expect(bookGroups).toHaveLength(1);
+    expect(bookGroups[0]?.parentGroupId).toBe(seriesGroups[0]?.id);
+  });
+
+  it("detects series from folder structure when no series tag", async () => {
+    await db.insert(mediaItems).values({
+      id: "ch-1",
+      libraryId: "lib-1",
+      dataSourceId: "ds-1",
+      filePath: "/audiobooks/Dune Chronicles/Dune/ch01.m4b",
+      fileName: "ch01.m4b",
+      fileSize: 10000,
+      mediaCategory: MediaCategory.Audiobooks,
+      metadata: JSON.stringify({ trackNumber: 1 }),
+    });
+
+    await groupAudiobooks(db, "lib-1");
+
+    const allGroups = await db.select().from(groups);
+    const seriesGroups = allGroups.filter((g) => g.type === "audiobook-series");
+    const bookGroups = allGroups.filter((g) => g.type === "book");
+
+    expect(seriesGroups).toHaveLength(1);
+    expect(seriesGroups[0]?.title).toBe("Dune Chronicles");
+    expect(bookGroups[0]?.title).toBe("Dune");
+    expect(bookGroups[0]?.parentGroupId).toBe(seriesGroups[0]?.id);
+  });
+
+  it("does not duplicate groups or members on repeated calls", async () => {
+    await db.insert(mediaItems).values({
+      id: "ch-1",
+      libraryId: "lib-1",
+      dataSourceId: "ds-1",
+      filePath: "/audiobooks/Dune/ch01.m4b",
+      fileName: "ch01.m4b",
+      fileSize: 10000,
+      mediaCategory: MediaCategory.Audiobooks,
+      metadata: JSON.stringify({ album: "Dune", trackNumber: 1 }),
+    });
+
+    await groupAudiobooks(db, "lib-1");
+    await groupAudiobooks(db, "lib-1");
+
+    const allGroups = await db.select().from(groups);
+    const members = await db.select().from(groupMembers);
+
+    expect(allGroups).toHaveLength(1); // 1 book group (no series)
+    expect(members).toHaveLength(1);
+  });
+
+  it("creates separate book groups for different books", async () => {
+    await db.insert(mediaItems).values([
+      {
+        id: "ch-1",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/audiobooks/Dune/ch01.m4b",
+        fileName: "ch01.m4b",
+        fileSize: 10000,
+        mediaCategory: MediaCategory.Audiobooks,
+        metadata: JSON.stringify({ album: "Dune", trackNumber: 1 }),
+      },
+      {
+        id: "ch-2",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/audiobooks/Foundation/ch01.m4b",
+        fileName: "ch01.m4b",
+        fileSize: 10000,
+        mediaCategory: MediaCategory.Audiobooks,
+        metadata: JSON.stringify({ album: "Foundation", trackNumber: 1 }),
+      },
+    ]);
+
+    await groupAudiobooks(db, "lib-1");
+
+    const bookGroups = await db.select().from(groups);
+    expect(bookGroups).toHaveLength(2);
+    const titles = bookGroups.map((g) => g.title).sort();
+    expect(titles).toEqual(["Dune", "Foundation"]);
+  });
+
+  it("only processes Audiobooks category items", async () => {
+    await db.insert(mediaItems).values([
+      {
+        id: "ch-1",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/audiobooks/Dune/ch01.m4b",
+        fileName: "ch01.m4b",
+        fileSize: 10000,
+        mediaCategory: MediaCategory.Audiobooks,
+        metadata: JSON.stringify({ album: "Dune", trackNumber: 1 }),
+      },
+      {
+        id: "track-1",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/audiobooks/music.mp3",
+        fileName: "music.mp3",
+        fileSize: 3000,
+        mediaCategory: MediaCategory.Music,
+        metadata: JSON.stringify({ album: "Dune", artist: "Someone", trackNumber: 1 }),
+      },
+    ]);
+
+    await groupAudiobooks(db, "lib-1");
+
+    const allGroups = await db.select().from(groups);
+    const members = await db.select().from(groupMembers);
+
+    // Only the audiobook chapter should be grouped
+    expect(allGroups).toHaveLength(1);
+    expect(members).toHaveLength(1);
+    expect(members[0]?.mediaItemId).toBe("ch-1");
   });
 });
