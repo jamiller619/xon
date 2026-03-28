@@ -55,9 +55,22 @@ export const mediaItems = sqliteTable(
   ]
 );
 
+export const readingPositions = sqliteTable("reading_positions", {
+  id: text("id").primaryKey(),
+  mediaItemId: text("media_item_id")
+    .notNull()
+    .unique()
+    .references(() => mediaItems.id, { onDelete: "cascade" }),
+  cfi: text("cfi").notNull(),
+  chapterTitle: text("chapter_title"),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+
 export type Library = typeof libraries.$inferSelect;
 export type NewLibrary = typeof libraries.$inferInsert;
 export type DataSource = typeof dataSources.$inferSelect;
 export type NewDataSource = typeof dataSources.$inferInsert;
 export type MediaItem = typeof mediaItems.$inferSelect;
 export type NewMediaItem = typeof mediaItems.$inferInsert;
+export type ReadingPosition = typeof readingPositions.$inferSelect;
+export type NewReadingPosition = typeof readingPositions.$inferInsert;

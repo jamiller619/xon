@@ -8,8 +8,9 @@ import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
 import { extractStreamTracks } from "../ffprobe.js";
+import { convertMobiToEpub } from "../mobi.js";
 import type { MediaItem } from "../schema.js";
-import { mediaItems } from "../schema.js";
+import { mediaItems, readingPositions } from "../schema.js";
 import type { ThumbnailPaths } from "../thumbnails.js";
 
 const VALID_SIZES = ["small", "medium", "large"] as const;
@@ -284,6 +285,98 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       "Content-Type": "image/jpeg",
       "Cache-Control": "public, max-age=86400, immutable",
     });
+  });
+
+  // GET /media/:id/epub — serve EPUB file (or convert MOBI to EPUB)
+  router.get("/:id/epub", async (c) => {
+    const id = c.req.param("id");
+    const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id));
+    const item = rows[0];
+    if (!item) return c.json({ error: "Not found" }, 404);
+
+    const ext = extname(item.filePath).toLowerCase();
+    if (ext !== ".epub" && ext !== ".mobi" && ext !== ".azw" && ext !== ".azw3") {
+      return c.json({ error: "Not an EPUB or MOBI file" }, 400);
+    }
+
+    let epubPath = item.filePath;
+
+    if (ext !== ".epub") {
+      // Convert MOBI/AZW to EPUB via ebook-convert (calibre)
+      let converted: string;
+      try {
+        converted = await convertMobiToEpub(item.filePath);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : "Conversion failed";
+        return c.json({ error: msg }, 500);
+      }
+      epubPath = converted;
+    }
+
+    let buffer: Buffer;
+    try {
+      buffer = await readFile(epubPath);
+    } catch {
+      return c.json({ error: "File not accessible" }, 404);
+    }
+
+    return c.body(new Uint8Array(buffer), 200, {
+      "Content-Type": "application/epub+zip",
+      "Cache-Control": "no-store",
+    });
+  });
+
+  // GET /media/:id/reading-position — retrieve saved reading position
+  router.get("/:id/reading-position", async (c) => {
+    const id = c.req.param("id");
+    const rows = await db
+      .select()
+      .from(readingPositions)
+      .where(eq(readingPositions.mediaItemId, id));
+    const pos = rows[0];
+    if (!pos) return c.json(null);
+    return c.json({ cfi: pos.cfi, chapterTitle: pos.chapterTitle });
+  });
+
+  const readingPositionSchema = z.object({
+    cfi: z.string().min(1),
+    chapterTitle: z.string().optional(),
+  });
+
+  // PUT /media/:id/reading-position — upsert reading position
+  router.put("/:id/reading-position", zValidator("json", readingPositionSchema), async (c) => {
+    const id = c.req.param("id");
+    const body = c.req.valid("json");
+
+    // Verify media item exists
+    const itemRows = await db.select().from(mediaItems).where(eq(mediaItems.id, id));
+    if (!itemRows[0]) return c.json({ error: "Not found" }, 404);
+
+    const existing = await db
+      .select()
+      .from(readingPositions)
+      .where(eq(readingPositions.mediaItemId, id));
+
+    if (existing[0]) {
+      await db
+        .update(readingPositions)
+        .set({
+          cfi: body.cfi,
+          ...(body.chapterTitle !== undefined ? { chapterTitle: body.chapterTitle } : {}),
+          updatedAt: new Date(),
+        })
+        .where(eq(readingPositions.mediaItemId, id));
+    } else {
+      const crypto = await import("node:crypto");
+      await db.insert(readingPositions).values({
+        id: crypto.randomUUID(),
+        mediaItemId: id,
+        cfi: body.cfi,
+        ...(body.chapterTitle !== undefined ? { chapterTitle: body.chapterTitle } : {}),
+      });
+    }
+
+    return c.json({ ok: true });
   });
 
   return router;

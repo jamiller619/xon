@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import EpubViewer from "../components/EpubViewer.js";
 import ImageViewer, { type ImageSibling } from "../components/ImageViewer.js";
 import PdfViewer from "../components/PdfViewer.js";
 import VideoPlayer from "../components/VideoPlayer.js";
@@ -54,6 +55,7 @@ export default function MediaDetail() {
   const [showPlayer, setShowPlayer] = useState(false);
   const [showImageViewer, setShowImageViewer] = useState(false);
   const [showPdfViewer, setShowPdfViewer] = useState(false);
+  const [showEpubViewer, setShowEpubViewer] = useState(false);
   const [imageSiblings, setImageSiblings] = useState<ImageSibling[]>([]);
 
   const playTrack = useAudioStore((s) => s.playTrack);
@@ -201,6 +203,10 @@ export default function MediaDetail() {
 
   const isImage = item.mimeType?.startsWith("image/");
   const isPdf = item.mimeType === "application/pdf";
+  const isEpub =
+    item.mimeType === "application/epub+zip" ||
+    item.mimeType === "application/x-mobipocket-ebook" ||
+    item.mimeType === "application/vnd.amazon.ebook";
 
   return (
     <div className={styles.page ?? ""}>
@@ -217,6 +223,13 @@ export default function MediaDetail() {
           mediaId={id}
           title={item.title ?? item.fileName}
           onClose={() => setShowPdfViewer(false)}
+        />
+      )}
+      {showEpubViewer && id && (
+        <EpubViewer
+          mediaId={id}
+          title={item.title ?? item.fileName}
+          onClose={() => setShowEpubViewer(false)}
         />
       )}
       <div className={styles.breadcrumb ?? ""}>
@@ -273,6 +286,15 @@ export default function MediaDetail() {
                   title="Open PDF viewer"
                 >
                   <span className={styles.posterIcon ?? ""}>📄</span>
+                </button>
+              ) : isEpub && !item.drmProtected ? (
+                <button
+                  type="button"
+                  className={styles.posterPlaceholder ?? ""}
+                  onClick={() => setShowEpubViewer(true)}
+                  title="Open EPUB reader"
+                >
+                  <span className={styles.posterIcon ?? ""}>📖</span>
                 </button>
               ) : (
                 <div className={styles.posterPlaceholder ?? ""}>
@@ -405,6 +427,16 @@ export default function MediaDetail() {
                     onClick={() => setShowPdfViewer(true)}
                   >
                     📄 Open
+                  </button>
+                ) : isEpub ? (
+                  <button
+                    type="button"
+                    className={`${styles.btnPlay ?? ""} ${item.drmProtected ? (styles.btnDisabled ?? "") : ""}`}
+                    disabled={item.drmProtected}
+                    title={item.drmProtected ? "Reading unavailable — DRM protected" : "Read ebook"}
+                    onClick={() => setShowEpubViewer(true)}
+                  >
+                    📖 Read
                   </button>
                 ) : item.mimeType?.startsWith("audio/") ? (
                   <>
