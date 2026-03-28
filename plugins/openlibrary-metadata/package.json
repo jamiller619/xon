@@ -1,0 +1,33 @@
+{
+  "name": "@xon/plugin-openlibrary-metadata",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "xon": {
+    "id": "openlibrary-metadata",
+    "name": "OpenLibrary Metadata",
+    "version": "1.0.0",
+    "description": "Fetches book and document metadata from OpenLibrary",
+    "author": "Xon",
+    "category": "MetadataSource",
+    "mediaCategories": ["Documents"],
+    "main": "dist/index.js",
+    "permissions": {
+      "network": ["openlibrary.org", "covers.openlibrary.org"]
+    }
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "typecheck": "tsc --build --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@xon/plugin-sdk": "*",
+    "@xon/shared": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "*",
+    "vitest": "^2.1.0"
+  }
+}

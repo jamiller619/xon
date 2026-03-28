@@ -26,7 +26,8 @@
     { "path": "./apps/desktop" },
     { "path": "./apps/headless" },
     { "path": "./plugins/tmdb-metadata" },
-    { "path": "./plugins/musicbrainz-metadata" }
+    { "path": "./plugins/musicbrainz-metadata" },
+    { "path": "./plugins/openlibrary-metadata" }
   ],
   "exclude": ["node_modules", "dist", "**/dist", "**/*.test.ts", "**/*.spec.ts", "apps/web"]
 }
