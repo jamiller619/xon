@@ -13,6 +13,8 @@ export {
   favorites,
   watchlist,
   apiTokens,
+  groups,
+  groupMembers,
   type Library,
   type NewLibrary,
   type DataSource,
@@ -33,7 +35,17 @@ export {
   type NewWatchlist,
   type ApiToken,
   type NewApiToken,
+  type Group,
+  type NewGroup,
+  type GroupMember,
+  type NewGroupMember,
 } from "./schema.js";
+export {
+  parseTvEpisode,
+  resolveSeriesName,
+  groupTvEpisodes,
+  type TvEpisodeInfo,
+} from "./grouping.js";
 export { hashPassword, verifyPassword } from "./password.js";
 export {
   extractExiftoolMetadata,

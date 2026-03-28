@@ -4,6 +4,7 @@ import { detectDrm } from "./drm.js";
 import { emitEvent } from "./events.js";
 import { extractExiftoolMetadata, isImageCategory } from "./exiftool.js";
 import { extractFfprobeMetadata, isAudioVideoCategory } from "./ffprobe.js";
+import { groupTvEpisodes } from "./grouping.js";
 import {
   extract3DModelMetadata,
   extractArchiveMetadata,
@@ -262,6 +263,9 @@ export async function scanLibrary(
       totalRemoved += result.removedFilePaths.length;
     }
   }
+
+  // Auto-group TV episodes into series and season groups
+  await groupTvEpisodes(db, libraryId);
 
   return {
     libraryId,

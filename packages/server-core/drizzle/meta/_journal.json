@@ -92,6 +92,13 @@
       "when": 1774800100000,
       "tag": "0012_media_fts",
       "breakpoints": true
+    },
+    {
+      "idx": 13,
+      "version": "6",
+      "when": 1774800200000,
+      "tag": "0013_groups",
+      "breakpoints": true
     }
   ]
 }
