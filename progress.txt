@@ -1,3 +1,21 @@
+## 2026-03-28 - US-080
+- Implemented bulk editing of media items (multi-select UI + API)
+- Files changed: packages/server-core/src/routes/media.ts (added POST /api/v1/media/bulk), packages/server-core/src/routes/media.test.ts (7 new bulk tests), apps/web/src/components/MediaCard.tsx (selectMode/selected/onToggleSelect props), apps/web/src/components/MediaCard.module.css (cardSelected, listRowSelected, selectOverlay styles), apps/web/src/components/BulkEditDialog.tsx (new dialog), apps/web/src/pages/LibraryBrowser.tsx (selectMode state + toolbar), apps/web/src/pages/LibraryBrowser.module.css (selectToolbar styles)
+- `POST /api/v1/media/bulk` with `{ action: "update"|"delete"|"move-to-group", ids: string[], updates?: { genre, tags, contentRating }, groupId? }`
+- "update" action sets genre/tags in metadata JSON and/or contentRating column
+- "delete" action removes items from DB (not from disk); access-checked via getAccessibleLibraryIds
+- "move-to-group" action inserts into groupMembers with onConflictDoNothing for idempotency
+- LibraryBrowser: ☑ toggle button in header enables selectMode; selection toolbar shows count + "Select All" + "Clear" + "Edit N items" button
+- MediaCard: in selectMode, grid cards are clickable divs with checkbox overlay; list rows show prepended checkbox cell; links disabled in selectMode
+- BulkEditDialog: genre text, comma-separated tags, content rating select, move-to-group select, delete button with confirm
+- 584 tests passing; biome clean; typecheck clean
+- **Learnings for future iterations:**
+  - Biome `noNoninteractiveTabindex`: cannot use `tabIndex` on plain divs — remove or use a button/anchor instead
+  - Biome `useKeyWithClickEvents`: any element with `onClick` that's conditionally set (e.g. `onClick={condition ? fn : undefined}`) still needs a corresponding `onKeyDown` on the same element
+  - For selectMode on MediaCard, use a plain `<div>` without `role` or `tabIndex` — the checkbox inside provides accessible interaction
+  - `inArray(col, [...Set])` works for filtering by dynamic ID list; always scope bulk operations via `getAccessibleLibraryIds`
+---
+
 ## 2026-03-28 - US-078
 - Implemented automatic photo grouping by date and GPS location
 - Files changed: packages/server-core/src/grouping.ts (added groupPhotos, parseExifDate, parseExifTimestamp, clusterCoordinate), packages/server-core/src/grouping.test.ts (added 18 new tests), packages/server-core/src/orchestrator.ts (calls groupPhotos after scan), packages/server-core/src/index.ts (exports new functions)
