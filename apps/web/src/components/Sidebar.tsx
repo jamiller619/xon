@@ -50,8 +50,12 @@ export default function Sidebar({ open }: SidebarProps) {
           <span className={styles.navIcon ?? ""}>⌕</span>
           Search
         </NavLink>
-        <NavLink to="/admin" className={navClass}>
+        <NavLink to="/settings" className={navClass}>
           <span className={styles.navIcon ?? ""}>⚙</span>
+          Settings
+        </NavLink>
+        <NavLink to="/admin" className={navClass}>
+          <span className={styles.navIcon ?? ""}>⊛</span>
           Admin
         </NavLink>
         <PluginSlot injectionPoint="nav-item" />

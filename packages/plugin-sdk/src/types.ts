@@ -24,6 +24,13 @@ export interface PluginManifest {
   minServerVersion?: string;
   /** Entry point relative to plugin root (default: index.js) */
   main?: string;
+  /** Theme asset files (for Theme category plugins) */
+  themeAssets?: {
+    /** CSS file path relative to plugin assets directory */
+    cssFile?: string;
+    /** Optional JavaScript file path relative to plugin assets directory */
+    jsFile?: string;
+  };
 }
 
 // Event types for plugin event hooks

@@ -1,0 +1,70 @@
+.page {
+  padding: 2rem;
+  max-width: 48rem;
+}
+
+.heading {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 2rem;
+}
+
+.section {
+  margin-bottom: 2rem;
+}
+
+.sectionHeading {
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin-bottom: 0.5rem;
+}
+
+.sectionDescription {
+  color: var(--color-text-muted, #888);
+  margin-bottom: 1rem;
+  font-size: 0.9rem;
+}
+
+.themeList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.themeOption {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  border: 1px solid var(--color-border, #333);
+  border-radius: 0.5rem;
+  cursor: pointer;
+}
+
+.themeOption:has(input:checked) {
+  border-color: var(--color-accent, #7c6af7);
+  background: var(--color-accent-subtle, rgba(124, 106, 247, 0.1));
+}
+
+.themeName {
+  font-weight: 500;
+  flex-shrink: 0;
+}
+
+.themeDescription {
+  color: var(--color-text-muted, #888);
+  font-size: 0.875rem;
+}
+
+.themeInactive {
+  color: var(--color-text-muted, #888);
+  font-size: 0.75rem;
+  font-style: italic;
+}
+
+.noThemes {
+  color: var(--color-text-muted, #888);
+  font-size: 0.9rem;
+  padding: 1rem;
+  text-align: center;
+}

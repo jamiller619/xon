@@ -4,6 +4,7 @@ import { pluginRouteDispatcher } from "./pluginRoutes.js";
 import { makeLibrariesRouter } from "./routes/libraries.js";
 import { makeMediaRouter } from "./routes/media.js";
 import { makePluginsRouter } from "./routes/plugins.js";
+import { makeThemesRouter } from "./routes/themes.js";
 
 export function createApp(db?: LibSQLDatabase): Hono {
   const app = new Hono().basePath("/api/v1");
@@ -16,6 +17,9 @@ export function createApp(db?: LibSQLDatabase): Hono {
     app.route("/libraries", makeLibrariesRouter(db));
     app.route("/media", makeMediaRouter(db));
   }
+
+  // Theme plugin listing
+  app.route("/themes", makeThemesRouter());
 
   // Plugin UI component listing and static asset serving
   app.route("/plugins", makePluginsRouter());
