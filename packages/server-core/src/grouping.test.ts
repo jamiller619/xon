@@ -1,8 +1,14 @@
 import type { Client } from "@libsql/client";
+import { MediaCategory } from "@xon/shared";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { openDatabase } from "./db.js";
-import { groupTvEpisodes, parseTvEpisode, resolveSeriesName } from "./grouping.js";
+import {
+  groupMusicTracks,
+  groupTvEpisodes,
+  parseTvEpisode,
+  resolveSeriesName,
+} from "./grouping.js";
 import { migrateDatabase } from "./migrate.js";
 import { dataSources, groupMembers, groups, libraries, mediaItems } from "./schema.js";
 
@@ -258,5 +264,303 @@ describe("groupTvEpisodes", () => {
     const series = seriesGroups.filter((g) => g.type === "series");
     expect(series).toHaveLength(1);
     expect(series[0]?.title).toBe("Sopranos");
+  });
+});
+
+describe("groupMusicTracks", () => {
+  let client: Client;
+  let db: LibSQLDatabase;
+
+  beforeEach(async () => {
+    ({ client, db } = await openDatabase(":memory:"));
+    await migrateDatabase(db);
+
+    await db.insert(libraries).values({ id: "lib-1", name: "Music", allowedMediaTypes: "[]" });
+    await db.insert(dataSources).values({
+      id: "ds-1",
+      libraryId: "lib-1",
+      type: "local",
+      path: "/music",
+    });
+  });
+
+  afterEach(() => {
+    client.close();
+  });
+
+  it("creates artist and album groups for music tracks", async () => {
+    await db.insert(mediaItems).values([
+      {
+        id: "track-1",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/music/01 - Song One.mp3",
+        fileName: "01 - Song One.mp3",
+        fileSize: 3000,
+        mediaCategory: MediaCategory.Music,
+        metadata: JSON.stringify({
+          artist: "Artist A",
+          album: "Album X",
+          trackNumber: 1,
+          discNumber: 1,
+        }),
+      },
+      {
+        id: "track-2",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/music/02 - Song Two.mp3",
+        fileName: "02 - Song Two.mp3",
+        fileSize: 3000,
+        mediaCategory: MediaCategory.Music,
+        metadata: JSON.stringify({
+          artist: "Artist A",
+          album: "Album X",
+          trackNumber: 2,
+          discNumber: 1,
+        }),
+      },
+    ]);
+
+    await groupMusicTracks(db, "lib-1");
+
+    const allGroups = await db.select().from(groups);
+    const artistGroups = allGroups.filter((g) => g.type === "artist");
+    const albumGroups = allGroups.filter((g) => g.type === "album");
+
+    expect(artistGroups).toHaveLength(1);
+    expect(artistGroups[0]?.title).toBe("Artist A");
+
+    expect(albumGroups).toHaveLength(1);
+    expect(albumGroups[0]?.title).toBe("Album X");
+    expect(albumGroups[0]?.parentGroupId).toBe(artistGroups[0]?.id);
+  });
+
+  it("assigns tracks to album groups with disc*1000+track sort order", async () => {
+    await db.insert(mediaItems).values([
+      {
+        id: "track-1",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/music/d1t1.mp3",
+        fileName: "d1t1.mp3",
+        fileSize: 3000,
+        mediaCategory: MediaCategory.Music,
+        metadata: JSON.stringify({
+          artist: "Artist A",
+          album: "Double Album",
+          trackNumber: 1,
+          discNumber: 1,
+        }),
+      },
+      {
+        id: "track-2",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/music/d2t1.mp3",
+        fileName: "d2t1.mp3",
+        fileSize: 3000,
+        mediaCategory: MediaCategory.Music,
+        metadata: JSON.stringify({
+          artist: "Artist A",
+          album: "Double Album",
+          trackNumber: 1,
+          discNumber: 2,
+        }),
+      },
+    ]);
+
+    await groupMusicTracks(db, "lib-1");
+
+    const members = await db.select().from(groupMembers);
+    expect(members).toHaveLength(2);
+
+    const m1 = members.find((m) => m.mediaItemId === "track-1");
+    const m2 = members.find((m) => m.mediaItemId === "track-2");
+    expect(m1?.sortOrder).toBe(1 * 1000 + 1); // disc 1 track 1 = 1001
+    expect(m2?.sortOrder).toBe(2 * 1000 + 1); // disc 2 track 1 = 2001
+  });
+
+  it("groups compilation albums under Various Artists", async () => {
+    await db.insert(mediaItems).values([
+      {
+        id: "track-1",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/music/comp1.mp3",
+        fileName: "comp1.mp3",
+        fileSize: 3000,
+        mediaCategory: MediaCategory.Music,
+        metadata: JSON.stringify({
+          artist: "Artist A",
+          album: "Best Of 2024",
+          trackNumber: 1,
+          discNumber: 1,
+        }),
+      },
+      {
+        id: "track-2",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/music/comp2.mp3",
+        fileName: "comp2.mp3",
+        fileSize: 3000,
+        mediaCategory: MediaCategory.Music,
+        metadata: JSON.stringify({
+          artist: "Artist B",
+          album: "Best Of 2024",
+          trackNumber: 2,
+          discNumber: 1,
+        }),
+      },
+    ]);
+
+    await groupMusicTracks(db, "lib-1");
+
+    const allGroups = await db.select().from(groups);
+    const artistGroups = allGroups.filter((g) => g.type === "artist");
+    const albumGroups = allGroups.filter((g) => g.type === "album");
+
+    expect(artistGroups).toHaveLength(1);
+    expect(artistGroups[0]?.title).toBe("Various Artists");
+    expect(albumGroups).toHaveLength(1);
+    expect(albumGroups[0]?.title).toBe("Best Of 2024");
+  });
+
+  it("does not duplicate groups or members on repeated calls", async () => {
+    await db.insert(mediaItems).values({
+      id: "track-1",
+      libraryId: "lib-1",
+      dataSourceId: "ds-1",
+      filePath: "/music/song.mp3",
+      fileName: "song.mp3",
+      fileSize: 3000,
+      mediaCategory: MediaCategory.Music,
+      metadata: JSON.stringify({
+        artist: "Artist A",
+        album: "Album X",
+        trackNumber: 1,
+        discNumber: 1,
+      }),
+    });
+
+    await groupMusicTracks(db, "lib-1");
+    await groupMusicTracks(db, "lib-1");
+
+    const allGroups = await db.select().from(groups);
+    const members = await db.select().from(groupMembers);
+
+    // 1 artist group + 1 album group = 2 total
+    expect(allGroups).toHaveLength(2);
+    expect(members).toHaveLength(1);
+  });
+
+  it("ignores tracks without album metadata", async () => {
+    await db.insert(mediaItems).values({
+      id: "track-1",
+      libraryId: "lib-1",
+      dataSourceId: "ds-1",
+      filePath: "/music/unknown.mp3",
+      fileName: "unknown.mp3",
+      fileSize: 3000,
+      mediaCategory: MediaCategory.Music,
+      metadata: JSON.stringify({ artist: "Artist A", trackNumber: 1 }),
+    });
+
+    await groupMusicTracks(db, "lib-1");
+
+    const allGroups = await db.select().from(groups);
+    expect(allGroups).toHaveLength(0);
+  });
+
+  it("creates separate album groups for different artists with the same album name", async () => {
+    await db.insert(mediaItems).values([
+      {
+        id: "track-1",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/music/a/greatest.mp3",
+        fileName: "greatest.mp3",
+        fileSize: 3000,
+        mediaCategory: MediaCategory.Music,
+        metadata: JSON.stringify({
+          artist: "Artist A",
+          album: "Greatest Hits",
+          trackNumber: 1,
+          discNumber: 1,
+        }),
+      },
+      {
+        id: "track-2",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/music/b/greatest.mp3",
+        fileName: "greatest.mp3",
+        fileSize: 3000,
+        mediaCategory: MediaCategory.Music,
+        metadata: JSON.stringify({
+          artist: "Artist B",
+          album: "Greatest Hits",
+          trackNumber: 1,
+          discNumber: 1,
+        }),
+      },
+    ]);
+
+    await groupMusicTracks(db, "lib-1");
+
+    const allGroups = await db.select().from(groups);
+    const artistGroups = allGroups.filter((g) => g.type === "artist");
+    const albumGroups = allGroups.filter((g) => g.type === "album");
+
+    // "Greatest Hits" by two different artists = compilation → 1 "Various Artists" + 1 album
+    expect(artistGroups).toHaveLength(1);
+    expect(artistGroups[0]?.title).toBe("Various Artists");
+    expect(albumGroups).toHaveLength(1);
+  });
+
+  it("only processes Music category items, not other categories", async () => {
+    await db.insert(mediaItems).values([
+      {
+        id: "track-1",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/music/song.mp3",
+        fileName: "song.mp3",
+        fileSize: 3000,
+        mediaCategory: MediaCategory.Music,
+        metadata: JSON.stringify({
+          artist: "Artist A",
+          album: "Album X",
+          trackNumber: 1,
+          discNumber: 1,
+        }),
+      },
+      {
+        id: "audiobook-1",
+        libraryId: "lib-1",
+        dataSourceId: "ds-1",
+        filePath: "/music/chapter1.m4b",
+        fileName: "chapter1.m4b",
+        fileSize: 10000,
+        mediaCategory: MediaCategory.Audiobooks,
+        metadata: JSON.stringify({
+          artist: "Author",
+          album: "Big Book",
+          trackNumber: 1,
+          discNumber: 1,
+        }),
+      },
+    ]);
+
+    await groupMusicTracks(db, "lib-1");
+
+    const allGroups = await db.select().from(groups);
+    const members = await db.select().from(groupMembers);
+
+    // Only the Music track should be grouped
+    expect(allGroups).toHaveLength(2); // 1 artist + 1 album
+    expect(members).toHaveLength(1);
+    expect(members[0]?.mediaItemId).toBe("track-1");
   });
 });

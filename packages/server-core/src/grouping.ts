@@ -1,5 +1,6 @@
 import { basename, dirname } from "node:path";
-import { eq, inArray } from "drizzle-orm";
+import { MediaCategory } from "@xon/shared";
+import { and, eq, inArray } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { groupMembers, groups, mediaItems } from "./schema.js";
 
@@ -206,6 +207,165 @@ export async function groupTvEpisodes(db: LibSQLDatabase, libraryId: string): Pr
         groupId: seasonGroupId,
         mediaItemId: ep.id,
         sortOrder: ep.info.episode,
+      });
+    }
+  }
+  if (memberInserts.length > 0) {
+    await db.insert(groupMembers).values(memberInserts);
+  }
+}
+
+function makeMusicArtistGroupId(libraryId: string, artistName: string): string {
+  return `grp:artist:${libraryId}:${artistName}`;
+}
+
+function makeMusicAlbumGroupId(libraryId: string, albumArtist: string, albumTitle: string): string {
+  return `grp:album:${libraryId}:${albumArtist}:${albumTitle}`;
+}
+
+interface MusicTrackData {
+  id: string;
+  album: string;
+  artist: string;
+  trackNumber: number;
+  discNumber: number;
+}
+
+/**
+ * Auto-creates artist and album groups for Music media items in a library,
+ * then assigns each track to its album group sorted by disc/track number.
+ * Compilation albums (multiple artists) are grouped under "Various Artists".
+ * Idempotent: safe to call after every scan.
+ */
+export async function groupMusicTracks(db: LibSQLDatabase, libraryId: string): Promise<void> {
+  // Fetch all Music category items for this library
+  const musicItems = await db
+    .select({ id: mediaItems.id, metadata: mediaItems.metadata })
+    .from(mediaItems)
+    .where(
+      and(eq(mediaItems.libraryId, libraryId), eq(mediaItems.mediaCategory, MediaCategory.Music))
+    );
+
+  if (musicItems.length === 0) return;
+
+  // Parse tags and collect tracks that have album metadata
+  const tracks: MusicTrackData[] = [];
+  for (const item of musicItems) {
+    let tags: Record<string, unknown> = {};
+    try {
+      tags = JSON.parse(item.metadata ?? "{}");
+    } catch {
+      // ignore parse errors
+    }
+    if (typeof tags.album === "string" && tags.album.length > 0) {
+      tracks.push({
+        id: item.id,
+        album: tags.album,
+        artist: typeof tags.artist === "string" ? tags.artist : "Unknown Artist",
+        trackNumber: typeof tags.trackNumber === "number" ? tags.trackNumber : 0,
+        discNumber: typeof tags.discNumber === "number" ? tags.discNumber : 1,
+      });
+    }
+  }
+
+  if (tracks.length === 0) return;
+
+  // Detect compilation albums: if multiple distinct artists share the same album title
+  const albumArtistsMap = new Map<string, Set<string>>();
+  for (const track of tracks) {
+    const set = albumArtistsMap.get(track.album);
+    if (set) {
+      set.add(track.artist);
+    } else {
+      albumArtistsMap.set(track.album, new Set([track.artist]));
+    }
+  }
+
+  const getAlbumArtist = (albumTitle: string): string => {
+    const artistSet = albumArtistsMap.get(albumTitle);
+    if (!artistSet || artistSet.size > 1) return "Various Artists";
+    const first = [...artistSet][0];
+    return first ?? "Unknown Artist";
+  };
+
+  // Collect unique artist group IDs and album group entries
+  const artistGroupIds = new Map<string, string>(); // artistName → groupId
+  const albumGroupMap = new Map<string, { id: string; albumArtist: string; albumTitle: string }>();
+
+  for (const track of tracks) {
+    const albumArtist = getAlbumArtist(track.album);
+    if (!artistGroupIds.has(albumArtist)) {
+      artistGroupIds.set(albumArtist, makeMusicArtistGroupId(libraryId, albumArtist));
+    }
+    const albumGroupId = makeMusicAlbumGroupId(libraryId, albumArtist, track.album);
+    if (!albumGroupMap.has(albumGroupId)) {
+      albumGroupMap.set(albumGroupId, { id: albumGroupId, albumArtist, albumTitle: track.album });
+    }
+  }
+
+  // Fetch existing groups to avoid duplicates
+  const allGroupIds = [...artistGroupIds.values(), ...albumGroupMap.keys()];
+  const existingGroups = await db
+    .select({ id: groups.id })
+    .from(groups)
+    .where(inArray(groups.id, allGroupIds));
+  const existingGroupIdSet = new Set(existingGroups.map((g) => g.id));
+
+  // Insert missing artist groups
+  const artistInserts: Array<typeof groups.$inferInsert> = [];
+  for (const [artistName, artistGroupId] of artistGroupIds) {
+    if (!existingGroupIdSet.has(artistGroupId)) {
+      artistInserts.push({
+        id: artistGroupId,
+        libraryId,
+        type: "artist",
+        title: artistName,
+        parentGroupId: null,
+        metadata: "{}",
+      });
+    }
+  }
+  if (artistInserts.length > 0) {
+    await db.insert(groups).values(artistInserts);
+  }
+
+  // Insert missing album groups
+  const albumInserts: Array<typeof groups.$inferInsert> = [];
+  for (const [albumGroupId, { albumArtist, albumTitle }] of albumGroupMap) {
+    if (!existingGroupIdSet.has(albumGroupId)) {
+      const artistGroupId = artistGroupIds.get(albumArtist) ?? null;
+      albumInserts.push({
+        id: albumGroupId,
+        libraryId,
+        type: "album",
+        title: albumTitle,
+        parentGroupId: artistGroupId,
+        metadata: "{}",
+      });
+    }
+  }
+  if (albumInserts.length > 0) {
+    await db.insert(groups).values(albumInserts);
+  }
+
+  // Fetch existing group members
+  const trackIds = tracks.map((t) => t.id);
+  const existingMembers = await db
+    .select({ mediaItemId: groupMembers.mediaItemId })
+    .from(groupMembers)
+    .where(inArray(groupMembers.mediaItemId, trackIds));
+  const existingMemberSet = new Set(existingMembers.map((m) => m.mediaItemId));
+
+  // Insert missing members — sort by disc * 1000 + trackNumber
+  const memberInserts: Array<typeof groupMembers.$inferInsert> = [];
+  for (const track of tracks) {
+    if (!existingMemberSet.has(track.id)) {
+      const albumArtist = getAlbumArtist(track.album);
+      const albumGroupId = makeMusicAlbumGroupId(libraryId, albumArtist, track.album);
+      memberInserts.push({
+        groupId: albumGroupId,
+        mediaItemId: track.id,
+        sortOrder: track.discNumber * 1000 + track.trackNumber,
       });
     }
   }
