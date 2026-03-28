@@ -1,3 +1,21 @@
+## 2026-03-28 - US-075
+- Implemented automatic TV episode grouping into series and season groups
+- Files created: packages/server-core/src/grouping.ts, packages/server-core/src/grouping.test.ts, packages/server-core/drizzle/0013_groups.sql
+- Files changed: packages/server-core/src/schema.ts (added groups + groupMembers tables + types), packages/server-core/src/orchestrator.ts (call groupTvEpisodes at end of scanLibrary), packages/server-core/src/index.ts (exported new types and grouping functions), packages/server-core/drizzle/meta/_journal.json
+- `groups` table: id (deterministic), libraryId, type (series/season/etc), title, parentGroupId (nullable), metadata JSON, createdAt
+- `groupMembers` table: composite PK (groupId, mediaItemId), sortOrder (= episode number)
+- `parseTvEpisode(fileName)`: parses SxxExx, sXXeXX, NxNN patterns; extracts seriesName from filename prefix
+- `resolveSeriesName(filePath, info)`: falls back to grandparent dir when parent looks like "Season N" / "SXX"
+- `groupTvEpisodes(db, libraryId)`: idempotent; uses deterministic IDs (grp:series:..., grp:season:...) to avoid duplicates on re-scan
+- Called automatically from orchestrator.ts after each library scan
+- 540 tests passing; biome clean (4 pre-existing errors in pluginLoader not related to this story)
+- **Learnings for future iterations:**
+  - Deterministic group IDs (grp:type:...) avoid needing unique constraints or ON CONFLICT handling for idempotent group creation
+  - `resolveSeriesName` grandparent fallback: `/^(?:season|s)\s*\d+$/i` detects season folder names like "Season 1", "season01", "S01"
+  - Biome `useNumberNamespace`: use `Number.parseInt` not `parseInt`
+  - `groups` table self-referential FK (parent_group_id → groups.id) works fine in SQLite with cascading deletes
+---
+
 ## 2026-03-28 - US-074
 - Implemented Search UI with type-ahead dropdown and full search results page
 - Files created: apps/web/src/pages/Search.tsx, apps/web/src/pages/Search.module.css
