@@ -1,10 +1,12 @@
 import { boot } from "@xon/server-core";
 import { DEFAULT_PORT } from "@xon/shared";
 import { BrowserWindow, app } from "electron";
+import { type TrayHandle, createTray } from "./tray.js";
 
 const headless = process.env.XON_HEADLESS === "1" || process.env.XON_HEADLESS === "true";
 
 let mainWindow: BrowserWindow | null = null;
+let trayHandle: TrayHandle | null = null;
 let isQuitting = false;
 
 function createWindow(): void {
@@ -30,6 +32,7 @@ app.whenReady().then(() => {
 
   if (!headless) {
     createWindow();
+    trayHandle = createTray();
   } else {
     console.log("Xon desktop running in headless mode");
   }
@@ -51,6 +54,7 @@ app.on("before-quit", (event) => {
   if (!isQuitting) {
     isQuitting = true;
     event.preventDefault();
+    trayHandle?.destroy();
     // Trigger server-core graceful shutdown; its handler calls process.exit(0)
     process.emit("SIGTERM");
   }
