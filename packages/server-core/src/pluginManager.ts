@@ -1,4 +1,4 @@
-import { join } from "node:path";
+import { basename, join } from "node:path";
 import type { Client } from "@libsql/client";
 import { BasePlugin } from "@xon/plugin-sdk";
 import type {
@@ -33,6 +33,15 @@ export interface PluginEntry {
 
 /** Registry of all loaded plugins, keyed by plugin id */
 export const registry = new Map<string, PluginEntry>();
+
+export interface PluginErrorEntry {
+  pluginDir: string;
+  manifest?: PluginManifest;
+  error: string;
+}
+
+/** Plugins that failed to load or activate, keyed by plugin id or dir basename */
+export const pluginErrors = new Map<string, PluginErrorEntry>();
 
 /** Per-event handler sets for plugin event hooks */
 const pluginEventHandlers = new Map<PluginEvent, Set<AnyPluginEventHandler>>();
@@ -237,6 +246,8 @@ export async function discoverAndActivatePlugins(pluginDir: string): Promise<voi
   for (const result of results) {
     if (!result.success) {
       console.error(`[plugin-manager] Skipping plugin at ${result.pluginDir}: ${result.error}`);
+      const fallbackId = basename(result.pluginDir);
+      pluginErrors.set(fallbackId, { pluginDir: result.pluginDir, error: result.error });
       continue;
     }
 
@@ -247,9 +258,9 @@ export async function discoverAndActivatePlugins(pluginDir: string): Promise<voi
       await activatePlugin(manifest.id);
       console.log(`[plugin-manager] Activated plugin: ${manifest.id} (${manifest.name})`);
     } catch (err) {
-      console.error(
-        `[plugin-manager] Failed to activate plugin "${manifest.id}": ${err instanceof Error ? err.message : String(err)}`
-      );
+      const errorMsg = err instanceof Error ? err.message : String(err);
+      console.error(`[plugin-manager] Failed to activate plugin "${manifest.id}": ${errorMsg}`);
+      pluginErrors.set(manifest.id, { pluginDir: dir, manifest, error: errorMsg });
     }
   }
 }
@@ -258,5 +269,6 @@ export async function discoverAndActivatePlugins(pluginDir: string): Promise<voi
 export function _resetForTesting(): void {
   registry.clear();
   pluginEventHandlers.clear();
+  pluginErrors.clear();
   _pluginClient = undefined;
 }

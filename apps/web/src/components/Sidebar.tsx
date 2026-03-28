@@ -54,9 +54,9 @@ export default function Sidebar({ open }: SidebarProps) {
           <span className={styles.navIcon ?? ""}>⚙</span>
           Settings
         </NavLink>
-        <NavLink to="/admin" className={navClass}>
+        <NavLink to="/admin/plugins" className={navClass}>
           <span className={styles.navIcon ?? ""}>⊛</span>
-          Admin
+          Plugins
         </NavLink>
         <PluginSlot injectionPoint="nav-item" />
       </div>
