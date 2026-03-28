@@ -22,7 +22,8 @@
     { "path": "./packages/shared" },
     { "path": "./packages/media-types" },
     { "path": "./packages/server-core" },
-    { "path": "./apps/desktop" }
+    { "path": "./apps/desktop" },
+    { "path": "./apps/headless" }
   ],
   "exclude": ["node_modules", "dist", "**/dist", "**/*.test.ts", "**/*.spec.ts", "apps/web"]
 }

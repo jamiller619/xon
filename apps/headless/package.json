@@ -1,0 +1,22 @@
+{
+  "name": "@xon/headless",
+  "version": "0.0.1",
+  "private": true,
+  "type": "module",
+  "bin": {
+    "xon": "./dist/main.js"
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "typecheck": "tsc --build --noEmit",
+    "start": "node ./dist/main.js"
+  },
+  "dependencies": {
+    "@xon/server-core": "*",
+    "@xon/shared": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "*"
+  }
+}
