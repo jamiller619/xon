@@ -1,3 +1,23 @@
+## 2026-03-27 - US-044
+- Scaffolded Electron desktop app that imports and boots server-core
+- Files created: apps/desktop/package.json (electron ^33.0.0 devDep, @xon/server-core dep, type:module)
+- Files created: apps/desktop/tsconfig.json (extends root, references server-core)
+- Files created: apps/desktop/src/main.ts (Electron main process entry)
+- Files changed: tsconfig.json (added apps/desktop to references array)
+- Files changed: yarn.lock (added electron + transitive deps)
+- main.ts: `XON_HEADLESS` check: `=== "1" || === "true"` — skips `createWindow()` when set; logs headless mode message
+- main.ts: calls `boot()` inside `app.whenReady()` so it runs in Electron's Node.js runtime
+- main.ts: `before-quit` handler with `isQuitting` flag: calls `event.preventDefault()` then `process.emit("SIGTERM")` to trigger server-core graceful shutdown; server-core shutdown calls `process.exit(0)` which terminates the process
+- main.ts: `window-all-closed` quits unless macOS non-headless (standard Electron behavior)
+- BrowserWindow loads `http://localhost:${PORT}` to point at the local server
+- **Learnings for future iterations:**
+  - Electron 28+ supports ESM (`type: "module"` in package.json) — use `electron: ^33.0.0` for full ESM support
+  - `process.emit("SIGTERM")` fires Node.js signal listeners synchronously (calls the handler function) without sending a real OS signal — sufficient to trigger server-core shutdown handler
+  - Electron's `before-quit` event fires before windows are closed; `event.preventDefault()` + `isQuitting` flag prevents re-entry; server-core calls `process.exit(0)` to terminate cleanly
+  - `app.whenReady()` is the correct place to call `boot()` — Electron is fully initialized at that point
+  - Biome import order: `@xon/*` workspace imports sort before third-party `electron` (alphabetical within third-party group)
+---
+
 ## 2026-03-27 - US-043
 - Implemented server-side pre-rendering with client-side hydration
 - Files created: apps/web/src/entry-server.tsx (SSR render function using renderToString + StaticRouter)
