@@ -11,6 +11,7 @@ import type {
 } from "@xon/plugin-sdk";
 import { createPluginDatabaseAccess } from "./pluginDb.js";
 import { discoverPluginManifests } from "./pluginLoader.js";
+import { createSandboxedFetch, createSandboxedFs } from "./pluginSandbox.js";
 
 type AnyPluginEventHandler = (payload: unknown) => void | Promise<void>;
 
@@ -78,9 +79,16 @@ function buildContext(entry: PluginEntry): PluginContext {
         query: async (_sql: string, _params?: unknown[]) => [],
       };
 
+  const allowedFsPaths = entry.manifest.permissions?.filesystem ?? [];
+  const allowedDomains = entry.manifest.permissions?.network ?? [];
+  const sandboxedFs = createSandboxedFs(entry.manifest.id, entry.pluginDir, allowedFsPaths);
+  const sandboxedFetch = createSandboxedFetch(entry.manifest.id, allowedDomains);
+
   return {
     manifest: entry.manifest,
     db,
+    fs: sandboxedFs,
+    fetch: sandboxedFetch,
     on<E extends PluginEvent>(
       event: E,
       handler: (payload: PluginEventPayloads[E]) => void | Promise<void>

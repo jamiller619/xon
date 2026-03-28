@@ -31,6 +31,13 @@ export interface PluginManifest {
     /** Optional JavaScript file path relative to plugin assets directory */
     jsFile?: string;
   };
+  /** Declared sandbox permissions for this plugin */
+  permissions?: {
+    /** Filesystem paths the plugin may read/write (in addition to its own directory) */
+    filesystem?: string[];
+    /** Network domains the plugin may connect to (e.g. "api.example.com") */
+    network?: string[];
+  };
 }
 
 // Event types for plugin event hooks
@@ -140,4 +147,17 @@ export interface PluginContext {
     warn: (message: string) => void;
     error: (message: string) => void;
   };
+  /** Sandboxed filesystem access (node:fs/promises subset) */
+  fs: {
+    readFile: (path: string) => Promise<Buffer>;
+    writeFile: (path: string, data: string | Buffer) => Promise<void>;
+    readdir: (path: string) => Promise<string[]>;
+    stat: (
+      path: string
+    ) => Promise<{ size: number; isFile: () => boolean; isDirectory: () => boolean }>;
+    mkdir: (path: string, options?: { recursive?: boolean }) => Promise<void>;
+    unlink: (path: string) => Promise<void>;
+  };
+  /** Sandboxed fetch — only allows declared network domains */
+  fetch: (url: string, init?: RequestInit) => Promise<Response>;
 }
