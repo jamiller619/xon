@@ -1,3 +1,18 @@
+## 2026-03-28 - US-068
+- Implemented content rating restrictions per user
+- Files changed: packages/server-core/src/schema.ts (added CONTENT_RATINGS, MEDIA_CONTENT_RATINGS, RATING_ORDER, getAllowedRatings helper, contentRating field on mediaItems, maxContentRating field on users), packages/server-core/drizzle/0008_lying_gertrude_yorkes.sql (migration), packages/server-core/src/routes/media.ts (getContentRatingCondition helper; filters GET /media and GET /media/:id), packages/server-core/src/routes/libraries.ts (getContentRatingCondition helper; filters GET /libraries/:id/media), packages/server-core/src/routes/adminUsers.ts (maxContentRating in update schema + select), apps/web/src/pages/AdminUsers.tsx (Max Rating column + edit select)
+- Files created: packages/server-core/src/routes/contentRating.test.ts
+- `getAllowedRatings(maxRating)`: returns null for "none" (no restriction), or RATING_ORDER.slice(0, idx+1) for others; RATING_ORDER = ["G","PG","PG-13","R","unrated"]
+- Null-rated media items: treated as "unrated" — hidden when maxContentRating is stricter than "unrated" (e.g., PG-13 hides both R and null-rated items); shown when maxContentRating is "unrated" or "none"
+- Drizzle `or()` returns `SQL<unknown> | undefined` — must cast as `SQL<unknown>` when using in typed arrays or conditions
+- 471 tests passing; biome clean
+- **Learnings for future iterations:**
+  - Drizzle `or(...)` is typed to return `SQL<unknown> | undefined` (handles zero-arg case); use `as SQL<unknown>` cast when you know args are always provided
+  - `getAllowedRatings` exported from schema.ts so both media.ts and libraries.ts can share it without duplication
+  - Rating filter applied at query time by loading user's maxContentRating from DB — changes take effect without re-login
+  - `and(libraryFilter, ratingCond ?? undefined)` pattern — Drizzle `and()` accepts undefined args and filters them out
+---
+
 ## 2026-03-28 - US-067
 - Implemented per-library access control: schema, migrations, admin API, access-filtered library/media queries, admin UI
 - Files created: packages/server-core/src/routes/adminLibraryAccess.ts, packages/server-core/src/routes/adminLibraryAccess.test.ts, packages/server-core/drizzle/0007_tricky_boom_boom.sql, apps/web/src/pages/AdminLibraryAccess.tsx
