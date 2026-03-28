@@ -1,3 +1,28 @@
+## 2026-03-27 - US-043
+- Implemented server-side pre-rendering with client-side hydration
+- Files created: apps/web/src/entry-server.tsx (SSR render function using renderToString + StaticRouter)
+- Files changed: apps/web/src/main.tsx (conditional hydrateRoot vs createRoot based on firstElementChild)
+- Files changed: apps/web/index.html (added <!--ssr-outlet--> placeholder inside #root div)
+- Files changed: apps/web/vite.config.ts (outDir: "dist/client", manifest: true for CSS collection)
+- Files changed: apps/web/package.json (added build:ssr script)
+- Files changed: packages/server-core/src/staticFiles.ts (SSR rendering, CSS inlining, polyfills)
+- Files changed: packages/server-core/src/server.ts (WEB_SSR_BUNDLE env var, passed to makeStaticMiddleware)
+- entry-server.tsx: `render(url)` uses `renderToString` with `StaticRouter location={url}` + App
+- staticFiles.ts: `loadSsrModule()` installs DOMMatrix polyfill BEFORE `import()` so pdfjs-dist initializes without crashing
+- staticFiles.ts: `loadSsrCss()` reads Vite manifest at `dist/client/.vite/manifest.json`, collects all CSS files, reads and concatenates them
+- staticFiles.ts: `renderSsrHtml()` injects CSS as `<style>` before `</head>` and replaces `<!--ssr-outlet-->` with rendered HTML
+- staticFiles.ts: SSR render errors are caught and fall back to empty outlet (SPA shell still served)
+- Hydration: `main.tsx` checks `rootEl.firstElementChild !== null` to decide hydrateRoot vs createRoot (comment nodes don't count)
+- Production flow: `WEB_CLIENT_DIR=dist/client WEB_SSR_BUNDLE=dist/server/entry-server.js`
+- **Learnings for future iterations:**
+  - `StaticRouter` is exported directly from `react-router-dom` in v7, NOT from `react-router-dom/server` (which doesn't exist as a subpath)
+  - ESM static imports are hoisted — polyfills inside an SSR module file cannot run before bundled deps initialize; polyfills must be set in the CALLER before `import()` is called
+  - pdfjs-dist accesses `DOMMatrix` at module initialization time (line 10474 in pdf.mjs) — requires a stub class set on `globalThis` before the SSR bundle is imported
+  - Vite 6 client build manifest is at `{outDir}/.vite/manifest.json`; CSS files are listed under each entry's `css` array
+  - `firstElementChild` (not `hasChildNodes()`) is the right check for SSR content — comment nodes like `<!--ssr-outlet-->` are child nodes but not element children
+  - `vite build --ssr src/entry-server.tsx --outDir dist/server` is the CLI for SSR builds
+---
+
 ## 2026-03-27 - US-042
 - Implemented RAW camera image preview via server-side dcraw conversion
 - Files created: packages/server-core/src/raw.ts (isRawImage, convertRawToJpeg, runDcraw)
