@@ -1,3 +1,18 @@
+## 2026-03-28 - US-070
+- Implemented personal favorites and watchlist
+- Files changed: packages/server-core/src/schema.ts (added favorites + watchlist tables with composite PKs), packages/server-core/src/routes/media.ts (POST/DELETE /media/:id/favorite and /media/:id/watchlist), packages/server-core/src/routes/users.ts (GET /users/me/favorites and /users/me/watchlist), packages/server-core/src/index.ts (exported new types), apps/web/src/components/MediaCard.tsx (isFavorited prop + heart icon overlay), apps/web/src/components/MediaCard.module.css (favoriteBtn style), apps/web/src/pages/MediaDetail.tsx (functional favorite/watchlist toggle buttons)
+- Files created: packages/server-core/drizzle/0010_favorites_watchlist.sql, packages/server-core/src/routes/favorites.test.ts
+- Migration needs `-->statement-breakpoint` between multiple CREATE TABLE statements in the same SQL file
+- POST/DELETE toggle pattern: POST adds (idempotent via onConflictDoNothing), DELETE removes; both return `{ favorited: bool }` or `{ watchlisted: bool }`
+- Heart icon on card uses opacity:0/hover:opacity:1 pattern matching audioOverlay — shows on hover only when `onToggleFavorite` prop is provided
+- MediaDetail loads initial favorite/watchlist state from GET /users/me/favorites and /users/me/watchlist on mount
+- 497 tests passing; biome clean
+- **Learnings for future iterations:**
+  - Multi-statement SQL migrations require `-->statement-breakpoint` comment between each statement or drizzle only executes the first one
+  - Overlay buttons on Link cards require `e.preventDefault(); e.stopPropagation()` to prevent navigation
+  - Loading initial toggle state: fetch the full list and check `.some((m) => m.id === id)` rather than a dedicated `/media/:id/favorite` status endpoint
+---
+
 ## 2026-03-28 - US-068
 - Implemented content rating restrictions per user
 - Files changed: packages/server-core/src/schema.ts (added CONTENT_RATINGS, MEDIA_CONTENT_RATINGS, RATING_ORDER, getAllowedRatings helper, contentRating field on mediaItems, maxContentRating field on users), packages/server-core/drizzle/0008_lying_gertrude_yorkes.sql (migration), packages/server-core/src/routes/media.ts (getContentRatingCondition helper; filters GET /media and GET /media/:id), packages/server-core/src/routes/libraries.ts (getContentRatingCondition helper; filters GET /libraries/:id/media), packages/server-core/src/routes/adminUsers.ts (maxContentRating in update schema + select), apps/web/src/pages/AdminUsers.tsx (Max Rating column + edit select)
