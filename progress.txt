@@ -1,3 +1,21 @@
+## 2026-03-28 - US-073
+- Implemented Search API endpoint with FTS5-backed full-text search and scoped results
+- Files created: packages/server-core/src/routes/search.ts, packages/server-core/src/routes/search.test.ts
+- Files changed: packages/server-core/src/app.ts (mounted /search router)
+- `GET /api/v1/search?q=&category=&limit=20&offset=0` — ranked FTS5 search across accessible media
+- Uses `db.all<T>(sql`...`)` with dynamic `sql.join()` conditions for single-pass SQL (FTS JOIN + library/rating/category filters)
+- Results mapped to camelCase with `thumbnailUrls` object when `thumbnail_paths` is set
+- Library scoping: admins/managers see all; users see only granted libraries (empty array → empty results)
+- Content rating filter inline (mirrors libraries.ts logic using `getAllowedRatings` from schema)
+- 525 tests passing; biome clean
+- **Learnings for future iterations:**
+  - `db.all<T>(sql`SELECT ...`)` is the right method for raw SELECT queries on LibSQLDatabase (SQLite Drizzle async adapter)
+  - `sql.join(parts, separator)` builds dynamic SQL conditions — use `conditions.push(sql`...`)` pattern then `sql.join(conditions, sql` AND `)`
+  - FTS5 JOIN syntax: `JOIN media_fts fts ON fts.id = m.id` + `WHERE media_fts MATCH ${q}` (table name in MATCH clause, not alias)
+  - Raw SQL returns snake_case column names — map to camelCase in the result transformation
+  - `db.$client` is accessible at runtime (set via `(db as any).$client = client` in drizzle construct()) but not in the LibSQLDatabase type annotation from db.ts — prefer `db.all()` over raw client access in route files
+---
+
 ## 2026-03-28 - US-072
 - Implemented FTS5 full-text index setup for media items
 - Files created: packages/server-core/drizzle/0012_media_fts.sql, packages/server-core/src/routes/fts.test.ts
