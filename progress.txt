@@ -1,3 +1,17 @@
+## 2026-03-28 - US-046
+- Implemented headless CLI entry point for running Xon server without Electron
+- Files created: apps/headless/src/main.ts (logs startup URL, calls boot())
+- Files pre-existing: apps/headless/package.json, apps/headless/tsconfig.json (already scaffolded)
+- Files changed: tsconfig.json (added apps/headless to project references)
+- main.ts: logs `Starting Xon server on http://localhost:{port}` before calling boot()
+- SIGTERM/SIGINT handled by server-core's boot() — no need to duplicate in headless entry
+- No Electron dependency — only @xon/server-core and @xon/shared
+- **Learnings for future iterations:**
+  - apps/headless was pre-scaffolded (package.json + tsconfig.json) but missing src/main.ts
+  - `tsc --build --noEmit` via yarn workspace fails with TS6310 when deps not built; `tsc --build` (without --noEmit) works fine from workspace dir
+  - The root tsconfig.json must include apps/headless in references for full project type-checking
+---
+
 ## 2026-03-27 - US-045
 - Implemented system tray / menubar integration for Electron desktop app
 - Files created: apps/desktop/src/tray.ts (createTray, makeColorIcon, TrayHandle interface)
