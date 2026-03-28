@@ -1,0 +1,276 @@
+.bar {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 300;
+  background: #1a1a2e;
+  border-top: 1px solid #333;
+  display: flex;
+  flex-direction: column;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 16px;
+  height: 64px;
+}
+
+/* Track info */
+.trackInfo {
+  display: flex;
+  flex-direction: column;
+  min-width: 140px;
+  max-width: 200px;
+  overflow: hidden;
+}
+
+.trackTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e0e0e0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.trackType {
+  font-size: 11px;
+  color: #888;
+}
+
+/* Playback controls */
+.playbackControls {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+}
+
+.iconBtn {
+  background: none;
+  border: none;
+  color: #aaa;
+  cursor: pointer;
+  font-size: 16px;
+  padding: 4px 6px;
+  border-radius: 4px;
+  transition: color 0.15s;
+}
+
+.iconBtn:hover {
+  color: #fff;
+}
+
+.iconBtn.active {
+  color: #7c6af7;
+}
+
+.iconBtn:disabled {
+  color: #555;
+  cursor: default;
+}
+
+.playBtn {
+  background: #7c6af7;
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-size: 18px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+
+.playBtn:hover {
+  background: #9d8fff;
+}
+
+/* Seek bar */
+.seekArea {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+}
+
+.timeLabel {
+  font-size: 11px;
+  color: #888;
+  flex-shrink: 0;
+  min-width: 32px;
+  text-align: center;
+}
+
+.seekBar {
+  flex: 1;
+  height: 4px;
+  cursor: pointer;
+  accent-color: #7c6af7;
+}
+
+/* Right controls */
+.rightControls {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex-shrink: 0;
+}
+
+.volIcon {
+  font-size: 14px;
+}
+
+.volumeBar {
+  width: 80px;
+  height: 4px;
+  cursor: pointer;
+  accent-color: #7c6af7;
+}
+
+/* Queue panel */
+.queuePanel {
+  background: #111122;
+  border-top: 1px solid #333;
+  max-height: 280px;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+}
+
+.queueHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 8px 16px;
+  border-bottom: 1px solid #2a2a3e;
+  flex-shrink: 0;
+}
+
+.queueTitle {
+  font-size: 13px;
+  font-weight: 600;
+  color: #e0e0e0;
+}
+
+.queueClear {
+  background: none;
+  border: 1px solid #444;
+  color: #aaa;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.queueClear:hover {
+  border-color: #e44;
+  color: #e44;
+}
+
+.queueList {
+  list-style: none;
+  margin: 0;
+  padding: 4px 0;
+  overflow-y: auto;
+  flex: 1;
+}
+
+.queueItem {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 4px 16px;
+  font-size: 13px;
+  color: #bbb;
+}
+
+.queueItem:hover {
+  background: #1e1e36;
+}
+
+.queueItemActive {
+  color: #e0e0e0;
+  background: #1e1e36;
+}
+
+.queueItemPlay {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 12px;
+  width: 20px;
+  flex-shrink: 0;
+}
+
+.queueItemPlay:hover {
+  color: #fff;
+}
+
+.queueItemTitle {
+  flex: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.queueItemActions {
+  display: flex;
+  gap: 2px;
+  flex-shrink: 0;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.queueItem:hover .queueItemActions {
+  opacity: 1;
+}
+
+.queueMoveBtn,
+.queueRemoveBtn {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  font-size: 12px;
+  padding: 2px 4px;
+  border-radius: 3px;
+}
+
+.queueMoveBtn:hover {
+  color: #fff;
+  background: #333;
+}
+
+.queueMoveBtn:disabled {
+  color: #444;
+  cursor: default;
+}
+
+.queueRemoveBtn:hover {
+  color: #e44;
+  background: #333;
+}
+
+@media (max-width: 600px) {
+  .trackInfo {
+    min-width: 80px;
+    max-width: 100px;
+  }
+
+  .volumeBar {
+    width: 50px;
+  }
+
+  .seekArea {
+    min-width: 60px;
+  }
+}

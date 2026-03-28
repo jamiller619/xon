@@ -1,4 +1,5 @@
 import { Link } from "react-router-dom";
+import { useAudioStore } from "../store/index";
 import styles from "./MediaCard.module.css";
 
 export interface MediaCardItem {
@@ -31,6 +32,22 @@ function formatDate(ts: number | string | null): string {
 }
 
 export default function MediaCard({ item, listView }: MediaCardProps) {
+  const playTrack = useAudioStore((s) => s.playTrack);
+  const addToQueue = useAudioStore((s) => s.addToQueue);
+  const isAudio = item.mimeType?.startsWith("audio/") ?? false;
+
+  function handlePlay(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    playTrack({ id: item.id, title: item.title, mimeType: item.mimeType ?? "audio/mpeg" });
+  }
+
+  function handleAddToQueue(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    addToQueue({ id: item.id, title: item.title, mimeType: item.mimeType ?? "audio/mpeg" });
+  }
+
   if (listView) {
     return (
       <tr className={styles.listRow ?? ""}>
@@ -39,7 +56,7 @@ export default function MediaCard({ item, listView }: MediaCardProps) {
             {item.thumbnailUrls ? (
               <img src={item.thumbnailUrls.small} alt="" className={styles.listThumbImg ?? ""} />
             ) : (
-              <div className={styles.listThumbPlaceholder ?? ""}>▶</div>
+              <div className={styles.listThumbPlaceholder ?? ""}>{isAudio ? "♪" : "▶"}</div>
             )}
           </Link>
         </td>
@@ -56,6 +73,21 @@ export default function MediaCard({ item, listView }: MediaCardProps) {
         <td className={styles.listCell ?? ""}>{item.mediaCategory ?? "—"}</td>
         <td className={styles.listCell ?? ""}>{formatBytes(item.fileSize)}</td>
         <td className={styles.listCell ?? ""}>{formatDate(item.createdAt)}</td>
+        {isAudio && (
+          <td className={styles.listCell ?? ""}>
+            <button type="button" className={styles.listPlayBtn ?? ""} onClick={handlePlay}>
+              ▶
+            </button>
+            <button
+              type="button"
+              className={styles.listQueueBtn ?? ""}
+              onClick={handleAddToQueue}
+              title="Add to queue"
+            >
+              +
+            </button>
+          </td>
+        )}
       </tr>
     );
   }
@@ -67,7 +99,27 @@ export default function MediaCard({ item, listView }: MediaCardProps) {
           <img src={item.thumbnailUrls.medium} alt={item.title} className={styles.thumbImg ?? ""} />
         ) : (
           <div className={styles.thumbPlaceholder ?? ""}>
-            <span>▶</span>
+            <span>{isAudio ? "♪" : "▶"}</span>
+          </div>
+        )}
+        {isAudio && (
+          <div className={styles.audioOverlay ?? ""}>
+            <button
+              type="button"
+              className={styles.overlayPlayBtn ?? ""}
+              onClick={handlePlay}
+              title="Play"
+            >
+              ▶
+            </button>
+            <button
+              type="button"
+              className={styles.overlayQueueBtn ?? ""}
+              onClick={handleAddToQueue}
+              title="Add to queue"
+            >
+              +
+            </button>
           </div>
         )}
       </div>

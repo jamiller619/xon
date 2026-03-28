@@ -8,6 +8,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
   return (
     <header className={styles.topBar ?? ""}>
       <button
+        type="button"
         className={styles.menuButton ?? ""}
         onClick={onMenuClick}
         aria-label="Toggle sidebar"
@@ -23,7 +24,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
         />
       </div>
       <span className={styles.spacer ?? ""} />
-      <button className={styles.userMenu ?? ""} aria-label="User menu">
+      <button type="button" className={styles.userMenu ?? ""} aria-label="User menu">
         <span className={styles.avatar ?? ""}>U</span>
         <span>User</span>
       </button>

@@ -18,6 +18,7 @@
   aspect-ratio: 16 / 9;
   background: #0f0f1a;
   overflow: hidden;
+  position: relative;
 }
 
 .thumbImg {
@@ -85,6 +86,91 @@
   overflow: hidden;
   text-overflow: ellipsis;
   text-transform: uppercase;
+}
+
+/* Audio overlay on grid cards */
+.audioOverlay {
+  position: absolute;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.card:hover .audioOverlay {
+  opacity: 1;
+}
+
+.overlayPlayBtn {
+  background: #7c6af7;
+  border: none;
+  color: #fff;
+  font-size: 16px;
+  width: 36px;
+  height: 36px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.overlayPlayBtn:hover {
+  background: #9d8fff;
+}
+
+.overlayQueueBtn {
+  background: rgba(255, 255, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  color: #fff;
+  font-size: 18px;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.overlayQueueBtn:hover {
+  background: rgba(255, 255, 255, 0.3);
+}
+
+/* List audio play buttons */
+.listPlayBtn {
+  background: #7c6af7;
+  border: none;
+  color: #fff;
+  font-size: 12px;
+  padding: 2px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  margin-right: 4px;
+}
+
+.listPlayBtn:hover {
+  background: #9d8fff;
+}
+
+.listQueueBtn {
+  background: none;
+  border: 1px solid #444;
+  color: #aaa;
+  font-size: 14px;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.listQueueBtn:hover {
+  border-color: #7c6af7;
+  color: #7c6af7;
 }
 
 /* List view row */

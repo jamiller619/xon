@@ -163,9 +163,7 @@ describe("Data Sources CRUD API", () => {
     });
 
     it("returns 400 when updating local source path to non-existent path", async () => {
-      const created = await (
-        await createSource({ type: "local", path: tmpDir })
-      ).json();
+      const created = await (await createSource({ type: "local", path: tmpDir })).json();
       const res = await app.request(`${sourcesUrl()}/${created.id}`, {
         method: "PUT",
         headers: { "Content-Type": "application/json" },

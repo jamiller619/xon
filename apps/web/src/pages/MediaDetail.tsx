@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import VideoPlayer from "../components/VideoPlayer.js";
+import { useAudioStore } from "../store/index";
 import styles from "./MediaDetail.module.css";
 
 interface MediaDetailItem {
@@ -48,6 +49,9 @@ export default function MediaDetail() {
   const [error, setError] = useState<string | null>(null);
 
   const [showPlayer, setShowPlayer] = useState(false);
+
+  const playTrack = useAudioStore((s) => s.playTrack);
+  const addToQueue = useAudioStore((s) => s.addToQueue);
 
   // Edit state
   const [editing, setEditing] = useState(false);
@@ -309,21 +313,60 @@ export default function MediaDetail() {
 
               {/* Action buttons */}
               <div className={styles.actions ?? ""}>
-                <button
-                  type="button"
-                  className={`${styles.btnPlay ?? ""} ${item.drmProtected || !item.mimeType?.startsWith("video/") ? (styles.btnDisabled ?? "") : ""}`}
-                  disabled={item.drmProtected || !item.mimeType?.startsWith("video/")}
-                  title={
-                    item.drmProtected
-                      ? "Playback unavailable — DRM protected"
-                      : !item.mimeType?.startsWith("video/")
-                        ? "Playback not supported for this media type"
-                        : "Play"
-                  }
-                  onClick={() => setShowPlayer(true)}
-                >
-                  ▶ Play
-                </button>
+                {item.mimeType?.startsWith("audio/") ? (
+                  <>
+                    <button
+                      type="button"
+                      className={styles.btnPlay ?? ""}
+                      disabled={item.drmProtected}
+                      title={item.drmProtected ? "Playback unavailable — DRM protected" : "Play"}
+                      onClick={() => {
+                        if (!item.drmProtected && id) {
+                          playTrack({
+                            id,
+                            title: item.title ?? item.fileName,
+                            mimeType: item.mimeType ?? "audio/mpeg",
+                          });
+                        }
+                      }}
+                    >
+                      ▶ Play
+                    </button>
+                    <button
+                      type="button"
+                      className={styles.btnSecondary ?? ""}
+                      disabled={item.drmProtected}
+                      title="Add to queue"
+                      onClick={() => {
+                        if (!item.drmProtected && id) {
+                          addToQueue({
+                            id,
+                            title: item.title ?? item.fileName,
+                            mimeType: item.mimeType ?? "audio/mpeg",
+                          });
+                        }
+                      }}
+                    >
+                      + Queue
+                    </button>
+                  </>
+                ) : (
+                  <button
+                    type="button"
+                    className={`${styles.btnPlay ?? ""} ${item.drmProtected || !item.mimeType?.startsWith("video/") ? (styles.btnDisabled ?? "") : ""}`}
+                    disabled={item.drmProtected || !item.mimeType?.startsWith("video/")}
+                    title={
+                      item.drmProtected
+                        ? "Playback unavailable — DRM protected"
+                        : !item.mimeType?.startsWith("video/")
+                          ? "Playback not supported for this media type"
+                          : "Play"
+                    }
+                    onClick={() => setShowPlayer(true)}
+                  >
+                    ▶ Play
+                  </button>
+                )}
                 <button
                   type="button"
                   className={styles.btnSecondary ?? ""}

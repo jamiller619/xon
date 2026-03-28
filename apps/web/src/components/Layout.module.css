@@ -29,6 +29,10 @@
   padding: 24px;
 }
 
+.contentWithPlayer {
+  padding-bottom: 88px;
+}
+
 @media (max-width: 768px) {
   .overlay.visible {
     display: block;
