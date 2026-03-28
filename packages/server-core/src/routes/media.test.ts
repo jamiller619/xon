@@ -25,14 +25,27 @@ vi.mock("../ffprobe.js", () => ({
   isAudioVideoCategory: vi.fn(),
 }));
 
+vi.mock("../transcode.js", () => ({
+  needsTranscoding: vi.fn(),
+  generateHlsPlaylist: vi.fn(),
+  spawnTranscodeSegment: vi.fn(),
+}));
+
 const { readFile, stat, readdir } = await import("node:fs/promises");
 const { createReadStream } = await import("node:fs");
-const { extractStreamTracks } = await import("../ffprobe.js");
+const { extractStreamTracks, extractFfprobeMetadata } = await import("../ffprobe.js");
+const { needsTranscoding, generateHlsPlaylist, spawnTranscodeSegment } = await import(
+  "../transcode.js"
+);
 const mockReadFile = vi.mocked(readFile);
 const mockStat = vi.mocked(stat);
 const mockCreateReadStream = vi.mocked(createReadStream);
 const mockReaddir = vi.mocked(readdir);
 const mockExtractStreamTracks = vi.mocked(extractStreamTracks);
+const mockExtractFfprobeMetadata = vi.mocked(extractFfprobeMetadata);
+const mockNeedsTranscoding = vi.mocked(needsTranscoding);
+const mockGenerateHlsPlaylist = vi.mocked(generateHlsPlaylist);
+const mockSpawnTranscodeSegment = vi.mocked(spawnTranscodeSegment);
 
 describe("Media API - Detail endpoint", () => {
   let client: Client;
@@ -592,7 +605,7 @@ describe("Media API - Tracks endpoint", () => {
 
       const res = await app.request(`/api/v1/media/${videoItemId}/tracks`);
       expect(res.status).toBe(200);
-      const body = await res.json() as { audioTracks: unknown[]; subtitleTracks: unknown[] };
+      const body = (await res.json()) as { audioTracks: unknown[]; subtitleTracks: unknown[] };
       expect(body.audioTracks).toHaveLength(2);
       expect(body.audioTracks[0]).toMatchObject({ index: 0, codec: "aac", language: "en" });
       expect(body.audioTracks[1]).toMatchObject({ index: 1, codec: "ac3", language: "fr" });
@@ -609,7 +622,7 @@ describe("Media API - Tracks endpoint", () => {
 
       const res = await app.request(`/api/v1/media/${videoItemId}/tracks`);
       expect(res.status).toBe(200);
-      const body = await res.json() as { audioTracks: unknown[]; subtitleTracks: unknown[] };
+      const body = (await res.json()) as { audioTracks: unknown[]; subtitleTracks: unknown[] };
       expect(body.audioTracks).toHaveLength(0);
       expect(body.subtitleTracks).toHaveLength(0);
     });
@@ -625,7 +638,7 @@ describe("Media API - Tracks endpoint", () => {
       ] as never);
 
       const res = await app.request(`/api/v1/media/${videoItemId}/tracks`);
-      const body = await res.json() as { subtitleTracks: { file: string }[] };
+      const body = (await res.json()) as { subtitleTracks: { file: string }[] };
       const files = body.subtitleTracks.map((t) => t.file);
       expect(files).toContain("movie.srt");
       expect(files).toContain("movie.vtt");
@@ -742,6 +755,168 @@ describe("Media API - Subtitle endpoint", () => {
       const text = await res.text();
       expect(text.startsWith("WEBVTT")).toBe(true);
       expect(text).toContain("Hello World");
+    });
+  });
+});
+
+describe("Media API - HLS transcoding endpoints", () => {
+  let client: Client;
+  let db: LibSQLDatabase;
+  let app: ReturnType<typeof createApp>;
+  let videoItemId: string;
+
+  beforeEach(async () => {
+    ({ client, db } = await openDatabase(":memory:"));
+    await migrateDatabase(db);
+    app = createApp(db);
+
+    const libId = crypto.randomUUID();
+    const now = new Date();
+    await db.insert(libraries).values({
+      id: libId,
+      name: "Test Library",
+      allowedMediaTypes: "[]",
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    const sourceId = crypto.randomUUID();
+    await db.insert(dataSources).values({
+      id: sourceId,
+      libraryId: libId,
+      type: "local",
+      path: "/media",
+      recursive: true,
+      enabled: true,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    videoItemId = crypto.randomUUID();
+    await db.insert(mediaItems).values({
+      id: videoItemId,
+      libraryId: libId,
+      dataSourceId: sourceId,
+      filePath: "/media/movie.mkv",
+      fileName: "movie.mkv",
+      fileSize: 500000,
+      mimeType: "video/x-matroska",
+      mediaCategory: "Movies",
+      thumbnailPaths: null,
+      createdAt: now,
+      updatedAt: now,
+    });
+
+    mockExtractFfprobeMetadata.mockReset();
+    mockNeedsTranscoding.mockReset();
+    mockGenerateHlsPlaylist.mockReset();
+    mockSpawnTranscodeSegment.mockReset();
+    mockStat.mockReset();
+    mockCreateReadStream.mockReset();
+  });
+
+  afterEach(() => {
+    client.close();
+  });
+
+  describe("GET /api/v1/media/:id/stream — redirect for non-native formats", () => {
+    it("redirects to HLS playlist when transcoding is needed", async () => {
+      mockStat.mockResolvedValueOnce({ size: 500000 } as never);
+      mockExtractFfprobeMetadata.mockResolvedValueOnce({
+        codec: "hevc",
+        audioCodec: "ac3",
+      } as never);
+      mockNeedsTranscoding.mockReturnValueOnce(true);
+
+      const res = await app.request(`/api/v1/media/${videoItemId}/stream`);
+      expect(res.status).toBe(307);
+      expect(res.headers.get("Location")).toContain(
+        `/api/v1/media/${videoItemId}/hls/playlist.m3u8`
+      );
+    });
+
+    it("serves file directly when no transcoding needed", async () => {
+      mockStat.mockResolvedValueOnce({ size: 500000 } as never);
+      mockExtractFfprobeMetadata.mockResolvedValueOnce({
+        codec: "h264",
+        audioCodec: "aac",
+      } as never);
+      mockNeedsTranscoding.mockReturnValueOnce(false);
+      const fakeStream = Readable.from(["video data"]);
+      mockCreateReadStream.mockReturnValueOnce(fakeStream as never);
+
+      const res = await app.request(`/api/v1/media/${videoItemId}/stream`);
+      expect(res.status).toBe(200);
+    });
+  });
+
+  describe("GET /api/v1/media/:id/hls/playlist.m3u8", () => {
+    it("returns 404 for unknown media item", async () => {
+      const res = await app.request("/api/v1/media/nonexistent/hls/playlist.m3u8");
+      expect(res.status).toBe(404);
+    });
+
+    it("returns 422 when ffprobe cannot determine duration", async () => {
+      mockExtractFfprobeMetadata.mockResolvedValueOnce(null as never);
+
+      const res = await app.request(`/api/v1/media/${videoItemId}/hls/playlist.m3u8`);
+      expect(res.status).toBe(422);
+    });
+
+    it("returns HLS playlist with correct content type", async () => {
+      mockExtractFfprobeMetadata.mockResolvedValueOnce({ duration: 12 } as never);
+      mockGenerateHlsPlaylist.mockReturnValueOnce(
+        "#EXTM3U\n#EXT-X-TARGETDURATION:6\nsegment-0.ts\nsegment-1.ts\n#EXT-X-ENDLIST"
+      );
+
+      const res = await app.request(`/api/v1/media/${videoItemId}/hls/playlist.m3u8`);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("Content-Type")).toContain("application/vnd.apple.mpegurl");
+      const text = await res.text();
+      expect(text).toContain("#EXTM3U");
+      expect(text).toContain("segment-0.ts");
+    });
+  });
+
+  describe("GET /api/v1/media/:id/hls/:segment", () => {
+    it("returns 400 for invalid segment name", async () => {
+      const res = await app.request(`/api/v1/media/${videoItemId}/hls/invalid.mp4`);
+      expect(res.status).toBe(400);
+    });
+
+    it("returns 404 for unknown media item", async () => {
+      const res = await app.request("/api/v1/media/nonexistent/hls/segment-0.ts");
+      expect(res.status).toBe(404);
+    });
+
+    it("returns 404 when file is not accessible on disk", async () => {
+      mockStat.mockRejectedValueOnce(
+        Object.assign(new Error("ENOENT"), { code: "ENOENT" }) as never
+      );
+
+      const res = await app.request(`/api/v1/media/${videoItemId}/hls/segment-0.ts`);
+      expect(res.status).toBe(404);
+    });
+
+    it("returns 200 with video/mp2t content type for valid segment", async () => {
+      mockStat.mockResolvedValueOnce({ size: 500000 } as never);
+
+      const mockProc = {
+        stdout: new Readable({
+          read() {
+            this.push("ts data");
+            this.push(null);
+          },
+        }),
+        on: vi.fn(),
+        kill: vi.fn(),
+      };
+      mockSpawnTranscodeSegment.mockReturnValueOnce(mockProc as never);
+
+      const res = await app.request(`/api/v1/media/${videoItemId}/hls/segment-2.ts`);
+      expect(res.status).toBe(200);
+      expect(res.headers.get("Content-Type")).toBe("video/mp2t");
+      expect(mockSpawnTranscodeSegment).toHaveBeenCalledWith("/media/movie.mkv", 2, 6);
     });
   });
 });

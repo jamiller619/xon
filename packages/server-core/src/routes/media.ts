@@ -1,19 +1,20 @@
 import { createReadStream } from "node:fs";
 import { readFile, readdir, stat } from "node:fs/promises";
 import { basename, dirname, extname, join } from "node:path";
-import { parse as parseFont } from "opentype.js";
 import { Readable } from "node:stream";
 import { zValidator } from "@hono/zod-validator";
 import { asc, desc, eq } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
+import { parse as parseFont } from "opentype.js";
 import { z } from "zod";
 import { listArchiveContents } from "../archive.js";
-import { extractStreamTracks } from "../ffprobe.js";
+import { extractFfprobeMetadata, extractStreamTracks } from "../ffprobe.js";
 import { convertMobiToEpub } from "../mobi.js";
 import type { MediaItem } from "../schema.js";
 import { mediaItems, readingPositions } from "../schema.js";
 import type { ThumbnailPaths } from "../thumbnails.js";
+import { generateHlsPlaylist, needsTranscoding, spawnTranscodeSegment } from "../transcode.js";
 
 const VALID_SIZES = ["small", "medium", "large"] as const;
 type ThumbnailSize = (typeof VALID_SIZES)[number];
@@ -115,6 +116,12 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       return c.json({ error: "File not accessible" }, 404);
     }
 
+    // Check if format needs transcoding — if so, redirect to HLS playlist
+    const meta = await extractFfprobeMetadata(item.filePath);
+    if (meta && needsTranscoding(meta.codec, meta.audioCodec)) {
+      return c.redirect(`/api/v1/media/${id}/hls/playlist.m3u8`, 307);
+    }
+
     const range = c.req.header("Range");
     const mimeType = item.mimeType ?? "application/octet-stream";
 
@@ -147,6 +154,67 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       "Accept-Ranges": "bytes",
       "Content-Length": String(fileSize),
       "Content-Type": mimeType,
+    });
+  });
+
+  const HLS_SEGMENT_DURATION = 6;
+
+  // GET /media/:id/hls/playlist.m3u8 — generate HLS playlist for transcoded playback
+  router.get("/:id/hls/playlist.m3u8", async (c) => {
+    const id = c.req.param("id");
+    const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id));
+    const item = rows[0];
+    if (!item) return c.json({ error: "Not found" }, 404);
+
+    const meta = await extractFfprobeMetadata(item.filePath);
+    if (!meta?.duration) {
+      return c.json({ error: "Cannot determine media duration" }, 422);
+    }
+
+    const playlist = generateHlsPlaylist(meta.duration, HLS_SEGMENT_DURATION);
+    return c.text(playlist, 200, {
+      "Content-Type": "application/vnd.apple.mpegurl",
+      "Cache-Control": "no-cache",
+    });
+  });
+
+  // GET /media/:id/hls/:segment — transcode and serve a specific HLS segment on-the-fly
+  router.get("/:id/hls/:segment", async (c) => {
+    const id = c.req.param("id");
+    const segment = c.req.param("segment");
+
+    // Validate segment name: segment-N.ts
+    const match = /^segment-(\d+)\.ts$/.exec(segment);
+    if (!match) return c.json({ error: "Invalid segment name" }, 400);
+    const segmentIndex = Number.parseInt(match[1] ?? "0", 10);
+
+    const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id));
+    const item = rows[0];
+    if (!item) return c.json({ error: "Not found" }, 404);
+
+    try {
+      await stat(item.filePath);
+    } catch {
+      return c.json({ error: "File not accessible" }, 404);
+    }
+
+    const proc = spawnTranscodeSegment(item.filePath, segmentIndex, HLS_SEGMENT_DURATION);
+
+    const stream = new ReadableStream({
+      start(controller) {
+        proc.stdout?.on("data", (chunk: Buffer) => controller.enqueue(chunk));
+        proc.stdout?.on("end", () => controller.close());
+        proc.stdout?.on("error", (err: Error) => controller.error(err));
+        proc.on("error", (err: Error) => controller.error(err));
+      },
+      cancel() {
+        proc.kill();
+      },
+    });
+
+    return c.body(stream, 200, {
+      "Content-Type": "video/mp2t",
+      "Cache-Control": "public, max-age=3600",
     });
   });
 
@@ -356,9 +424,7 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
         Object.values(names.fontFamily ?? {})[0] ??
         basename(item.filePath, ext);
       const subfamily =
-        names.fontSubfamily?.en ??
-        Object.values(names.fontSubfamily ?? {})[0] ??
-        "Regular";
+        names.fontSubfamily?.en ?? Object.values(names.fontSubfamily ?? {})[0] ?? "Regular";
       const glyphCount = font.glyphs.length;
       const unitsPerEm = font.unitsPerEm;
       return c.json({ family, subfamily, glyphCount, unitsPerEm });

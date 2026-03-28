@@ -1,3 +1,4 @@
+import Hls from "hls.js";
 import { useEffect, useRef, useState } from "react";
 import styles from "./VideoPlayer.module.css";
 
@@ -26,14 +27,31 @@ type TracksResponse = {
 
 interface VideoPlayerProps {
   mediaId: string;
+  mimeType?: string;
   onClose: () => void;
 }
 
-export default function VideoPlayer({ mediaId, onClose }: VideoPlayerProps) {
+function browserCanPlay(mimeType: string): boolean {
+  const v = document.createElement("video");
+  const result = v.canPlayType(mimeType);
+  return result === "probably" || result === "maybe";
+}
+
+export default function VideoPlayer({ mediaId, mimeType, onClose }: VideoPlayerProps) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const [tracks, setTracks] = useState<TracksResponse | null>(null);
   const [selectedSub, setSelectedSub] = useState<string>("none");
   const [selectedAudio, setSelectedAudio] = useState<number>(-1);
+
+  // Determine upfront (before first render) whether HLS is needed
+  const [useHls] = useState<boolean>(() => {
+    if (!mimeType) return false;
+    try {
+      return !browserCanPlay(mimeType);
+    } catch {
+      return false;
+    }
+  });
 
   useEffect(() => {
     fetch(`/api/v1/media/${mediaId}/tracks`)
@@ -45,6 +63,26 @@ export default function VideoPlayer({ mediaId, onClose }: VideoPlayerProps) {
         // tracks unavailable
       });
   }, [mediaId]);
+
+  // HLS setup via hls.js when native playback is not supported
+  useEffect(() => {
+    if (!useHls) return;
+    const video = videoRef.current;
+    if (!video) return;
+
+    const hlsUrl = `/api/v1/media/${mediaId}/hls/playlist.m3u8`;
+
+    if (Hls.isSupported()) {
+      const hls = new Hls();
+      hls.loadSource(hlsUrl);
+      hls.attachMedia(video);
+      return () => hls.destroy();
+    }
+    // Safari supports HLS natively
+    if (video.canPlayType("application/vnd.apple.mpegurl")) {
+      video.src = hlsUrl;
+    }
+  }, [useHls, mediaId]);
 
   useEffect(() => {
     const video = videoRef.current;
@@ -144,11 +182,10 @@ export default function VideoPlayer({ mediaId, onClose }: VideoPlayerProps) {
       >
         ✕
       </button>
-      {/* biome-ignore lint/a11y/useMediaCaption: captions are loaded dynamically via <track> elements */}
       <video
         ref={videoRef}
         className={styles.video ?? ""}
-        src={`/api/v1/media/${mediaId}/stream`}
+        {...(useHls ? {} : { src: `/api/v1/media/${mediaId}/stream` })}
         controls
         autoPlay
       >

@@ -269,7 +269,11 @@ export default function MediaDetail() {
         {/* Video player, image viewer trigger, or poster */}
         <div className={styles.poster ?? ""}>
           {showPlayer && id ? (
-            <VideoPlayer mediaId={id} onClose={() => setShowPlayer(false)} />
+            <VideoPlayer
+              mediaId={id}
+              mimeType={item.mimeType ?? undefined}
+              onClose={() => setShowPlayer(false)}
+            />
           ) : (
             <>
               {item.drmProtected && (
