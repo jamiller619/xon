@@ -1,3 +1,18 @@
+## 2026-03-28 - US-071
+- Implemented API token authentication for programmatic access
+- Files changed: packages/server-core/src/schema.ts (added apiTokens table), packages/server-core/src/authMiddleware.ts (refactored to makeAuthMiddleware(db) factory; supports JWT + API token auth), packages/server-core/src/routes/users.ts (added POST/GET/DELETE /me/tokens; hashApiToken helper), packages/server-core/src/app.ts (passes db to makeAuthMiddleware), packages/server-core/src/index.ts (exported apiTokens, ApiToken, NewApiToken)
+- Files created: packages/server-core/drizzle/0011_plain_kang.sql, packages/server-core/src/routes/apiTokens.test.ts
+- Token format: `xon_<64-hex-chars>` (32 random bytes); SHA-256 hash stored in DB (never the raw token)
+- Auth middleware tries JWT first, then API token (xon_ prefix guard before DB lookup); updates lastUsedAt asynchronously
+- Generated migration included duplicate CREATE TABLE statements for favorites/media_progress/watchlist — trimmed manually to only include new api_tokens table and unique index
+- 639 tests passing; biome clean
+- **Learnings for future iterations:**
+  - drizzle-kit generate can emit duplicate CREATE TABLE for already-migrated tables when FK syntax changes between drizzle versions — always inspect generated SQL and trim to only new additions
+  - `makeAuthMiddleware(db?)` factory pattern allows passing DB to middleware without changing app.use() call signature; old `authMiddleware` export preserved for backward compatibility
+  - Biome `noConfusingVoidType`: remove explicit return type annotation on async middleware functions (`Promise<Response | void>`) — let TypeScript infer; or drop return type entirely
+  - `hashApiToken` exported from routes/users.ts so it can be imported in authMiddleware.ts without circular deps
+---
+
 ## 2026-03-28 - US-070
 - Implemented personal favorites and watchlist
 - Files changed: packages/server-core/src/schema.ts (added favorites + watchlist tables with composite PKs), packages/server-core/src/routes/media.ts (POST/DELETE /media/:id/favorite and /media/:id/watchlist), packages/server-core/src/routes/users.ts (GET /users/me/favorites and /users/me/watchlist), packages/server-core/src/index.ts (exported new types), apps/web/src/components/MediaCard.tsx (isFavorited prop + heart icon overlay), apps/web/src/components/MediaCard.module.css (favoriteBtn style), apps/web/src/pages/MediaDetail.tsx (functional favorite/watchlist toggle buttons)
