@@ -1,0 +1,33 @@
+{
+  "name": "@xon/plugin-musicbrainz-metadata",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "xon": {
+    "id": "musicbrainz-metadata",
+    "name": "MusicBrainz Metadata",
+    "version": "1.0.0",
+    "description": "Fetches music metadata from MusicBrainz and cover art from the Cover Art Archive",
+    "author": "Xon",
+    "category": "MetadataSource",
+    "mediaCategories": ["Music"],
+    "main": "dist/index.js",
+    "permissions": {
+      "network": ["musicbrainz.org", "coverartarchive.org"]
+    }
+  },
+  "scripts": {
+    "build": "tsc --build",
+    "typecheck": "tsc --build --noEmit",
+    "test": "vitest run"
+  },
+  "dependencies": {
+    "@xon/plugin-sdk": "*",
+    "@xon/shared": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "*",
+    "vitest": "^2.1.0"
+  }
+}
