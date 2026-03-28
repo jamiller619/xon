@@ -1,3 +1,21 @@
+## 2026-03-28 - US-063
+- Implemented JWT authentication: login, refresh token rotation, logout, and auth middleware
+- Files created: packages/server-core/src/routes/auth.ts, packages/server-core/src/routes/auth.test.ts, packages/server-core/src/authMiddleware.ts, packages/server-core/drizzle/0006_mixed_tag.sql
+- Files changed: packages/server-core/src/schema.ts (added refreshTokens table), packages/server-core/src/app.ts (mounted auth router + applied middleware), packages/server-core/src/index.ts (exported refreshTokens), packages/server-core/src/routes/*.test.ts (added auth headers), packages/server-core/src/index.test.ts (updated 404→401 for unauthenticated unknown routes), packages/server-core/src/pluginRoutes.test.ts (added auth headers)
+- `refreshTokens` table: id (UUID), userId (FK→users), expiresAt, createdAt
+- `signAccessToken(userId, username, role)` / `verifyAccessToken(token)` — HS256, 15-min TTL; secret from `JWT_SECRET` env (defaults to dev secret)
+- `signRefreshToken(tokenId, userId)` — HS256, 7-day TTL, stored `jti` (UUID) in DB; rotation on `/refresh`, DB delete on `/logout`
+- `authMiddleware`: skips `/api/v1/auth/*` and `/api/v1/health`; verifies Bearer token; sets `c.var.user` (id, username, role)
+- All existing route tests updated with `const AUTH = \`Bearer \${await signAccessToken(...)}\`` top-level await pattern
+- 413 tests passing; biome clean on new/modified files
+- **Learnings for future iterations:**
+  - `hono/jwt` v4.12.x `verify(token, secret)` throws `JwtAlgorithmRequired` — must pass algorithm explicitly: `verify(token, secret, "HS256")`; same for `sign(payload, secret, "HS256")`
+  - Auth middleware path check: `c.req.path` returns full path including basePath (e.g., `/api/v1/auth/login`), not the stripped path
+  - Top-level `await` in vitest ESM test files works fine for computing test auth tokens before `describe` blocks
+  - The health endpoint should be exempted from auth for monitoring compatibility; `c.req.path === "/api/v1/health"` for exact match
+  - Existing tests that use `createApp(db)` need auth headers after adding global middleware — use module-level `AUTH` constant from `signAccessToken`
+---
+
 ## 2026-03-28 - US-062
 - Implemented users table schema and Argon2id password hashing
 - Files created: packages/server-core/src/password.ts, packages/server-core/src/password.test.ts, packages/server-core/src/userInit.ts, packages/server-core/src/userInit.test.ts, packages/server-core/drizzle/0005_furry_retro_girl.sql
@@ -912,6 +930,9 @@
 - Root tsconfig.json exclude must include `apps/web` to prevent root `tsc --build` from applying NodeNext module resolution to browser/JSX files
 - CSS Modules with `noUncheckedIndexedAccess: true`: `styles.foo` returns `string | undefined`; use `styles.foo ?? ""` for direct className props or use template literals (always return `string`)
 - Add `src/vite-env.d.ts` with `/// <reference types="vite/client" />` to enable CSS Module imports in TypeScript
+- `hono/jwt` v4.12.x: `sign(payload, secret, "HS256")` and `verify(token, secret, "HS256")` — algorithm must be explicit or throws `JwtAlgorithmRequired`
+- JWT auth middleware: check `c.req.path.startsWith("/api/v1/auth/")` for full path (includes basePath); also exempt `/api/v1/health`
+- Auth test pattern: top-level `const AUTH = \`Bearer \${await signAccessToken(...)}\`` in ESM test files; add `Authorization: AUTH` to all test requests
 - React Router v7 layout routes: `<Route element={<Layout />}>` wrapping child routes; `<Outlet />` renders child content inside the layout
 
 ---
