@@ -6,6 +6,8 @@ export type {
   PluginEventPayloads,
   PluginContext,
   PluginDatabaseAccess,
+  PluginRouteContext,
+  PluginRouteResponse,
   RouteHandler,
   RouteDefinition,
   UIInjectionPoint,

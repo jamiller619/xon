@@ -1,5 +1,6 @@
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
+import { pluginRouteDispatcher } from "./pluginRoutes.js";
 import { makeLibrariesRouter } from "./routes/libraries.js";
 import { makeMediaRouter } from "./routes/media.js";
 
@@ -14,6 +15,9 @@ export function createApp(db?: LibSQLDatabase): Hono {
     app.route("/libraries", makeLibrariesRouter(db));
     app.route("/media", makeMediaRouter(db));
   }
+
+  // Plugin routes: dispatched dynamically to registered plugin route handlers
+  app.all("/plugins/:pluginId/*", pluginRouteDispatcher);
 
   return app;
 }
