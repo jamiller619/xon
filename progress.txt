@@ -1402,3 +1402,23 @@
   - `onConflictDoUpdate` for upsert in Drizzle: `{ target: [col1, col2], set: { ... } }` — use for sortOrder updates when re-adding existing items
   - Groups protection pattern: check `MANUAL_GROUP_TYPES.includes(group.type)` before allowing PUT/DELETE so auto-generated groups (series, season, etc.) can't be accidentally deleted via the API
 ---
+
+## 2026-03-28 - US-083
+- Implemented AI-assisted automatic tagging for images and documents
+- Files changed: packages/server-core/src/autoTag.ts (new module), packages/server-core/src/autoTag.test.ts (new tests), packages/server-core/src/orchestrator.ts (added autoTagMediaItems call), packages/server-core/src/routes/media.ts (added PUT /:id/ai-tags endpoint), packages/server-core/src/index.ts (exported new symbols), apps/web/src/pages/MediaDetail.tsx (AI tags review UI), apps/web/src/pages/MediaDetail.module.css (AI tag styles)
+- `autoTag.ts`: `computeImageTags(filePath, metadata)` generates tags from EXIF data (dimensions→landscape/portrait/square, GPS→outdoor/location, camera make/model→photography, colorSpace→black-and-white, subject keywords) and filename heuristics (scene detection via keyword map)
+- `autoTag.ts`: `computeDocumentTags(filePath, metadata)` generates tags from page count (short/medium/long-read), file extension (pdf, ebook, document), title/subject metadata, and filename keywords for topic detection (technical, legal, financial, academic, etc.)
+- `AutoTagOnnxSession` interface + `setAutoTagOnnxSession()` / `getAutoTagOnnxSession()`: same injection pattern as fuzzyMatch; when set, 8-feature vector is run through model for both image and document classification; gracefully falls back to heuristics on ONNX errors
+- AI tags stored in `metadata.aiTags` field as `{ text, confidence, source: "ai-generated" }[]` array — separate from user `tags` (string[]) to allow review workflow
+- `autoTagMediaItems(db, libraryId)`: idempotent — skips items that already have `aiTags` set; only processes image categories (Pictures, Images, DesignFiles) and document categories
+- Called automatically in `orchestrator.ts` after scan and grouping steps
+- `PUT /api/v1/media/:id/ai-tags` with `{ accept?: string[], reject?: string[] }`: moves accepted tags from `aiTags` to `tags`; removes rejected from `aiTags`; returns updated media item
+- MediaDetail.tsx: shows "AI Suggested Tags" section with confidence percentage and ✓/✕ accept/reject buttons per tag; refreshes item state from API response; filters `aiTags` from raw metadata display
+- 656 tests passing; biome clean; typecheck clean
+- **Learnings for future iterations:**
+  - AI tag storage pattern: use `metadata.aiTags` (separate from `metadata.tags`) to distinguish AI-generated from user-defined tags — allows review workflow without polluting the main tags field
+  - Idempotent auto-tagging check: `Array.isArray(meta.aiTags) && meta.aiTags.length > 0` before tagging — prevents re-running on already-tagged items
+  - ONNX feature vector pattern: build fixed-length `Float32Array` from boolean/numeric metadata properties; keep dims consistent between train and inference
+  - `PUT /:id/ai-tags` accept/reject pattern: read current `meta.aiTags` and `meta.tags`, compute new arrays, write back — single endpoint handles both accept and reject in one call
+  - Interface declared inside render function scope in React (e.g. `interface AiTagEntry {}`) avoids top-level export clutter for types only used for type casting in JSX
+---
