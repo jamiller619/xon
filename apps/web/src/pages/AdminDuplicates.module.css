@@ -1,0 +1,219 @@
+.page {
+  padding: 2rem;
+  max-width: 72rem;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.heading {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.thresholdLabel {
+  font-size: 0.875rem;
+  color: var(--color-text-muted, #888);
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.thresholdInput {
+  width: 4rem;
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--color-border, #333);
+  border-radius: 0.25rem;
+  background: var(--color-surface, #141414);
+  color: var(--color-text, #e0e0e0);
+  font-size: 0.875rem;
+}
+
+.scanBtn {
+  padding: 0.4rem 1rem;
+  border: 1px solid var(--color-border, #333);
+  border-radius: 0.25rem;
+  background: var(--color-surface-hover, #1e1e1e);
+  color: var(--color-text, #e0e0e0);
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.scanBtn:hover {
+  background: var(--color-surface-active, #2a2a2a);
+}
+
+.scanBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.loading {
+  color: var(--color-text-muted, #888);
+  padding: 2rem 0;
+}
+
+.empty {
+  color: var(--color-text-muted, #888);
+  padding: 2rem 0;
+  text-align: center;
+}
+
+.candidateCard {
+  background: var(--color-surface, #141414);
+  border: 1px solid var(--color-border, #333);
+  border-radius: 0.5rem;
+  padding: 1.25rem;
+  margin-bottom: 1.25rem;
+}
+
+.candidateHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.similarityBadge {
+  font-size: 0.8rem;
+  font-weight: 600;
+  padding: 0.2rem 0.6rem;
+  border-radius: 1rem;
+  background: var(--color-accent, #3b82f6);
+  color: #fff;
+}
+
+.comparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.mediaCard {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+}
+
+.thumb {
+  width: 80px;
+  height: 80px;
+  object-fit: cover;
+  border-radius: 0.25rem;
+  background: var(--color-surface-hover, #1e1e1e);
+  flex-shrink: 0;
+}
+
+.thumbPlaceholder {
+  width: 80px;
+  height: 80px;
+  border-radius: 0.25rem;
+  background: var(--color-surface-hover, #1e1e1e);
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  color: var(--color-text-muted, #888);
+}
+
+.mediaInfo {
+  overflow: hidden;
+}
+
+.mediaTitle {
+  font-weight: 600;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mediaFile {
+  font-size: 0.75rem;
+  color: var(--color-text-muted, #888);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.mediaSize {
+  font-size: 0.75rem;
+  color: var(--color-text-muted, #888);
+  margin-top: 0.15rem;
+}
+
+.actions {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.keepFirstBtn,
+.keepSecondBtn,
+.keepBothBtn {
+  padding: 0.35rem 0.875rem;
+  border-radius: 0.25rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  border: 1px solid var(--color-border, #333);
+}
+
+.keepFirstBtn {
+  background: var(--color-surface-hover, #1e1e1e);
+  color: var(--color-text, #e0e0e0);
+}
+
+.keepFirstBtn:hover {
+  background: var(--color-surface-active, #2a2a2a);
+}
+
+.keepSecondBtn {
+  background: var(--color-surface-hover, #1e1e1e);
+  color: var(--color-text, #e0e0e0);
+}
+
+.keepSecondBtn:hover {
+  background: var(--color-surface-active, #2a2a2a);
+}
+
+.keepBothBtn {
+  background: transparent;
+  color: var(--color-text-muted, #888);
+}
+
+.keepBothBtn:hover {
+  background: var(--color-surface-hover, #1e1e1e);
+  color: var(--color-text, #e0e0e0);
+}
+
+.keepFirstBtn:disabled,
+.keepSecondBtn:disabled,
+.keepBothBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.librarySelect {
+  padding: 0.25rem 0.5rem;
+  border: 1px solid var(--color-border, #333);
+  border-radius: 0.25rem;
+  background: var(--color-surface, #141414);
+  color: var(--color-text, #e0e0e0);
+  font-size: 0.875rem;
+}

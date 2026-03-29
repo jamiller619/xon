@@ -42,6 +42,12 @@ export {
   matchingQueue,
   type MatchingQueueItem,
   type NewMatchingQueueItem,
+  imageHashes,
+  type ImageHash,
+  type NewImageHash,
+  duplicateCandidates,
+  type DuplicateCandidate,
+  type NewDuplicateCandidate,
 } from "./schema.js";
 export {
   parseTvEpisode,
@@ -78,6 +84,16 @@ export {
   type AutoTag,
   type AutoTagOnnxSession,
 } from "./autoTag.js";
+export {
+  computePerceptualHash,
+  hammingDistance,
+  hashSimilarity,
+  scanLibraryForDuplicates,
+  setPerceptualHashOnnxSession,
+  getPerceptualHashOnnxSession,
+  type PerceptualHashConfig,
+  type PerceptualHashOnnxSession,
+} from "./perceptualHash.js";
 export { hashPassword, verifyPassword } from "./password.js";
 export {
   extractExiftoolMetadata,

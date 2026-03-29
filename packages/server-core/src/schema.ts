@@ -296,3 +296,50 @@ export const matchingQueue = sqliteTable(
 
 export type MatchingQueueItem = typeof matchingQueue.$inferSelect;
 export type NewMatchingQueueItem = typeof matchingQueue.$inferInsert;
+
+export const imageHashes = sqliteTable(
+  "image_hashes",
+  {
+    id: text("id").primaryKey(),
+    mediaItemId: text("media_item_id")
+      .notNull()
+      .unique()
+      .references(() => mediaItems.id, { onDelete: "cascade" }),
+    hash: text("hash").notNull(),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  },
+  (table) => [index("image_hashes_media_item_id_idx").on(table.mediaItemId)]
+);
+
+export type ImageHash = typeof imageHashes.$inferSelect;
+export type NewImageHash = typeof imageHashes.$inferInsert;
+
+export const duplicateCandidates = sqliteTable(
+  "duplicate_candidates",
+  {
+    id: text("id").primaryKey(),
+    libraryId: text("library_id")
+      .notNull()
+      .references(() => libraries.id, { onDelete: "cascade" }),
+    mediaItemId1: text("media_item_id_1")
+      .notNull()
+      .references(() => mediaItems.id, { onDelete: "cascade" }),
+    mediaItemId2: text("media_item_id_2")
+      .notNull()
+      .references(() => mediaItems.id, { onDelete: "cascade" }),
+    /** Similarity score 0–100 (higher = more similar) */
+    similarity: integer("similarity").notNull(),
+    status: text("status", { enum: ["pending", "kept_both", "kept_first", "kept_second"] })
+      .notNull()
+      .default("pending"),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  },
+  (table) => [
+    index("duplicate_candidates_library_id_idx").on(table.libraryId),
+    index("duplicate_candidates_status_idx").on(table.status),
+  ]
+);
+
+export type DuplicateCandidate = typeof duplicateCandidates.$inferSelect;
+export type NewDuplicateCandidate = typeof duplicateCandidates.$inferInsert;
