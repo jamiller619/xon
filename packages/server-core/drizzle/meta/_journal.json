@@ -120,6 +120,13 @@
       "when": 1774800500000,
       "tag": "0016_duplicates",
       "breakpoints": true
+    },
+    {
+      "idx": 17,
+      "version": "6",
+      "when": 1774800600000,
+      "tag": "0017_suggested_groups",
+      "breakpoints": true
     }
   ]
 }

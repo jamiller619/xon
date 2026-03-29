@@ -48,6 +48,9 @@ export {
   duplicateCandidates,
   type DuplicateCandidate,
   type NewDuplicateCandidate,
+  suggestedGroups,
+  type SuggestedGroup,
+  type NewSuggestedGroup,
 } from "./schema.js";
 export {
   parseTvEpisode,
@@ -94,6 +97,14 @@ export {
   type PerceptualHashConfig,
   type PerceptualHashOnnxSession,
 } from "./perceptualHash.js";
+export {
+  scanLibraryForSmartGroups,
+  acceptSuggestedGroup,
+  detectMultiDiscAlbums,
+  detectBookSeries,
+  detectSupplementaryMaterials,
+  type SmartGroupCandidate,
+} from "./smartGrouping.js";
 export { hashPassword, verifyPassword } from "./password.js";
 export {
   extractExiftoolMetadata,

@@ -4,7 +4,14 @@ import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
 import { scanLibraryForDuplicates } from "../perceptualHash.js";
-import { duplicateCandidates, libraries, libraryAccess, mediaItems } from "../schema.js";
+import {
+  duplicateCandidates,
+  libraries,
+  libraryAccess,
+  mediaItems,
+  suggestedGroups,
+} from "../schema.js";
+import { acceptSuggestedGroup, scanLibraryForSmartGroups } from "../smartGrouping.js";
 import { withThumbnailUrls } from "./media.js";
 
 const PRIVILEGED_ROLES = ["admin", "manager"] as const;
@@ -189,6 +196,141 @@ export function makeAiRouter(db: LibSQLDatabase): Hono {
       .update(duplicateCandidates)
       .set({ status: newStatus, updatedAt: new Date() })
       .where(eq(duplicateCandidates.id, id))
+      .returning();
+
+    return c.json(updated[0]);
+  });
+
+  // ─── Suggested Groups ─────────────────────────────────────────────────────
+
+  /**
+   * GET /ai/suggested-groups
+   * Returns suggested groups (scattered files that belong together).
+   * Supports ?libraryId, ?status (default "pending"), ?limit, ?offset.
+   */
+  router.get("/suggested-groups", async (c) => {
+    const user = c.get("user");
+    const limitNum = Math.min(Math.max(1, Number(c.req.query("limit") || 20)), 100);
+    const offsetNum = Math.max(0, Number(c.req.query("offset") || 0));
+    const statusFilter = c.req.query("status") ?? "pending";
+    const libraryIdFilter = c.req.query("libraryId");
+
+    const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role);
+
+    const conditions = [];
+
+    if (statusFilter === "pending" || statusFilter === "accepted" || statusFilter === "rejected") {
+      conditions.push(eq(suggestedGroups.status, statusFilter));
+    }
+
+    if (accessibleIds !== null) {
+      conditions.push(inArray(suggestedGroups.libraryId, accessibleIds));
+    }
+
+    if (libraryIdFilter) {
+      if (accessibleIds !== null && !accessibleIds.includes(libraryIdFilter)) {
+        return c.json({ items: [], limit: limitNum, offset: offsetNum });
+      }
+      conditions.push(eq(suggestedGroups.libraryId, libraryIdFilter));
+    }
+
+    const rows = await db
+      .select()
+      .from(suggestedGroups)
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(suggestedGroups.confidence))
+      .limit(limitNum)
+      .offset(offsetNum);
+
+    return c.json({ items: rows, limit: limitNum, offset: offsetNum });
+  });
+
+  /**
+   * POST /ai/suggested-groups/scan
+   * Trigger smart grouping scan for a library. Admin/manager only.
+   */
+  const smartScanSchema = z.object({ libraryId: z.string().min(1) });
+
+  router.post("/suggested-groups/scan", zValidator("json", smartScanSchema), async (c) => {
+    const user = c.get("user");
+    const { libraryId } = c.req.valid("json");
+
+    const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role);
+    if (accessibleIds !== null && !accessibleIds.includes(libraryId)) {
+      return c.json({ error: "Forbidden" }, 403);
+    }
+
+    const libRows = await db.select().from(libraries).where(eq(libraries.id, libraryId));
+    if (libRows.length === 0) {
+      return c.json({ error: "Library not found" }, 404);
+    }
+
+    const found = await scanLibraryForSmartGroups(db, libraryId);
+    return c.json({ found });
+  });
+
+  /**
+   * POST /ai/suggested-groups/:id/accept
+   * Accept a suggestion: creates a real group and marks suggestion accepted.
+   */
+  router.post("/suggested-groups/:id/accept", async (c) => {
+    const { id } = c.req.param();
+    const user = c.get("user");
+
+    const rows = await db.select().from(suggestedGroups).where(eq(suggestedGroups.id, id));
+    if (rows.length === 0) {
+      return c.json({ error: "Not found" }, 404);
+    }
+    const suggestion = rows[0];
+    if (!suggestion) {
+      return c.json({ error: "Not found" }, 404);
+    }
+    if (suggestion.status !== "pending") {
+      return c.json({ error: "Suggestion is not pending" }, 409);
+    }
+
+    const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role);
+    if (accessibleIds !== null && !accessibleIds.includes(suggestion.libraryId)) {
+      return c.json({ error: "Forbidden" }, 403);
+    }
+
+    const result = await acceptSuggestedGroup(db, id);
+    if (!result) {
+      return c.json({ error: "Could not accept suggestion" }, 409);
+    }
+
+    return c.json({ groupId: result.groupId });
+  });
+
+  /**
+   * POST /ai/suggested-groups/:id/reject
+   * Reject a suggestion: marks it as rejected without creating a group.
+   */
+  router.post("/suggested-groups/:id/reject", async (c) => {
+    const { id } = c.req.param();
+    const user = c.get("user");
+
+    const rows = await db.select().from(suggestedGroups).where(eq(suggestedGroups.id, id));
+    if (rows.length === 0) {
+      return c.json({ error: "Not found" }, 404);
+    }
+    const suggestion = rows[0];
+    if (!suggestion) {
+      return c.json({ error: "Not found" }, 404);
+    }
+    if (suggestion.status !== "pending") {
+      return c.json({ error: "Suggestion is not pending" }, 409);
+    }
+
+    const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role);
+    if (accessibleIds !== null && !accessibleIds.includes(suggestion.libraryId)) {
+      return c.json({ error: "Forbidden" }, 403);
+    }
+
+    const updated = await db
+      .update(suggestedGroups)
+      .set({ status: "rejected", updatedAt: new Date() })
+      .where(eq(suggestedGroups.id, id))
       .returning();
 
     return c.json(updated[0]);

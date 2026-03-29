@@ -343,3 +343,34 @@ export const duplicateCandidates = sqliteTable(
 
 export type DuplicateCandidate = typeof duplicateCandidates.$inferSelect;
 export type NewDuplicateCandidate = typeof duplicateCandidates.$inferInsert;
+
+export const suggestedGroups = sqliteTable(
+  "suggested_groups",
+  {
+    id: text("id").primaryKey(),
+    libraryId: text("library_id")
+      .notNull()
+      .references(() => libraries.id, { onDelete: "cascade" }),
+    suggestedTitle: text("suggested_title").notNull(),
+    /** e.g. "album", "book-series", "collection" */
+    suggestedType: text("suggested_type").notNull(),
+    /** Human-readable explanation of why these files were grouped */
+    reason: text("reason").notNull(),
+    /** JSON array of mediaItem IDs */
+    memberItemIds: text("member_item_ids").notNull().default("[]"),
+    /** Confidence score 0–100 */
+    confidence: integer("confidence").notNull(),
+    status: text("status", { enum: ["pending", "accepted", "rejected"] })
+      .notNull()
+      .default("pending"),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  },
+  (table) => [
+    index("suggested_groups_library_id_idx").on(table.libraryId),
+    index("suggested_groups_status_idx").on(table.status),
+  ]
+);
+
+export type SuggestedGroup = typeof suggestedGroups.$inferSelect;
+export type NewSuggestedGroup = typeof suggestedGroups.$inferInsert;
