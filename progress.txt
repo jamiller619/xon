@@ -1,3 +1,19 @@
+## 2026-03-28 - US-086
+- Implemented AI configuration settings (admin page + API)
+- Files changed: packages/server-core/drizzle/0018_ai_settings.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added aiSettings table), packages/server-core/src/crypto.ts (new AES-256-GCM encryption utility), packages/server-core/src/routes/adminAiSettings.ts (new admin route), packages/server-core/src/app.ts (registered /admin/ai-settings), packages/server-core/src/index.ts (exported new types), apps/web/src/pages/AdminAiSettings.tsx (new admin page), apps/web/src/pages/AdminAiSettings.module.css, apps/web/src/App.tsx (registered /admin/ai-settings route)
+- `ai_settings` DB table: singleton row (id='default'), aiEnabled (bool), aiMode (local-only/cloud-only/local-with-cloud-fallback), cloudApiKey (encrypted text), cloudApiUrl (text), featureMatching/featureTagging/featureSimilarity/featureSmartGrouping (booleans), updatedAt
+- `crypto.ts`: AES-256-GCM encryption via node:crypto; key from `XON_ENCRYPTION_KEY` env (padded to 32 bytes); stores as `iv:tag:ciphertext` (hex); `encryptSecret`/`decryptSecret` exports
+- `GET /api/v1/admin/ai-settings`: returns settings with `cloudApiKeySet: boolean` (key never returned in plaintext)
+- `PUT /api/v1/admin/ai-settings`: updates all fields; cloudApiKey only updated when non-empty, null clears it
+- `GET /api/v1/admin/ai-settings/key`: returns decrypted key for server-internal use (admin only)
+- Admin UI: `/admin/ai-settings` page with global toggle, mode radio buttons, cloud API URL+key fields, per-feature toggles, save button
+- 684 tests passing; biome clean; typecheck clean (pre-existing errors in plugin packages only)
+- **Learnings for future iterations:**
+  - AES-256-GCM in Node.js: `createCipheriv("aes-256-gcm", key, iv)` where iv is 12 bytes; call `cipher.getAuthTag()` after `final()` for the 16-byte auth tag; store as `iv:tag:ciphertext` hex
+  - Singleton settings pattern: table with fixed id ('default'), `INSERT OR IGNORE` in migration to seed default row, `getOrInitSettings` helper that inserts on first access
+  - For password-like fields: never return plaintext to client; return a boolean `fieldSet: true/false` instead; only update in DB when client sends a non-empty new value
+---
+
 ## 2026-03-28 - US-085
 - Implemented AI-assisted smart grouping of scattered files
 - Files changed: packages/server-core/drizzle/0017_suggested_groups.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added suggestedGroups table), packages/server-core/src/smartGrouping.ts (new module), packages/server-core/src/smartGrouping.test.ts (13 new tests), packages/server-core/src/routes/ai.ts (new suggested-groups routes), packages/server-core/src/routes/ai.suggested-groups.test.ts (15 new route tests), packages/server-core/src/index.ts (exported new types/functions)
