@@ -9,6 +9,7 @@ export interface MediaCardItem {
   mimeType: string | null;
   fileSize: number | null;
   createdAt: number | null;
+  drmProtected?: boolean;
   thumbnailUrls: { small: string; medium: string; large: string } | null;
 }
 
@@ -91,20 +92,27 @@ export default function MediaCard({
         )}
         <td className={styles.listThumbCell ?? ""}>
           {selectMode ? (
-            <div className={styles.listThumbLink ?? ""}>
+            <div
+              className={`${styles.listThumbLink ?? ""} ${item.drmProtected ? (styles.listThumbDrm ?? "") : ""}`}
+            >
               {item.thumbnailUrls ? (
                 <img src={item.thumbnailUrls.small} alt="" className={styles.listThumbImg ?? ""} />
               ) : (
                 <div className={styles.listThumbPlaceholder ?? ""}>{isAudio ? "♪" : "▶"}</div>
               )}
+              {item.drmProtected && <span className={styles.listDrmBadge ?? ""}>🔒</span>}
             </div>
           ) : (
-            <Link to={`/media/${item.id}`} className={styles.listThumbLink ?? ""}>
+            <Link
+              to={`/media/${item.id}`}
+              className={`${styles.listThumbLink ?? ""} ${item.drmProtected ? (styles.listThumbDrm ?? "") : ""}`}
+            >
               {item.thumbnailUrls ? (
                 <img src={item.thumbnailUrls.small} alt="" className={styles.listThumbImg ?? ""} />
               ) : (
                 <div className={styles.listThumbPlaceholder ?? ""}>{isAudio ? "♪" : "▶"}</div>
               )}
+              {item.drmProtected && <span className={styles.listDrmBadge ?? ""}>🔒</span>}
             </Link>
           )}
         </td>
@@ -154,6 +162,7 @@ export default function MediaCard({
             <span>{isAudio ? "♪" : "▶"}</span>
           </div>
         )}
+        {item.drmProtected && !selectMode && <div className={styles.drmBadge ?? ""}>🔒</div>}
         {selectMode && (
           <div className={styles.selectOverlay ?? ""}>
             <input

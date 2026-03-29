@@ -68,3 +68,15 @@
   padding: 1rem;
   text-align: center;
 }
+
+.prefOption {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  padding: 0.5rem 0;
+}
+
+.prefLabel {
+  font-size: 0.9rem;
+}

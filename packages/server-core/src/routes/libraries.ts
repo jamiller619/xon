@@ -63,6 +63,7 @@ const updateLibrarySchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
   allowedMediaTypes: z.array(z.string()).optional(),
+  hideDrmItems: z.boolean().optional(),
 });
 
 export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
@@ -128,6 +129,7 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
     if (body.allowedMediaTypes !== undefined) {
       updates.allowedMediaTypes = JSON.stringify(body.allowedMediaTypes);
     }
+    if (body.hideDrmItems !== undefined) updates.hideDrmItems = body.hideDrmItems;
 
     await db.update(libraries).set(updates).where(eq(libraries.id, id));
     const updated = await db.select().from(libraries).where(eq(libraries.id, id));
@@ -164,11 +166,22 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
 
     const ratingCond = await getContentRatingCondition(db, user.id);
 
+    // Check if DRM items should be hidden (per library or per user preference)
+    const userRows = await db
+      .select({ hideDrmItems: users.hideDrmItems })
+      .from(users)
+      .where(eq(users.id, user.id))
+      .limit(1);
+    const userHidesDrm = userRows[0]?.hideDrmItems ?? false;
+    const libHidesDrm = lib[0]?.hideDrmItems ?? false;
+
     const conditions = [eq(mediaItems.libraryId, libraryId)];
     if (mediaCategory) conditions.push(eq(mediaItems.mediaCategory, mediaCategory));
     if (mimeType) conditions.push(eq(mediaItems.mimeType, mimeType));
     if (drmProtected !== undefined && drmProtected !== "") {
       conditions.push(eq(mediaItems.drmProtected, drmProtected === "true"));
+    } else if (userHidesDrm || libHidesDrm) {
+      conditions.push(eq(mediaItems.drmProtected, false));
     }
     if (ratingCond !== null) conditions.push(ratingCond);
 

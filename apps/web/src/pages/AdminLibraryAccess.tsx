@@ -5,6 +5,7 @@ import styles from "./AdminUsers.module.css";
 interface Library {
   id: string;
   name: string;
+  hideDrmItems: boolean;
 }
 
 interface UserInfo {
@@ -33,13 +34,13 @@ export default function AdminLibraryAccess() {
   const [grantError, setGrantError] = useState("");
   const [confirmRevokeId, setConfirmRevokeId] = useState<string | null>(null);
   const [revoking, setRevoking] = useState(false);
+  const [savingLibSettings, setSavingLibSettings] = useState(false);
 
   useEffect(() => {
     apiFetch("/api/v1/libraries")
       .then((r) => r.json())
       .then((data: Library[]) => setLibraries(data))
       .catch(() => {});
-
     apiFetch("/api/v1/admin/users")
       .then((r) => r.json())
       .then((data: UserInfo[]) => setUsers(data))
@@ -85,6 +86,23 @@ export default function AdminLibraryAccess() {
     }
   }
 
+  async function handleToggleHideDrm(value: boolean) {
+    if (!selectedLibraryId) return;
+    setSavingLibSettings(true);
+    try {
+      await apiFetch(`/api/v1/libraries/${selectedLibraryId}`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ hideDrmItems: value }),
+      });
+      setLibraries((prev) =>
+        prev.map((lib) => (lib.id === selectedLibraryId ? { ...lib, hideDrmItems: value } : lib))
+      );
+    } finally {
+      setSavingLibSettings(false);
+    }
+  }
+
   async function handleRevoke(userId: string) {
     if (!selectedLibraryId) return;
     setRevoking(true);
@@ -125,6 +143,22 @@ export default function AdminLibraryAccess() {
 
       {selectedLibraryId && (
         <>
+          <div className={styles.formCard}>
+            <div className={styles.formHeading}>Library Settings</div>
+            <label
+              style={{ display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer" }}
+            >
+              <input
+                type="checkbox"
+                checked={libraries.find((l) => l.id === selectedLibraryId)?.hideDrmItems ?? false}
+                onChange={(e) => handleToggleHideDrm(e.target.checked)}
+                disabled={savingLibSettings}
+              />
+              <span style={{ fontSize: "0.9rem" }}>
+                Hide DRM-protected items from this library for all users
+              </span>
+            </label>
+          </div>
           <div className={styles.formCard}>
             <div className={styles.formHeading}>Grant Access</div>
             <div className={styles.formActions}>

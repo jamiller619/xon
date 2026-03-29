@@ -4,7 +4,7 @@ import { and, desc, eq, isNull, or } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
-import { apiTokens, favorites, mediaItems, mediaProgress, watchlist } from "../schema.js";
+import { apiTokens, favorites, mediaItems, mediaProgress, users, watchlist } from "../schema.js";
 import { withThumbnailUrls } from "./media.js";
 
 export function hashApiToken(token: string): string {
@@ -13,6 +13,59 @@ export function hashApiToken(token: string): string {
 
 export function makeUsersRouter(db: LibSQLDatabase): Hono {
   const router = new Hono();
+
+  // GET /users/me — get current user profile (no password hash)
+  router.get("/me", async (c) => {
+    const user = c.get("user");
+    const rows = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        displayName: users.displayName,
+        avatarUrl: users.avatarUrl,
+        role: users.role,
+        maxContentRating: users.maxContentRating,
+        hideDrmItems: users.hideDrmItems,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+      })
+      .from(users)
+      .where(eq(users.id, user.id))
+      .limit(1);
+    if (!rows[0]) return c.json({ error: "Not found" }, 404);
+    return c.json(rows[0]);
+  });
+
+  // PATCH /users/me — update current user preferences
+  router.patch(
+    "/me",
+    zValidator("json", z.object({ hideDrmItems: z.boolean().optional() })),
+    async (c) => {
+      const user = c.get("user");
+      const body = c.req.valid("json");
+      const updates: Partial<typeof users.$inferInsert> = { updatedAt: new Date() };
+      if (body.hideDrmItems !== undefined) updates.hideDrmItems = body.hideDrmItems;
+      await db.update(users).set(updates).where(eq(users.id, user.id));
+      const rows = await db
+        .select({
+          id: users.id,
+          username: users.username,
+          email: users.email,
+          displayName: users.displayName,
+          avatarUrl: users.avatarUrl,
+          role: users.role,
+          maxContentRating: users.maxContentRating,
+          hideDrmItems: users.hideDrmItems,
+          createdAt: users.createdAt,
+          updatedAt: users.updatedAt,
+        })
+        .from(users)
+        .where(eq(users.id, user.id))
+        .limit(1);
+      return c.json(rows[0]);
+    }
+  );
 
   // GET /users/me/progress — list in-progress (not completed) items for the current user
   router.get("/me/progress", async (c) => {

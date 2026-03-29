@@ -99,6 +99,13 @@
       "when": 1774800200000,
       "tag": "0013_groups",
       "breakpoints": true
+    },
+    {
+      "idx": 14,
+      "version": "6",
+      "when": 1774800300000,
+      "tag": "0014_drm_settings",
+      "breakpoints": true
     }
   ]
 }

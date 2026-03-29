@@ -7,6 +7,7 @@ export const libraries = sqliteTable("libraries", {
   description: text("description"),
   allowedMediaTypes: text("allowed_media_types").notNull().default("[]"),
   scanSchedule: text("scan_schedule"),
+  hideDrmItems: integer("hide_drm_items", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
@@ -101,6 +102,7 @@ export const users = sqliteTable("users", {
   })
     .notNull()
     .default("none"),
+  hideDrmItems: integer("hide_drm_items", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });

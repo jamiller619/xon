@@ -88,6 +88,33 @@
   text-transform: uppercase;
 }
 
+/* DRM lock badge on grid card thumbnail */
+.drmBadge {
+  position: absolute;
+  top: 6px;
+  left: 6px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 4px;
+  padding: 2px 5px;
+  font-size: 0.75rem;
+  z-index: 2;
+  pointer-events: none;
+}
+
+/* DRM lock badge on list view thumbnail */
+.listThumbDrm {
+  position: relative;
+}
+
+.listDrmBadge {
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  font-size: 0.65rem;
+  line-height: 1;
+  pointer-events: none;
+}
+
 /* Favorite heart button overlay */
 .favoriteBtn {
   position: absolute;
