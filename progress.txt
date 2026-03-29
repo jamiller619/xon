@@ -1,3 +1,21 @@
+## 2026-03-28 - US-082
+- Implemented AI-assisted fuzzy media matching with review queue API
+- Files changed: packages/server-core/drizzle/0015_matching_queue.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added matchingQueue table), packages/server-core/src/fuzzyMatch.ts (new module), packages/server-core/src/fuzzyMatch.test.ts (new tests), packages/server-core/src/routes/matching.ts (new routes), packages/server-core/src/routes/matching.test.ts (new tests), packages/server-core/src/app.ts (registered /matching router), packages/server-core/src/index.ts (exported new types/functions)
+- `fuzzyMatch.ts`: Jaro-Winkler + bigram/trigram n-gram Jaccard similarity for local inference; `computeMatchScore(queryTitle, candidate)` returns 0-100 confidence via weighted combination (JW 50%, bigram 25%, trigram 15%, length ratio 10%)
+- ONNX integration: `OnnxInferenceSession` interface + `setOnnxSession(session)` / `getOnnxSession()` for injecting an ONNX Runtime session; when set, model output replaces string-similarity scoring; gracefully falls back on ONNX errors
+- Cloud API fallback: when `cloudApiUrl` + `cloudApiKey` config set and best local confidence < autoAcceptThreshold (default 85), POSTs to cloud endpoint; cloud candidates get minimum 70 confidence boost
+- `parseFilenameInfo(fileName)`: strips extension, quality markers (1080p, BluRay, etc.), replaces dots/underscores with spaces, extracts year from `[YYYY]` / `(YYYY)` patterns
+- `matchingQueue` DB table: id, mediaItemId (FK→media_items CASCADE), suggestedTitle, suggestedMetadata (JSON), confidence (0-100), status (pending/confirmed/rejected), matchSource (local/cloud), createdAt, updatedAt
+- `GET /api/v1/matching/pending`: returns pending items joined with media item info, paginated, scoped to user's accessible libraries
+- `PUT /api/v1/matching/:id/confirm`: updates media item title + merges suggestedMetadata into existing metadata, marks queue item confirmed
+- `PUT /api/v1/matching/:id/reject`: marks queue item rejected, leaves media item unchanged; enforces library access control
+- 627 tests passing; biome clean; typecheck clean
+- **Learnings for future iterations:**
+  - `exactOptionalPropertyTypes: true`: when building objects with optional number/string props from potentially-undefined values, use `const obj: T = { required }; if (val !== undefined) obj.optProp = val` — can't spread `{ prop: val | undefined }`
+  - Test setup: always insert DB records directly via `db.insert().values()` in `beforeEach` rather than using API endpoints — avoids auth/user-existence issues and keeps tests fast
+  - ONNX integration pattern: define `OnnxInferenceSession` interface matching the onnxruntime-node Session API, export `setOnnxSession()` for injection — no hard dependency on native binary, tests mock easily with `vi.fn()`
+---
+
 ## 2026-03-28 - US-081
 - Implemented DRM content display in UI
 - Files changed: packages/server-core/drizzle/0014_drm_settings.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added hideDrmItems to users + libraries tables), packages/server-core/src/routes/users.ts (added GET /me and PATCH /me), packages/server-core/src/routes/libraries.ts (added hideDrmItems to update schema + DRM filter in media query), apps/web/src/components/MediaCard.tsx (added drmProtected field + lock badge in grid/list), apps/web/src/components/MediaCard.module.css (drmBadge, listThumbDrm, listDrmBadge styles), apps/web/src/pages/Settings.tsx (Content section with hideDrmItems toggle), apps/web/src/pages/Settings.module.css (prefOption, prefLabel styles), apps/web/src/pages/AdminLibraryAccess.tsx (Library Settings panel with hideDrmItems toggle)
