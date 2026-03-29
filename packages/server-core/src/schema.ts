@@ -268,3 +268,31 @@ export type Group = typeof groups.$inferSelect;
 export type NewGroup = typeof groups.$inferInsert;
 export type GroupMember = typeof groupMembers.$inferSelect;
 export type NewGroupMember = typeof groupMembers.$inferInsert;
+
+export const matchingQueue = sqliteTable(
+  "matching_queue",
+  {
+    id: text("id").primaryKey(),
+    mediaItemId: text("media_item_id")
+      .notNull()
+      .references(() => mediaItems.id, { onDelete: "cascade" }),
+    suggestedTitle: text("suggested_title").notNull(),
+    suggestedMetadata: text("suggested_metadata").notNull().default("{}"),
+    confidence: integer("confidence").notNull(),
+    status: text("status", { enum: ["pending", "confirmed", "rejected"] })
+      .notNull()
+      .default("pending"),
+    matchSource: text("match_source", { enum: ["local", "cloud"] })
+      .notNull()
+      .default("local"),
+    createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+    updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  },
+  (table) => [
+    index("matching_queue_media_item_id_idx").on(table.mediaItemId),
+    index("matching_queue_status_idx").on(table.status),
+  ]
+);
+
+export type MatchingQueueItem = typeof matchingQueue.$inferSelect;
+export type NewMatchingQueueItem = typeof matchingQueue.$inferInsert;

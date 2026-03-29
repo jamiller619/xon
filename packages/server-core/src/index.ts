@@ -39,6 +39,9 @@ export {
   type NewGroup,
   type GroupMember,
   type NewGroupMember,
+  matchingQueue,
+  type MatchingQueueItem,
+  type NewMatchingQueueItem,
 } from "./schema.js";
 export {
   parseTvEpisode,
@@ -53,6 +56,19 @@ export {
   clusterCoordinate,
   type TvEpisodeInfo,
 } from "./grouping.js";
+export {
+  matchMediaFile,
+  computeMatchScore,
+  parseFilenameInfo,
+  jaroWinkler,
+  ngramSimilarity,
+  setOnnxSession,
+  getOnnxSession,
+  type MatchCandidate,
+  type MatchResult,
+  type FuzzyMatchConfig,
+  type OnnxInferenceSession,
+} from "./fuzzyMatch.js";
 export { hashPassword, verifyPassword } from "./password.js";
 export {
   extractExiftoolMetadata,
