@@ -1,3 +1,18 @@
+## 2026-03-28 - US-081
+- Implemented DRM content display in UI
+- Files changed: packages/server-core/drizzle/0014_drm_settings.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added hideDrmItems to users + libraries tables), packages/server-core/src/routes/users.ts (added GET /me and PATCH /me), packages/server-core/src/routes/libraries.ts (added hideDrmItems to update schema + DRM filter in media query), apps/web/src/components/MediaCard.tsx (added drmProtected field + lock badge in grid/list), apps/web/src/components/MediaCard.module.css (drmBadge, listThumbDrm, listDrmBadge styles), apps/web/src/pages/Settings.tsx (Content section with hideDrmItems toggle), apps/web/src/pages/Settings.module.css (prefOption, prefLabel styles), apps/web/src/pages/AdminLibraryAccess.tsx (Library Settings panel with hideDrmItems toggle)
+- MediaCard: `drmProtected?: boolean` added to MediaCardItem interface; lock badge (🔒) shown in grid thumbnail top-left; lock badge shown in list view thumbnail bottom-right
+- MediaDetail: DRM overlay, dimmed controls, and DRM notice already existed from previous work
+- User preference: `GET /api/v1/users/me` returns profile incl. `hideDrmItems`; `PATCH /api/v1/users/me` updates it; Settings page shows toggle under "Content" section
+- Per-library setting: `hideDrmItems` added to libraries table; `PUT /api/v1/libraries/:id` accepts it; AdminLibraryAccess shows "Library Settings" panel with toggle when library selected
+- Server-side filtering: when user OR library has `hideDrmItems = true`, `eq(mediaItems.drmProtected, false)` condition added to GET /:libraryId/media query (unless explicit `drmProtected` query param is set)
+- 584 tests passing; biome clean; typecheck clean
+- **Learnings for future iterations:**
+  - `PATCH /me` endpoint pattern: only update fields that are `!== undefined` in the request body; select specific columns (no passwordHash) for the response
+  - When adding a column to schema + migration, both `users` and `libraries` tables can be altered in the same migration file with `-->statement-breakpoint` between statements
+  - AdminLibraryAccess.tsx imports AdminUsers.module.css for shared admin styles — use those classes for consistency
+---
+
 ## 2026-03-28 - US-080
 - Implemented bulk editing of media items (multi-select UI + API)
 - Files changed: packages/server-core/src/routes/media.ts (added POST /api/v1/media/bulk), packages/server-core/src/routes/media.test.ts (7 new bulk tests), apps/web/src/components/MediaCard.tsx (selectMode/selected/onToggleSelect props), apps/web/src/components/MediaCard.module.css (cardSelected, listRowSelected, selectOverlay styles), apps/web/src/components/BulkEditDialog.tsx (new dialog), apps/web/src/pages/LibraryBrowser.tsx (selectMode state + toolbar), apps/web/src/pages/LibraryBrowser.module.css (selectToolbar styles)
