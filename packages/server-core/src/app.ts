@@ -3,6 +3,7 @@ import { Hono } from "hono";
 import { makeAuthMiddleware } from "./authMiddleware.js";
 import { pluginRouteDispatcher } from "./pluginRoutes.js";
 import { requireRole } from "./rbac.js";
+import { makeAdminAiSettingsRouter } from "./routes/adminAiSettings.js";
 import { makeAdminLibraryAccessRouter } from "./routes/adminLibraryAccess.js";
 import { makeAdminPluginsRouter } from "./routes/adminPlugins.js";
 import { makeAdminUsersRouter } from "./routes/adminUsers.js";
@@ -46,6 +47,7 @@ export function createApp(db?: LibSQLDatabase): Hono {
   if (db) {
     app.route("/admin/users", makeAdminUsersRouter(db));
     app.route("/admin/libraries", makeAdminLibraryAccessRouter(db));
+    app.route("/admin/ai-settings", makeAdminAiSettingsRouter(db));
   }
 
   // Admin: plugin management

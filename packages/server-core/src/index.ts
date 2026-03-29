@@ -51,6 +51,10 @@ export {
   suggestedGroups,
   type SuggestedGroup,
   type NewSuggestedGroup,
+  aiSettings,
+  type AiSettingsRow,
+  type NewAiSettings,
+  type AiMode,
 } from "./schema.js";
 export {
   parseTvEpisode,

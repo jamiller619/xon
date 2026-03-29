@@ -1,0 +1,136 @@
+.page {
+  padding: 2rem;
+  max-width: 48rem;
+}
+
+.header {
+  margin-bottom: 2rem;
+}
+
+.heading {
+  font-size: 1.5rem;
+  font-weight: 600;
+}
+
+.loading {
+  color: var(--color-text-muted, #888);
+  padding: 2rem 0;
+}
+
+.section {
+  background: var(--color-surface, #141414);
+  border: 1px solid var(--color-border, #333);
+  border-radius: 0.5rem;
+  padding: 1.25rem 1.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.sectionHeading {
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+}
+
+.toggle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0.25rem 0;
+}
+
+.toggleGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.radioGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.radioOption {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  cursor: pointer;
+  font-size: 0.9rem;
+  padding: 0.25rem 0;
+}
+
+.fieldGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.fieldLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #888);
+}
+
+.input {
+  padding: 0.4rem 0.6rem;
+  background: var(--color-bg, #0a0a0a);
+  border: 1px solid var(--color-border, #333);
+  border-radius: 0.25rem;
+  color: var(--color-text, #e0e0e0);
+  font-size: 0.875rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-accent, #6366f1);
+}
+
+.keyNote {
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #888);
+  margin: 0;
+}
+
+.error {
+  color: #ef4444;
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
+}
+
+.success {
+  color: #22c55e;
+  font-size: 0.875rem;
+  margin-bottom: 0.75rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1.5rem;
+}
+
+.saveBtn {
+  padding: 0.5rem 1.5rem;
+  border: 1px solid var(--color-accent, #6366f1);
+  border-radius: 0.25rem;
+  background: var(--color-accent, #6366f1);
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.saveBtn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.saveBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}

@@ -374,3 +374,27 @@ export const suggestedGroups = sqliteTable(
 
 export type SuggestedGroup = typeof suggestedGroups.$inferSelect;
 export type NewSuggestedGroup = typeof suggestedGroups.$inferInsert;
+
+export const AI_MODES = ["local-only", "cloud-only", "local-with-cloud-fallback"] as const;
+export type AiMode = (typeof AI_MODES)[number];
+
+export const aiSettings = sqliteTable("ai_settings", {
+  id: text("id").primaryKey(),
+  aiEnabled: integer("ai_enabled", { mode: "boolean" }).notNull().default(true),
+  aiMode: text("ai_mode", { enum: ["local-only", "cloud-only", "local-with-cloud-fallback"] })
+    .notNull()
+    .default("local-only"),
+  /** Encrypted cloud API key (iv:tag:ciphertext hex) */
+  cloudApiKey: text("cloud_api_key"),
+  cloudApiUrl: text("cloud_api_url"),
+  featureMatching: integer("feature_matching", { mode: "boolean" }).notNull().default(true),
+  featureTagging: integer("feature_tagging", { mode: "boolean" }).notNull().default(true),
+  featureSimilarity: integer("feature_similarity", { mode: "boolean" }).notNull().default(true),
+  featureSmartGrouping: integer("feature_smart_grouping", { mode: "boolean" })
+    .notNull()
+    .default(true),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+
+export type AiSettingsRow = typeof aiSettings.$inferSelect;
+export type NewAiSettings = typeof aiSettings.$inferInsert;
