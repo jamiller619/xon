@@ -1,3 +1,25 @@
+## 2026-03-28 - US-085
+- Implemented AI-assisted smart grouping of scattered files
+- Files changed: packages/server-core/drizzle/0017_suggested_groups.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added suggestedGroups table), packages/server-core/src/smartGrouping.ts (new module), packages/server-core/src/smartGrouping.test.ts (13 new tests), packages/server-core/src/routes/ai.ts (new suggested-groups routes), packages/server-core/src/routes/ai.suggested-groups.test.ts (15 new route tests), packages/server-core/src/index.ts (exported new types/functions)
+- `suggestedGroups` DB table: id, libraryId (FK→libraries CASCADE), suggestedTitle, suggestedType, reason, memberItemIds (JSON array), confidence (0-100), status (pending/accepted/rejected), createdAt, updatedAt
+- `detectMultiDiscAlbums`: groups Music/Audiobooks items by album title (from metadata or parent dir); flags albums where tracks are in different directories and any directory contains a disc indicator (Disc N, CD N, Vol N); uses grandparent dir when parent is itself a disc folder
+- `detectBookSeries`: groups Documents/Audiobooks items by normalised title base; flags items with series indicators (Vol, Book, Part, #, trailing number) that share the same normalised title; computes series title via longest common prefix
+- `detectSupplementaryMaterials`: groups eligible items (Videos, Docs, Clips, etc.) by normalised base name; flags groups spanning multiple categories OR multiple directories
+- `deduplicateCandidates`: merges overlapping candidate groups (≥50% shared items), keeping the higher-confidence one
+- `scanLibraryForSmartGroups(db, libraryId)`: runs all detectors, deduplicates, skips already-pending/accepted suggestions, inserts new rows; returns count inserted
+- `acceptSuggestedGroup(db, id)`: upserts a real groups record + inserts groupMembers, marks suggestion accepted; returns groupId
+- `GET /api/v1/ai/suggested-groups`: list suggestions with ?status, ?libraryId, ?limit, ?offset filters
+- `POST /api/v1/ai/suggested-groups/scan`: trigger scan for a library (admin/manager); returns { found }
+- `POST /api/v1/ai/suggested-groups/:id/accept`: creates real group, marks suggestion accepted
+- `POST /api/v1/ai/suggested-groups/:id/reject`: marks suggestion rejected
+- 816 tests passing; biome clean; typecheck clean
+- **Learnings for future iterations:**
+  - `getAlbumTitle` disc fallback: when `basename(dirname(filePath))` matches DISC_PATTERN, use `basename(dirname(dirname(filePath)))` (grandparent) as the album name
+  - `libraryAccess` insert in tests requires both `userId` and `grantedBy` to exist in `users` table (FK constraint) — insert users first
+  - Invalid `// biome-ignore lint/style/noImportAssert` comments cause `suppressions/parse` errors — only use valid biome rule categories
+  - Biome prefers short single-line chained methods if they fit in 100 chars; splits to multi-line otherwise — rely on `biome check --write` for auto-formatting
+---
+
 ## 2026-03-28 - US-084
 - Implemented AI-assisted visual similarity and duplicate detection
 - Files changed: packages/server-core/drizzle/0016_duplicates.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added imageHashes + duplicateCandidates tables), packages/server-core/src/perceptualHash.ts (new module), packages/server-core/src/routes/ai.ts (new routes), packages/server-core/src/app.ts (registered /ai router), packages/server-core/src/index.ts (exported new types/functions), apps/web/src/pages/AdminDuplicates.tsx (new page), apps/web/src/pages/AdminDuplicates.module.css, apps/web/src/App.tsx (registered /admin/duplicates route)
