@@ -175,6 +175,66 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     return c.json(withThumbnailUrls(updated[0] as MediaItem));
   });
 
+  const aiTagsSchema = z.object({
+    accept: z.array(z.string()).optional(),
+    reject: z.array(z.string()).optional(),
+  });
+
+  // PUT /media/:id/ai-tags — accept or reject AI-generated tag suggestions
+  router.put("/:id/ai-tags", zValidator("json", aiTagsSchema), async (c) => {
+    const id = c.req.param("id");
+    const body = c.req.valid("json");
+
+    const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id));
+    const item = rows[0];
+    if (!item) return c.json({ error: "Not found" }, 404);
+
+    let meta: Record<string, unknown> = {};
+    try {
+      meta = JSON.parse(item.metadata) as Record<string, unknown>;
+    } catch {
+      // ignore
+    }
+
+    interface AiTagEntry {
+      text: string;
+      confidence: number;
+      source: string;
+    }
+
+    const currentAiTags: AiTagEntry[] = Array.isArray(meta.aiTags)
+      ? (meta.aiTags as AiTagEntry[])
+      : [];
+    const currentTags: string[] = Array.isArray(meta.tags) ? (meta.tags as string[]) : [];
+
+    const acceptSet = new Set(body.accept ?? []);
+    const rejectSet = new Set(body.reject ?? []);
+
+    // Move accepted tags into the regular tags array
+    const newTags = [...currentTags];
+    for (const tag of currentAiTags) {
+      if (acceptSet.has(tag.text) && !newTags.includes(tag.text)) {
+        newTags.push(tag.text);
+      }
+    }
+
+    // Remove accepted and rejected from aiTags
+    const remainingAiTags = currentAiTags.filter(
+      (t) => !acceptSet.has(t.text) && !rejectSet.has(t.text)
+    );
+
+    meta.tags = newTags;
+    meta.aiTags = remainingAiTags;
+
+    await db
+      .update(mediaItems)
+      .set({ metadata: JSON.stringify(meta), updatedAt: new Date() })
+      .where(eq(mediaItems.id, id));
+
+    const updated = await db.select().from(mediaItems).where(eq(mediaItems.id, id));
+    return c.json(withThumbnailUrls(updated[0] as MediaItem));
+  });
+
   const bulkSchema = z.object({
     action: z.enum(["update", "delete", "move-to-group"]),
     ids: z.array(z.string().min(1)).min(1).max(100),

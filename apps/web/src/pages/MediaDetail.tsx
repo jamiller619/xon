@@ -172,6 +172,20 @@ export default function MediaDetail() {
     setSaveError(null);
   }
 
+  async function handleAiTag(action: "accept" | "reject", tagText: string) {
+    if (!id) return;
+    const body = action === "accept" ? { accept: [tagText] } : { reject: [tagText] };
+    const res = await apiFetch(`/api/v1/media/${id}/ai-tags`, {
+      method: "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    }).catch(() => null);
+    if (res?.ok) {
+      const updated = (await res.json()) as MediaDetailItem;
+      setItem(updated);
+    }
+  }
+
   async function saveEditing() {
     if (!item || !id) return;
     setSaving(true);
@@ -237,13 +251,26 @@ export default function MediaDetail() {
     // ignore
   }
 
+  interface AiTagEntry {
+    text: string;
+    confidence: number;
+    source: string;
+  }
+
   const metaEntries = Object.entries(parsedMeta).filter(
-    ([k, v]) => k !== "tags" && v !== null && v !== undefined && v !== "" && !Array.isArray(v)
+    ([k, v]) =>
+      k !== "tags" &&
+      k !== "aiTags" &&
+      v !== null &&
+      v !== undefined &&
+      v !== "" &&
+      !Array.isArray(v)
   );
   const metaArrayEntries = Object.entries(parsedMeta).filter(
-    ([k, v]) => k !== "tags" && Array.isArray(v)
+    ([k, v]) => k !== "tags" && k !== "aiTags" && Array.isArray(v)
   );
   const tags = Array.isArray(parsedMeta.tags) ? (parsedMeta.tags as string[]) : [];
+  const aiTags = Array.isArray(parsedMeta.aiTags) ? (parsedMeta.aiTags as AiTagEntry[]) : [];
 
   const isImage = item.mimeType?.startsWith("image/");
   const isPdf = item.mimeType === "application/pdf";
@@ -490,6 +517,36 @@ export default function MediaDetail() {
                       {tag}
                     </span>
                   ))}
+                </div>
+              )}
+
+              {aiTags.length > 0 && (
+                <div className={styles.aiTagsSection ?? ""}>
+                  <p className={styles.aiTagsLabel ?? ""}>AI Suggested Tags</p>
+                  <div className={styles.aiTags ?? ""}>
+                    {aiTags.map((tag) => (
+                      <span key={tag.text} className={styles.aiTag ?? ""}>
+                        <span className={styles.aiTagText ?? ""}>{tag.text}</span>
+                        <span className={styles.aiTagConfidence ?? ""}>{tag.confidence}%</span>
+                        <button
+                          type="button"
+                          className={styles.aiTagAccept ?? ""}
+                          title="Accept tag"
+                          onClick={() => handleAiTag("accept", tag.text)}
+                        >
+                          ✓
+                        </button>
+                        <button
+                          type="button"
+                          className={styles.aiTagReject ?? ""}
+                          title="Reject tag"
+                          onClick={() => handleAiTag("reject", tag.text)}
+                        >
+                          ✕
+                        </button>
+                      </span>
+                    ))}
+                  </div>
                 </div>
               )}
 

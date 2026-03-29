@@ -69,6 +69,15 @@ export {
   type FuzzyMatchConfig,
   type OnnxInferenceSession,
 } from "./fuzzyMatch.js";
+export {
+  autoTagMediaItems,
+  computeDocumentTags,
+  computeImageTags,
+  getAutoTagOnnxSession,
+  setAutoTagOnnxSession,
+  type AutoTag,
+  type AutoTagOnnxSession,
+} from "./autoTag.js";
 export { hashPassword, verifyPassword } from "./password.js";
 export {
   extractExiftoolMetadata,

@@ -1,5 +1,6 @@
 import { and, eq, inArray } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
+import { autoTagMediaItems } from "./autoTag.js";
 import { detectDrm } from "./drm.js";
 import { emitEvent } from "./events.js";
 import { extractExiftoolMetadata, isImageCategory } from "./exiftool.js";
@@ -272,6 +273,8 @@ export async function scanLibrary(
   await groupAudiobooks(db, libraryId);
   // Auto-group photos by date and GPS location
   await groupPhotos(db, libraryId);
+  // Auto-tag images and documents with AI-generated tags
+  await autoTagMediaItems(db, libraryId);
 
   return {
     libraryId,

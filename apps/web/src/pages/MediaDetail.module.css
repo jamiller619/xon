@@ -484,3 +484,72 @@
     background-position: -200% 0;
   }
 }
+
+/* AI suggested tags */
+.aiTagsSection {
+  margin-bottom: 16px;
+}
+
+.aiTagsLabel {
+  margin: 0 0 6px;
+  font-size: 0.72rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.aiTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.aiTag {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 3px 6px 3px 10px;
+  background: rgba(108, 99, 255, 0.1);
+  border: 1px solid rgba(108, 99, 255, 0.25);
+  border-radius: 12px;
+  font-size: 0.75rem;
+}
+
+.aiTagText {
+  color: #b0aaff;
+}
+
+.aiTagConfidence {
+  color: #666;
+  font-size: 0.68rem;
+}
+
+.aiTagAccept {
+  padding: 0 2px;
+  background: transparent;
+  border: none;
+  color: #6ecf6e;
+  cursor: pointer;
+  font-size: 0.75rem;
+  line-height: 1;
+  border-radius: 3px;
+}
+
+.aiTagAccept:hover {
+  color: #90e090;
+}
+
+.aiTagReject {
+  padding: 0 2px;
+  background: transparent;
+  border: none;
+  color: #cf6e6e;
+  cursor: pointer;
+  font-size: 0.68rem;
+  line-height: 1;
+  border-radius: 3px;
+}
+
+.aiTagReject:hover {
+  color: #e09090;
+}
