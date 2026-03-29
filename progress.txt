@@ -1,3 +1,24 @@
+## 2026-03-28 - US-084
+- Implemented AI-assisted visual similarity and duplicate detection
+- Files changed: packages/server-core/drizzle/0016_duplicates.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added imageHashes + duplicateCandidates tables), packages/server-core/src/perceptualHash.ts (new module), packages/server-core/src/routes/ai.ts (new routes), packages/server-core/src/app.ts (registered /ai router), packages/server-core/src/index.ts (exported new types/functions), apps/web/src/pages/AdminDuplicates.tsx (new page), apps/web/src/pages/AdminDuplicates.module.css, apps/web/src/App.tsx (registered /admin/duplicates route)
+- `perceptualHash.ts`: dHash algorithm using sharp (resize 9×8 grayscale, compare adjacent horizontal pixels, 64-bit hash as 16-char hex); `computePerceptualHash(filePath)` → hex string; `hammingDistance(h1, h2)` popcount-based Hamming distance; `hashSimilarity(h1, h2)` converts to 0–100 score
+- ONNX injection pattern: `PerceptualHashOnnxSession` interface + `setPerceptualHashOnnxSession()` / `getPerceptualHashOnnxSession()`; when set, 64×64 grayscale embedding used for binarized hash; falls back to dHash on error
+- `scanLibraryForDuplicates(db, libraryId, threshold)`: loads all image items, computes/caches hashes in `image_hashes` table, compares all pairs within Hamming threshold, inserts new `duplicate_candidates`; idempotent (skips existing pairs)
+- `image_hashes` DB table: id, mediaItemId (FK→media_items CASCADE, UNIQUE), hash (text), createdAt; onConflictDoUpdate for re-scanning
+- `duplicate_candidates` DB table: id, libraryId (FK→libraries CASCADE), mediaItemId1/2 (FK→media_items CASCADE), similarity (0-100), status (pending/kept_both/kept_first/kept_second), createdAt, updatedAt
+- `GET /api/v1/ai/duplicates`: list pending candidates with ?minSimilarity, ?libraryId, ?limit, ?offset; returns mediaItem1+mediaItem2 with thumbnail URLs; library access control
+- `POST /api/v1/ai/duplicates/scan`: trigger scan for a library with configurable threshold (Hamming distance 0–64); admin/manager access
+- `POST /api/v1/ai/duplicates/:id/resolve`: action keep_both/keep_first/keep_second; keep_first deletes mediaItem2 from DB (not disk); keep_second deletes mediaItem1; updates status
+- Admin UI: /admin/duplicates page with side-by-side comparison (thumbnail + filename + filesize), similarity badge, Keep Item 1/2/Both buttons, library selector, min-similarity filter, scan trigger with configurable sensitivity
+- 656 tests passing; biome clean; typecheck clean
+- **Learnings for future iterations:**
+  - dHash with sharp: `sharp(path).resize(9, 8).grayscale().raw().toBuffer({ resolveWithObject: true })` returns `{ data: Buffer, info }` — use `data[row * 9 + col]` for pixel access
+  - BigInt for 64-bit hash: use `BigInt(0)`, `BigInt(1) << BigInt(n)`, then `.toString(16).padStart(16, "0")`
+  - `onConflictDoUpdate({ target: col, set: { ... } })` works for UNIQUE columns (not just primaryKey) in Drizzle
+  - For routes that query two different FK targets (mediaItemId1, mediaItemId2), join on one and batch-fetch the other — avoids complex double join
+  - Route ordering matters in Hono: `router.post("/duplicates/scan", ...)` must come before `router.post("/:id/resolve", ...)` to avoid the fixed path being captured as `:id`
+---
+
 ## 2026-03-28 - US-082
 - Implemented AI-assisted fuzzy media matching with review queue API
 - Files changed: packages/server-core/drizzle/0015_matching_queue.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added matchingQueue table), packages/server-core/src/fuzzyMatch.ts (new module), packages/server-core/src/fuzzyMatch.test.ts (new tests), packages/server-core/src/routes/matching.ts (new routes), packages/server-core/src/routes/matching.test.ts (new tests), packages/server-core/src/app.ts (registered /matching router), packages/server-core/src/index.ts (exported new types/functions)
@@ -1222,6 +1243,8 @@
 - `useCallback` required for functions used in React `useEffect` deps to satisfy biome `useExhaustiveDependencies`
 - Manual group protection: check `MANUAL_GROUP_TYPES.includes(group.type)` before allowing mutations so auto-generated groups (series, season, artist, etc.) can't be deleted via the API
 - Drizzle upsert: `db.insert().values().onConflictDoUpdate({ target: [col1, col2], set: { ... } })` for update-on-conflict semantics
+- dHash perceptual hash with sharp: `sharp(path).resize(9, 8).grayscale().raw().toBuffer({ resolveWithObject: true })` → compare adjacent horizontal pixels per row → 64-bit hash as 16-char hex (BigInt arithmetic)
+- Route ordering in Hono: fixed paths (e.g. `/duplicates/scan`) must be registered before parameterized routes (e.g. `/:id/resolve`) to avoid capture
 
 ---
 
