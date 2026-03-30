@@ -1,3 +1,17 @@
+## 2026-03-29 - US-088
+- Implemented backup targets schema and built-in local/network target copy logic
+- Files changed: packages/server-core/drizzle/0019_backup_targets.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added backupTargets table), packages/server-core/src/routes/adminBackupTargets.ts (new CRUD route + copy logic), packages/server-core/src/routes/adminBackupTargets.test.ts (20 tests), packages/server-core/src/app.ts (registered /admin/backup/targets), packages/server-core/src/index.ts (exported new types/functions)
+- `backup_targets` DB table: id (PK), name, type (local/network enum), config (JSON text), enabled (bool), createdAt
+- `copyFilesToDestination(srcFiles, basePath, destDir)`: copies files preserving relative path under basePath; uses `mkdir({ recursive: true })` for parent dirs; returns `{ copied, errors }` without throwing
+- `runBackupToTarget(target, srcFiles, basePath)`: dispatches to `copyFilesToDestination` using destPath (local) or mountPath (network) from parsed config JSON
+- `GET/POST/PUT/DELETE /api/v1/admin/backup/targets`: full CRUD; admin-only via existing middleware; Zod validation; config stored as JSON string in DB
+- 714 tests passing; biome clean; typecheck clean (pre-existing errors in plugin packages only)
+- **Learnings for future iterations:**
+  - `copyFile` from `node:fs/promises` (not `node:fs`) — mock with `vi.mock("node:fs/promises", () => ({ copyFile: vi.fn(), mkdir: vi.fn() }))`
+  - When mocking `node:fs/promises`, both `copyFile` and `mkdir` must be in the same mock factory even if only one is used
+  - Config stored as JSON string in SQLite text column — parse with `JSON.parse` when reading, `JSON.stringify` when writing
+---
+
 ## 2026-03-28 - US-086
 - Implemented AI configuration settings (admin page + API)
 - Files changed: packages/server-core/drizzle/0018_ai_settings.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added aiSettings table), packages/server-core/src/crypto.ts (new AES-256-GCM encryption utility), packages/server-core/src/routes/adminAiSettings.ts (new admin route), packages/server-core/src/app.ts (registered /admin/ai-settings), packages/server-core/src/index.ts (exported new types), apps/web/src/pages/AdminAiSettings.tsx (new admin page), apps/web/src/pages/AdminAiSettings.module.css, apps/web/src/App.tsx (registered /admin/ai-settings route)
