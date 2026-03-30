@@ -1483,3 +1483,18 @@
   - `PUT /:id/ai-tags` accept/reject pattern: read current `meta.aiTags` and `meta.tags`, compute new arrays, write back — single endpoint handles both accept and reject in one call
   - Interface declared inside render function scope in React (e.g. `interface AiTagEntry {}`) avoids top-level export clutter for types only used for type casting in JSX
 ---
+
+## 2026-03-29 - US-087
+- Implemented metadata backup — database export and import
+- Files changed: packages/server-core/src/routes/adminBackup.ts (new), packages/server-core/src/routes/adminBackup.test.ts (new), packages/server-core/src/app.ts (registered backup/restore routers), packages/server-core/src/events.ts (added backup/restore event types)
+- `adminBackup.ts`: pure-Node ZIP builder (CRC32 + DEFLATE via node:zlib deflateRawSync) and parser (EOCD scan + inflateRawSync); no external ZIP library needed
+- `POST /admin/backup/metadata`: reads xon.db from DATA_DIR, collects plugin registry list, server config (dataDir, port), packages as ZIP with backup-info.json (version, xonVersion, createdAt); emits backup:progress/backup:complete events; returns ZIP with Content-Disposition attachment filename
+- `POST /admin/restore/metadata`: accepts raw ZIP body, parses it, validates backup-info.json version compatibility, writes xon.db back to DATA_DIR (skips if empty); emits restore:progress/restore:complete events
+- Both routes protected by admin RBAC via app.ts `/admin/*` middleware
+- 13 new tests covering: 200 on valid backup/restore, 403/401 auth checks, version mismatch, missing backup-info.json, invalid ZIP, empty body, empty DB skips writeFile
+- 697 tests passing; biome clean; typecheck clean (pre-existing errors in plugin packages only)
+- **Learnings for future iterations:**
+  - Files were pre-created before this iteration (found in git untracked); always check git status for pre-existing work before starting implementation
+  - Pure-Node ZIP with deflateRawSync avoids adm-zip/jszip dependency; CRC32 table computed once and cached in module-level variable
+  - `c.req.arrayBuffer()` in Hono gives raw binary body; convert to Node Buffer with `Buffer.from(arrayBuffer)` for binary ZIP parsing
+---
