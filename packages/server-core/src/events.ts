@@ -22,7 +22,13 @@ export type XonEvent =
     }
   | { type: "scan:error"; payload: { libraryId: string; error: string } }
   | { type: "media:added"; payload: { libraryId: string; mediaItemId: string } }
-  | { type: "media:removed"; payload: { libraryId: string; mediaItemId: string } };
+  | { type: "media:removed"; payload: { libraryId: string; mediaItemId: string } }
+  | { type: "backup:progress"; payload: { stage: string; percent: number } }
+  | { type: "backup:complete"; payload: { sizeBytes: number } }
+  | { type: "backup:error"; payload: { error: string } }
+  | { type: "restore:progress"; payload: { stage: string; percent: number } }
+  | { type: "restore:complete"; payload: { restoredAt: string } }
+  | { type: "restore:error"; payload: { error: string } };
 
 export const eventBus = new EventEmitter();
 
