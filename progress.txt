@@ -1,3 +1,20 @@
+## 2026-03-29 - US-092
+- Implemented backup verification and integrity checks using SHA-256 checksums
+- Files changed: packages/server-core/drizzle/0023_backup_verify_jobs.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added backupVerifyJobs table), packages/server-core/src/events.ts (added backup:verify:progress/complete/error event types), packages/server-core/src/routes/adminBackupVerify.ts (new module: computeChecksum, runVerifyJob, makeAdminBackupVerifyRouter), packages/server-core/src/routes/adminBackupVerify.test.ts (15 new tests), packages/server-core/src/app.ts (registered /admin/backup/verify route), packages/server-core/src/index.ts (exported new types/functions)
+- `backup_verify_jobs` DB table: id (PK), targetId (FK→backup_targets CASCADE), status (pending/running/completed/failed), totalFiles, passedFiles, failedFiles, missingFiles, failedItems (JSON array of {filePath, reason}), startedAt, completedAt, createdAt
+- `computeChecksum(filePath)`: reads file via `readFile` from `node:fs/promises`, computes SHA-256 hex via `createHash("sha256")` from `node:crypto`
+- `runVerifyJob`: loads backupFileState for target, computes source + dest checksums for each, categorises as passed/failed/missing; flags failed/missing files for re-backup by resetting mtime+size+checksum to 0/null in backupFileState; stores verified checksum for passing files; emits backup:verify:progress per file and backup:verify:complete at end
+- `POST /api/v1/admin/backup/verify/:targetId`: 404 if target not found, 400 if disabled; creates job record, fire-and-forget runVerifyJob, returns { jobId, status: "running" } 202
+- `GET /api/v1/admin/backup/verify/jobs`: list all verify jobs ordered by createdAt DESC
+- `GET /api/v1/admin/backup/verify/jobs/:id`: get single verify job by id
+- 783 tests passing; biome clean; typecheck clean (pre-existing errors in plugin packages only)
+- **Learnings for future iterations:**
+  - `computeChecksum` uses `readFile` from `node:fs/promises` (not createReadStream) for simplicity and easy mocking in tests
+  - To test async job results, use `await new Promise((r) => setTimeout(r, 100))` to let the fire-and-forget async complete
+  - `vi.mocked(readFile).mockResolvedValueOnce(...).mockResolvedValueOnce(...)` chains allow source and dest reads to return different content (for testing mismatch)
+  - Dynamic imports like `await import("drizzle-orm").then(m => m.eq)` work in tests but biome formats them consistently — prefer top-level imports when possible
+---
+
 ## 2026-03-29 - US-091
 - Implemented scheduled backups with retention policies
 - Files changed: packages/server-core/drizzle/0022_backup_schedule.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added schedule, retentionKeepCount, retentionKeepDays, nextScheduledAt to backupTargets), packages/server-core/src/backupScheduler.ts (new module: cron parsing, getNextCronTime, applyRetentionPolicy, startBackupScheduler/stopBackupScheduler), packages/server-core/src/routes/adminBackupTargets.ts (scheduleSchema, PUT /:id/schedule endpoint), packages/server-core/src/routes/adminBackupMedia.ts (applyRetentionPolicy called after job completes), packages/server-core/src/backupScheduler.test.ts (26 new tests), packages/server-core/src/routes/adminBackupTargets.test.ts (6 new schedule API tests), apps/web/src/pages/AdminBackup.tsx (new admin page), apps/web/src/pages/AdminBackup.module.css, apps/web/src/App.tsx (registered /admin/backup route)
