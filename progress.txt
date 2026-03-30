@@ -1,3 +1,21 @@
+## 2026-03-29 - US-089
+- Implemented media file backup — full and partial backup to configured targets
+- Files changed: packages/server-core/drizzle/0020_backup_jobs.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added backupJobs table), packages/server-core/src/events.ts (new backup:media:* event types), packages/server-core/src/routes/adminBackupMedia.ts (new route + async job execution), packages/server-core/src/routes/adminBackupMedia.test.ts (16 tests), packages/server-core/src/app.ts (registered /admin/backup/media), packages/server-core/src/index.ts (exported new types/functions)
+- `backup_jobs` DB table: id (PK), targetId (FK→backup_targets CASCADE), scope (JSON text), status (pending/running/completed/failed), totalFiles, copiedFiles, errors (JSON text), startedAt, completedAt, createdAt
+- `POST /api/v1/admin/backup/media`: validates targetId (404 if not found, 400 if disabled), creates job record, fires async `runMediaBackupJob()` (fire-and-forget), returns `{ jobId, status: "running" }` 202
+- `GET /api/v1/admin/backup/media/jobs`: list all jobs ordered by createdAt DESC
+- `GET /api/v1/admin/backup/media/jobs/:id`: get single job by id
+- Scope: `{ all?, libraryIds?, mediaTypes?, itemIds? }` — filters applied as SQL WHERE conditions; empty scope copies all media items
+- Progress via WebSocket: emits `backup:media:progress` per file, `backup:media:complete` or `backup:media:error` on finish
+- Job status: "running" while in progress; "completed" even if some files errored (errors stored in JSON); "failed" only if target is missing or config is invalid (0 files could be copied)
+- 730 tests passing; biome clean (changed files); typecheck clean (pre-existing errors in plugin packages only)
+- **Learnings for future iterations:**
+  - `inArray(col, arr)` from drizzle-orm for filtering by array; combine multiple filters with `and(...filters)` where filters is `SQL[]`
+  - When filters array is empty, skip the `.where()` clause entirely (don't pass empty `and()`)
+  - Fire-and-forget async: `asyncFn().catch(() => {})` pattern to run background job without blocking HTTP response
+  - `backup:media:*` events added to XonEvent union in events.ts — all event types must be added there for TypeScript to accept `emitEvent()` calls
+---
+
 ## 2026-03-29 - US-088
 - Implemented backup targets schema and built-in local/network target copy logic
 - Files changed: packages/server-core/drizzle/0019_backup_targets.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added backupTargets table), packages/server-core/src/routes/adminBackupTargets.ts (new CRUD route + copy logic), packages/server-core/src/routes/adminBackupTargets.test.ts (20 tests), packages/server-core/src/app.ts (registered /admin/backup/targets), packages/server-core/src/index.ts (exported new types/functions)
