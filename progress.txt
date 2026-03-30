@@ -1,3 +1,19 @@
+## 2026-03-30 - US-093
+- Implemented BackupTarget plugin interface in plugin SDK and server-core integration
+- Files changed: packages/plugin-sdk/src/BackupTargetPlugin.ts (new abstract class), packages/plugin-sdk/src/types.ts (BackupTargetConfigField, BackupTargetConfigSchema, BackupVerifyResult types), packages/plugin-sdk/src/index.ts (exports), packages/server-core/src/backupTargetPluginRegistry.ts (new registry module), packages/server-core/src/backupTargetPluginRegistry.test.ts (6 registry tests), packages/server-core/src/routes/adminBackupTargets.ts (pluginConfigSchema + plugin case in runBackupToTarget), packages/server-core/src/routes/adminBackupMedia.ts (plugin upload/delete in runMediaBackupJob), packages/server-core/src/routes/adminBackupVerify.ts (plugin verify in runVerifyJob), packages/server-core/src/routes/adminBackupPlugin.test.ts (integration tests), packages/server-core/src/schema.ts (added "plugin" to backup_targets type enum), packages/server-core/src/index.ts (exported registry functions), apps/web/src/components/FontViewer.tsx (biome format fix)
+- `BackupTargetPlugin` abstract class in plugin SDK: extends BasePlugin; abstract methods: upload(localPath, remotePath), download(remotePath, localPath), delete(remotePath), list(), verify(remotePath) → BackupVerifyResult; abstract readonly configSchema: BackupTargetConfigSchema
+- `backupTargetPluginRegistry.ts`: in-memory Map registry with register/get/unregister/_reset functions
+- `runBackupToTarget` extended with "plugin" type: parses pluginId from config, looks up plugin, calls plugin.upload() per file
+- `runMediaBackupJob` extended: for plugin targets calls plugin.upload() for new files and plugin.delete() for stale files when removeDeleted=true
+- `runVerifyJob` extended: for plugin targets calls plugin.verify() and maps exists=true→passed, exists=false→missing
+- 800 tests passing; biome clean; typecheck clean (pre-existing errors in plugin packages only)
+- **Learnings for future iterations:**
+  - Plugin registry uses in-memory Map — plugins must re-register on server restart; no persistence needed for the registry itself
+  - `runBackupToTarget` uses `src.startsWith(basePath)` to compute relative path — same pattern as local/network copy for consistency
+  - For plugin delete in runMediaBackupJob, use `row.filePath.replace(/^\//, "")` to strip leading slash for remote path (different from upload which uses basePath-relative path)
+  - Integration tests for plugin type: mock `node:fs/promises` (copyFile/mkdir/stat/unlink/readFile) even though plugin methods bypass them — other code paths still need the mocks
+---
+
 ## 2026-03-29 - US-092
 - Implemented backup verification and integrity checks using SHA-256 checksums
 - Files changed: packages/server-core/drizzle/0023_backup_verify_jobs.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added backupVerifyJobs table), packages/server-core/src/events.ts (added backup:verify:progress/complete/error event types), packages/server-core/src/routes/adminBackupVerify.ts (new module: computeChecksum, runVerifyJob, makeAdminBackupVerifyRouter), packages/server-core/src/routes/adminBackupVerify.test.ts (15 new tests), packages/server-core/src/app.ts (registered /admin/backup/verify route), packages/server-core/src/index.ts (exported new types/functions)
