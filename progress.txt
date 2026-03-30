@@ -1,3 +1,18 @@
+## 2026-03-29 - US-091
+- Implemented scheduled backups with retention policies
+- Files changed: packages/server-core/drizzle/0022_backup_schedule.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added schedule, retentionKeepCount, retentionKeepDays, nextScheduledAt to backupTargets), packages/server-core/src/backupScheduler.ts (new module: cron parsing, getNextCronTime, applyRetentionPolicy, startBackupScheduler/stopBackupScheduler), packages/server-core/src/routes/adminBackupTargets.ts (scheduleSchema, PUT /:id/schedule endpoint), packages/server-core/src/routes/adminBackupMedia.ts (applyRetentionPolicy called after job completes), packages/server-core/src/backupScheduler.test.ts (26 new tests), packages/server-core/src/routes/adminBackupTargets.test.ts (6 new schedule API tests), apps/web/src/pages/AdminBackup.tsx (new admin page), apps/web/src/pages/AdminBackup.module.css, apps/web/src/App.tsx (registered /admin/backup route)
+- `backup_targets` gets 4 new nullable columns: `schedule` (cron text), `retention_keep_count` (integer), `retention_keep_days` (integer), `next_scheduled_at` (timestamp)
+- `backupScheduler.ts`: `parseCronExpression` expands 5-field cron to `{ minutes, hours, doms, months, dows }` sets; `getNextCronTime` iterates in UTC minute-by-minute (skips months/days/hours efficiently); `applyRetentionPolicy` prunes `backup_jobs` by count (keep N most recent) and/or by age (delete older than N days); `startBackupScheduler` runs setInterval every 60s, queries for enabled targets with due nextScheduledAt, fires backup jobs, updates nextScheduledAt
+- `PUT /api/v1/admin/backup/targets/:id/schedule`: validates cron (400 for invalid), sets schedule+retention, computes nextScheduledAt via getNextCronTime; null schedule clears nextScheduledAt too
+- Frontend: `/admin/backup` page shows targets table with schedule (cron expr), next run time (formatted), retention policy; "Edit Schedule" button opens modal with cron input + retention count/days fields
+- 768 tests passing; biome clean; typecheck clean (pre-existing errors in plugin packages only)
+- **Learnings for future iterations:**
+  - Migration SQL: each statement needs `--> statement-breakpoint` separator for drizzle migrator to execute them separately
+  - JSDoc block comments: avoid `*/` inside the comment (e.g. `* /5` in cron examples closes the comment early) — use prose descriptions instead
+  - Drizzle nullable column update: use `null` explicitly to set NULL; `undefined` means "don't update this field" — `??` operator turns `null` into `undefined`, so assign directly without `??`
+  - Cron time computation: use UTC methods (getUTCHours, getUTCDate, etc.) for timezone-invariant behavior — local-time methods fail tests in non-UTC environments
+---
+
 ## 2026-03-29 - US-090
 - Implemented incremental backup support: file state tracking per target, change detection via mtime+size, removeDeleted policy
 - Files changed: packages/server-core/drizzle/0021_backup_state.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added backupFileState table, removeDeleted to backupTargets, skippedFiles to backupJobs), packages/server-core/src/routes/adminBackupTargets.ts (removeDeleted in create/update schemas), packages/server-core/src/routes/adminBackupMedia.ts (incremental logic), packages/server-core/src/routes/adminBackupMedia.test.ts (updated mocks), packages/server-core/src/routes/adminBackupIncremental.test.ts (10 new tests), packages/server-core/src/index.ts (exported new types)
