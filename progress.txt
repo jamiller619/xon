@@ -1,3 +1,19 @@
+## 2026-03-29 - US-090
+- Implemented incremental backup support: file state tracking per target, change detection via mtime+size, removeDeleted policy
+- Files changed: packages/server-core/drizzle/0021_backup_state.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added backupFileState table, removeDeleted to backupTargets, skippedFiles to backupJobs), packages/server-core/src/routes/adminBackupTargets.ts (removeDeleted in create/update schemas), packages/server-core/src/routes/adminBackupMedia.ts (incremental logic), packages/server-core/src/routes/adminBackupMedia.test.ts (updated mocks), packages/server-core/src/routes/adminBackupIncremental.test.ts (10 new tests), packages/server-core/src/index.ts (exported new types)
+- `backup_file_state` DB table: id (PK), targetId (FK→backup_targets CASCADE), filePath, fileSize, mtime (Unix ms), checksum (nullable), backedUpAt; UNIQUE(targetId, filePath)
+- `backup_targets` gets `remove_deleted` boolean column (default false)
+- `backup_jobs` gets `skipped_files` integer column (default 0)
+- `runMediaBackupJob` now: loads state map for target; stats each source file; skips if mtime+size match stored state; upserts state after copy; if `removeDeleted`, deletes dest files for stale state entries and removes those state rows
+- `finalStatus` logic: "failed" only when errors>0 AND copied=0 AND skipped=0 (all-zero is true failure; partial skip+error is completed)
+- 740 tests passing; biome clean; typecheck clean (pre-existing errors in plugin packages only)
+- **Learnings for future iterations:**
+  - `stat` from `node:fs/promises` (not `node:fs`) — add to vi.mock factory alongside copyFile/mkdir/unlink
+  - `stat().mtimeMs` is a float ms timestamp — use `Math.floor()` before storing/comparing
+  - `onConflictDoUpdate` works with composite unique index: `target: [col1, col2]` — same API as single-column
+  - When mocking stat in existing tests, `mockResolvedValue({ size, mtimeMs } as never)` avoids full Stats type
+---
+
 ## 2026-03-29 - US-089
 - Implemented media file backup — full and partial backup to configured targets
 - Files changed: packages/server-core/drizzle/0020_backup_jobs.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added backupJobs table), packages/server-core/src/events.ts (new backup:media:* event types), packages/server-core/src/routes/adminBackupMedia.ts (new route + async job execution), packages/server-core/src/routes/adminBackupMedia.test.ts (16 tests), packages/server-core/src/app.ts (registered /admin/backup/media), packages/server-core/src/index.ts (exported new types/functions)
