@@ -8,15 +8,17 @@ import { requireRole } from "../rbac.js";
 import { dataSources, libraries } from "../schema.js";
 
 const createSourceSchema = z.object({
-  type: z.enum(["local", "network"]),
+  type: z.enum(["local", "network", "plugin"]),
   path: z.string().min(1),
+  pluginId: z.string().min(1).optional(),
   recursive: z.boolean().optional().default(true),
   enabled: z.boolean().optional().default(true),
 });
 
 const updateSourceSchema = z.object({
-  type: z.enum(["local", "network"]).optional(),
+  type: z.enum(["local", "network", "plugin"]).optional(),
   path: z.string().min(1).optional(),
+  pluginId: z.string().min(1).optional(),
   recursive: z.boolean().optional(),
   enabled: z.boolean().optional(),
 });
@@ -33,6 +35,10 @@ export function makeSourcesRouter(db: LibSQLDatabase): Hono {
     const lib = await db.select().from(libraries).where(eq(libraries.id, libraryId));
     if (lib.length === 0) return c.json({ error: "Library not found" }, 404);
 
+    if (body.type === "plugin" && !body.pluginId) {
+      return c.json({ error: "pluginId is required for plugin type data sources" }, 400);
+    }
+
     if (body.type === "local") {
       try {
         await access(body.path);
@@ -48,6 +54,7 @@ export function makeSourcesRouter(db: LibSQLDatabase): Hono {
       libraryId,
       type: body.type,
       path: body.path,
+      pluginId: body.pluginId ?? null,
       recursive: body.recursive,
       enabled: body.enabled,
       createdAt: now,
@@ -82,6 +89,11 @@ export function makeSourcesRouter(db: LibSQLDatabase): Hono {
 
     const newType = body.type ?? existing[0]?.type ?? "local";
     const newPath = body.path ?? existing[0]?.path ?? "";
+    const newPluginId = body.pluginId ?? existing[0]?.pluginId ?? null;
+
+    if (newType === "plugin" && !newPluginId) {
+      return c.json({ error: "pluginId is required for plugin type data sources" }, 400);
+    }
 
     if (newType === "local" && body.path !== undefined) {
       try {
@@ -94,6 +106,7 @@ export function makeSourcesRouter(db: LibSQLDatabase): Hono {
     const updates: Partial<typeof dataSources.$inferInsert> = { updatedAt: new Date() };
     if (body.type !== undefined) updates.type = body.type;
     if (body.path !== undefined) updates.path = body.path;
+    if (body.pluginId !== undefined) updates.pluginId = body.pluginId;
     if (body.recursive !== undefined) updates.recursive = body.recursive;
     if (body.enabled !== undefined) updates.enabled = body.enabled;
 

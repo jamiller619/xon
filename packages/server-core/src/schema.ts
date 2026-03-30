@@ -24,8 +24,9 @@ export const dataSources = sqliteTable("data_sources", {
   libraryId: text("library_id")
     .notNull()
     .references(() => libraries.id, { onDelete: "cascade" }),
-  type: text("type", { enum: ["local", "network"] }).notNull(),
+  type: text("type", { enum: ["local", "network", "plugin"] }).notNull(),
   path: text("path").notNull(),
+  pluginId: text("plugin_id"),
   recursive: integer("recursive", { mode: "boolean" }).notNull().default(true),
   enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),

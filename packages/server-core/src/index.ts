@@ -140,6 +140,11 @@ export {
   getBackupTargetPlugin,
   unregisterBackupTargetPlugin,
 } from "./backupTargetPluginRegistry.js";
+export {
+  registerMediaProviderPlugin,
+  getMediaProviderPlugin,
+  unregisterMediaProviderPlugin,
+} from "./mediaProviderPluginRegistry.js";
 export { runMediaBackupJob } from "./routes/adminBackupMedia.js";
 export { runVerifyJob, computeChecksum } from "./routes/adminBackupVerify.js";
 export { runSyncJob } from "./routes/sync.js";

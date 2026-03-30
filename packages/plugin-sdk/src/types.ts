@@ -155,6 +155,53 @@ export interface BackupVerifyResult {
   size?: number;
 }
 
+// ---------------------------------------------------------------------------
+// MediaProvider plugin types
+// ---------------------------------------------------------------------------
+
+/** A file entry returned by a MediaProvider plugin's listFiles() method */
+export interface MediaProviderFile {
+  /** Unique identifier for the file in the remote storage */
+  id: string;
+  /** Display name of the file */
+  name: string;
+  /** Full path or virtual path of the file in the remote storage */
+  path: string;
+  /** File size in bytes */
+  size: number;
+  /** MIME type of the file, if known */
+  mimeType?: string;
+  /** Last modified timestamp */
+  modifiedAt?: Date;
+}
+
+/** Callback invoked by MediaProviderPlugin.watch() when files change */
+export type WatchCallback = (event: {
+  type: "created" | "updated" | "deleted";
+  file: MediaProviderFile;
+}) => void;
+
+/** A single configuration field for a MediaProvider plugin's data source setup form */
+export interface MediaProviderConfigField {
+  /** Key used in the plugin config JSON */
+  key: string;
+  /** Human-readable label shown in the admin UI */
+  label: string;
+  /** Input type for the admin UI */
+  type: "string" | "password" | "number" | "boolean";
+  /** Whether this field must be filled before saving */
+  required?: boolean;
+  /** Default value pre-populated in the admin UI */
+  default?: string | number | boolean;
+  /** Optional help text shown below the field */
+  description?: string;
+}
+
+/** Schema describing all configuration fields for a MediaProvider plugin */
+export interface MediaProviderConfigSchema {
+  fields: MediaProviderConfigField[];
+}
+
 // Database access interface exposed to plugins
 export interface PluginDatabaseAccess {
   /** Execute a raw SQL query (read-only) */
