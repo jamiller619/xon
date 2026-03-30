@@ -64,6 +64,9 @@ export {
   backupFileState,
   type BackupFileState,
   type NewBackupFileState,
+  backupVerifyJobs,
+  type BackupVerifyJob,
+  type NewBackupVerifyJob,
 } from "./schema.js";
 export {
   parseTvEpisode,
@@ -126,6 +129,7 @@ export {
   type NetworkBackupConfig,
 } from "./routes/adminBackupTargets.js";
 export { runMediaBackupJob } from "./routes/adminBackupMedia.js";
+export { runVerifyJob, computeChecksum } from "./routes/adminBackupVerify.js";
 export {
   extractExiftoolMetadata,
   isImageCategory,

@@ -7,6 +7,7 @@ import { makeAdminAiSettingsRouter } from "./routes/adminAiSettings.js";
 import { makeAdminBackupRouter, makeAdminRestoreRouter } from "./routes/adminBackup.js";
 import { makeAdminBackupMediaRouter } from "./routes/adminBackupMedia.js";
 import { makeAdminBackupTargetsRouter } from "./routes/adminBackupTargets.js";
+import { makeAdminBackupVerifyRouter } from "./routes/adminBackupVerify.js";
 import { makeAdminLibraryAccessRouter } from "./routes/adminLibraryAccess.js";
 import { makeAdminPluginsRouter } from "./routes/adminPlugins.js";
 import { makeAdminUsersRouter } from "./routes/adminUsers.js";
@@ -55,6 +56,7 @@ export function createApp(db?: LibSQLDatabase): Hono {
     app.route("/admin/restore/metadata", makeAdminRestoreRouter(db));
     app.route("/admin/backup/targets", makeAdminBackupTargetsRouter(db));
     app.route("/admin/backup/media", makeAdminBackupMediaRouter(db));
+    app.route("/admin/backup/verify", makeAdminBackupVerifyRouter(db));
   }
 
   // Admin: plugin management

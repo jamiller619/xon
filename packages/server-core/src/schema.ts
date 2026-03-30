@@ -479,3 +479,26 @@ export const backupFileState = sqliteTable(
 
 export type BackupFileState = typeof backupFileState.$inferSelect;
 export type NewBackupFileState = typeof backupFileState.$inferInsert;
+
+export const backupVerifyJobs = sqliteTable("backup_verify_jobs", {
+  id: text("id").primaryKey(),
+  targetId: text("target_id")
+    .notNull()
+    .references(() => backupTargets.id, { onDelete: "cascade" }),
+  /** pending | running | completed | failed */
+  status: text("status", { enum: ["pending", "running", "completed", "failed"] })
+    .notNull()
+    .default("pending"),
+  totalFiles: integer("total_files").notNull().default(0),
+  passedFiles: integer("passed_files").notNull().default(0),
+  failedFiles: integer("failed_files").notNull().default(0),
+  missingFiles: integer("missing_files").notNull().default(0),
+  /** JSON array of { filePath: string, reason: string } */
+  failedItems: text("failed_items").notNull().default("[]"),
+  startedAt: integer("started_at", { mode: "timestamp" }),
+  completedAt: integer("completed_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+
+export type BackupVerifyJob = typeof backupVerifyJobs.$inferSelect;
+export type NewBackupVerifyJob = typeof backupVerifyJobs.$inferInsert;
