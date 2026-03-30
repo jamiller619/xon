@@ -55,6 +55,9 @@ export {
   type AiSettingsRow,
   type NewAiSettings,
   type AiMode,
+  backupTargets,
+  type BackupTarget,
+  type NewBackupTarget,
 } from "./schema.js";
 export {
   parseTvEpisode,
@@ -110,6 +113,12 @@ export {
   type SmartGroupCandidate,
 } from "./smartGrouping.js";
 export { hashPassword, verifyPassword } from "./password.js";
+export {
+  copyFilesToDestination,
+  runBackupToTarget,
+  type LocalBackupConfig,
+  type NetworkBackupConfig,
+} from "./routes/adminBackupTargets.js";
 export {
   extractExiftoolMetadata,
   isImageCategory,

@@ -398,3 +398,17 @@ export const aiSettings = sqliteTable("ai_settings", {
 
 export type AiSettingsRow = typeof aiSettings.$inferSelect;
 export type NewAiSettings = typeof aiSettings.$inferInsert;
+
+export const backupTargets = sqliteTable("backup_targets", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  /** "local" | "network" */
+  type: text("type", { enum: ["local", "network"] }).notNull().default("local"),
+  /** JSON config — local: { destPath: string }; network: { mountPath: string } */
+  config: text("config").notNull().default("{}"),
+  enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+
+export type BackupTarget = typeof backupTargets.$inferSelect;
+export type NewBackupTarget = typeof backupTargets.$inferInsert;
