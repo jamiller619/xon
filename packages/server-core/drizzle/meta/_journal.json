@@ -148,6 +148,13 @@
       "when": 1774800900000,
       "tag": "0020_backup_jobs",
       "breakpoints": true
+    },
+    {
+      "idx": 21,
+      "version": "6",
+      "when": 1774801000000,
+      "tag": "0021_backup_state",
+      "breakpoints": true
     }
   ]
 }

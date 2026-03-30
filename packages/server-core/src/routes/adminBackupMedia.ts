@@ -1,4 +1,4 @@
-import { copyFile, mkdir } from "node:fs/promises";
+import { copyFile, mkdir, stat, unlink } from "node:fs/promises";
 import { join } from "node:path";
 import { zValidator } from "@hono/zod-validator";
 import { and, desc, eq, inArray } from "drizzle-orm";
@@ -6,7 +6,7 @@ import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
 import { emitEvent } from "../events.js";
-import { backupJobs, backupTargets, mediaItems } from "../schema.js";
+import { backupFileState, backupJobs, backupTargets, mediaItems } from "../schema.js";
 import { localConfigSchema, networkConfigSchema } from "./adminBackupTargets.js";
 
 // ---------------------------------------------------------------------------
@@ -141,7 +141,18 @@ export async function runMediaBackupJob(db: LibSQLDatabase, jobId: string): Prom
   // Update total count
   await db.update(backupJobs).set({ totalFiles: total }).where(eq(backupJobs.id, jobId));
 
+  // Load existing file state for this target (incremental backup tracking)
+  const stateRows = await db
+    .select()
+    .from(backupFileState)
+    .where(eq(backupFileState.targetId, job.targetId));
+  const stateMap = new Map<string, { fileSize: number; mtime: number }>();
+  for (const row of stateRows) {
+    stateMap.set(row.filePath, { fileSize: row.fileSize, mtime: row.mtime });
+  }
+
   let copied = 0;
+  let skipped = 0;
   const errors: string[] = [];
 
   for (const item of items) {
@@ -149,6 +160,25 @@ export async function runMediaBackupJob(db: LibSQLDatabase, jobId: string): Prom
       type: "backup:media:progress",
       payload: { jobId, copied, total, currentFile: item.filePath },
     });
+
+    // Stat source file to check for changes
+    let srcStat: { size: number; mtimeMs: number } | null = null;
+    try {
+      const s = await stat(item.filePath);
+      srcStat = { size: s.size, mtimeMs: s.mtimeMs };
+    } catch {
+      // stat failed — attempt copy anyway
+    }
+
+    // Skip unchanged files (incremental: mtime + size both match stored state)
+    const stored = stateMap.get(item.filePath);
+    if (stored !== undefined && srcStat !== null) {
+      if (srcStat.size === stored.fileSize && Math.floor(srcStat.mtimeMs) === stored.mtime) {
+        skipped++;
+        await db.update(backupJobs).set({ skippedFiles: skipped }).where(eq(backupJobs.id, jobId));
+        continue;
+      }
+    }
 
     try {
       const dest = join(destDir, item.filePath.replace(/^\//, ""));
@@ -159,17 +189,62 @@ export async function runMediaBackupJob(db: LibSQLDatabase, jobId: string): Prom
       await copyFile(item.filePath, dest);
       copied++;
       await db.update(backupJobs).set({ copiedFiles: copied }).where(eq(backupJobs.id, jobId));
+
+      // Upsert file state after successful copy
+      const stateSize = srcStat?.size ?? 0;
+      const stateMtime = srcStat !== null ? Math.floor(srcStat.mtimeMs) : 0;
+      await db
+        .insert(backupFileState)
+        .values({
+          id: crypto.randomUUID(),
+          targetId: job.targetId,
+          filePath: item.filePath,
+          fileSize: stateSize,
+          mtime: stateMtime,
+          backedUpAt: new Date(),
+        })
+        .onConflictDoUpdate({
+          target: [backupFileState.targetId, backupFileState.filePath],
+          set: {
+            fileSize: stateSize,
+            mtime: stateMtime,
+            backedUpAt: new Date(),
+          },
+        });
     } catch (err) {
       errors.push(`${item.filePath}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
-  const finalStatus = errors.length > 0 && copied === 0 ? "failed" : "completed";
+  // Remove deleted source files from backup destination (if policy enabled)
+  if (target.removeDeleted) {
+    const currentPaths = new Set(items.map((i) => i.filePath));
+    const deletedRows = stateRows.filter((r) => !currentPaths.has(r.filePath));
+    for (const row of deletedRows) {
+      const dest = join(destDir, row.filePath.replace(/^\//, ""));
+      try {
+        await unlink(dest);
+      } catch {
+        // ignore — file may already be absent from destination
+      }
+      await db
+        .delete(backupFileState)
+        .where(
+          and(
+            eq(backupFileState.targetId, job.targetId),
+            eq(backupFileState.filePath, row.filePath)
+          )
+        );
+    }
+  }
+
+  const finalStatus = errors.length > 0 && copied === 0 && skipped === 0 ? "failed" : "completed";
   await db
     .update(backupJobs)
     .set({
       status: finalStatus,
       copiedFiles: copied,
+      skippedFiles: skipped,
       errors: JSON.stringify(errors),
       completedAt: new Date(),
     })
@@ -214,6 +289,7 @@ export function makeAdminBackupMediaRouter(db: LibSQLDatabase): Hono {
       status: "pending",
       totalFiles: 0,
       copiedFiles: 0,
+      skippedFiles: 0,
       errors: "[]",
       createdAt: now,
     });

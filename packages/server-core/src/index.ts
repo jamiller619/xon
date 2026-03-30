@@ -61,6 +61,9 @@ export {
   backupJobs,
   type BackupJob,
   type NewBackupJob,
+  backupFileState,
+  type BackupFileState,
+  type NewBackupFileState,
 } from "./schema.js";
 export {
   parseTvEpisode,

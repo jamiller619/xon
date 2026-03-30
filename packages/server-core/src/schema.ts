@@ -1,5 +1,12 @@
 import { sql } from "drizzle-orm";
-import { index, integer, primaryKey, sqliteTable, text } from "drizzle-orm/sqlite-core";
+import {
+  index,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from "drizzle-orm/sqlite-core";
 
 export const libraries = sqliteTable("libraries", {
   id: text("id").primaryKey(),
@@ -409,6 +416,8 @@ export const backupTargets = sqliteTable("backup_targets", {
   /** JSON config — local: { destPath: string }; network: { mountPath: string } */
   config: text("config").notNull().default("{}"),
   enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
+  /** When true, files deleted from the source are also removed from the backup destination */
+  removeDeleted: integer("remove_deleted", { mode: "boolean" }).notNull().default(false),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 
@@ -428,6 +437,7 @@ export const backupJobs = sqliteTable("backup_jobs", {
     .default("pending"),
   totalFiles: integer("total_files").notNull().default(0),
   copiedFiles: integer("copied_files").notNull().default(0),
+  skippedFiles: integer("skipped_files").notNull().default(0),
   /** JSON array of error strings */
   errors: text("errors").notNull().default("[]"),
   startedAt: integer("started_at", { mode: "timestamp" }),
@@ -437,3 +447,27 @@ export const backupJobs = sqliteTable("backup_jobs", {
 
 export type BackupJob = typeof backupJobs.$inferSelect;
 export type NewBackupJob = typeof backupJobs.$inferInsert;
+
+export const backupFileState = sqliteTable(
+  "backup_file_state",
+  {
+    id: text("id").primaryKey(),
+    targetId: text("target_id")
+      .notNull()
+      .references(() => backupTargets.id, { onDelete: "cascade" }),
+    filePath: text("file_path").notNull(),
+    /** Source file size in bytes at time of last backup */
+    fileSize: integer("file_size").notNull().default(0),
+    /** Source file mtime as Unix timestamp (ms) at time of last backup */
+    mtime: integer("mtime").notNull().default(0),
+    /** Optional checksum (e.g. SHA-256 hex) for integrity verification */
+    checksum: text("checksum"),
+    backedUpAt: integer("backed_up_at", { mode: "timestamp" })
+      .notNull()
+      .default(sql`(unixepoch())`),
+  },
+  (t) => [uniqueIndex("backup_file_state_target_path_idx").on(t.targetId, t.filePath)]
+);
+
+export type BackupFileState = typeof backupFileState.$inferSelect;
+export type NewBackupFileState = typeof backupFileState.$inferInsert;

@@ -31,6 +31,7 @@ const createSchema = z.object({
   type: z.enum(["local", "network"]).default("local"),
   config: z.record(z.unknown()).default({}),
   enabled: z.boolean().default(true),
+  removeDeleted: z.boolean().default(false),
 });
 
 const updateSchema = z.object({
@@ -38,6 +39,7 @@ const updateSchema = z.object({
   type: z.enum(["local", "network"]).optional(),
   config: z.record(z.unknown()).optional(),
   enabled: z.boolean().optional(),
+  removeDeleted: z.boolean().optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -147,6 +149,7 @@ export function makeAdminBackupTargetsRouter(db: LibSQLDatabase): Hono {
         type: body.type,
         config: JSON.stringify(body.config),
         enabled: body.enabled,
+        removeDeleted: body.removeDeleted,
         createdAt: now,
       })
       .returning();
@@ -168,6 +171,7 @@ export function makeAdminBackupTargetsRouter(db: LibSQLDatabase): Hono {
     if (body.type !== undefined) update.type = body.type;
     if (body.config !== undefined) update.config = JSON.stringify(body.config);
     if (body.enabled !== undefined) update.enabled = body.enabled;
+    if (body.removeDeleted !== undefined) update.removeDeleted = body.removeDeleted;
 
     const updated = await db
       .update(backupTargets)

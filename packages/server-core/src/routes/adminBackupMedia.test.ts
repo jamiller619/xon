@@ -1,4 +1,4 @@
-import { copyFile, mkdir } from "node:fs/promises";
+import { copyFile, mkdir, stat, unlink } from "node:fs/promises";
 import type { Client } from "@libsql/client";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
@@ -12,6 +12,8 @@ import { signAccessToken } from "./auth.js";
 vi.mock("node:fs/promises", () => ({
   copyFile: vi.fn(),
   mkdir: vi.fn(),
+  stat: vi.fn(),
+  unlink: vi.fn(),
 }));
 
 const ADMIN_AUTH = `Bearer ${await signAccessToken("admin-1", "admin", "admin")}`;
@@ -30,6 +32,8 @@ describe("Admin Backup Media API", () => {
 
     vi.mocked(mkdir).mockResolvedValue(undefined);
     vi.mocked(copyFile).mockResolvedValue(undefined);
+    vi.mocked(stat).mockResolvedValue({ size: 1000, mtimeMs: 1000000 } as never);
+    vi.mocked(unlink).mockResolvedValue(undefined);
 
     await db.insert(users).values({
       id: "admin-1",
