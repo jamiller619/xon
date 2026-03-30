@@ -58,6 +58,9 @@ export {
   backupTargets,
   type BackupTarget,
   type NewBackupTarget,
+  backupJobs,
+  type BackupJob,
+  type NewBackupJob,
 } from "./schema.js";
 export {
   parseTvEpisode,
@@ -119,6 +122,7 @@ export {
   type LocalBackupConfig,
   type NetworkBackupConfig,
 } from "./routes/adminBackupTargets.js";
+export { runMediaBackupJob } from "./routes/adminBackupMedia.js";
 export {
   extractExiftoolMetadata,
   isImageCategory,

@@ -403,7 +403,9 @@ export const backupTargets = sqliteTable("backup_targets", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
   /** "local" | "network" */
-  type: text("type", { enum: ["local", "network"] }).notNull().default("local"),
+  type: text("type", { enum: ["local", "network"] })
+    .notNull()
+    .default("local"),
   /** JSON config — local: { destPath: string }; network: { mountPath: string } */
   config: text("config").notNull().default("{}"),
   enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
@@ -412,3 +414,26 @@ export const backupTargets = sqliteTable("backup_targets", {
 
 export type BackupTarget = typeof backupTargets.$inferSelect;
 export type NewBackupTarget = typeof backupTargets.$inferInsert;
+
+export const backupJobs = sqliteTable("backup_jobs", {
+  id: text("id").primaryKey(),
+  targetId: text("target_id")
+    .notNull()
+    .references(() => backupTargets.id, { onDelete: "cascade" }),
+  /** JSON scope: { all?, libraryIds?, mediaTypes?, itemIds? } */
+  scope: text("scope").notNull().default("{}"),
+  /** pending | running | completed | failed */
+  status: text("status", { enum: ["pending", "running", "completed", "failed"] })
+    .notNull()
+    .default("pending"),
+  totalFiles: integer("total_files").notNull().default(0),
+  copiedFiles: integer("copied_files").notNull().default(0),
+  /** JSON array of error strings */
+  errors: text("errors").notNull().default("[]"),
+  startedAt: integer("started_at", { mode: "timestamp" }),
+  completedAt: integer("completed_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+
+export type BackupJob = typeof backupJobs.$inferSelect;
+export type NewBackupJob = typeof backupJobs.$inferInsert;

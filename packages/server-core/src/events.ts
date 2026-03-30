@@ -28,7 +28,13 @@ export type XonEvent =
   | { type: "backup:error"; payload: { error: string } }
   | { type: "restore:progress"; payload: { stage: string; percent: number } }
   | { type: "restore:complete"; payload: { restoredAt: string } }
-  | { type: "restore:error"; payload: { error: string } };
+  | { type: "restore:error"; payload: { error: string } }
+  | {
+      type: "backup:media:progress";
+      payload: { jobId: string; copied: number; total: number; currentFile: string };
+    }
+  | { type: "backup:media:complete"; payload: { jobId: string; copied: number; errors: number } }
+  | { type: "backup:media:error"; payload: { jobId: string; error: string } };
 
 export const eventBus = new EventEmitter();
 
