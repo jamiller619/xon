@@ -1,3 +1,17 @@
+## 2026-03-30 - US-096
+- Implemented MediaProvider plugin interface in plugin SDK and scanner integration
+- Files changed: packages/plugin-sdk/src/types.ts (added MediaProviderFile, WatchCallback, MediaProviderConfigField, MediaProviderConfigSchema types), packages/plugin-sdk/src/MediaProviderPlugin.ts (new abstract class), packages/plugin-sdk/src/index.ts (exports), packages/server-core/drizzle/0025_datasource_plugin.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added "plugin" to data_sources type enum, added pluginId column), packages/server-core/src/mediaProviderPluginRegistry.ts (new registry), packages/server-core/src/mediaProviderPluginRegistry.test.ts (6 tests), packages/server-core/src/scanner.ts (plugin integration), packages/server-core/src/scannerPlugin.test.ts (8 tests), packages/server-core/src/routes/sources.ts (plugin type support), packages/server-core/src/index.ts (exported registry functions)
+- `MediaProviderPlugin` abstract class: extends BasePlugin; abstract `configSchema: MediaProviderConfigSchema`; abstract methods: listFiles(path), getFile(id), getStream(id), watch(callback→unsubscribe)
+- `mediaProviderPluginRegistry.ts`: same in-memory Map pattern as backupTargetPluginRegistry; register/get/unregister/_reset functions
+- `scanner.ts`: when `type === "plugin"` and `pluginId` is set, calls `plugin.listFiles(path)` and maps results to `FileEntry[]` via `getMediaCategory`; falls back to local `walkDirectory` otherwise
+- `data_sources.plugin_id` column: nullable text, set for plugin-type sources; `sources.ts` validates pluginId required when type is "plugin"
+- 829 tests passing; biome clean; typecheck clean (pre-existing errors in plugin packages only)
+- **Learnings for future iterations:**
+  - `let providerFiles;` without initialization triggers biome `noImplicitAnyLet` — use `let providerFiles: Awaited<ReturnType<typeof plugin.method>>` or assign inline
+  - MediaProviderPlugin follows same abstract class pattern as BackupTargetPlugin: extends BasePlugin, abstract configSchema, abstract async methods
+  - Plugin registry pattern is fully reusable: copy backupTargetPluginRegistry.ts and swap type name
+---
+
 ## 2026-03-30 - US-095
 - Implemented sync profiles — full and partial sync
 - Files changed: packages/server-core/drizzle/0024_sync_profiles.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added syncProfiles, syncRuns tables), packages/server-core/src/routes/sync.ts (new route module), packages/server-core/src/routes/sync.test.ts (15 tests), packages/server-core/src/app.ts (registered /sync/profiles), packages/server-core/src/index.ts (exported new types/functions)
