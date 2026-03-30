@@ -6,6 +6,7 @@ import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
 import { getNextCronTime, validateCronExpression } from "../backupScheduler.js";
+import { getBackupTargetPlugin } from "../backupTargetPluginRegistry.js";
 import { backupTargets } from "../schema.js";
 
 // ---------------------------------------------------------------------------
@@ -20,8 +21,13 @@ export const networkConfigSchema = z.object({
   mountPath: z.string().min(1),
 });
 
+export const pluginConfigSchema = z.object({
+  pluginId: z.string().min(1),
+});
+
 export type LocalBackupConfig = z.infer<typeof localConfigSchema>;
 export type NetworkBackupConfig = z.infer<typeof networkConfigSchema>;
+export type PluginBackupConfig = z.infer<typeof pluginConfigSchema>;
 
 // ---------------------------------------------------------------------------
 // Request schemas
@@ -29,7 +35,7 @@ export type NetworkBackupConfig = z.infer<typeof networkConfigSchema>;
 
 const createSchema = z.object({
   name: z.string().min(1),
-  type: z.enum(["local", "network"]).default("local"),
+  type: z.enum(["local", "network", "plugin"]).default("local"),
   config: z.record(z.unknown()).default({}),
   enabled: z.boolean().default(true),
   removeDeleted: z.boolean().default(false),
@@ -37,7 +43,7 @@ const createSchema = z.object({
 
 const updateSchema = z.object({
   name: z.string().min(1).optional(),
-  type: z.enum(["local", "network"]).optional(),
+  type: z.enum(["local", "network", "plugin"]).optional(),
   config: z.record(z.unknown()).optional(),
   enabled: z.boolean().optional(),
   removeDeleted: z.boolean().optional(),
@@ -116,6 +122,32 @@ export async function runBackupToTarget(
       return { copied: 0, errors: ["Invalid network config: missing mountPath"] };
     }
     return copyFilesToDestination(srcFiles, basePath, parsed.data.mountPath);
+  }
+
+  if (target.type === "plugin") {
+    const parsed = pluginConfigSchema.safeParse(cfg);
+    if (!parsed.success) {
+      return { copied: 0, errors: ["Invalid plugin config: missing pluginId"] };
+    }
+    const plugin = getBackupTargetPlugin(parsed.data.pluginId);
+    if (!plugin) {
+      return {
+        copied: 0,
+        errors: [`Backup target plugin not registered: ${parsed.data.pluginId}`],
+      };
+    }
+    let copied = 0;
+    const errors: string[] = [];
+    for (const src of srcFiles) {
+      try {
+        const rel = src.startsWith(basePath) ? src.slice(basePath.length).replace(/^\//, "") : src;
+        await plugin.upload(src, rel);
+        copied++;
+      } catch (err) {
+        errors.push(`${src}: ${err instanceof Error ? err.message : String(err)}`);
+      }
+    }
+    return { copied, errors };
   }
 
   return { copied: 0, errors: [`Unknown target type: ${target.type}`] };

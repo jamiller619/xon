@@ -216,11 +216,7 @@ export default function FontViewer({ mediaId, title, onClose }: Props) {
                   const ch = String.fromCodePoint(cp);
                   const hex = cp.toString(16).toUpperCase().padStart(4, "0");
                   return (
-                    <div
-                      key={cp}
-                      className={styles.charmapCell ?? ""}
-                      title={`U+${hex} ${ch}`}
-                    >
+                    <div key={cp} className={styles.charmapCell ?? ""} title={`U+${hex} ${ch}`}>
                       {ch}
                     </div>
                   );

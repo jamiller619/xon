@@ -4,9 +4,14 @@ import { join } from "node:path";
 import { desc, eq } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
+import { getBackupTargetPlugin } from "../backupTargetPluginRegistry.js";
 import { emitEvent } from "../events.js";
 import { backupFileState, backupTargets, backupVerifyJobs } from "../schema.js";
-import { localConfigSchema, networkConfigSchema } from "./adminBackupTargets.js";
+import {
+  localConfigSchema,
+  networkConfigSchema,
+  pluginConfigSchema,
+} from "./adminBackupTargets.js";
 
 // ---------------------------------------------------------------------------
 // Checksum helper
@@ -18,10 +23,12 @@ export async function computeChecksum(filePath: string): Promise<string> {
 }
 
 // ---------------------------------------------------------------------------
-// Dest dir resolver (same logic as adminBackupMedia)
+// Backup handler resolver (mirrors adminBackupMedia logic)
 // ---------------------------------------------------------------------------
 
-async function resolveDestDir(target: { type: string; config: string }): Promise<string | null> {
+type VerifyHandler = { kind: "dir"; destDir: string } | { kind: "plugin"; pluginId: string };
+
+function resolveVerifyHandler(target: { type: string; config: string }): VerifyHandler | null {
   let cfg: Record<string, unknown>;
   try {
     cfg = JSON.parse(target.config) as Record<string, unknown>;
@@ -30,11 +37,15 @@ async function resolveDestDir(target: { type: string; config: string }): Promise
   }
   if (target.type === "local") {
     const parsed = localConfigSchema.safeParse(cfg);
-    return parsed.success ? parsed.data.destPath : null;
+    return parsed.success ? { kind: "dir", destDir: parsed.data.destPath } : null;
   }
   if (target.type === "network") {
     const parsed = networkConfigSchema.safeParse(cfg);
-    return parsed.success ? parsed.data.mountPath : null;
+    return parsed.success ? { kind: "dir", destDir: parsed.data.mountPath } : null;
+  }
+  if (target.type === "plugin") {
+    const parsed = pluginConfigSchema.safeParse(cfg);
+    return parsed.success ? { kind: "plugin", pluginId: parsed.data.pluginId } : null;
   }
   return null;
 }
@@ -79,8 +90,8 @@ export async function runVerifyJob(db: LibSQLDatabase, jobId: string): Promise<v
     return;
   }
 
-  const destDir = await resolveDestDir(target);
-  if (!destDir) {
+  const handler = resolveVerifyHandler(target);
+  if (!handler) {
     await db
       .update(backupVerifyJobs)
       .set({
@@ -119,55 +130,97 @@ export async function runVerifyJob(db: LibSQLDatabase, jobId: string): Promise<v
       payload: { jobId, checked: passed + failed + missing, total, currentFile: row.filePath },
     });
 
-    const destPath = join(destDir, row.filePath.replace(/^\//, ""));
+    const remotePath = row.filePath.replace(/^\//, "");
 
-    // Compute source checksum
-    let srcChecksum: string | null = null;
-    try {
-      srcChecksum = await computeChecksum(row.filePath);
-    } catch {
-      // Source file missing or unreadable
-    }
+    if (handler.kind === "plugin") {
+      // Plugin-based verify: delegate to the plugin's verify() method
+      const plugin = getBackupTargetPlugin(handler.pluginId);
+      let verifyOk = false;
+      let verifyReason = "Plugin not registered";
+      let remoteChecksum: string | undefined;
 
-    // Compute destination checksum
-    let destChecksum: string | null = null;
-    try {
-      destChecksum = await computeChecksum(destPath);
-    } catch {
-      // Destination file missing or unreadable
-    }
+      if (plugin) {
+        try {
+          const result = await plugin.verify(remotePath);
+          if (!result.exists) {
+            verifyReason = "File missing in remote storage";
+          } else {
+            verifyOk = true;
+            remoteChecksum = result.checksum;
+          }
+        } catch (err) {
+          verifyReason = err instanceof Error ? err.message : String(err);
+        }
+      }
 
-    if (srcChecksum === null || destChecksum === null) {
-      const reason =
-        srcChecksum === null && destChecksum === null
-          ? "Source and destination files missing"
-          : srcChecksum === null
-            ? "Source file missing"
-            : "Destination file missing";
-      missing++;
-      failedItems.push({ filePath: row.filePath, reason });
-
-      // Flag for re-backup: reset mtime+size so incremental backup re-copies the file
-      await db
-        .update(backupFileState)
-        .set({ mtime: 0, fileSize: 0, checksum: null })
-        .where(eq(backupFileState.id, row.id));
-    } else if (srcChecksum !== destChecksum) {
-      failed++;
-      failedItems.push({ filePath: row.filePath, reason: "Checksum mismatch" });
-
-      // Flag for re-backup
-      await db
-        .update(backupFileState)
-        .set({ mtime: 0, fileSize: 0, checksum: null })
-        .where(eq(backupFileState.id, row.id));
+      if (verifyOk) {
+        passed++;
+        if (remoteChecksum !== undefined) {
+          await db
+            .update(backupFileState)
+            .set({ checksum: remoteChecksum })
+            .where(eq(backupFileState.id, row.id));
+        }
+      } else {
+        missing++;
+        failedItems.push({ filePath: row.filePath, reason: verifyReason });
+        await db
+          .update(backupFileState)
+          .set({ mtime: 0, fileSize: 0, checksum: null })
+          .where(eq(backupFileState.id, row.id));
+      }
     } else {
-      passed++;
-      // Store verified checksum in state
-      await db
-        .update(backupFileState)
-        .set({ checksum: srcChecksum })
-        .where(eq(backupFileState.id, row.id));
+      // Dir-based verify: compare local and destination checksums
+      const destPath = join(handler.destDir, remotePath);
+
+      // Compute source checksum
+      let srcChecksum: string | null = null;
+      try {
+        srcChecksum = await computeChecksum(row.filePath);
+      } catch {
+        // Source file missing or unreadable
+      }
+
+      // Compute destination checksum
+      let destChecksum: string | null = null;
+      try {
+        destChecksum = await computeChecksum(destPath);
+      } catch {
+        // Destination file missing or unreadable
+      }
+
+      if (srcChecksum === null || destChecksum === null) {
+        const reason =
+          srcChecksum === null && destChecksum === null
+            ? "Source and destination files missing"
+            : srcChecksum === null
+              ? "Source file missing"
+              : "Destination file missing";
+        missing++;
+        failedItems.push({ filePath: row.filePath, reason });
+
+        // Flag for re-backup: reset mtime+size so incremental backup re-copies the file
+        await db
+          .update(backupFileState)
+          .set({ mtime: 0, fileSize: 0, checksum: null })
+          .where(eq(backupFileState.id, row.id));
+      } else if (srcChecksum !== destChecksum) {
+        failed++;
+        failedItems.push({ filePath: row.filePath, reason: "Checksum mismatch" });
+
+        // Flag for re-backup
+        await db
+          .update(backupFileState)
+          .set({ mtime: 0, fileSize: 0, checksum: null })
+          .where(eq(backupFileState.id, row.id));
+      } else {
+        passed++;
+        // Store verified checksum in state
+        await db
+          .update(backupFileState)
+          .set({ checksum: srcChecksum })
+          .where(eq(backupFileState.id, row.id));
+      }
     }
 
     await db

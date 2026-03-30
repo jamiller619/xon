@@ -1,4 +1,5 @@
 export { BasePlugin } from "./BasePlugin.js";
+export { BackupTargetPlugin } from "./BackupTargetPlugin.js";
 export type {
   PluginCategory,
   PluginManifest,
@@ -13,4 +14,7 @@ export type {
   UIInjectionPoint,
   UIComponent,
   PluginComponentProps,
+  BackupTargetConfigField,
+  BackupTargetConfigSchema,
+  BackupVerifyResult,
 } from "./types.js";

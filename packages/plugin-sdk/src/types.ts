@@ -120,6 +120,41 @@ export interface PluginComponentProps {
   libraryId?: string;
 }
 
+// ---------------------------------------------------------------------------
+// BackupTarget plugin types
+// ---------------------------------------------------------------------------
+
+/** A single configuration field for a BackupTarget plugin's admin UI form */
+export interface BackupTargetConfigField {
+  /** Key used in the plugin config JSON */
+  key: string;
+  /** Human-readable label shown in the admin UI */
+  label: string;
+  /** Input type for the admin UI */
+  type: "string" | "password" | "number" | "boolean";
+  /** Whether this field must be filled before saving */
+  required?: boolean;
+  /** Default value pre-populated in the admin UI */
+  default?: string | number | boolean;
+  /** Optional help text shown below the field */
+  description?: string;
+}
+
+/** Schema describing all configuration fields for a BackupTarget plugin */
+export interface BackupTargetConfigSchema {
+  fields: BackupTargetConfigField[];
+}
+
+/** Result returned by BackupTargetPlugin.verify() */
+export interface BackupVerifyResult {
+  /** Whether the file exists in remote storage */
+  exists: boolean;
+  /** SHA-256 checksum of the remote file, if available */
+  checksum?: string;
+  /** Size of the remote file in bytes, if available */
+  size?: number;
+}
+
 // Database access interface exposed to plugins
 export interface PluginDatabaseAccess {
   /** Execute a raw SQL query (read-only) */

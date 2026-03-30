@@ -409,11 +409,11 @@ export type NewAiSettings = typeof aiSettings.$inferInsert;
 export const backupTargets = sqliteTable("backup_targets", {
   id: text("id").primaryKey(),
   name: text("name").notNull(),
-  /** "local" | "network" */
-  type: text("type", { enum: ["local", "network"] })
+  /** "local" | "network" | "plugin" */
+  type: text("type", { enum: ["local", "network", "plugin"] })
     .notNull()
     .default("local"),
-  /** JSON config — local: { destPath: string }; network: { mountPath: string } */
+  /** JSON config — local: { destPath: string }; network: { mountPath: string }; plugin: { pluginId: string, ...pluginConfig } */
   config: text("config").notNull().default("{}"),
   enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
   /** When true, files deleted from the source are also removed from the backup destination */

@@ -127,7 +127,13 @@ export {
   runBackupToTarget,
   type LocalBackupConfig,
   type NetworkBackupConfig,
+  type PluginBackupConfig,
 } from "./routes/adminBackupTargets.js";
+export {
+  registerBackupTargetPlugin,
+  getBackupTargetPlugin,
+  unregisterBackupTargetPlugin,
+} from "./backupTargetPluginRegistry.js";
 export { runMediaBackupJob } from "./routes/adminBackupMedia.js";
 export { runVerifyJob, computeChecksum } from "./routes/adminBackupVerify.js";
 export {

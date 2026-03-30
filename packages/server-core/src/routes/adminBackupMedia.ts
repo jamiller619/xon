@@ -6,9 +6,14 @@ import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
 import { applyRetentionPolicy } from "../backupScheduler.js";
+import { getBackupTargetPlugin } from "../backupTargetPluginRegistry.js";
 import { emitEvent } from "../events.js";
 import { backupFileState, backupJobs, backupTargets, mediaItems } from "../schema.js";
-import { localConfigSchema, networkConfigSchema } from "./adminBackupTargets.js";
+import {
+  localConfigSchema,
+  networkConfigSchema,
+  pluginConfigSchema,
+} from "./adminBackupTargets.js";
 
 // ---------------------------------------------------------------------------
 // Request schema
@@ -30,7 +35,9 @@ const startBackupSchema = z.object({
 // Backup execution
 // ---------------------------------------------------------------------------
 
-async function resolveDestDir(target: { type: string; config: string }): Promise<string | null> {
+type BackupHandler = { kind: "dir"; destDir: string } | { kind: "plugin"; pluginId: string };
+
+function resolveBackupHandler(target: { type: string; config: string }): BackupHandler | null {
   let cfg: Record<string, unknown>;
   try {
     cfg = JSON.parse(target.config) as Record<string, unknown>;
@@ -39,11 +46,15 @@ async function resolveDestDir(target: { type: string; config: string }): Promise
   }
   if (target.type === "local") {
     const parsed = localConfigSchema.safeParse(cfg);
-    return parsed.success ? parsed.data.destPath : null;
+    return parsed.success ? { kind: "dir", destDir: parsed.data.destPath } : null;
   }
   if (target.type === "network") {
     const parsed = networkConfigSchema.safeParse(cfg);
-    return parsed.success ? parsed.data.mountPath : null;
+    return parsed.success ? { kind: "dir", destDir: parsed.data.mountPath } : null;
+  }
+  if (target.type === "plugin") {
+    const parsed = pluginConfigSchema.safeParse(cfg);
+    return parsed.success ? { kind: "plugin", pluginId: parsed.data.pluginId } : null;
   }
   return null;
 }
@@ -87,8 +98,8 @@ export async function runMediaBackupJob(db: LibSQLDatabase, jobId: string): Prom
     return;
   }
 
-  const destDir = await resolveDestDir(target);
-  if (!destDir) {
+  const handler = resolveBackupHandler(target);
+  if (!handler) {
     await db
       .update(backupJobs)
       .set({
@@ -182,12 +193,19 @@ export async function runMediaBackupJob(db: LibSQLDatabase, jobId: string): Prom
     }
 
     try {
-      const dest = join(destDir, item.filePath.replace(/^\//, ""));
-      const destParent = dest.substring(0, dest.lastIndexOf("/"));
-      if (destParent) {
-        await mkdir(destParent, { recursive: true });
+      const rel = item.filePath.replace(/^\//, "");
+      if (handler.kind === "plugin") {
+        const plugin = getBackupTargetPlugin(handler.pluginId);
+        if (!plugin) throw new Error(`Backup target plugin not registered: ${handler.pluginId}`);
+        await plugin.upload(item.filePath, rel);
+      } else {
+        const dest = join(handler.destDir, rel);
+        const destParent = dest.substring(0, dest.lastIndexOf("/"));
+        if (destParent) {
+          await mkdir(destParent, { recursive: true });
+        }
+        await copyFile(item.filePath, dest);
       }
-      await copyFile(item.filePath, dest);
       copied++;
       await db.update(backupJobs).set({ copiedFiles: copied }).where(eq(backupJobs.id, jobId));
 
@@ -222,9 +240,16 @@ export async function runMediaBackupJob(db: LibSQLDatabase, jobId: string): Prom
     const currentPaths = new Set(items.map((i) => i.filePath));
     const deletedRows = stateRows.filter((r) => !currentPaths.has(r.filePath));
     for (const row of deletedRows) {
-      const dest = join(destDir, row.filePath.replace(/^\//, ""));
       try {
-        await unlink(dest);
+        if (handler.kind === "plugin") {
+          const plugin = getBackupTargetPlugin(handler.pluginId);
+          if (plugin) {
+            await plugin.delete(row.filePath.replace(/^\//, ""));
+          }
+        } else {
+          const dest = join(handler.destDir, row.filePath.replace(/^\//, ""));
+          await unlink(dest);
+        }
       } catch {
         // ignore — file may already be absent from destination
       }
