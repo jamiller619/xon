@@ -5,6 +5,7 @@ import { and, desc, eq, inArray } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
+import { applyRetentionPolicy } from "../backupScheduler.js";
 import { emitEvent } from "../events.js";
 import { backupFileState, backupJobs, backupTargets, mediaItems } from "../schema.js";
 import { localConfigSchema, networkConfigSchema } from "./adminBackupTargets.js";
@@ -254,6 +255,9 @@ export async function runMediaBackupJob(db: LibSQLDatabase, jobId: string): Prom
     type: "backup:media:complete",
     payload: { jobId, copied, errors: errors.length },
   });
+
+  // Apply retention policy for this target (prune old backup job records)
+  await applyRetentionPolicy(db, job.targetId);
 }
 
 // ---------------------------------------------------------------------------

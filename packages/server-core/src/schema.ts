@@ -418,6 +418,14 @@ export const backupTargets = sqliteTable("backup_targets", {
   enabled: integer("enabled", { mode: "boolean" }).notNull().default(true),
   /** When true, files deleted from the source are also removed from the backup destination */
   removeDeleted: integer("remove_deleted", { mode: "boolean" }).notNull().default(false),
+  /** Cron expression for automatic scheduled backups (e.g. "0 2 * * *") */
+  schedule: text("schedule"),
+  /** Keep N most recent backup jobs; older jobs are pruned */
+  retentionKeepCount: integer("retention_keep_count"),
+  /** Keep backup jobs created within the last N days; older jobs are pruned */
+  retentionKeepDays: integer("retention_keep_days"),
+  /** Timestamp of next scheduled backup run */
+  nextScheduledAt: integer("next_scheduled_at", { mode: "timestamp" }),
   createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 

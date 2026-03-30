@@ -3,6 +3,7 @@ import Layout from "./components/Layout";
 import RequireAuth from "./components/RequireAuth";
 import ThemeLoader from "./components/ThemeLoader";
 import AdminAiSettings from "./pages/AdminAiSettings";
+import AdminBackup from "./pages/AdminBackup";
 import AdminDuplicates from "./pages/AdminDuplicates";
 import AdminLibraryAccess from "./pages/AdminLibraryAccess";
 import AdminPlugins from "./pages/AdminPlugins";
@@ -38,6 +39,7 @@ export default function App() {
           <Route path="/admin/library-access" element={<AdminLibraryAccess />} />
           <Route path="/admin/duplicates" element={<AdminDuplicates />} />
           <Route path="/admin/ai-settings" element={<AdminAiSettings />} />
+          <Route path="/admin/backup" element={<AdminBackup />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
       </Routes>

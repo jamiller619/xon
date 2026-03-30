@@ -201,6 +201,128 @@ describe("Backup Targets API", () => {
     });
     expect(res.status).toBe(404);
   });
+
+  // ---------------------------------------------------------------------------
+  // Schedule
+  // ---------------------------------------------------------------------------
+
+  it("PUT /admin/backup/targets/:id/schedule — sets cron schedule", async () => {
+    const id = crypto.randomUUID();
+    await db.insert(backupTargets).values({
+      id,
+      name: "Scheduled Target",
+      type: "local",
+      config: '{"destPath":"/backups"}',
+      enabled: true,
+      createdAt: new Date(),
+    });
+
+    const res = await app.request(`/api/v1/admin/backup/targets/${id}/schedule`, {
+      method: "PUT",
+      headers: { Authorization: AUTH, "Content-Type": "application/json" },
+      body: JSON.stringify({ schedule: "0 2 * * *" }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.schedule).toBe("0 2 * * *");
+    // nextScheduledAt should be set
+    expect(body.nextScheduledAt).toBeTruthy();
+  });
+
+  it("PUT /admin/backup/targets/:id/schedule — sets retention count", async () => {
+    const id = crypto.randomUUID();
+    await db.insert(backupTargets).values({
+      id,
+      name: "Retention Target",
+      type: "local",
+      config: "{}",
+      enabled: true,
+      createdAt: new Date(),
+    });
+
+    const res = await app.request(`/api/v1/admin/backup/targets/${id}/schedule`, {
+      method: "PUT",
+      headers: { Authorization: AUTH, "Content-Type": "application/json" },
+      body: JSON.stringify({ retentionKeepCount: 5 }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.retentionKeepCount).toBe(5);
+  });
+
+  it("PUT /admin/backup/targets/:id/schedule — sets retention days", async () => {
+    const id = crypto.randomUUID();
+    await db.insert(backupTargets).values({
+      id,
+      name: "Retention Days Target",
+      type: "local",
+      config: "{}",
+      enabled: true,
+      createdAt: new Date(),
+    });
+
+    const res = await app.request(`/api/v1/admin/backup/targets/${id}/schedule`, {
+      method: "PUT",
+      headers: { Authorization: AUTH, "Content-Type": "application/json" },
+      body: JSON.stringify({ retentionKeepDays: 30 }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.retentionKeepDays).toBe(30);
+  });
+
+  it("PUT /admin/backup/targets/:id/schedule — 400 for invalid cron", async () => {
+    const id = crypto.randomUUID();
+    await db.insert(backupTargets).values({
+      id,
+      name: "Bad Schedule Target",
+      type: "local",
+      config: "{}",
+      enabled: true,
+      createdAt: new Date(),
+    });
+
+    const res = await app.request(`/api/v1/admin/backup/targets/${id}/schedule`, {
+      method: "PUT",
+      headers: { Authorization: AUTH, "Content-Type": "application/json" },
+      body: JSON.stringify({ schedule: "not-a-cron" }),
+    });
+    expect(res.status).toBe(400);
+    const body = await res.json();
+    expect(body.error).toMatch(/Invalid cron expression/);
+  });
+
+  it("PUT /admin/backup/targets/:id/schedule — 404 for unknown target", async () => {
+    const res = await app.request("/api/v1/admin/backup/targets/nonexistent/schedule", {
+      method: "PUT",
+      headers: { Authorization: AUTH, "Content-Type": "application/json" },
+      body: JSON.stringify({ schedule: "0 * * * *" }),
+    });
+    expect(res.status).toBe(404);
+  });
+
+  it("PUT /admin/backup/targets/:id/schedule — clears schedule when null", async () => {
+    const id = crypto.randomUUID();
+    await db.insert(backupTargets).values({
+      id,
+      name: "Clear Schedule Target",
+      type: "local",
+      config: "{}",
+      enabled: true,
+      schedule: "0 2 * * *",
+      createdAt: new Date(),
+    });
+
+    const res = await app.request(`/api/v1/admin/backup/targets/${id}/schedule`, {
+      method: "PUT",
+      headers: { Authorization: AUTH, "Content-Type": "application/json" },
+      body: JSON.stringify({ schedule: null }),
+    });
+    expect(res.status).toBe(200);
+    const body = await res.json();
+    expect(body.schedule).toBeNull();
+    expect(body.nextScheduledAt).toBeNull();
+  });
 });
 
 // ---------------------------------------------------------------------------

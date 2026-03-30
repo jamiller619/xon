@@ -5,6 +5,7 @@ import { eq } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
+import { getNextCronTime, validateCronExpression } from "../backupScheduler.js";
 import { backupTargets } from "../schema.js";
 
 // ---------------------------------------------------------------------------
@@ -40,6 +41,12 @@ const updateSchema = z.object({
   config: z.record(z.unknown()).optional(),
   enabled: z.boolean().optional(),
   removeDeleted: z.boolean().optional(),
+});
+
+const scheduleSchema = z.object({
+  schedule: z.string().nullable().optional(),
+  retentionKeepCount: z.number().int().min(0).nullable().optional(),
+  retentionKeepDays: z.number().int().min(0).nullable().optional(),
 });
 
 // ---------------------------------------------------------------------------
@@ -191,6 +198,53 @@ export function makeAdminBackupTargetsRouter(db: LibSQLDatabase): Hono {
 
     await db.delete(backupTargets).where(eq(backupTargets.id, id));
     return c.json({ success: true });
+  });
+
+  // PUT /admin/backup/targets/:id/schedule — set schedule and retention policy
+  router.put("/:id/schedule", zValidator("json", scheduleSchema), async (c) => {
+    const id = c.req.param("id") as string;
+    const body = c.req.valid("json");
+
+    const existing = await db.select().from(backupTargets).where(eq(backupTargets.id, id));
+    if (!existing[0]) return c.json({ error: "Not found" }, 404);
+
+    // Validate cron expression if provided
+    if (body.schedule) {
+      const validation = validateCronExpression(body.schedule);
+      if (!validation.valid) {
+        return c.json({ error: validation.error }, 400);
+      }
+    }
+
+    const now = new Date();
+    const update: Partial<typeof backupTargets.$inferInsert> = {};
+
+    if (body.schedule !== undefined) {
+      update.schedule = body.schedule;
+      // Compute next run time when schedule is set; clear it when removed
+      if (body.schedule) {
+        const next = getNextCronTime(body.schedule, now);
+        update.nextScheduledAt = next;
+      } else {
+        update.nextScheduledAt = null;
+      }
+    }
+
+    if (body.retentionKeepCount !== undefined) {
+      update.retentionKeepCount = body.retentionKeepCount;
+    }
+    if (body.retentionKeepDays !== undefined) {
+      update.retentionKeepDays = body.retentionKeepDays;
+    }
+
+    const updated = await db
+      .update(backupTargets)
+      .set(update)
+      .where(eq(backupTargets.id, id))
+      .returning();
+    const row = updated[0];
+    if (!row) return c.json({ error: "Update failed" }, 500);
+    return c.json(row);
   });
 
   return router;

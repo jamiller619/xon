@@ -1,0 +1,114 @@
+.page {
+  padding: 2rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+
+.page h1 {
+  margin-bottom: 1.5rem;
+  font-size: 1.5rem;
+}
+
+.empty {
+  color: #888;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.table th,
+.table td {
+  padding: 0.6rem 0.8rem;
+  text-align: left;
+  border-bottom: 1px solid #333;
+}
+
+.table th {
+  font-weight: 600;
+  background: #1a1a1a;
+}
+
+.table code {
+  font-size: 0.85em;
+  background: #1e1e1e;
+  padding: 2px 6px;
+  border-radius: 3px;
+}
+
+.modal {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.6);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 100;
+}
+
+.modalContent {
+  background: #1c1c1c;
+  border: 1px solid #333;
+  border-radius: 8px;
+  padding: 2rem;
+  width: 400px;
+  max-width: 90vw;
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.modalContent h2 {
+  margin: 0 0 0.5rem;
+  font-size: 1.1rem;
+}
+
+.modalContent label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  font-size: 0.85rem;
+  color: #ccc;
+}
+
+.modalContent input {
+  padding: 0.4rem 0.6rem;
+  background: #111;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.modalActions {
+  display: flex;
+  gap: 0.75rem;
+  justify-content: flex-end;
+  margin-top: 0.5rem;
+}
+
+.modalActions button {
+  padding: 0.4rem 1rem;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+.modalActions button:first-child {
+  background: #4a7cf7;
+  color: #fff;
+  border: none;
+}
+
+.modalActions button:last-child {
+  background: transparent;
+  color: #ccc;
+  border: 1px solid #444;
+}
+
+.error {
+  color: #f87171;
+  font-size: 0.85rem;
+}
