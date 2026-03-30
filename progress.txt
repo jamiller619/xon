@@ -1,3 +1,19 @@
+## 2026-03-30 - US-095
+- Implemented sync profiles — full and partial sync
+- Files changed: packages/server-core/drizzle/0024_sync_profiles.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added syncProfiles, syncRuns tables), packages/server-core/src/routes/sync.ts (new route module), packages/server-core/src/routes/sync.test.ts (15 tests), packages/server-core/src/app.ts (registered /sync/profiles), packages/server-core/src/index.ts (exported new types/functions)
+- `sync_profiles` DB table: id (PK), name, type (full/partial), scope (JSON text), targetPath, includeMedia (boolean), createdAt, updatedAt
+- `sync_runs` DB table: id (PK), profileId (FK→sync_profiles CASCADE), status (pending/running/completed/failed), totalItems, syncedItems, errors (JSON), startedAt, completedAt, createdAt
+- `runSyncJob`: loads profile, builds filters from scope for partial sync (libraryIds, mediaTypes, itemIds), writes metadata.json to targetPath, optionally copies media files to targetPath/media/; updates run record with status/counts/errors
+- `POST /api/v1/sync/profiles/:id/run`: 404 if not found; creates run record, fire-and-forget runSyncJob, returns { runId, status: "running" } 202
+- CRUD: GET /, GET /:id, POST /, PUT /:id, DELETE /:id for sync profiles; GET /:id/runs (list runs for profile), GET /runs/:id (single run)
+- Route mounted at /api/v1/sync/profiles (non-admin, authenticated only)
+- 815 tests passing; biome clean; typecheck clean (pre-existing errors in plugin packages only)
+- **Learnings for future iterations:**
+  - Sync runs router mounts /runs/:id as a nested route — the GET /runs/:id route must be placed before /:id/runs to avoid route conflict in Hono
+  - `runSyncJob` uses the same fire-and-forget pattern as backup jobs: `runSyncJob(db, runId).catch(() => {})`
+  - For partial sync filters, use same `and(...filters)` with `inArray` pattern as backup media route — guard with `filters.length > 0`
+---
+
 ## 2026-03-30 - US-094
 - Implemented comprehensive Backup Admin UI at /admin/backup
 - Files changed: apps/web/src/pages/AdminBackup.tsx (full rewrite), apps/web/src/pages/AdminBackup.module.css (full rewrite)
