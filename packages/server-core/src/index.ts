@@ -67,6 +67,12 @@ export {
   backupVerifyJobs,
   type BackupVerifyJob,
   type NewBackupVerifyJob,
+  syncProfiles,
+  type SyncProfile,
+  type NewSyncProfile,
+  syncRuns,
+  type SyncRun,
+  type NewSyncRun,
 } from "./schema.js";
 export {
   parseTvEpisode,
@@ -136,6 +142,7 @@ export {
 } from "./backupTargetPluginRegistry.js";
 export { runMediaBackupJob } from "./routes/adminBackupMedia.js";
 export { runVerifyJob, computeChecksum } from "./routes/adminBackupVerify.js";
+export { runSyncJob } from "./routes/sync.js";
 export {
   extractExiftoolMetadata,
   isImageCategory,

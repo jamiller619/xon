@@ -502,3 +502,42 @@ export const backupVerifyJobs = sqliteTable("backup_verify_jobs", {
 
 export type BackupVerifyJob = typeof backupVerifyJobs.$inferSelect;
 export type NewBackupVerifyJob = typeof backupVerifyJobs.$inferInsert;
+
+export const syncProfiles = sqliteTable("sync_profiles", {
+  id: text("id").primaryKey(),
+  name: text("name").notNull(),
+  /** full | partial */
+  type: text("type", { enum: ["full", "partial"] })
+    .notNull()
+    .default("full"),
+  /** JSON: { libraryIds?, groupIds?, itemIds?, mediaTypes? } */
+  scope: text("scope").notNull().default("{}"),
+  targetPath: text("target_path").notNull(),
+  includeMedia: integer("include_media", { mode: "boolean" }).notNull().default(false),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+
+export type SyncProfile = typeof syncProfiles.$inferSelect;
+export type NewSyncProfile = typeof syncProfiles.$inferInsert;
+
+export const syncRuns = sqliteTable("sync_runs", {
+  id: text("id").primaryKey(),
+  profileId: text("profile_id")
+    .notNull()
+    .references(() => syncProfiles.id, { onDelete: "cascade" }),
+  /** pending | running | completed | failed */
+  status: text("status", { enum: ["pending", "running", "completed", "failed"] })
+    .notNull()
+    .default("pending"),
+  totalItems: integer("total_items").notNull().default(0),
+  syncedItems: integer("synced_items").notNull().default(0),
+  /** JSON array of error strings */
+  errors: text("errors").notNull().default("[]"),
+  startedAt: integer("started_at", { mode: "timestamp" }),
+  completedAt: integer("completed_at", { mode: "timestamp" }),
+  createdAt: integer("created_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+
+export type SyncRun = typeof syncRuns.$inferSelect;
+export type NewSyncRun = typeof syncRuns.$inferInsert;

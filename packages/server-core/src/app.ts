@@ -19,6 +19,7 @@ import { makeMatchingRouter } from "./routes/matching.js";
 import { makeMediaRouter } from "./routes/media.js";
 import { makePluginsRouter } from "./routes/plugins.js";
 import { makeSearchRouter } from "./routes/search.js";
+import { makeSyncRouter } from "./routes/sync.js";
 import { makeThemesRouter } from "./routes/themes.js";
 import { makeUsersRouter } from "./routes/users.js";
 
@@ -42,6 +43,7 @@ export function createApp(db?: LibSQLDatabase): Hono {
     app.route("/media", makeMediaRouter(db));
     app.route("/search", makeSearchRouter(db));
     app.route("/users", makeUsersRouter(db));
+    app.route("/sync/profiles", makeSyncRouter(db));
   }
 
   // Admin-only: require admin role for all /admin/* routes
