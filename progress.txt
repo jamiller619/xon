@@ -1,3 +1,18 @@
+## 2026-03-30 - US-103
+- Implemented admin system health monitoring page and API
+- Files changed: packages/server-core/src/scanRegistry.ts (new: shared scan state singleton), packages/server-core/src/routes/scan.ts (refactored to use shared scanRegistry), packages/server-core/src/routes/adminHealth.ts (new: GET /admin/health), packages/server-core/src/routes/adminHealth.test.ts (5 tests), packages/server-core/src/app.ts (registered /admin/health), apps/web/src/App.tsx (route /admin/health), apps/web/src/pages/AdminHealth.tsx (new admin page), apps/web/src/pages/AdminHealth.module.css
+- `GET /api/v1/admin/health`: returns uptime (process.uptime()), memory (process.memoryUsage() + os.totalmem/freemem), cpu (os.loadavg() 1m/5m/15m), storage (node:fs/promises statfs on DATA_DIR), activeScans (from shared scanRegistry filtered to running), libraries (item count + last scan time per library via SQL aggregate)
+- `scanRegistry.ts`: extracted scan state Map from scan.ts closure into a module-level singleton so admin health endpoint can read active scan state
+- Admin UI at /admin/health: 4-card grid (uptime, memory with progress bar, CPU load averages, storage with progress bar), active scans section with per-scan progress, library stats table
+- Auto-refreshes every 10 seconds; manual Refresh button
+- 893 tests passing; biome clean; typecheck clean
+- **Learnings for future iterations:**
+  - Shared mutable state between routes: extract to a module-level singleton (e.g., scanRegistry.ts) — closure-local Maps can't be accessed cross-module
+  - `statfs` from `node:fs/promises` available in Node 18.15+; wrap in try/catch since DATA_DIR may not exist yet; returns `{ bsize, blocks, bfree, bavail }`
+  - `os.loadavg()` returns `[number, number, number]` — returns `[0,0,0]` on Windows; destructure with `?? 0` for noUncheckedIndexedAccess
+  - Drizzle `sql<number>` template for raw aggregates: `sql<number>\`count(*)\`` and `sql<number | null>\`max(${col})\`` — max returns unix seconds (not Date) when used with integer(timestamp) columns, multiply by 1000 for JS Date
+---
+
 ## 2026-03-30 - US-102
 - Implemented admin settings page for server configuration
 - Files changed: packages/server-core/drizzle/0028_server_config_settings.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added serverPort, dataDirectory, defaultScanSchedule, thumbnailSizes to serverSettings table), packages/server-core/src/routes/adminSettings.ts (new: GET/PUT /admin/settings), packages/server-core/src/routes/adminSettings.test.ts (8 tests), packages/server-core/src/app.ts (registered /admin/settings), apps/web/src/App.tsx (route /admin/settings), apps/web/src/pages/AdminSettings.tsx (new admin page), apps/web/src/pages/AdminSettings.module.css
