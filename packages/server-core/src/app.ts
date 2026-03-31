@@ -61,6 +61,29 @@ export function createApp(db?: LibSQLDatabase): Hono {
     app.use("/*", makeRateLimitMiddleware(db, "general"));
   }
 
+  // Reverse proxy: expose X-Forwarded-Proto via a response header so clients can
+  // detect whether the upstream connection was HTTPS when behind a trusted proxy.
+  if (db) {
+    app.use("/*", async (c, next) => {
+      const rows = await db
+        .select()
+        .from(serverSettings)
+        .where(eq(serverSettings.id, SERVER_SETTINGS_ID));
+      const settings = rows[0];
+      if (settings?.trustProxy) {
+        const proto = c.req.header("x-forwarded-proto");
+        if (proto) {
+          c.header("X-Forwarded-Proto", proto);
+        }
+        const forwardedFor = c.req.header("x-forwarded-for");
+        if (forwardedFor) {
+          c.set("clientIp" as never, forwardedFor.split(",")[0]?.trim() ?? "unknown");
+        }
+      }
+      return next();
+    });
+  }
+
   // Auth middleware on all routes (skips /api/v1/auth/* internally)
   // Passes db so API tokens can be verified alongside JWT access tokens
   app.use("/*", makeAuthMiddleware(db));

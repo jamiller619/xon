@@ -553,6 +553,22 @@ export const serverSettings = sqliteTable("server_settings", {
   rateLimitGeneral: integer("rate_limit_general").notNull().default(100),
   /** Max auth endpoint requests per minute per IP */
   rateLimitAuth: integer("rate_limit_auth").notNull().default(10),
+  /** Enable built-in HTTPS */
+  httpsEnabled: integer("https_enabled", { mode: "boolean" }).notNull().default(false),
+  /** Path to TLS certificate file (PEM) for manual HTTPS */
+  httpsCertPath: text("https_cert_path"),
+  /** Path to TLS private key file (PEM) for manual HTTPS */
+  httpsKeyPath: text("https_key_path"),
+  /** Enable automatic HTTPS via Let's Encrypt ACME */
+  acmeEnabled: integer("acme_enabled", { mode: "boolean" }).notNull().default(false),
+  /** Domain name for ACME certificate */
+  acmeDomain: text("acme_domain"),
+  /** Email address for ACME account registration */
+  acmeEmail: text("acme_email"),
+  /** Directory to store ACME certificates */
+  acmeCertsDir: text("acme_certs_dir"),
+  /** Trust X-Forwarded-For and X-Forwarded-Proto headers from reverse proxies */
+  trustProxy: integer("trust_proxy", { mode: "boolean" }).notNull().default(false),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 

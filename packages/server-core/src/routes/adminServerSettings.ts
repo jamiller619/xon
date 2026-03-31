@@ -13,6 +13,14 @@ const updateSchema = z.object({
   rateLimitEnabled: z.boolean().optional(),
   rateLimitGeneral: z.number().int().min(1).max(10000).optional(),
   rateLimitAuth: z.number().int().min(1).max(1000).optional(),
+  httpsEnabled: z.boolean().optional(),
+  httpsCertPath: z.string().nullable().optional(),
+  httpsKeyPath: z.string().nullable().optional(),
+  acmeEnabled: z.boolean().optional(),
+  acmeDomain: z.string().nullable().optional(),
+  acmeEmail: z.string().email().nullable().optional(),
+  acmeCertsDir: z.string().nullable().optional(),
+  trustProxy: z.boolean().optional(),
 });
 
 async function getOrInitSettings(db: LibSQLDatabase) {
@@ -36,6 +44,14 @@ function formatSettings(row: NonNullable<Awaited<ReturnType<typeof getOrInitSett
     rateLimitEnabled: row.rateLimitEnabled,
     rateLimitGeneral: row.rateLimitGeneral,
     rateLimitAuth: row.rateLimitAuth,
+    httpsEnabled: row.httpsEnabled,
+    httpsCertPath: row.httpsCertPath ?? null,
+    httpsKeyPath: row.httpsKeyPath ?? null,
+    acmeEnabled: row.acmeEnabled,
+    acmeDomain: row.acmeDomain ?? null,
+    acmeEmail: row.acmeEmail ?? null,
+    acmeCertsDir: row.acmeCertsDir ?? null,
+    trustProxy: row.trustProxy,
     updatedAt: row.updatedAt,
   };
 }
@@ -45,7 +61,7 @@ export function makeAdminServerSettingsRouter(db: LibSQLDatabase): Hono {
 
   /**
    * GET /admin/server-settings
-   * Returns the current CORS and rate limit configuration.
+   * Returns the current CORS, rate limit, HTTPS, and proxy configuration.
    */
   router.get("/", async (c) => {
     const row = await getOrInitSettings(db);
@@ -55,7 +71,7 @@ export function makeAdminServerSettingsRouter(db: LibSQLDatabase): Hono {
 
   /**
    * PUT /admin/server-settings
-   * Updates CORS and rate limit configuration.
+   * Updates CORS, rate limit, HTTPS, and proxy configuration.
    */
   router.put("/", zValidator("json", updateSchema), async (c) => {
     const body = c.req.valid("json");
@@ -72,6 +88,29 @@ export function makeAdminServerSettingsRouter(db: LibSQLDatabase): Hono {
     if (body.rateLimitEnabled !== undefined) update.rateLimitEnabled = body.rateLimitEnabled;
     if (body.rateLimitGeneral !== undefined) update.rateLimitGeneral = body.rateLimitGeneral;
     if (body.rateLimitAuth !== undefined) update.rateLimitAuth = body.rateLimitAuth;
+    if (body.httpsEnabled !== undefined) update.httpsEnabled = body.httpsEnabled;
+    if (body.httpsCertPath !== undefined) {
+      if (body.httpsCertPath === null) update.httpsCertPath = null;
+      else update.httpsCertPath = body.httpsCertPath;
+    }
+    if (body.httpsKeyPath !== undefined) {
+      if (body.httpsKeyPath === null) update.httpsKeyPath = null;
+      else update.httpsKeyPath = body.httpsKeyPath;
+    }
+    if (body.acmeEnabled !== undefined) update.acmeEnabled = body.acmeEnabled;
+    if (body.acmeDomain !== undefined) {
+      if (body.acmeDomain === null) update.acmeDomain = null;
+      else update.acmeDomain = body.acmeDomain;
+    }
+    if (body.acmeEmail !== undefined) {
+      if (body.acmeEmail === null) update.acmeEmail = null;
+      else update.acmeEmail = body.acmeEmail;
+    }
+    if (body.acmeCertsDir !== undefined) {
+      if (body.acmeCertsDir === null) update.acmeCertsDir = null;
+      else update.acmeCertsDir = body.acmeCertsDir;
+    }
+    if (body.trustProxy !== undefined) update.trustProxy = body.trustProxy;
 
     const updated = await db
       .update(serverSettings)

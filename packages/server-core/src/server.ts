@@ -1,14 +1,20 @@
+import { createServer as createHttpsServer } from "node:https";
 import { serve } from "@hono/node-server";
 import { DEFAULT_PORT } from "@xon/shared";
+import { eq } from "drizzle-orm";
 import { Hono } from "hono";
 import { createApp } from "./app.js";
 import { openDatabase } from "./db.js";
+import { acquireAcmeCert, loadManualCerts } from "./httpsManager.js";
 import { migrateDatabase } from "./migrate.js";
 import { emitPluginEvent, setPluginDatabase } from "./pluginManager.js";
 import { WS_PATH, createWsServer } from "./routes/ws.js";
 import { startScheduler } from "./scheduler.js";
+import { serverSettings } from "./schema.js";
 import { makeStaticMiddleware } from "./staticFiles.js";
 import { ensureAdminUser } from "./userInit.js";
+
+const SERVER_SETTINGS_ID = "default";
 
 export function boot(): void {
   const port = Number(process.env.PORT ?? DEFAULT_PORT);
@@ -28,8 +34,64 @@ export function boot(): void {
       }
       const { handleUpgrade } = createWsServer();
       const scheduler = await startScheduler(db);
-      const server = serve({ fetch: app.fetch, port }, (info) => {
-        console.log(`Xon server listening on port ${info.port}`);
+
+      // Load HTTPS settings to determine server mode
+      const settingsRows = await db
+        .select()
+        .from(serverSettings)
+        .where(eq(serverSettings.id, SERVER_SETTINGS_ID));
+      const httpsConfig = settingsRows[0];
+
+      let tlsCert: string | undefined;
+      let tlsKey: string | undefined;
+
+      if (httpsConfig?.httpsEnabled) {
+        if (httpsConfig.acmeEnabled && httpsConfig.acmeDomain && httpsConfig.acmeEmail) {
+          // Automatic HTTPS via Let's Encrypt ACME
+          const certsDir = httpsConfig.acmeCertsDir ?? "./certs";
+          console.log(`Acquiring ACME certificate for ${httpsConfig.acmeDomain}...`);
+          try {
+            const certs = await acquireAcmeCert({
+              domain: httpsConfig.acmeDomain,
+              email: httpsConfig.acmeEmail,
+              certsDir,
+            });
+            tlsCert = certs.cert;
+            tlsKey = certs.key;
+            console.log(`ACME certificate ready for ${httpsConfig.acmeDomain}`);
+          } catch (err) {
+            console.error("Failed to acquire ACME certificate:", err);
+            console.log("Falling back to HTTP");
+          }
+        } else if (httpsConfig.httpsCertPath && httpsConfig.httpsKeyPath) {
+          // Manual certificate
+          try {
+            const certs = await loadManualCerts(
+              httpsConfig.httpsCertPath,
+              httpsConfig.httpsKeyPath
+            );
+            tlsCert = certs.cert;
+            tlsKey = certs.key;
+          } catch (err) {
+            console.error("Failed to load TLS certificates:", err);
+            console.log("Falling back to HTTP");
+          }
+        }
+      }
+
+      const serveOptions =
+        tlsCert && tlsKey
+          ? {
+              fetch: app.fetch,
+              port,
+              createServer: createHttpsServer,
+              serverOptions: { cert: tlsCert, key: tlsKey },
+            }
+          : { fetch: app.fetch, port };
+
+      const server = serve(serveOptions, (info) => {
+        const protocol = tlsCert ? "https" : "http";
+        console.log(`Xon server listening on ${protocol}://0.0.0.0:${info.port}`);
         emitPluginEvent("server:boot", {});
       });
 
