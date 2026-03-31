@@ -1,3 +1,19 @@
+## 2026-03-31 - US-106
+- Implemented error handling hardening and user-facing error pages
+- Files changed: packages/server-core/src/errorMiddleware.ts (new: onError + onNotFound handlers), packages/server-core/src/errorMiddleware.test.ts (4 tests), packages/server-core/src/app.ts (registered app.onError + app.notFound), packages/server-core/src/server.ts (uncaughtException + unhandledRejection handlers), apps/web/src/components/ErrorBoundary.tsx (new React class error boundary), apps/web/src/components/ErrorBoundary.module.css, apps/web/src/pages/NotFound.tsx (404 page), apps/web/src/pages/NotFound.module.css, apps/web/src/App.tsx (wrapped with ErrorBoundary, added `* → NotFound` wildcard route)
+- `onError(err, c)`: Hono error handler; logs error with console.error; returns `{ error: "Internal server error", message: err.message }` as 500 JSON
+- `onNotFound(c)`: Hono 404 handler; returns `{ error: "Not found", path: c.req.path }` as 404 JSON
+- `ErrorBoundary`: React class component wrapping the entire app; renders a 500-style error card with Retry button (reloads page) on unhandled React errors
+- `NotFound`: Simple 404 page showing the attempted path with a "Go home" link
+- `process.on("uncaughtException")` + `process.on("unhandledRejection")` added to server.ts at module load time — logs and continues (does not crash)
+- 902 tests passing; biome clean; typecheck clean
+- **Learnings for future iterations:**
+  - Hono `app.onError(handler)` and `app.notFound(handler)` are called on the base Hono instance; add them right after `new Hono().basePath(...)` before middleware so they apply to all routes
+  - React error boundary must be a class component (no functional equivalent); place it in components/, not pages/
+  - `window.location.reload()` inside ErrorBoundary retry resets React state — simpler than trying to recover in-place
+  - Biome import ordering: `errorMiddleware.js` (e) sorts before `pluginRoutes.js` (p) and after `authMiddleware.js` (a) alphabetically
+---
+
 ## 2026-03-31 - US-105
 - Implemented onboarding wizard for first-time setup
 - Files changed: apps/web/src/pages/Setup.tsx (new 3-step wizard), apps/web/src/pages/Setup.module.css, apps/web/src/App.tsx (route /setup), apps/web/src/pages/Login.tsx (redirect to /setup when !setupComplete), packages/server-core/src/routes/auth.ts (GET /auth/setup-status + POST /auth/setup endpoints), packages/server-core/src/routes/auth.test.ts (setup endpoint tests), packages/server-core/src/userInit.ts (changed to no-op), packages/server-core/src/userInit.test.ts (updated tests for no-op behavior)
