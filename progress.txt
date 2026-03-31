@@ -1,3 +1,19 @@
+## 2026-03-31 - US-105
+- Implemented onboarding wizard for first-time setup
+- Files changed: apps/web/src/pages/Setup.tsx (new 3-step wizard), apps/web/src/pages/Setup.module.css, apps/web/src/App.tsx (route /setup), apps/web/src/pages/Login.tsx (redirect to /setup when !setupComplete), packages/server-core/src/routes/auth.ts (GET /auth/setup-status + POST /auth/setup endpoints), packages/server-core/src/routes/auth.test.ts (setup endpoint tests), packages/server-core/src/userInit.ts (changed to no-op), packages/server-core/src/userInit.test.ts (updated tests for no-op behavior)
+- `GET /api/v1/auth/setup-status`: unauthenticated; returns `{ setupComplete: boolean }` based on whether any users exist
+- `POST /api/v1/auth/setup`: unauthenticated; creates first admin user with username/password/displayName; returns 409 if users already exist; issues JWT tokens on success
+- Setup wizard: Step 1 (admin account) → Step 2 (first library + data source path) → Step 3 (trigger scan); each step skippable; redirects to /login if setupComplete on mount
+- Login page redirects to /setup if !setupComplete
+- `userInit.ts` changed to no-op since wizard now handles first-run admin creation; userInit.test.ts updated to match
+- Auth middleware exempts /api/v1/auth/* (existing) so setup endpoints are unauthenticated automatically
+- 898 tests passing; biome clean; typecheck clean
+- **Learnings for future iterations:**
+  - Login page should check setup-status on mount and redirect to /setup if no users exist — prevents users from being stuck at login with no way to sign in
+  - Setup endpoint returns 409 when users already exist — frontend handles this by redirecting to /login
+  - `userInit.ts` was previously auto-creating admin — change to no-op required updating existing tests; old tests tested behavior that no longer exists
+---
+
 ## 2026-03-30 - US-104
 - Implemented library management admin page at /admin/libraries
 - Files changed: apps/web/src/pages/AdminLibraries.tsx (new admin page), apps/web/src/pages/AdminLibraries.module.css, apps/web/src/App.tsx (added route + import)
