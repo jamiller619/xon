@@ -1,3 +1,19 @@
+## 2026-03-30 - US-100
+- Implemented consistent input validation across all API endpoints
+- Files changed: packages/server-core/src/validate.ts (new validate() wrapper), packages/server-core/src/validate.test.ts (6 tests), packages/shared/src/schemas.ts (paginationSchema + sortOrderSchema), packages/shared/src/index.ts (export schemas), packages/shared/package.json (added zod dep), all 16 route files in src/routes/ (replaced zValidator imports/calls with validate()), packages/server-core/src/routes/libraries.ts (added query validation for /:libraryId/media), packages/server-core/src/routes/search.ts (added query validation for search endpoint)
+- `validate(target, schema)`: wraps `@hono/zod-validator`'s `zValidator` with a custom hook that returns `{ error: "Validation failed", details: ZodIssue[] }` on failure; preserves full type inference for `c.req.valid()`
+- All POST/PUT/PATCH route bodies now consistently return `{ error: "Validation failed", details: [...] }` on invalid input
+- `libraryMediaQuerySchema`: validates mediaCategory, mimeType, drmProtected (enum "true"|"false"), sortBy, order, and coerces page/limit to numbers with defaults
+- `searchQuerySchema`: validates q (required, trimmed), category, and coerces limit/offset to numbers with defaults; removes manual `if (!q) return 400` check
+- `@xon/shared` now exports `paginationSchema`, `PaginationParams`, `sortOrderSchema`, `SortOrder` for shared use between server and client
+- 872 tests passing; biome clean; typecheck clean (pre-existing errors in plugin packages only)
+- **Learnings for future iterations:**
+  - `zValidator(target, schema, hook)` hook receives `{ success, error?, data, target }` — use `result.error.issues` (not `result.error`) for the details array
+  - Wrapping `zValidator` with a generic function preserves TypeScript inference for `c.req.valid()` since TypeScript infers the return type from the implementation
+  - For query param boolean filters (like drmProtected), use `z.enum(["true", "false"])` not `z.coerce.boolean()` — coerce treats any non-empty string as true including "false"
+  - Biome import sorting: local imports alphabetically (`schema.js` before `validate.js`)
+---
+
 ## 2026-03-30 - US-099
 - Implemented Content Security Policy and security headers middleware
 - Files changed: packages/server-core/src/securityHeadersMiddleware.ts (new middleware), packages/server-core/src/securityHeadersMiddleware.test.ts (7 tests), packages/server-core/src/app.ts (added middleware + `isHttps` option to createApp), packages/server-core/src/server.ts (pass isHttps after HTTPS cert determination)
