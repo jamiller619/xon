@@ -183,6 +183,13 @@
       "when": 1774801400000,
       "tag": "0025_datasource_plugin",
       "breakpoints": true
+    },
+    {
+      "idx": 26,
+      "version": "6",
+      "when": 1774801500000,
+      "tag": "0026_server_settings",
+      "breakpoints": true
     }
   ]
 }

@@ -542,3 +542,19 @@ export const syncRuns = sqliteTable("sync_runs", {
 
 export type SyncRun = typeof syncRuns.$inferSelect;
 export type NewSyncRun = typeof syncRuns.$inferInsert;
+
+export const serverSettings = sqliteTable("server_settings", {
+  id: text("id").primaryKey(),
+  corsEnabled: integer("cors_enabled", { mode: "boolean" }).notNull().default(false),
+  /** JSON array of allowed origins, e.g. ["https://example.com"] or ["*"] */
+  corsAllowedOrigins: text("cors_allowed_origins").notNull().default('["*"]'),
+  rateLimitEnabled: integer("rate_limit_enabled", { mode: "boolean" }).notNull().default(true),
+  /** Max general API requests per minute per IP */
+  rateLimitGeneral: integer("rate_limit_general").notNull().default(100),
+  /** Max auth endpoint requests per minute per IP */
+  rateLimitAuth: integer("rate_limit_auth").notNull().default(10),
+  updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
+});
+
+export type ServerSettings = typeof serverSettings.$inferSelect;
+export type NewServerSettings = typeof serverSettings.$inferInsert;
