@@ -1,3 +1,18 @@
+## 2026-03-30 - US-099
+- Implemented Content Security Policy and security headers middleware
+- Files changed: packages/server-core/src/securityHeadersMiddleware.ts (new middleware), packages/server-core/src/securityHeadersMiddleware.test.ts (7 tests), packages/server-core/src/app.ts (added middleware + `isHttps` option to createApp), packages/server-core/src/server.ts (pass isHttps after HTTPS cert determination)
+- `makeSecurityHeadersMiddleware({ isHttps? })`: adds X-Content-Type-Options: nosniff, X-Frame-Options: DENY, Referrer-Policy: strict-origin-when-cross-origin, CSP, and HSTS (when isHttps=true) to all responses
+- CSP policy: `default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; media-src 'self' blob:; font-src 'self'; connect-src 'self' ws: wss:; frame-ancestors 'none'`
+- HSTS: `max-age=31536000; includeSubDomains` — only set when isHttps=true (passed at boot time from tlsCert/tlsKey availability)
+- server.ts restructured: HTTPS cert determination moved before createApp() so isHttps flag is accurate at startup
+- 866 tests passing; biome clean; typecheck clean (pre-existing errors in plugin packages only)
+- **Learnings for future iterations:**
+  - `exactOptionalPropertyTypes: true` applies to middleware options too — use `?? false` when passing `options?.isHttps` to avoid `boolean | undefined` type error
+  - Biome sorts local imports alphabetically: `securityHeadersMiddleware.js` sorts after `schema.js` (s-e-c-u-r vs s-c-h-e-m)
+  - Security headers middleware sets headers after `await next()` — Hono allows c.header() calls after the handler has run
+  - HSTS should only be set when HTTPS is actually active; pass a static `isHttps` flag determined at startup rather than doing a DB query per request
+---
+
 ## 2026-03-30 - US-098
 - Implemented HTTPS and reverse proxy configuration
 - Files changed: packages/server-core/drizzle/0027_https_settings.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added httpsEnabled, httpsCertPath, httpsKeyPath, acmeEnabled, acmeDomain, acmeEmail, acmeCertsDir, trustProxy columns to serverSettings), packages/server-core/src/httpsManager.ts (new: loadManualCerts, isCertFileValid, acquireAcmeCert), packages/server-core/src/httpsManager.test.ts (12 tests), packages/server-core/src/routes/adminServerSettings.ts (extended with HTTPS/proxy fields), packages/server-core/src/routes/adminServerSettings.test.ts (6 new tests), packages/server-core/src/rateLimitMiddleware.ts (trustProxy check before reading X-Forwarded-For), packages/server-core/src/app.ts (added proxy middleware for X-Forwarded-Proto pass-through), packages/server-core/src/server.ts (HTTPS support via createServer + ACME cert acquisition at boot), apps/web/src/pages/AdminNetworkSettings.tsx (new admin page), apps/web/src/pages/AdminNetworkSettings.module.css, apps/web/src/App.tsx (route /admin/network)
