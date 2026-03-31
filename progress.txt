@@ -1,3 +1,17 @@
+## 2026-03-30 - US-102
+- Implemented admin settings page for server configuration
+- Files changed: packages/server-core/drizzle/0028_server_config_settings.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added serverPort, dataDirectory, defaultScanSchedule, thumbnailSizes to serverSettings table), packages/server-core/src/routes/adminSettings.ts (new: GET/PUT /admin/settings), packages/server-core/src/routes/adminSettings.test.ts (8 tests), packages/server-core/src/app.ts (registered /admin/settings), apps/web/src/App.tsx (route /admin/settings), apps/web/src/pages/AdminSettings.tsx (new admin page), apps/web/src/pages/AdminSettings.module.css
+- `GET/PUT /api/v1/admin/settings`: exposes serverPort, dataDirectory, defaultScanSchedule, thumbnailSizes from the existing serverSettings DB table
+- `requiresRestart: true` returned when serverPort or dataDirectory is changed (vs current DB value) — both require server restart to take effect
+- Thumbnail sizes validated as enum array: ["small","medium","large","xlarge"]; at least one must be selected
+- Admin UI at /admin/settings: sections for Network (port), Storage (data dir), Scanning (cron schedule), Thumbnails (checkbox multi-select); restart banner shown when requiresRestart=true
+- 888 tests passing; biome clean; typecheck clean
+- **Learnings for future iterations:**
+  - `requiresRestart` flag: compare new value against current DB row value at PUT time — only set true when value actually changed
+  - Thumbnail sizes stored as JSON array in text column (same pattern as corsAllowedOrigins); enum validation with `z.array(z.enum([...]))`
+  - Biome import ordering: AdminSettings sorts after AdminPlugins alphabetically (Se > Pl)
+---
+
 ## 2026-03-30 - US-101
 - Implemented OpenAPI 3.1 spec and Swagger UI docs endpoint
 - Files changed: packages/server-core/src/routes/docs.ts (new: makeDocsRouter with GET /docs and GET /docs/openapi.json), packages/server-core/src/routes/docs.test.ts (7 tests), packages/server-core/src/app.ts (registered docs router, added docs import), packages/server-core/src/authMiddleware.ts (exempted /api/v1/docs and /api/v1/docs/* from auth)
