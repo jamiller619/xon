@@ -1,24 +1,19 @@
-import { copyFile, mkdir, stat, unlink } from 'node:fs/promises';
-import { join } from 'node:path';
-import { and, desc, eq, inArray } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { Hono } from 'hono';
-import { z } from 'zod';
-import { applyRetentionPolicy } from '../backupScheduler.js';
-import { getBackupTargetPlugin } from '../backupTargetPluginRegistry.js';
-import { emitEvent } from '../events.js';
-import {
-  backupFileState,
-  backupJobs,
-  backupTargets,
-  mediaItems,
-} from '../schema.js';
-import { validate } from '../validate.js';
+import { copyFile, mkdir, stat, unlink } from "node:fs/promises";
+import { join } from "node:path";
+import { and, desc, eq, inArray } from "drizzle-orm";
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
+import { Hono } from "hono";
+import { z } from "zod";
+import { applyRetentionPolicy } from "../backupScheduler.js";
+import { getBackupTargetPlugin } from "../backupTargetPluginRegistry.js";
+import { emitEvent } from "../events.js";
+import { backupFileState, backupJobs, backupTargets, mediaItems } from "../schema.js";
+import { validate } from "../validate.js";
 import {
   localConfigSchema,
   networkConfigSchema,
   pluginConfigSchema,
-} from './adminBackupTargets.js';
+} from "./adminBackupTargets.js";
 
 // ---------------------------------------------------------------------------
 // Request schema
@@ -40,64 +35,44 @@ const startBackupSchema = z.object({
 // Backup execution
 // ---------------------------------------------------------------------------
 
-type BackupHandler =
-  | { kind: 'dir'; destDir: string }
-  | { kind: 'plugin'; pluginId: string };
+type BackupHandler = { kind: "dir"; destDir: string } | { kind: "plugin"; pluginId: string };
 
-function resolveBackupHandler(target: {
-  type: string;
-  config: string;
-}): BackupHandler | null {
+function resolveBackupHandler(target: { type: string; config: string }): BackupHandler | null {
   let cfg: Record<string, unknown>;
   try {
     cfg = JSON.parse(target.config) as Record<string, unknown>;
   } catch {
     return null;
   }
-  if (target.type === 'local') {
+  if (target.type === "local") {
     const parsed = localConfigSchema.safeParse(cfg);
-    return parsed.success
-      ? { kind: 'dir', destDir: parsed.data.destPath }
-      : null;
+    return parsed.success ? { kind: "dir", destDir: parsed.data.destPath } : null;
   }
-  if (target.type === 'network') {
+  if (target.type === "network") {
     const parsed = networkConfigSchema.safeParse(cfg);
-    return parsed.success
-      ? { kind: 'dir', destDir: parsed.data.mountPath }
-      : null;
+    return parsed.success ? { kind: "dir", destDir: parsed.data.mountPath } : null;
   }
-  if (target.type === 'plugin') {
+  if (target.type === "plugin") {
     const parsed = pluginConfigSchema.safeParse(cfg);
-    return parsed.success
-      ? { kind: 'plugin', pluginId: parsed.data.pluginId }
-      : null;
+    return parsed.success ? { kind: "plugin", pluginId: parsed.data.pluginId } : null;
   }
   return null;
 }
 
-export async function runMediaBackupJob(
-  db: LibSQLDatabase,
-  jobId: string,
-): Promise<void> {
+export async function runMediaBackupJob(db: LibSQLDatabase, jobId: string): Promise<void> {
   const now = new Date();
 
   // Mark job as running
   await db
     .update(backupJobs)
-    .set({ status: 'running', startedAt: now })
+    .set({ status: "running", startedAt: now })
     .where(eq(backupJobs.id, jobId));
 
   // Load job record
-  const jobRows = await db
-    .select()
-    .from(backupJobs)
-    .where(eq(backupJobs.id, jobId));
+  const jobRows = await db.select().from(backupJobs).where(eq(backupJobs.id, jobId));
   const job = jobRows[0];
   if (!job) {
-    emitEvent({
-      type: 'backup:media:error',
-      payload: { jobId, error: 'Job not found' },
-    });
+    emitEvent({ type: "backup:media:error", payload: { jobId, error: "Job not found" } });
     return;
   }
 
@@ -111,14 +86,14 @@ export async function runMediaBackupJob(
     await db
       .update(backupJobs)
       .set({
-        status: 'failed',
-        errors: JSON.stringify(['Backup target not found']),
+        status: "failed",
+        errors: JSON.stringify(["Backup target not found"]),
         completedAt: new Date(),
       })
       .where(eq(backupJobs.id, jobId));
     emitEvent({
-      type: 'backup:media:error',
-      payload: { jobId, error: 'Backup target not found' },
+      type: "backup:media:error",
+      payload: { jobId, error: "Backup target not found" },
     });
     return;
   }
@@ -128,14 +103,14 @@ export async function runMediaBackupJob(
     await db
       .update(backupJobs)
       .set({
-        status: 'failed',
-        errors: JSON.stringify(['Invalid target configuration']),
+        status: "failed",
+        errors: JSON.stringify(["Invalid target configuration"]),
         completedAt: new Date(),
       })
       .where(eq(backupJobs.id, jobId));
     emitEvent({
-      type: 'backup:media:error',
-      payload: { jobId, error: 'Invalid target configuration' },
+      type: "backup:media:error",
+      payload: { jobId, error: "Invalid target configuration" },
     });
     return;
   }
@@ -171,17 +146,12 @@ export async function runMediaBackupJob(
           .select({ id: mediaItems.id, filePath: mediaItems.filePath })
           .from(mediaItems)
           .where(and(...filters))
-      : await db
-          .select({ id: mediaItems.id, filePath: mediaItems.filePath })
-          .from(mediaItems);
+      : await db.select({ id: mediaItems.id, filePath: mediaItems.filePath }).from(mediaItems);
 
   const total = items.length;
 
   // Update total count
-  await db
-    .update(backupJobs)
-    .set({ totalFiles: total })
-    .where(eq(backupJobs.id, jobId));
+  await db.update(backupJobs).set({ totalFiles: total }).where(eq(backupJobs.id, jobId));
 
   // Load existing file state for this target (incremental backup tracking)
   const stateRows = await db
@@ -199,7 +169,7 @@ export async function runMediaBackupJob(
 
   for (const item of items) {
     emitEvent({
-      type: 'backup:media:progress',
+      type: "backup:media:progress",
       payload: { jobId, copied, total, currentFile: item.filePath },
     });
 
@@ -215,41 +185,29 @@ export async function runMediaBackupJob(
     // Skip unchanged files (incremental: mtime + size both match stored state)
     const stored = stateMap.get(item.filePath);
     if (stored !== undefined && srcStat !== null) {
-      if (
-        srcStat.size === stored.fileSize &&
-        Math.floor(srcStat.mtimeMs) === stored.mtime
-      ) {
+      if (srcStat.size === stored.fileSize && Math.floor(srcStat.mtimeMs) === stored.mtime) {
         skipped++;
-        await db
-          .update(backupJobs)
-          .set({ skippedFiles: skipped })
-          .where(eq(backupJobs.id, jobId));
+        await db.update(backupJobs).set({ skippedFiles: skipped }).where(eq(backupJobs.id, jobId));
         continue;
       }
     }
 
     try {
-      const rel = item.filePath.replace(/^\//, '');
-      if (handler.kind === 'plugin') {
+      const rel = item.filePath.replace(/^\//, "");
+      if (handler.kind === "plugin") {
         const plugin = getBackupTargetPlugin(handler.pluginId);
-        if (!plugin)
-          throw new Error(
-            `Backup target plugin not registered: ${handler.pluginId}`,
-          );
+        if (!plugin) throw new Error(`Backup target plugin not registered: ${handler.pluginId}`);
         await plugin.upload(item.filePath, rel);
       } else {
         const dest = join(handler.destDir, rel);
-        const destParent = dest.substring(0, dest.lastIndexOf('/'));
+        const destParent = dest.substring(0, dest.lastIndexOf("/"));
         if (destParent) {
           await mkdir(destParent, { recursive: true });
         }
         await copyFile(item.filePath, dest);
       }
       copied++;
-      await db
-        .update(backupJobs)
-        .set({ copiedFiles: copied })
-        .where(eq(backupJobs.id, jobId));
+      await db.update(backupJobs).set({ copiedFiles: copied }).where(eq(backupJobs.id, jobId));
 
       // Upsert file state after successful copy
       const stateSize = srcStat?.size ?? 0;
@@ -273,9 +231,7 @@ export async function runMediaBackupJob(
           },
         });
     } catch (err) {
-      errors.push(
-        `${item.filePath}: ${err instanceof Error ? err.message : String(err)}`,
-      );
+      errors.push(`${item.filePath}: ${err instanceof Error ? err.message : String(err)}`);
     }
   }
 
@@ -285,13 +241,13 @@ export async function runMediaBackupJob(
     const deletedRows = stateRows.filter((r) => !currentPaths.has(r.filePath));
     for (const row of deletedRows) {
       try {
-        if (handler.kind === 'plugin') {
+        if (handler.kind === "plugin") {
           const plugin = getBackupTargetPlugin(handler.pluginId);
           if (plugin) {
-            await plugin.delete(row.filePath.replace(/^\//, ''));
+            await plugin.delete(row.filePath.replace(/^\//, ""));
           }
         } else {
-          const dest = join(handler.destDir, row.filePath.replace(/^\//, ''));
+          const dest = join(handler.destDir, row.filePath.replace(/^\//, ""));
           await unlink(dest);
         }
       } catch {
@@ -302,14 +258,13 @@ export async function runMediaBackupJob(
         .where(
           and(
             eq(backupFileState.targetId, job.targetId),
-            eq(backupFileState.filePath, row.filePath),
-          ),
+            eq(backupFileState.filePath, row.filePath)
+          )
         );
     }
   }
 
-  const finalStatus =
-    errors.length > 0 && copied === 0 && skipped === 0 ? 'failed' : 'completed';
+  const finalStatus = errors.length > 0 && copied === 0 && skipped === 0 ? "failed" : "completed";
   await db
     .update(backupJobs)
     .set({
@@ -322,7 +277,7 @@ export async function runMediaBackupJob(
     .where(eq(backupJobs.id, jobId));
 
   emitEvent({
-    type: 'backup:media:complete',
+    type: "backup:media:complete",
     payload: { jobId, copied, errors: errors.length },
   });
 
@@ -338,8 +293,8 @@ export function makeAdminBackupMediaRouter(db: LibSQLDatabase): Hono {
   const router = new Hono();
 
   // POST /admin/backup/media — start a media backup job
-  router.post('/', validate('json', startBackupSchema), async (c) => {
-    const body = c.req.valid('json');
+  router.post("/", validate("json", startBackupSchema), async (c) => {
+    const body = c.req.valid("json");
 
     // Verify target exists and is enabled
     const targetRows = await db
@@ -348,10 +303,10 @@ export function makeAdminBackupMediaRouter(db: LibSQLDatabase): Hono {
       .where(eq(backupTargets.id, body.targetId));
     const target = targetRows[0];
     if (!target) {
-      return c.json({ error: 'Backup target not found' }, 404);
+      return c.json({ error: "Backup target not found" }, 404);
     }
     if (!target.enabled) {
-      return c.json({ error: 'Backup target is disabled' }, 400);
+      return c.json({ error: "Backup target is disabled" }, 400);
     }
 
     const jobId = crypto.randomUUID();
@@ -360,11 +315,11 @@ export function makeAdminBackupMediaRouter(db: LibSQLDatabase): Hono {
       id: jobId,
       targetId: body.targetId,
       scope: JSON.stringify(body.scope),
-      status: 'pending',
+      status: "pending",
       totalFiles: 0,
       copiedFiles: 0,
       skippedFiles: 0,
-      errors: '[]',
+      errors: "[]",
       createdAt: now,
     });
 
@@ -373,27 +328,21 @@ export function makeAdminBackupMediaRouter(db: LibSQLDatabase): Hono {
       // errors are stored in the job record
     });
 
-    return c.json({ jobId, status: 'running' }, 202);
+    return c.json({ jobId, status: "running" }, 202);
   });
 
   // GET /admin/backup/media/jobs — list all backup jobs
-  router.get('/jobs', async (c) => {
-    const rows = await db
-      .select()
-      .from(backupJobs)
-      .orderBy(desc(backupJobs.createdAt));
+  router.get("/jobs", async (c) => {
+    const rows = await db.select().from(backupJobs).orderBy(desc(backupJobs.createdAt));
     return c.json(rows);
   });
 
   // GET /admin/backup/media/jobs/:id — get single job
-  router.get('/jobs/:id', async (c) => {
-    const id = c.req.param('id') as string;
-    const rows = await db
-      .select()
-      .from(backupJobs)
-      .where(eq(backupJobs.id, id));
+  router.get("/jobs/:id", async (c) => {
+    const id = c.req.param("id") as string;
+    const rows = await db.select().from(backupJobs).where(eq(backupJobs.id, id));
     const row = rows[0];
-    if (!row) return c.json({ error: 'Not found' }, 404);
+    if (!row) return c.json({ error: "Not found" }, 404);
     return c.json(row);
   });
 

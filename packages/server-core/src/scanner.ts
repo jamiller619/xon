@@ -1,10 +1,10 @@
-import type { Dirent, Stats } from 'node:fs';
-import { readdir, stat } from 'node:fs/promises';
-import { basename, extname, join } from 'node:path';
-import { EXTENSION_TO_MIME, getMediaCategory } from '@xon/media-types';
-import type { MediaCategory } from '@xon/shared';
-import { getMediaProviderPlugin } from './mediaProviderPluginRegistry.js';
-import type { MediaItem } from './schema.js';
+import type { Dirent, Stats } from "node:fs";
+import { readdir, stat } from "node:fs/promises";
+import { basename, extname, join } from "node:path";
+import { EXTENSION_TO_MIME, getMediaCategory } from "@xon/media-types";
+import type { MediaCategory } from "@xon/shared";
+import { getMediaProviderPlugin } from "./mediaProviderPluginRegistry.js";
+import type { MediaItem } from "./schema.js";
 
 export type FileEntry = {
   filePath: string;
@@ -22,10 +22,7 @@ export type ScanResult = {
   removedFilePaths: string[];
 };
 
-async function walkDirectory(
-  dirPath: string,
-  recursive: boolean,
-): Promise<FileEntry[]> {
+async function walkDirectory(dirPath: string, recursive: boolean): Promise<FileEntry[]> {
   const entries: FileEntry[] = [];
 
   let dirEntries: Dirent[];
@@ -72,15 +69,10 @@ async function walkDirectory(
   return entries;
 }
 
-async function scanPluginDataSource(
-  pluginId: string,
-  path: string,
-): Promise<FileEntry[]> {
+async function scanPluginDataSource(pluginId: string, path: string): Promise<FileEntry[]> {
   const plugin = getMediaProviderPlugin(pluginId);
   if (!plugin) {
-    console.error(
-      `Scanner: no MediaProviderPlugin registered for pluginId "${pluginId}"`,
-    );
+    console.error(`Scanner: no MediaProviderPlugin registered for pluginId "${pluginId}"`);
     return [];
   }
 
@@ -88,10 +80,7 @@ async function scanPluginDataSource(
   try {
     providerFiles = await plugin.listFiles(path);
   } catch (err) {
-    console.error(
-      `Scanner: plugin "${pluginId}" listFiles("${path}") failed:`,
-      err,
-    );
+    console.error(`Scanner: plugin "${pluginId}" listFiles("${path}") failed:`, err);
     return [];
   }
 
@@ -114,21 +103,13 @@ async function scanPluginDataSource(
 }
 
 export async function scanDataSource(
-  dataSource: {
-    type?: string;
-    path: string;
-    recursive: boolean;
-    pluginId?: string | null;
-  },
-  existingItems: Pick<MediaItem, 'filePath' | 'fileSize'>[] = [],
+  dataSource: { type?: string; path: string; recursive: boolean; pluginId?: string | null },
+  existingItems: Pick<MediaItem, "filePath" | "fileSize">[] = []
 ): Promise<ScanResult> {
   let discovered: FileEntry[];
 
-  if (dataSource.type === 'plugin' && dataSource.pluginId) {
-    discovered = await scanPluginDataSource(
-      dataSource.pluginId,
-      dataSource.path,
-    );
+  if (dataSource.type === "plugin" && dataSource.pluginId) {
+    discovered = await scanPluginDataSource(dataSource.pluginId, dataSource.path);
   } else {
     discovered = await walkDirectory(dataSource.path, dataSource.recursive);
   }
@@ -152,9 +133,7 @@ export async function scanDataSource(
     }
   }
 
-  const removedFilePaths = [...existingMap.keys()].filter(
-    (p) => !discoveredPaths.has(p),
-  );
+  const removedFilePaths = [...existingMap.keys()].filter((p) => !discoveredPaths.has(p));
 
   return { discovered, newFiles, changedFiles, removedFilePaths };
 }

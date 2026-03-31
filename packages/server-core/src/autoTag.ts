@@ -1,9 +1,9 @@
-import { basename, extname } from 'node:path';
-import { eq } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { isImageCategory } from './exiftool.js';
-import { isDocumentCategory } from './miscmeta.js';
-import { mediaItems } from './schema.js';
+import { basename, extname } from "node:path";
+import { eq } from "drizzle-orm";
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
+import { isImageCategory } from "./exiftool.js";
+import { isDocumentCategory } from "./miscmeta.js";
+import { mediaItems } from "./schema.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -11,7 +11,7 @@ export interface AutoTag {
   text: string;
   /** Confidence score 0–100 */
   confidence: number;
-  source: 'ai-generated';
+  source: "ai-generated";
 }
 
 /**
@@ -21,16 +21,14 @@ export interface AutoTag {
  */
 export interface AutoTagOnnxSession {
   run(
-    feeds: Record<string, { data: Float32Array; dims: number[] }>,
+    feeds: Record<string, { data: Float32Array; dims: number[] }>
   ): Promise<Record<string, { data: Float32Array; dims: number[] }>>;
 }
 
 let autoTagOnnxSession: AutoTagOnnxSession | null = null;
 
 /** Inject an ONNX Runtime session for AI-powered image/document tagging. */
-export function setAutoTagOnnxSession(
-  session: AutoTagOnnxSession | null,
-): void {
+export function setAutoTagOnnxSession(session: AutoTagOnnxSession | null): void {
   autoTagOnnxSession = session;
 }
 
@@ -45,7 +43,7 @@ function filenameWords(filePath: string): string[] {
   const name = basename(filePath, extname(filePath));
   return name
     .toLowerCase()
-    .replace(/[_\-\.]/g, ' ')
+    .replace(/[_\-\.]/g, " ")
     .split(/\s+/)
     .filter((w) => w.length >= 3);
 }
@@ -58,30 +56,21 @@ function clamp(n: number, min: number, max: number): number {
 // ── Image tagging ─────────────────────────────────────────────────────────────
 
 const IMAGE_SCENE_KEYWORDS: Record<string, string[]> = {
-  landscape: [
-    'landscape',
-    'nature',
-    'mountain',
-    'forest',
-    'beach',
-    'ocean',
-    'lake',
-    'river',
-  ],
-  portrait: ['portrait', 'person', 'people', 'face', 'selfie'],
-  architecture: ['building', 'architecture', 'city', 'street', 'urban'],
-  food: ['food', 'meal', 'restaurant', 'cooking', 'recipe'],
-  animal: ['animal', 'pet', 'dog', 'cat', 'bird', 'wildlife'],
-  travel: ['travel', 'vacation', 'trip', 'holiday', 'tour'],
-  sports: ['sport', 'sports', 'game', 'match', 'team', 'player'],
-  night: ['night', 'dark', 'stars', 'moon', 'evening'],
-  macro: ['macro', 'close', 'detail', 'texture'],
+  landscape: ["landscape", "nature", "mountain", "forest", "beach", "ocean", "lake", "river"],
+  portrait: ["portrait", "person", "people", "face", "selfie"],
+  architecture: ["building", "architecture", "city", "street", "urban"],
+  food: ["food", "meal", "restaurant", "cooking", "recipe"],
+  animal: ["animal", "pet", "dog", "cat", "bird", "wildlife"],
+  travel: ["travel", "vacation", "trip", "holiday", "tour"],
+  sports: ["sport", "sports", "game", "match", "team", "player"],
+  night: ["night", "dark", "stars", "moon", "evening"],
+  macro: ["macro", "close", "detail", "texture"],
 };
 
 /** Tag an image using EXIF metadata and filename heuristics. Falls back gracefully from ONNX. */
 export async function computeImageTags(
   filePath: string,
-  metadata: Record<string, unknown>,
+  metadata: Record<string, unknown>
 ): Promise<AutoTag[]> {
   // Try ONNX-based inference first
   if (autoTagOnnxSession !== null) {
@@ -103,40 +92,35 @@ export async function computeImageTags(
   const words = filenameWords(filePath);
 
   // Orientation from image dimensions
-  const width =
-    typeof metadata.imageWidth === 'number' ? metadata.imageWidth : 0;
-  const height =
-    typeof metadata.imageHeight === 'number' ? metadata.imageHeight : 0;
+  const width = typeof metadata.imageWidth === "number" ? metadata.imageWidth : 0;
+  const height = typeof metadata.imageHeight === "number" ? metadata.imageHeight : 0;
   if (width > 0 && height > 0) {
     if (width > height) {
-      tags.push({ text: 'landscape', confidence: 80, source: 'ai-generated' });
+      tags.push({ text: "landscape", confidence: 80, source: "ai-generated" });
     } else if (height > width) {
-      tags.push({ text: 'portrait', confidence: 80, source: 'ai-generated' });
+      tags.push({ text: "portrait", confidence: 80, source: "ai-generated" });
     } else {
-      tags.push({ text: 'square', confidence: 75, source: 'ai-generated' });
+      tags.push({ text: "square", confidence: 75, source: "ai-generated" });
     }
   }
 
   // GPS presence → outdoor / location photo
-  if (
-    metadata.gpsLatitude !== undefined ||
-    metadata.gpsLongitude !== undefined
-  ) {
-    tags.push({ text: 'outdoor', confidence: 70, source: 'ai-generated' });
-    tags.push({ text: 'location', confidence: 65, source: 'ai-generated' });
+  if (metadata.gpsLatitude !== undefined || metadata.gpsLongitude !== undefined) {
+    tags.push({ text: "outdoor", confidence: 70, source: "ai-generated" });
+    tags.push({ text: "location", confidence: 65, source: "ai-generated" });
   }
 
   // Camera make/model → photography tag
-  if (typeof metadata.make === 'string' || typeof metadata.model === 'string') {
-    tags.push({ text: 'photography', confidence: 60, source: 'ai-generated' });
+  if (typeof metadata.make === "string" || typeof metadata.model === "string") {
+    tags.push({ text: "photography", confidence: 60, source: "ai-generated" });
   }
 
   // EXIF keywords
-  if (typeof metadata.subject === 'string' && metadata.subject.length > 0) {
+  if (typeof metadata.subject === "string" && metadata.subject.length > 0) {
     for (const kw of metadata.subject.split(/[;,]+/)) {
       const word = kw.trim().toLowerCase();
       if (word.length >= 3) {
-        tags.push({ text: word, confidence: 85, source: 'ai-generated' });
+        tags.push({ text: word, confidence: 85, source: "ai-generated" });
       }
     }
   }
@@ -145,21 +129,17 @@ export async function computeImageTags(
   for (const word of words) {
     for (const [scene, keywords] of Object.entries(IMAGE_SCENE_KEYWORDS)) {
       if (keywords.includes(word) && !tags.some((t) => t.text === scene)) {
-        tags.push({ text: scene, confidence: 60, source: 'ai-generated' });
+        tags.push({ text: scene, confidence: 60, source: "ai-generated" });
       }
     }
   }
 
   // Color space hint
-  if (typeof metadata.colorSpace === 'string') {
-    if (metadata.colorSpace.toLowerCase().includes('srgb')) {
-      tags.push({ text: 'color', confidence: 55, source: 'ai-generated' });
-    } else if (metadata.colorSpace.toLowerCase().includes('gray')) {
-      tags.push({
-        text: 'black-and-white',
-        confidence: 70,
-        source: 'ai-generated',
-      });
+  if (typeof metadata.colorSpace === "string") {
+    if (metadata.colorSpace.toLowerCase().includes("srgb")) {
+      tags.push({ text: "color", confidence: 55, source: "ai-generated" });
+    } else if (metadata.colorSpace.toLowerCase().includes("gray")) {
+      tags.push({ text: "black-and-white", confidence: 70, source: "ai-generated" });
     }
   }
 
@@ -169,33 +149,19 @@ export async function computeImageTags(
 // ── Document tagging ──────────────────────────────────────────────────────────
 
 const DOCUMENT_TOPIC_KEYWORDS: Record<string, string[]> = {
-  technical: [
-    'technical',
-    'manual',
-    'specification',
-    'guide',
-    'reference',
-    'api',
-  ],
-  legal: ['legal', 'contract', 'agreement', 'terms', 'policy', 'law'],
-  financial: ['financial', 'invoice', 'receipt', 'budget', 'report', 'tax'],
-  academic: ['research', 'thesis', 'paper', 'study', 'analysis', 'journal'],
-  creative: ['story', 'novel', 'fiction', 'poem', 'script', 'creative'],
-  educational: [
-    'tutorial',
-    'lesson',
-    'course',
-    'learning',
-    'education',
-    'training',
-  ],
-  business: ['business', 'proposal', 'plan', 'strategy', 'meeting', 'project'],
+  technical: ["technical", "manual", "specification", "guide", "reference", "api"],
+  legal: ["legal", "contract", "agreement", "terms", "policy", "law"],
+  financial: ["financial", "invoice", "receipt", "budget", "report", "tax"],
+  academic: ["research", "thesis", "paper", "study", "analysis", "journal"],
+  creative: ["story", "novel", "fiction", "poem", "script", "creative"],
+  educational: ["tutorial", "lesson", "course", "learning", "education", "training"],
+  business: ["business", "proposal", "plan", "strategy", "meeting", "project"],
 };
 
 /** Tag a document using filename and extracted document metadata heuristics. */
 export async function computeDocumentTags(
   filePath: string,
-  metadata: Record<string, unknown>,
+  metadata: Record<string, unknown>
 ): Promise<AutoTag[]> {
   // Try ONNX-based inference first
   if (autoTagOnnxSession !== null) {
@@ -217,61 +183,50 @@ export async function computeDocumentTags(
   const words = filenameWords(filePath);
 
   // Page count → read-length hint
-  const pageCount =
-    typeof metadata.pageCount === 'number' ? metadata.pageCount : 0;
+  const pageCount = typeof metadata.pageCount === "number" ? metadata.pageCount : 0;
   if (pageCount > 0) {
     if (pageCount <= 10) {
-      tags.push({ text: 'short-read', confidence: 75, source: 'ai-generated' });
+      tags.push({ text: "short-read", confidence: 75, source: "ai-generated" });
     } else if (pageCount <= 100) {
-      tags.push({
-        text: 'medium-read',
-        confidence: 75,
-        source: 'ai-generated',
-      });
+      tags.push({ text: "medium-read", confidence: 75, source: "ai-generated" });
     } else {
-      tags.push({ text: 'long-read', confidence: 75, source: 'ai-generated' });
+      tags.push({ text: "long-read", confidence: 75, source: "ai-generated" });
     }
   }
 
   // Extension-based document type
   const ext = extname(filePath).toLowerCase();
-  if (ext === '.pdf') {
-    tags.push({ text: 'pdf', confidence: 95, source: 'ai-generated' });
-  } else if (ext === '.epub' || ext === '.mobi') {
-    tags.push({ text: 'ebook', confidence: 95, source: 'ai-generated' });
-  } else if (ext === '.docx' || ext === '.doc' || ext === '.odt') {
-    tags.push({ text: 'document', confidence: 90, source: 'ai-generated' });
-  } else if (ext === '.txt' || ext === '.md') {
-    tags.push({ text: 'text', confidence: 90, source: 'ai-generated' });
+  if (ext === ".pdf") {
+    tags.push({ text: "pdf", confidence: 95, source: "ai-generated" });
+  } else if (ext === ".epub" || ext === ".mobi") {
+    tags.push({ text: "ebook", confidence: 95, source: "ai-generated" });
+  } else if (ext === ".docx" || ext === ".doc" || ext === ".odt") {
+    tags.push({ text: "document", confidence: 90, source: "ai-generated" });
+  } else if (ext === ".txt" || ext === ".md") {
+    tags.push({ text: "text", confidence: 90, source: "ai-generated" });
   }
 
   // Subject/title from metadata
   const textHints: string[] = [];
-  if (typeof metadata.title === 'string') {
+  if (typeof metadata.title === "string") {
     textHints.push(...metadata.title.toLowerCase().split(/\s+/));
   }
-  if (typeof metadata.subject === 'string') {
+  if (typeof metadata.subject === "string") {
     textHints.push(...metadata.subject.toLowerCase().split(/\s+/));
   }
   textHints.push(...words);
 
   for (const word of textHints) {
     for (const [topic, keywords] of Object.entries(DOCUMENT_TOPIC_KEYWORDS)) {
-      if (
-        keywords.some((k) => word.includes(k)) &&
-        !tags.some((t) => t.text === topic)
-      ) {
-        tags.push({ text: topic, confidence: 65, source: 'ai-generated' });
+      if (keywords.some((k) => word.includes(k)) && !tags.some((t) => t.text === topic)) {
+        tags.push({ text: topic, confidence: 65, source: "ai-generated" });
       }
     }
   }
 
   // Author → credited tag
-  if (
-    typeof metadata.author === 'string' &&
-    metadata.author.trim().length > 0
-  ) {
-    tags.push({ text: 'authored', confidence: 60, source: 'ai-generated' });
+  if (typeof metadata.author === "string" && metadata.author.trim().length > 0) {
+    tags.push({ text: "authored", confidence: 60, source: "ai-generated" });
   }
 
   return deduplicateTags(tags);
@@ -281,64 +236,56 @@ export async function computeDocumentTags(
 
 /** Label maps for ONNX output index → tag name */
 const IMAGE_LABEL_MAP: string[] = [
-  'landscape',
-  'portrait',
-  'architecture',
-  'food',
-  'animal',
-  'travel',
-  'sports',
-  'night',
-  'macro',
-  'nature',
+  "landscape",
+  "portrait",
+  "architecture",
+  "food",
+  "animal",
+  "travel",
+  "sports",
+  "night",
+  "macro",
+  "nature",
 ];
 
 const DOCUMENT_LABEL_MAP: string[] = [
-  'technical',
-  'legal',
-  'financial',
-  'academic',
-  'creative',
-  'educational',
-  'business',
-  'short-read',
-  'long-read',
-  'ebook',
+  "technical",
+  "legal",
+  "financial",
+  "academic",
+  "creative",
+  "educational",
+  "business",
+  "short-read",
+  "long-read",
+  "ebook",
 ];
 
-function buildImageFeatureVector(
-  metadata: Record<string, unknown>,
-): Float32Array {
+function buildImageFeatureVector(metadata: Record<string, unknown>): Float32Array {
   const features = new Float32Array(8);
-  const width =
-    typeof metadata.imageWidth === 'number' ? metadata.imageWidth : 0;
-  const height =
-    typeof metadata.imageHeight === 'number' ? metadata.imageHeight : 0;
+  const width = typeof metadata.imageWidth === "number" ? metadata.imageWidth : 0;
+  const height = typeof metadata.imageHeight === "number" ? metadata.imageHeight : 0;
   features[0] = width > 0 && height > 0 ? clamp(width / height, 0, 4) : 1;
   features[1] = metadata.gpsLatitude !== undefined ? 1 : 0;
   features[2] = metadata.gpsLongitude !== undefined ? 1 : 0;
-  features[3] = typeof metadata.make === 'string' ? 1 : 0;
-  features[4] = typeof metadata.model === 'string' ? 1 : 0;
-  features[5] = typeof metadata.subject === 'string' ? 1 : 0;
+  features[3] = typeof metadata.make === "string" ? 1 : 0;
+  features[4] = typeof metadata.model === "string" ? 1 : 0;
+  features[5] = typeof metadata.subject === "string" ? 1 : 0;
   features[6] =
-    typeof metadata.colorSpace === 'string' &&
-    metadata.colorSpace.toLowerCase().includes('gray')
+    typeof metadata.colorSpace === "string" && metadata.colorSpace.toLowerCase().includes("gray")
       ? 1
       : 0;
-  features[7] = typeof metadata.orientation === 'string' ? 1 : 0;
+  features[7] = typeof metadata.orientation === "string" ? 1 : 0;
   return features;
 }
 
-function buildDocumentFeatureVector(
-  metadata: Record<string, unknown>,
-): Float32Array {
+function buildDocumentFeatureVector(metadata: Record<string, unknown>): Float32Array {
   const features = new Float32Array(8);
-  const pageCount =
-    typeof metadata.pageCount === 'number' ? metadata.pageCount : 0;
+  const pageCount = typeof metadata.pageCount === "number" ? metadata.pageCount : 0;
   features[0] = clamp(pageCount / 1000, 0, 1);
-  features[1] = typeof metadata.title === 'string' ? 1 : 0;
-  features[2] = typeof metadata.subject === 'string' ? 1 : 0;
-  features[3] = typeof metadata.author === 'string' ? 1 : 0;
+  features[1] = typeof metadata.title === "string" ? 1 : 0;
+  features[2] = typeof metadata.subject === "string" ? 1 : 0;
+  features[3] = typeof metadata.author === "string" ? 1 : 0;
   features[4] = pageCount <= 10 && pageCount > 0 ? 1 : 0;
   features[5] = pageCount > 100 ? 1 : 0;
   features[6] = 0;
@@ -354,7 +301,7 @@ function onnxScoresToTags(scores: Float32Array, labelMap: string[]): AutoTag[] {
       tags.push({
         text: labelMap[i] as string,
         confidence: Math.round(clamp(score * 100, 0, 100)),
-        source: 'ai-generated',
+        source: "ai-generated",
       });
     }
   }
@@ -377,10 +324,7 @@ function deduplicateTags(tags: AutoTag[]): AutoTag[] {
  * Stores generated tags in metadata.aiTags field.
  * Idempotent: skips items that already have aiTags set.
  */
-export async function autoTagMediaItems(
-  db: LibSQLDatabase,
-  libraryId: string,
-): Promise<void> {
+export async function autoTagMediaItems(db: LibSQLDatabase, libraryId: string): Promise<void> {
   const rows = await db
     .select({
       id: mediaItems.id,
@@ -394,8 +338,7 @@ export async function autoTagMediaItems(
 
   // Filter to supported categories
   const supported = rows.filter(
-    (r) =>
-      isImageCategory(r.mediaCategory) || isDocumentCategory(r.mediaCategory),
+    (r) => isImageCategory(r.mediaCategory) || isDocumentCategory(r.mediaCategory)
   );
 
   const now = new Date();

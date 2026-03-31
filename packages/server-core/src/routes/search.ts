@@ -1,23 +1,23 @@
-import { type SQL, eq, sql } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { Hono } from 'hono';
-import { z } from 'zod';
-import { getAllowedRatings, libraryAccess, users } from '../schema.js';
-import { validate } from '../validate.js';
+import { type SQL, eq, sql } from "drizzle-orm";
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
+import { Hono } from "hono";
+import { z } from "zod";
+import { getAllowedRatings, libraryAccess, users } from "../schema.js";
+import { validate } from "../validate.js";
 
 const searchQuerySchema = z.object({
-  q: z.string().trim().min(1, 'q is required'),
+  q: z.string().trim().min(1, "q is required"),
   category: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
   offset: z.coerce.number().int().min(0).optional().default(0),
 });
 
-const PRIVILEGED_ROLES = ['admin', 'manager'] as const;
+const PRIVILEGED_ROLES = ["admin", "manager"] as const;
 
 async function getAccessibleLibraryIds(
   db: LibSQLDatabase,
   userId: string,
-  role: string,
+  role: string
 ): Promise<string[] | null> {
   if ((PRIVILEGED_ROLES as readonly string[]).includes(role)) return null;
   const rows = await db
@@ -43,15 +43,10 @@ interface SearchRow {
 export function makeSearchRouter(db: LibSQLDatabase): Hono {
   const router = new Hono();
 
-  router.get('/', validate('query', searchQuerySchema), async (c) => {
-    const {
-      q,
-      category,
-      limit: limitNum,
-      offset: offsetNum,
-    } = c.req.valid('query');
+  router.get("/", validate("query", searchQuerySchema), async (c) => {
+    const { q, category, limit: limitNum, offset: offsetNum } = c.req.valid("query");
 
-    const user = c.get('user');
+    const user = c.get("user");
 
     // Get accessible library IDs for this user
     const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role);
@@ -64,7 +59,7 @@ export function makeSearchRouter(db: LibSQLDatabase): Hono {
       .select({ maxContentRating: users.maxContentRating })
       .from(users)
       .where(eq(users.id, user.id));
-    const maxRating = userRows[0]?.maxContentRating ?? 'none';
+    const maxRating = userRows[0]?.maxContentRating ?? "none";
     const allowedRatings = getAllowedRatings(maxRating);
 
     // Build WHERE conditions for the raw SQL query
@@ -74,8 +69,8 @@ export function makeSearchRouter(db: LibSQLDatabase): Hono {
       conditions.push(
         sql`m.library_id IN (${sql.join(
           accessibleIds.map((id) => sql`${id}`),
-          sql`, `,
-        )})`,
+          sql`, `
+        )})`
       );
     }
 
@@ -87,20 +82,20 @@ export function makeSearchRouter(db: LibSQLDatabase): Hono {
       if (allowedRatings.length === 0) {
         conditions.push(sql`m.content_rating IS NULL`);
       } else {
-        const unratedAllowed = (allowedRatings as string[]).includes('unrated');
+        const unratedAllowed = (allowedRatings as string[]).includes("unrated");
         if (unratedAllowed) {
           conditions.push(
             sql`(m.content_rating IS NULL OR m.content_rating IN (${sql.join(
               allowedRatings.map((r) => sql`${r}`),
-              sql`, `,
-            )}))`,
+              sql`, `
+            )}))`
           );
         } else {
           conditions.push(
             sql`m.content_rating IN (${sql.join(
               allowedRatings.map((r) => sql`${r}`),
-              sql`, `,
-            )})`,
+              sql`, `
+            )})`
           );
         }
       }
@@ -135,9 +130,7 @@ export function makeSearchRouter(db: LibSQLDatabase): Hono {
       fileName: row.file_name,
       mediaCategory: row.media_category,
       contentRating: row.content_rating,
-      createdAt: row.created_at
-        ? new Date(row.created_at * 1000).toISOString()
-        : null,
+      createdAt: row.created_at ? new Date(row.created_at * 1000).toISOString() : null,
       thumbnailUrls: row.thumbnail_paths
         ? {
             small: `/api/v1/media/${row.id}/thumbnail?size=small`,

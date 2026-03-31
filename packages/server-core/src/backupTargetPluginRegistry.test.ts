@@ -3,31 +3,31 @@ import type {
   BackupVerifyResult,
   PluginContext,
   PluginManifest,
-} from '@xon/plugin-sdk';
-import { BackupTargetPlugin } from '@xon/plugin-sdk';
-import { afterEach, describe, expect, it } from 'vitest';
+} from "@xon/plugin-sdk";
+import { BackupTargetPlugin } from "@xon/plugin-sdk";
+import { afterEach, describe, expect, it } from "vitest";
 import {
   _resetBackupTargetPluginRegistry,
   getBackupTargetPlugin,
   registerBackupTargetPlugin,
   unregisterBackupTargetPlugin,
-} from './backupTargetPluginRegistry.js';
+} from "./backupTargetPluginRegistry.js";
 
 // Minimal concrete BackupTargetPlugin for testing
 class TestBackupPlugin extends BackupTargetPlugin {
   readonly manifest: PluginManifest = {
-    id: 'test-backup',
-    name: 'Test Backup',
-    version: '1.0.0',
-    description: 'Test',
-    author: 'Test',
-    category: 'BackupTarget',
+    id: "test-backup",
+    name: "Test Backup",
+    version: "1.0.0",
+    description: "Test",
+    author: "Test",
+    category: "BackupTarget",
   };
 
   readonly configSchema: BackupTargetConfigSchema = {
     fields: [
-      { key: 'bucket', label: 'Bucket Name', type: 'string', required: true },
-      { key: 'apiKey', label: 'API Key', type: 'password', required: true },
+      { key: "bucket", label: "Bucket Name", type: "string", required: true },
+      { key: "apiKey", label: "API Key", type: "password", required: true },
     ],
   };
 
@@ -49,54 +49,54 @@ afterEach(() => {
   _resetBackupTargetPluginRegistry();
 });
 
-describe('BackupTargetPlugin registry', () => {
-  it('registers and retrieves a plugin by id', () => {
+describe("BackupTargetPlugin registry", () => {
+  it("registers and retrieves a plugin by id", () => {
     const plugin = new TestBackupPlugin();
-    registerBackupTargetPlugin('test-backup', plugin);
-    expect(getBackupTargetPlugin('test-backup')).toBe(plugin);
+    registerBackupTargetPlugin("test-backup", plugin);
+    expect(getBackupTargetPlugin("test-backup")).toBe(plugin);
   });
 
-  it('returns undefined for an unregistered plugin', () => {
-    expect(getBackupTargetPlugin('unknown')).toBeUndefined();
+  it("returns undefined for an unregistered plugin", () => {
+    expect(getBackupTargetPlugin("unknown")).toBeUndefined();
   });
 
-  it('unregisters a plugin', () => {
+  it("unregisters a plugin", () => {
     const plugin = new TestBackupPlugin();
-    registerBackupTargetPlugin('test-backup', plugin);
-    unregisterBackupTargetPlugin('test-backup');
-    expect(getBackupTargetPlugin('test-backup')).toBeUndefined();
+    registerBackupTargetPlugin("test-backup", plugin);
+    unregisterBackupTargetPlugin("test-backup");
+    expect(getBackupTargetPlugin("test-backup")).toBeUndefined();
   });
 
-  it('reset clears all registered plugins', () => {
+  it("reset clears all registered plugins", () => {
     const plugin = new TestBackupPlugin();
-    registerBackupTargetPlugin('test-backup', plugin);
+    registerBackupTargetPlugin("test-backup", plugin);
     _resetBackupTargetPluginRegistry();
-    expect(getBackupTargetPlugin('test-backup')).toBeUndefined();
+    expect(getBackupTargetPlugin("test-backup")).toBeUndefined();
   });
 
-  it('overwrites registration for the same id', () => {
+  it("overwrites registration for the same id", () => {
     const plugin1 = new TestBackupPlugin();
     const plugin2 = new TestBackupPlugin();
-    registerBackupTargetPlugin('test-backup', plugin1);
-    registerBackupTargetPlugin('test-backup', plugin2);
-    expect(getBackupTargetPlugin('test-backup')).toBe(plugin2);
+    registerBackupTargetPlugin("test-backup", plugin1);
+    registerBackupTargetPlugin("test-backup", plugin2);
+    expect(getBackupTargetPlugin("test-backup")).toBe(plugin2);
   });
 });
 
-describe('BackupTargetPlugin configSchema', () => {
-  it('exposes configSchema with fields', () => {
+describe("BackupTargetPlugin configSchema", () => {
+  it("exposes configSchema with fields", () => {
     const plugin = new TestBackupPlugin();
     expect(plugin.configSchema.fields).toHaveLength(2);
     expect(plugin.configSchema.fields[0]).toMatchObject({
-      key: 'bucket',
-      label: 'Bucket Name',
-      type: 'string',
+      key: "bucket",
+      label: "Bucket Name",
+      type: "string",
       required: true,
     });
     expect(plugin.configSchema.fields[1]).toMatchObject({
-      key: 'apiKey',
-      label: 'API Key',
-      type: 'password',
+      key: "apiKey",
+      label: "API Key",
+      type: "password",
       required: true,
     });
   });

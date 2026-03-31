@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
-import { apiFetch } from '../apiFetch.js';
-import styles from './AdminHealth.module.css';
+import { useCallback, useEffect, useState } from "react";
+import { apiFetch } from "../apiFetch.js";
+import styles from "./AdminHealth.module.css";
 
 interface ScanProgress {
   dataSourceId: string;
@@ -46,10 +46,10 @@ interface HealthData {
 }
 
 function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+  if (bytes === 0) return "0 B";
+  const units = ["B", "KB", "MB", "GB", "TB"];
   const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  const unit = units[i] ?? 'B';
+  const unit = units[i] ?? "B";
   return `${(bytes / 1024 ** i).toFixed(1)} ${unit}`;
 }
 
@@ -70,17 +70,17 @@ function formatDate(iso: string): string {
 
 export default function AdminHealth() {
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [error, setError] = useState("");
   const [data, setData] = useState<HealthData | null>(null);
 
   const fetchHealth = useCallback(() => {
-    apiFetch('/api/v1/admin/health')
+    apiFetch("/api/v1/admin/health")
       .then((r) => r.json() as Promise<HealthData>)
       .then((d) => {
         setData(d);
-        setError('');
+        setError("");
       })
-      .catch(() => setError('Failed to load health data'))
+      .catch(() => setError("Failed to load health data"))
       .finally(() => setLoading(false));
   }, []);
 
@@ -92,167 +92,129 @@ export default function AdminHealth() {
 
   if (loading) {
     return (
-      <div className={styles.page ?? ''}>
-        <p className={styles.loading ?? ''}>Loading...</p>
+      <div className={styles.page ?? ""}>
+        <p className={styles.loading ?? ""}>Loading...</p>
       </div>
     );
   }
 
   if (error || !data) {
     return (
-      <div className={styles.page ?? ''}>
-        <p className={styles.error ?? ''}>{error || 'No data'}</p>
+      <div className={styles.page ?? ""}>
+        <p className={styles.error ?? ""}>{error || "No data"}</p>
       </div>
     );
   }
 
   const memUsedPct =
     data.memory.total > 0
-      ? Math.round(
-          ((data.memory.total - data.memory.free) / data.memory.total) * 100,
-        )
+      ? Math.round(((data.memory.total - data.memory.free) / data.memory.total) * 100)
       : 0;
   const diskUsedPct =
-    data.storage.total > 0
-      ? Math.round((data.storage.used / data.storage.total) * 100)
-      : 0;
+    data.storage.total > 0 ? Math.round((data.storage.used / data.storage.total) * 100) : 0;
 
   return (
-    <div className={styles.page ?? ''}>
-      <div className={styles.header ?? ''}>
-        <h1 className={styles.heading ?? ''}>System Health</h1>
-        <button
-          type="button"
-          className={styles.refreshBtn ?? ''}
-          onClick={fetchHealth}
-        >
+    <div className={styles.page ?? ""}>
+      <div className={styles.header ?? ""}>
+        <h1 className={styles.heading ?? ""}>System Health</h1>
+        <button type="button" className={styles.refreshBtn ?? ""} onClick={fetchHealth}>
           Refresh
         </button>
       </div>
 
-      <div className={styles.grid ?? ''}>
+      <div className={styles.grid ?? ""}>
         {/* Uptime */}
-        <section className={styles.card ?? ''}>
-          <h2 className={styles.cardHeading ?? ''}>Uptime</h2>
-          <p className={styles.stat ?? ''}>{formatUptime(data.uptime)}</p>
+        <section className={styles.card ?? ""}>
+          <h2 className={styles.cardHeading ?? ""}>Uptime</h2>
+          <p className={styles.stat ?? ""}>{formatUptime(data.uptime)}</p>
         </section>
 
         {/* Memory */}
-        <section className={styles.card ?? ''}>
-          <h2 className={styles.cardHeading ?? ''}>Memory</h2>
-          <div className={styles.progressBar ?? ''}>
-            <div
-              className={styles.progressFill ?? ''}
-              style={{ width: `${memUsedPct}%` }}
-            />
+        <section className={styles.card ?? ""}>
+          <h2 className={styles.cardHeading ?? ""}>Memory</h2>
+          <div className={styles.progressBar ?? ""}>
+            <div className={styles.progressFill ?? ""} style={{ width: `${memUsedPct}%` }} />
           </div>
-          <p className={styles.statDetail ?? ''}>
-            {formatBytes(data.memory.total - data.memory.free)} /{' '}
-            {formatBytes(data.memory.total)} used ({memUsedPct}%)
+          <p className={styles.statDetail ?? ""}>
+            {formatBytes(data.memory.total - data.memory.free)} / {formatBytes(data.memory.total)}{" "}
+            used ({memUsedPct}%)
           </p>
-          <p className={styles.hint ?? ''}>
-            Heap: {formatBytes(data.memory.heapUsed)} /{' '}
-            {formatBytes(data.memory.heapTotal)}
+          <p className={styles.hint ?? ""}>
+            Heap: {formatBytes(data.memory.heapUsed)} / {formatBytes(data.memory.heapTotal)}
           </p>
-          <p className={styles.hint ?? ''}>
-            RSS: {formatBytes(data.memory.rss)}
-          </p>
+          <p className={styles.hint ?? ""}>RSS: {formatBytes(data.memory.rss)}</p>
         </section>
 
         {/* CPU */}
-        <section className={styles.card ?? ''}>
-          <h2 className={styles.cardHeading ?? ''}>CPU Load</h2>
-          <div className={styles.loadRow ?? ''}>
-            <span className={styles.loadLabel ?? ''}>1m</span>
-            <span className={styles.loadValue ?? ''}>
-              {data.cpu.loadAvg1m.toFixed(2)}
-            </span>
+        <section className={styles.card ?? ""}>
+          <h2 className={styles.cardHeading ?? ""}>CPU Load</h2>
+          <div className={styles.loadRow ?? ""}>
+            <span className={styles.loadLabel ?? ""}>1m</span>
+            <span className={styles.loadValue ?? ""}>{data.cpu.loadAvg1m.toFixed(2)}</span>
           </div>
-          <div className={styles.loadRow ?? ''}>
-            <span className={styles.loadLabel ?? ''}>5m</span>
-            <span className={styles.loadValue ?? ''}>
-              {data.cpu.loadAvg5m.toFixed(2)}
-            </span>
+          <div className={styles.loadRow ?? ""}>
+            <span className={styles.loadLabel ?? ""}>5m</span>
+            <span className={styles.loadValue ?? ""}>{data.cpu.loadAvg5m.toFixed(2)}</span>
           </div>
-          <div className={styles.loadRow ?? ''}>
-            <span className={styles.loadLabel ?? ''}>15m</span>
-            <span className={styles.loadValue ?? ''}>
-              {data.cpu.loadAvg15m.toFixed(2)}
-            </span>
+          <div className={styles.loadRow ?? ""}>
+            <span className={styles.loadLabel ?? ""}>15m</span>
+            <span className={styles.loadValue ?? ""}>{data.cpu.loadAvg15m.toFixed(2)}</span>
           </div>
         </section>
 
         {/* Storage */}
-        <section className={styles.card ?? ''}>
-          <h2 className={styles.cardHeading ?? ''}>Storage</h2>
+        <section className={styles.card ?? ""}>
+          <h2 className={styles.cardHeading ?? ""}>Storage</h2>
           {data.storage.total > 0 ? (
             <>
-              <div className={styles.progressBar ?? ''}>
-                <div
-                  className={styles.progressFill ?? ''}
-                  style={{ width: `${diskUsedPct}%` }}
-                />
+              <div className={styles.progressBar ?? ""}>
+                <div className={styles.progressFill ?? ""} style={{ width: `${diskUsedPct}%` }} />
               </div>
-              <p className={styles.statDetail ?? ''}>
-                {formatBytes(data.storage.used)} /{' '}
-                {formatBytes(data.storage.total)} used ({diskUsedPct}%)
+              <p className={styles.statDetail ?? ""}>
+                {formatBytes(data.storage.used)} / {formatBytes(data.storage.total)} used (
+                {diskUsedPct}%)
               </p>
-              <p className={styles.hint ?? ''}>
-                {formatBytes(data.storage.free)} free
-              </p>
+              <p className={styles.hint ?? ""}>{formatBytes(data.storage.free)} free</p>
             </>
           ) : (
-            <p className={styles.hint ?? ''}>Storage info unavailable</p>
+            <p className={styles.hint ?? ""}>Storage info unavailable</p>
           )}
         </section>
       </div>
 
       {/* Active Scans */}
-      <section className={styles.section ?? ''}>
-        <h2 className={styles.sectionHeading ?? ''}>
+      <section className={styles.section ?? ""}>
+        <h2 className={styles.sectionHeading ?? ""}>
           Active Scans
           {data.activeScans.length > 0 && (
-            <span className={styles.badge ?? ''}>
-              {data.activeScans.length}
-            </span>
+            <span className={styles.badge ?? ""}>{data.activeScans.length}</span>
           )}
         </h2>
         {data.activeScans.length === 0 ? (
-          <p className={styles.empty ?? ''}>No active scans</p>
+          <p className={styles.empty ?? ""}>No active scans</p>
         ) : (
-          <div className={styles.scanList ?? ''}>
+          <div className={styles.scanList ?? ""}>
             {data.activeScans.map((scan) => {
               const pct =
                 scan.progress && scan.progress.totalFiles > 0
-                  ? Math.round(
-                      (scan.progress.processedFiles /
-                        scan.progress.totalFiles) *
-                        100,
-                    )
+                  ? Math.round((scan.progress.processedFiles / scan.progress.totalFiles) * 100)
                   : 0;
               return (
-                <div key={scan.libraryId} className={styles.scanItem ?? ''}>
-                  <div className={styles.scanHeader ?? ''}>
-                    <span className={styles.scanLibrary ?? ''}>
-                      Library: {scan.libraryId}
-                    </span>
-                    <span className={styles.scanStarted ?? ''}>
+                <div key={scan.libraryId} className={styles.scanItem ?? ""}>
+                  <div className={styles.scanHeader ?? ""}>
+                    <span className={styles.scanLibrary ?? ""}>Library: {scan.libraryId}</span>
+                    <span className={styles.scanStarted ?? ""}>
                       Started: {formatDate(scan.startedAt)}
                     </span>
                   </div>
                   {scan.progress && (
                     <>
-                      <div className={styles.progressBar ?? ''}>
-                        <div
-                          className={styles.progressFill ?? ''}
-                          style={{ width: `${pct}%` }}
-                        />
+                      <div className={styles.progressBar ?? ""}>
+                        <div className={styles.progressFill ?? ""} style={{ width: `${pct}%` }} />
                       </div>
-                      <p className={styles.hint ?? ''}>
-                        {scan.progress.processedFiles} /{' '}
-                        {scan.progress.totalFiles} files ({pct}%)
-                        {scan.progress.currentFile &&
-                          ` — ${scan.progress.currentFile}`}
+                      <p className={styles.hint ?? ""}>
+                        {scan.progress.processedFiles} / {scan.progress.totalFiles} files ({pct}%)
+                        {scan.progress.currentFile && ` — ${scan.progress.currentFile}`}
                       </p>
                     </>
                   )}
@@ -264,28 +226,26 @@ export default function AdminHealth() {
       </section>
 
       {/* Library Statistics */}
-      <section className={styles.section ?? ''}>
-        <h2 className={styles.sectionHeading ?? ''}>Library Statistics</h2>
+      <section className={styles.section ?? ""}>
+        <h2 className={styles.sectionHeading ?? ""}>Library Statistics</h2>
         {data.libraries.length === 0 ? (
-          <p className={styles.empty ?? ''}>No libraries configured</p>
+          <p className={styles.empty ?? ""}>No libraries configured</p>
         ) : (
-          <table className={styles.table ?? ''}>
+          <table className={styles.table ?? ""}>
             <thead>
               <tr>
-                <th className={styles.th ?? ''}>Library</th>
-                <th className={styles.th ?? ''}>Total Items</th>
-                <th className={styles.th ?? ''}>Last Scan</th>
+                <th className={styles.th ?? ""}>Library</th>
+                <th className={styles.th ?? ""}>Total Items</th>
+                <th className={styles.th ?? ""}>Last Scan</th>
               </tr>
             </thead>
             <tbody>
               {data.libraries.map((lib) => (
                 <tr key={lib.id}>
-                  <td className={styles.td ?? ''}>{lib.name}</td>
-                  <td className={styles.td ?? ''}>
-                    {lib.totalItems.toLocaleString()}
-                  </td>
-                  <td className={styles.td ?? ''}>
-                    {lib.lastScanAt ? formatDate(lib.lastScanAt) : 'Never'}
+                  <td className={styles.td ?? ""}>{lib.name}</td>
+                  <td className={styles.td ?? ""}>{lib.totalItems.toLocaleString()}</td>
+                  <td className={styles.td ?? ""}>
+                    {lib.lastScanAt ? formatDate(lib.lastScanAt) : "Never"}
                   </td>
                 </tr>
               ))}

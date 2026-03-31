@@ -1,7 +1,6 @@
-const OL_BASE = 'https://openlibrary.org';
-const COVERS_BASE = 'https://covers.openlibrary.org';
-const USER_AGENT =
-  'Xon-MediaCenter/1.0 (https://github.com/xon-media-center/xon)';
+const OL_BASE = "https://openlibrary.org";
+const COVERS_BASE = "https://covers.openlibrary.org";
+const USER_AGENT = "Xon-MediaCenter/1.0 (https://github.com/xon-media-center/xon)";
 
 type FetchFn = (url: string, init?: RequestInit) => Promise<Response>;
 
@@ -61,7 +60,7 @@ export class OpenLibraryClient {
 
   private async get<T>(url: string): Promise<T | null> {
     const res = await this.fetchFn(url, {
-      headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
+      headers: { "User-Agent": USER_AGENT, Accept: "application/json" },
     });
     if (!res.ok) return null;
     return (await res.json()) as T;
@@ -71,7 +70,7 @@ export class OpenLibraryClient {
   private async fetchAuthorBio(authorKey: string): Promise<string | undefined> {
     const data = await this.get<OLAuthor>(`${OL_BASE}${authorKey}.json`);
     if (!data?.bio) return undefined;
-    if (typeof data.bio === 'string') return data.bio;
+    if (typeof data.bio === "string") return data.bio;
     return data.bio.value;
   }
 
@@ -104,7 +103,7 @@ export class OpenLibraryClient {
           authors.push(author.name);
           if (!authorBio && author.bio) {
             authorBio =
-              typeof author.bio === 'string' ? author.bio : author.bio.value;
+              typeof author.bio === "string" ? author.bio : author.bio.value;
           }
         }
       }
@@ -141,10 +140,10 @@ export class OpenLibraryClient {
    */
   async searchByTitleAuthor(
     title: string,
-    author?: string,
+    author?: string
   ): Promise<BookMetadata | null> {
-    const params = new URLSearchParams({ title, limit: '1' });
-    if (author) params.set('author', author);
+    const params = new URLSearchParams({ title, limit: "1" });
+    if (author) params.set("author", author);
     const url = `${OL_BASE}/search.json?${params.toString()}`;
 
     const result = await this.get<OLSearchResponse>(url);
@@ -157,8 +156,7 @@ export class OpenLibraryClient {
       authorBio = await this.fetchAuthorBio(doc.author_key[0]);
     }
 
-    const coverUrl =
-      doc.cover_i !== undefined ? this.coverUrl(doc.cover_i) : undefined;
+    const coverUrl = doc.cover_i !== undefined ? this.coverUrl(doc.cover_i) : undefined;
 
     // Prefer a 13-digit ISBN
     const isbn =

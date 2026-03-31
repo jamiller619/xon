@@ -1,11 +1,11 @@
-import { copyFile, mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { and, desc, eq, inArray } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { Hono } from 'hono';
-import { z } from 'zod';
-import { mediaItems, syncProfiles, syncRuns } from '../schema.js';
-import { validate } from '../validate.js';
+import { copyFile, mkdir, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { and, desc, eq, inArray } from "drizzle-orm";
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
+import { Hono } from "hono";
+import { z } from "zod";
+import { mediaItems, syncProfiles, syncRuns } from "../schema.js";
+import { validate } from "../validate.js";
 
 // ---------------------------------------------------------------------------
 // Request schemas
@@ -20,7 +20,7 @@ const scopeSchema = z.object({
 
 const createSchema = z.object({
   name: z.string().min(1),
-  type: z.enum(['full', 'partial']).default('full'),
+  type: z.enum(["full", "partial"]).default("full"),
   scope: scopeSchema.default({}),
   targetPath: z.string().min(1),
   includeMedia: z.boolean().default(false),
@@ -28,7 +28,7 @@ const createSchema = z.object({
 
 const updateSchema = z.object({
   name: z.string().min(1).optional(),
-  type: z.enum(['full', 'partial']).optional(),
+  type: z.enum(["full", "partial"]).optional(),
   scope: scopeSchema.optional(),
   targetPath: z.string().min(1).optional(),
   includeMedia: z.boolean().optional(),
@@ -38,21 +38,15 @@ const updateSchema = z.object({
 // Sync execution
 // ---------------------------------------------------------------------------
 
-export async function runSyncJob(
-  db: LibSQLDatabase,
-  runId: string,
-): Promise<void> {
+export async function runSyncJob(db: LibSQLDatabase, runId: string): Promise<void> {
   const now = new Date();
 
   await db
     .update(syncRuns)
-    .set({ status: 'running', startedAt: now })
+    .set({ status: "running", startedAt: now })
     .where(eq(syncRuns.id, runId));
 
-  const runRows = await db
-    .select()
-    .from(syncRuns)
-    .where(eq(syncRuns.id, runId));
+  const runRows = await db.select().from(syncRuns).where(eq(syncRuns.id, runId));
   const run = runRows[0];
   if (!run) return;
 
@@ -65,8 +59,8 @@ export async function runSyncJob(
     await db
       .update(syncRuns)
       .set({
-        status: 'failed',
-        errors: JSON.stringify(['Sync profile not found']),
+        status: "failed",
+        errors: JSON.stringify(["Sync profile not found"]),
         completedAt: new Date(),
       })
       .where(eq(syncRuns.id, runId));
@@ -86,7 +80,7 @@ export async function runSyncJob(
   try {
     // Build query filters based on scope (for partial sync)
     const filters = [];
-    if (profile.type === 'partial') {
+    if (profile.type === "partial") {
       if (scope.libraryIds && scope.libraryIds.length > 0) {
         filters.push(inArray(mediaItems.libraryId, scope.libraryIds));
       }
@@ -106,20 +100,17 @@ export async function runSyncJob(
             .where(and(...filters))
         : await db.select().from(mediaItems);
 
-    await db
-      .update(syncRuns)
-      .set({ totalItems: items.length })
-      .where(eq(syncRuns.id, runId));
+    await db.update(syncRuns).set({ totalItems: items.length }).where(eq(syncRuns.id, runId));
 
     // Write metadata JSON
     await mkdir(profile.targetPath, { recursive: true });
-    const metadataPath = join(profile.targetPath, 'metadata.json');
-    await writeFile(metadataPath, JSON.stringify(items, null, 2), 'utf-8');
+    const metadataPath = join(profile.targetPath, "metadata.json");
+    await writeFile(metadataPath, JSON.stringify(items, null, 2), "utf-8");
     synced++;
 
     // Optionally copy media files
     if (profile.includeMedia) {
-      const mediaDir = join(profile.targetPath, 'media');
+      const mediaDir = join(profile.targetPath, "media");
       await mkdir(mediaDir, { recursive: true });
       for (const item of items) {
         try {
@@ -127,9 +118,7 @@ export async function runSyncJob(
           await copyFile(item.filePath, dest);
           synced++;
         } catch (err) {
-          errors.push(
-            `${item.filePath}: ${err instanceof Error ? err.message : String(err)}`,
-          );
+          errors.push(`${item.filePath}: ${err instanceof Error ? err.message : String(err)}`);
         }
       }
     }
@@ -137,7 +126,7 @@ export async function runSyncJob(
     await db
       .update(syncRuns)
       .set({
-        status: errors.length > 0 ? 'completed' : 'completed',
+        status: errors.length > 0 ? "completed" : "completed",
         syncedItems: synced,
         errors: JSON.stringify(errors),
         completedAt: new Date(),
@@ -148,7 +137,7 @@ export async function runSyncJob(
     await db
       .update(syncRuns)
       .set({
-        status: 'failed',
+        status: "failed",
         errors: JSON.stringify([...errors, msg]),
         completedAt: new Date(),
       })
@@ -164,26 +153,23 @@ export function makeSyncRouter(db: LibSQLDatabase): Hono {
   const router = new Hono();
 
   // GET /sync/profiles — list all profiles
-  router.get('/', async (c) => {
+  router.get("/", async (c) => {
     const rows = await db.select().from(syncProfiles);
     return c.json(rows);
   });
 
   // GET /sync/profiles/:id — get single profile
-  router.get('/:id', async (c) => {
-    const id = c.req.param('id') as string;
-    const rows = await db
-      .select()
-      .from(syncProfiles)
-      .where(eq(syncProfiles.id, id));
+  router.get("/:id", async (c) => {
+    const id = c.req.param("id") as string;
+    const rows = await db.select().from(syncProfiles).where(eq(syncProfiles.id, id));
     const row = rows[0];
-    if (!row) return c.json({ error: 'Not found' }, 404);
+    if (!row) return c.json({ error: "Not found" }, 404);
     return c.json(row);
   });
 
   // POST /sync/profiles — create profile
-  router.post('/', validate('json', createSchema), async (c) => {
-    const body = c.req.valid('json');
+  router.post("/", validate("json", createSchema), async (c) => {
+    const body = c.req.valid("json");
     const id = crypto.randomUUID();
     const now = new Date();
     const inserted = await db
@@ -200,28 +186,24 @@ export function makeSyncRouter(db: LibSQLDatabase): Hono {
       })
       .returning();
     const row = inserted[0];
-    if (!row) return c.json({ error: 'Insert failed' }, 500);
+    if (!row) return c.json({ error: "Insert failed" }, 500);
     return c.json(row, 201);
   });
 
   // PUT /sync/profiles/:id — update profile
-  router.put('/:id', validate('json', updateSchema), async (c) => {
-    const id = c.req.param('id') as string;
-    const body = c.req.valid('json');
+  router.put("/:id", validate("json", updateSchema), async (c) => {
+    const id = c.req.param("id") as string;
+    const body = c.req.valid("json");
 
-    const existing = await db
-      .select()
-      .from(syncProfiles)
-      .where(eq(syncProfiles.id, id));
-    if (!existing[0]) return c.json({ error: 'Not found' }, 404);
+    const existing = await db.select().from(syncProfiles).where(eq(syncProfiles.id, id));
+    if (!existing[0]) return c.json({ error: "Not found" }, 404);
 
     const updates: Record<string, unknown> = { updatedAt: new Date() };
     if (body.name !== undefined) updates.name = body.name;
     if (body.type !== undefined) updates.type = body.type;
     if (body.scope !== undefined) updates.scope = JSON.stringify(body.scope);
     if (body.targetPath !== undefined) updates.targetPath = body.targetPath;
-    if (body.includeMedia !== undefined)
-      updates.includeMedia = body.includeMedia;
+    if (body.includeMedia !== undefined) updates.includeMedia = body.includeMedia;
 
     const updated = await db
       .update(syncProfiles)
@@ -229,53 +211,44 @@ export function makeSyncRouter(db: LibSQLDatabase): Hono {
       .where(eq(syncProfiles.id, id))
       .returning();
     const row = updated[0];
-    if (!row) return c.json({ error: 'Update failed' }, 500);
+    if (!row) return c.json({ error: "Update failed" }, 500);
     return c.json(row);
   });
 
   // DELETE /sync/profiles/:id — delete profile
-  router.delete('/:id', async (c) => {
-    const id = c.req.param('id') as string;
-    const existing = await db
-      .select()
-      .from(syncProfiles)
-      .where(eq(syncProfiles.id, id));
-    if (!existing[0]) return c.json({ error: 'Not found' }, 404);
+  router.delete("/:id", async (c) => {
+    const id = c.req.param("id") as string;
+    const existing = await db.select().from(syncProfiles).where(eq(syncProfiles.id, id));
+    if (!existing[0]) return c.json({ error: "Not found" }, 404);
     await db.delete(syncProfiles).where(eq(syncProfiles.id, id));
     return c.body(null, 204);
   });
 
   // POST /sync/profiles/:id/run — execute sync
-  router.post('/:id/run', async (c) => {
-    const id = c.req.param('id') as string;
-    const profileRows = await db
-      .select()
-      .from(syncProfiles)
-      .where(eq(syncProfiles.id, id));
-    if (!profileRows[0]) return c.json({ error: 'Not found' }, 404);
+  router.post("/:id/run", async (c) => {
+    const id = c.req.param("id") as string;
+    const profileRows = await db.select().from(syncProfiles).where(eq(syncProfiles.id, id));
+    if (!profileRows[0]) return c.json({ error: "Not found" }, 404);
 
     const runId = crypto.randomUUID();
     const now = new Date();
     await db.insert(syncRuns).values({
       id: runId,
       profileId: id,
-      status: 'pending',
+      status: "pending",
       createdAt: now,
     });
 
     runSyncJob(db, runId).catch(() => {});
 
-    return c.json({ runId, status: 'running' }, 202);
+    return c.json({ runId, status: "running" }, 202);
   });
 
   // GET /sync/profiles/:id/runs — list runs for a profile
-  router.get('/:id/runs', async (c) => {
-    const id = c.req.param('id') as string;
-    const profileRows = await db
-      .select()
-      .from(syncProfiles)
-      .where(eq(syncProfiles.id, id));
-    if (!profileRows[0]) return c.json({ error: 'Not found' }, 404);
+  router.get("/:id/runs", async (c) => {
+    const id = c.req.param("id") as string;
+    const profileRows = await db.select().from(syncProfiles).where(eq(syncProfiles.id, id));
+    if (!profileRows[0]) return c.json({ error: "Not found" }, 404);
     const rows = await db
       .select()
       .from(syncRuns)
@@ -285,11 +258,11 @@ export function makeSyncRouter(db: LibSQLDatabase): Hono {
   });
 
   // GET /sync/runs/:id — get single run
-  router.get('/runs/:id', async (c) => {
-    const id = c.req.param('id') as string;
+  router.get("/runs/:id", async (c) => {
+    const id = c.req.param("id") as string;
     const rows = await db.select().from(syncRuns).where(eq(syncRuns.id, id));
     const row = rows[0];
-    if (!row) return c.json({ error: 'Not found' }, 404);
+    if (!row) return c.json({ error: "Not found" }, 404);
     return c.json(row);
   });
 

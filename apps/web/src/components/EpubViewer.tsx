@@ -1,10 +1,10 @@
-import ePub from 'epubjs';
-import type { Book } from 'epubjs';
-import type { Location, Rendition } from 'epubjs';
-import type { NavItem } from 'epubjs';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { apiFetch } from '../apiFetch.js';
-import styles from './EpubViewer.module.css';
+import ePub from "epubjs";
+import type { Book } from "epubjs";
+import type { Location, Rendition } from "epubjs";
+import type { NavItem } from "epubjs";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { apiFetch } from "../apiFetch.js";
+import styles from "./EpubViewer.module.css";
 
 interface Props {
   mediaId: string;
@@ -12,7 +12,7 @@ interface Props {
   onClose: () => void;
 }
 
-type Theme = 'light' | 'dark' | 'sepia';
+type Theme = "light" | "dark" | "sepia";
 
 const FONT_SIZES = [12, 14, 16, 18, 20, 24, 28];
 const DEFAULT_FONT_IDX = 2; // 16px
@@ -20,15 +20,15 @@ const LINE_HEIGHTS = [1.3, 1.5, 1.7, 2.0];
 const DEFAULT_LINE_IDX = 1; // 1.5
 
 const THEME_STYLES: Record<Theme, Record<string, string>> = {
-  light: { background: '#ffffff', color: '#1a1a1a' },
-  dark: { background: '#1a1a2e', color: '#e0e0e0' },
-  sepia: { background: '#f4ecd8', color: '#3b2e1e' },
+  light: { background: "#ffffff", color: "#1a1a1a" },
+  dark: { background: "#1a1a2e", color: "#e0e0e0" },
+  sepia: { background: "#f4ecd8", color: "#3b2e1e" },
 };
 
 function savePosition(mediaId: string, cfi: string, chapterTitle?: string) {
   apiFetch(`/api/v1/media/${mediaId}/reading-position`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    method: "PUT",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ cfi, ...(chapterTitle ? { chapterTitle } : {}) }),
   }).catch(() => {
     // best-effort save
@@ -41,8 +41,8 @@ export default function EpubViewer({ mediaId, title, onClose }: Props) {
   const renditionRef = useRef<Rendition | null>(null);
 
   const [toc, setToc] = useState<NavItem[]>([]);
-  const [currentCfi, setCurrentCfi] = useState<string>('');
-  const [currentChapter, setCurrentChapter] = useState<string>('');
+  const [currentCfi, setCurrentCfi] = useState<string>("");
+  const [currentChapter, setCurrentChapter] = useState<string>("");
   const [atStart, setAtStart] = useState(true);
   const [atEnd, setAtEnd] = useState(false);
   const [loading, setLoading] = useState(true);
@@ -50,30 +50,27 @@ export default function EpubViewer({ mediaId, title, onClose }: Props) {
 
   const [fontIdx, setFontIdx] = useState(DEFAULT_FONT_IDX);
   const [lineIdx, setLineIdx] = useState(DEFAULT_LINE_IDX);
-  const [theme, setTheme] = useState<Theme>('light');
+  const [theme, setTheme] = useState<Theme>("light");
   const [showToc, setShowToc] = useState(true);
 
-  const applyTheme = useCallback(
-    (rendition: Rendition, t: Theme, fIdx: number, lIdx: number) => {
-      const ts = THEME_STYLES[t];
-      const fontSize = FONT_SIZES[fIdx] ?? 16;
-      const lineHeight = LINE_HEIGHTS[lIdx] ?? 1.5;
-      rendition.themes.register('xon', {
-        body: {
-          background: ts.background ?? '#ffffff',
-          color: ts.color ?? '#1a1a1a',
-          'font-size': `${fontSize}px`,
-          'line-height': String(lineHeight),
-          padding: '1em 2em',
-        },
-        '*, *::before, *::after': {
-          'box-sizing': 'border-box',
-        },
-      });
-      rendition.themes.select('xon');
-    },
-    [],
-  );
+  const applyTheme = useCallback((rendition: Rendition, t: Theme, fIdx: number, lIdx: number) => {
+    const ts = THEME_STYLES[t];
+    const fontSize = FONT_SIZES[fIdx] ?? 16;
+    const lineHeight = LINE_HEIGHTS[lIdx] ?? 1.5;
+    rendition.themes.register("xon", {
+      body: {
+        background: ts.background ?? "#ffffff",
+        color: ts.color ?? "#1a1a1a",
+        "font-size": `${fontSize}px`,
+        "line-height": String(lineHeight),
+        padding: "1em 2em",
+      },
+      "*, *::before, *::after": {
+        "box-sizing": "border-box",
+      },
+    });
+    rendition.themes.select("xon");
+  }, []);
 
   // Init book — only re-run when mediaId changes; theme/fontIdx/lineIdx changes handled by separate effect
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentional — book init must only run on mediaId change
@@ -87,9 +84,9 @@ export default function EpubViewer({ mediaId, title, onClose }: Props) {
     bookRef.current = book;
 
     const rendition = book.renderTo(viewerRef.current, {
-      width: '100%',
-      height: '100%',
-      flow: 'scrolled-doc',
+      width: "100%",
+      height: "100%",
+      flow: "scrolled-doc",
     });
     renditionRef.current = rendition;
 
@@ -100,15 +97,13 @@ export default function EpubViewer({ mediaId, title, onClose }: Props) {
       .then((r) => r.json())
       .then((pos: unknown) => {
         const savedCfi =
-          pos && typeof pos === 'object' && 'cfi' in pos
-            ? (pos as { cfi: string }).cfi
-            : undefined;
+          pos && typeof pos === "object" && "cfi" in pos ? (pos as { cfi: string }).cfi : undefined;
         return rendition.display(savedCfi);
       })
       .catch(() => rendition.display())
       .then(() => setLoading(false))
       .catch(() => {
-        setError('Failed to load EPUB.');
+        setError("Failed to load EPUB.");
         setLoading(false);
       });
 
@@ -122,7 +117,7 @@ export default function EpubViewer({ mediaId, title, onClose }: Props) {
       });
 
     // Track location changes
-    rendition.on('relocated', (location: Location) => {
+    rendition.on("relocated", (location: Location) => {
       const cfi = location.start.cfi;
       setCurrentCfi(cfi);
       setAtStart(location.atStart ?? false);
@@ -133,10 +128,8 @@ export default function EpubViewer({ mediaId, title, onClose }: Props) {
         .then((nav) => {
           const spineItem = book.spine.get(cfi);
           if (spineItem) {
-            const chapter = nav.toc.find((item) =>
-              item.href.includes(spineItem.href ?? ''),
-            );
-            const chapterTitle = chapter?.label ?? '';
+            const chapter = nav.toc.find((item) => item.href.includes(spineItem.href ?? ""));
+            const chapterTitle = chapter?.label ?? "";
             setCurrentChapter(chapterTitle);
             savePosition(mediaId, cfi, chapterTitle || undefined);
           } else {
@@ -148,8 +141,8 @@ export default function EpubViewer({ mediaId, title, onClose }: Props) {
         });
     });
 
-    book.on('openFailed', () => {
-      setError('Failed to open EPUB file.');
+    book.on("openFailed", () => {
+      setError("Failed to open EPUB file.");
       setLoading(false);
     });
 
@@ -179,16 +172,16 @@ export default function EpubViewer({ mediaId, title, onClose }: Props) {
   // Keyboard shortcuts
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') {
+      if (e.key === "Escape") {
         onClose();
-      } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
+      } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
         goNext();
-      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
+      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
         goPrev();
       }
     }
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
+    document.addEventListener("keydown", onKeyDown);
+    return () => document.removeEventListener("keydown", onKeyDown);
   }, [onClose, goNext, goPrev]);
 
   const themeStyle = THEME_STYLES[theme];
@@ -196,17 +189,15 @@ export default function EpubViewer({ mediaId, title, onClose }: Props) {
   return (
     <dialog
       open
-      className={styles.overlay ?? ''}
+      className={styles.overlay ?? ""}
       aria-label={`EPUB Viewer: ${title}`}
       style={{ background: themeStyle.background, color: themeStyle.color }}
     >
       {/* Toolbar */}
-      <div
-        className={`${styles.toolbar ?? ''} ${styles[`toolbar_${theme}`] ?? ''}`}
-      >
+      <div className={`${styles.toolbar ?? ""} ${styles[`toolbar_${theme}`] ?? ""}`}>
         <button
           type="button"
-          className={styles.closeBtn ?? ''}
+          className={styles.closeBtn ?? ""}
           onClick={onClose}
           title="Close (Esc)"
         >
@@ -214,35 +205,29 @@ export default function EpubViewer({ mediaId, title, onClose }: Props) {
         </button>
         <button
           type="button"
-          className={`${styles.tocToggle ?? ''} ${showToc ? (styles.tocToggleActive ?? '') : ''}`}
+          className={`${styles.tocToggle ?? ""} ${showToc ? (styles.tocToggleActive ?? "") : ""}`}
           onClick={() => setShowToc((v) => !v)}
           title="Toggle table of contents"
         >
           ☰
         </button>
-        <span className={styles.toolbarTitle ?? ''}>
-          {currentChapter || title}
-        </span>
-        <div className={styles.toolbarControls ?? ''}>
+        <span className={styles.toolbarTitle ?? ""}>{currentChapter || title}</span>
+        <div className={styles.toolbarControls ?? ""}>
           {/* Font size */}
           <button
             type="button"
-            className={styles.ctrlBtn ?? ''}
+            className={styles.ctrlBtn ?? ""}
             onClick={() => setFontIdx((i) => Math.max(i - 1, 0))}
             disabled={fontIdx === 0}
             title="Decrease font size"
           >
             A−
           </button>
-          <span className={styles.ctrlLabel ?? ''}>
-            {FONT_SIZES[fontIdx]}px
-          </span>
+          <span className={styles.ctrlLabel ?? ""}>{FONT_SIZES[fontIdx]}px</span>
           <button
             type="button"
-            className={styles.ctrlBtn ?? ''}
-            onClick={() =>
-              setFontIdx((i) => Math.min(i + 1, FONT_SIZES.length - 1))
-            }
+            className={styles.ctrlBtn ?? ""}
+            onClick={() => setFontIdx((i) => Math.min(i + 1, FONT_SIZES.length - 1))}
             disabled={fontIdx === FONT_SIZES.length - 1}
             title="Increase font size"
           >
@@ -251,7 +236,7 @@ export default function EpubViewer({ mediaId, title, onClose }: Props) {
           {/* Line height */}
           <button
             type="button"
-            className={styles.ctrlBtn ?? ''}
+            className={styles.ctrlBtn ?? ""}
             onClick={() => setLineIdx((i) => Math.max(i - 1, 0))}
             disabled={lineIdx === 0}
             title="Decrease line height"
@@ -260,10 +245,8 @@ export default function EpubViewer({ mediaId, title, onClose }: Props) {
           </button>
           <button
             type="button"
-            className={styles.ctrlBtn ?? ''}
-            onClick={() =>
-              setLineIdx((i) => Math.min(i + 1, LINE_HEIGHTS.length - 1))
-            }
+            className={styles.ctrlBtn ?? ""}
+            onClick={() => setLineIdx((i) => Math.min(i + 1, LINE_HEIGHTS.length - 1))}
             disabled={lineIdx === LINE_HEIGHTS.length - 1}
             title="Increase line height"
           >
@@ -272,24 +255,24 @@ export default function EpubViewer({ mediaId, title, onClose }: Props) {
           {/* Theme */}
           <button
             type="button"
-            className={`${styles.themeBtn ?? ''} ${theme === 'light' ? (styles.themeBtnActive ?? '') : ''}`}
-            onClick={() => setTheme('light')}
+            className={`${styles.themeBtn ?? ""} ${theme === "light" ? (styles.themeBtnActive ?? "") : ""}`}
+            onClick={() => setTheme("light")}
             title="Light theme"
           >
             ☀
           </button>
           <button
             type="button"
-            className={`${styles.themeBtn ?? ''} ${theme === 'sepia' ? (styles.themeBtnActive ?? '') : ''}`}
-            onClick={() => setTheme('sepia')}
+            className={`${styles.themeBtn ?? ""} ${theme === "sepia" ? (styles.themeBtnActive ?? "") : ""}`}
+            onClick={() => setTheme("sepia")}
             title="Sepia theme"
           >
             ♜
           </button>
           <button
             type="button"
-            className={`${styles.themeBtn ?? ''} ${theme === 'dark' ? (styles.themeBtnActive ?? '') : ''}`}
-            onClick={() => setTheme('dark')}
+            className={`${styles.themeBtn ?? ""} ${theme === "dark" ? (styles.themeBtnActive ?? "") : ""}`}
+            onClick={() => setTheme("dark")}
             title="Dark theme"
           >
             ☾
@@ -297,7 +280,7 @@ export default function EpubViewer({ mediaId, title, onClose }: Props) {
           {/* Navigation */}
           <button
             type="button"
-            className={styles.navBtn ?? ''}
+            className={styles.navBtn ?? ""}
             onClick={goPrev}
             disabled={atStart}
             title="Previous (←)"
@@ -306,7 +289,7 @@ export default function EpubViewer({ mediaId, title, onClose }: Props) {
           </button>
           <button
             type="button"
-            className={styles.navBtn ?? ''}
+            className={styles.navBtn ?? ""}
             onClick={goNext}
             disabled={atEnd}
             title="Next (→)"
@@ -316,18 +299,16 @@ export default function EpubViewer({ mediaId, title, onClose }: Props) {
         </div>
       </div>
 
-      <div className={styles.body ?? ''}>
+      <div className={styles.body ?? ""}>
         {/* TOC sidebar */}
         {showToc && toc.length > 0 && (
-          <div
-            className={`${styles.sidebar ?? ''} ${styles[`sidebar_${theme}`] ?? ''}`}
-          >
-            <div className={styles.sidebarTitle ?? ''}>Contents</div>
+          <div className={`${styles.sidebar ?? ""} ${styles[`sidebar_${theme}`] ?? ""}`}>
+            <div className={styles.sidebarTitle ?? ""}>Contents</div>
             {toc.map((item) => (
               <button
                 key={item.id}
                 type="button"
-                className={`${styles.tocItem ?? ''} ${item.href && currentCfi.includes(item.href.replace(/#.*$/, '')) ? (styles.tocItemActive ?? '') : ''}`}
+                className={`${styles.tocItem ?? ""} ${item.href && currentCfi.includes(item.href.replace(/#.*$/, "")) ? (styles.tocItemActive ?? "") : ""}`}
                 onClick={() => renditionRef.current?.display(item.href)}
                 title={item.label}
               >
@@ -338,13 +319,13 @@ export default function EpubViewer({ mediaId, title, onClose }: Props) {
         )}
 
         {/* Viewer area */}
-        <div className={styles.main ?? ''}>
-          {loading && <p className={styles.loadingMsg ?? ''}>Loading book…</p>}
-          {error && <p className={styles.errorMsg ?? ''}>{error}</p>}
+        <div className={styles.main ?? ""}>
+          {loading && <p className={styles.loadingMsg ?? ""}>Loading book…</p>}
+          {error && <p className={styles.errorMsg ?? ""}>{error}</p>}
           <div
             ref={viewerRef}
-            className={styles.epubContainer ?? ''}
-            style={{ display: loading || error ? 'none' : 'block' }}
+            className={styles.epubContainer ?? ""}
+            style={{ display: loading || error ? "none" : "block" }}
           />
         </div>
       </div>

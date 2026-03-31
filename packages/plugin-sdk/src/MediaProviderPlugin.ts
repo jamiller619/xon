@@ -1,9 +1,5 @@
-import { BasePlugin } from './BasePlugin.js';
-import type {
-  MediaProviderConfigSchema,
-  MediaProviderFile,
-  WatchCallback,
-} from './types.js';
+import { BasePlugin } from "./BasePlugin.js";
+import type { MediaProviderConfigSchema, MediaProviderFile, WatchCallback } from "./types.js";
 
 /**
  * Abstract base class for MediaProvider plugins.

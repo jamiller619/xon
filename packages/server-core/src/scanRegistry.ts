@@ -1,7 +1,7 @@
-import type { ScanProgress, ScanSummary } from './orchestrator.js';
+import type { ScanProgress, ScanSummary } from "./orchestrator.js";
 
 export type ScanState = {
-  status: 'running' | 'completed' | 'failed';
+  status: "running" | "completed" | "failed";
   startedAt: Date;
   progress: ScanProgress | null;
   summary: ScanSummary | null;

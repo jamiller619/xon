@@ -13,12 +13,12 @@
     "enabled": true,
     "indentStyle": "space",
     "indentWidth": 2,
-    "lineWidth": 80
+    "lineWidth": 100
   },
   "javascript": {
     "formatter": {
-      "quoteStyle": "single",
-      "trailingCommas": "all"
+      "quoteStyle": "double",
+      "trailingCommas": "es5"
     }
   },
   "files": {

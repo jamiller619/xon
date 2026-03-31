@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
-import { apiFetch } from '../apiFetch.js';
-import styles from './AdminDuplicates.module.css';
+import { useCallback, useEffect, useState } from "react";
+import { apiFetch } from "../apiFetch.js";
+import styles from "./AdminDuplicates.module.css";
 
 interface MediaItemInfo {
   id: string;
@@ -20,7 +20,7 @@ interface DuplicateCandidate {
   mediaItemId1: string;
   mediaItemId2: string;
   similarity: number;
-  status: 'pending' | 'kept_both' | 'kept_first' | 'kept_second';
+  status: "pending" | "kept_both" | "kept_first" | "kept_second";
   mediaItem1: MediaItemInfo | null;
   mediaItem2: MediaItemInfo | null;
 }
@@ -31,7 +31,7 @@ interface Library {
 }
 
 function formatBytes(bytes: number | null): string {
-  if (!bytes) return '';
+  if (!bytes) return "";
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
@@ -42,7 +42,7 @@ export default function AdminDuplicates() {
   const [libraries, setLibraries] = useState<Library[]>([]);
   const [loading, setLoading] = useState(true);
   const [minSimilarity, setMinSimilarity] = useState(70);
-  const [selectedLibraryId, setSelectedLibraryId] = useState('');
+  const [selectedLibraryId, setSelectedLibraryId] = useState("");
   const [scanning, setScanning] = useState(false);
   const [scanThreshold, setScanThreshold] = useState(10);
   const [resolvingId, setResolvingId] = useState<string | null>(null);
@@ -50,11 +50,8 @@ export default function AdminDuplicates() {
   const fetchCandidates = useCallback(async () => {
     setLoading(true);
     try {
-      const params = new URLSearchParams({
-        minSimilarity: String(minSimilarity),
-        limit: '50',
-      });
-      if (selectedLibraryId) params.set('libraryId', selectedLibraryId);
+      const params = new URLSearchParams({ minSimilarity: String(minSimilarity), limit: "50" });
+      if (selectedLibraryId) params.set("libraryId", selectedLibraryId);
       const res = await apiFetch(`/api/v1/ai/duplicates?${params.toString()}`);
       if (res.ok) {
         const data = (await res.json()) as { items: DuplicateCandidate[] };
@@ -68,7 +65,7 @@ export default function AdminDuplicates() {
   }, [minSimilarity, selectedLibraryId]);
 
   useEffect(() => {
-    apiFetch('/api/v1/libraries')
+    apiFetch("/api/v1/libraries")
       .then((r) => r.json() as Promise<Library[]>)
       .then(setLibraries)
       .catch(() => {});
@@ -82,13 +79,10 @@ export default function AdminDuplicates() {
     if (!selectedLibraryId) return;
     setScanning(true);
     try {
-      await apiFetch('/api/v1/ai/duplicates/scan', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          libraryId: selectedLibraryId,
-          threshold: scanThreshold,
-        }),
+      await apiFetch("/api/v1/ai/duplicates/scan", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ libraryId: selectedLibraryId, threshold: scanThreshold }),
       });
       await fetchCandidates();
     } catch {
@@ -100,18 +94,15 @@ export default function AdminDuplicates() {
 
   async function handleResolve(
     candidateId: string,
-    action: 'keep_both' | 'keep_first' | 'keep_second',
+    action: "keep_both" | "keep_first" | "keep_second"
   ) {
     setResolvingId(candidateId);
     try {
-      const res = await apiFetch(
-        `/api/v1/ai/duplicates/${candidateId}/resolve`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action }),
-        },
-      );
+      const res = await apiFetch(`/api/v1/ai/duplicates/${candidateId}/resolve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action }),
+      });
       if (res.ok) {
         setCandidates((prev) => prev.filter((c) => c.id !== candidateId));
       }
@@ -168,7 +159,7 @@ export default function AdminDuplicates() {
             disabled={!selectedLibraryId || scanning}
             type="button"
           >
-            {scanning ? 'Scanning…' : 'Scan Library'}
+            {scanning ? "Scanning…" : "Scan Library"}
           </button>
         </div>
       </div>
@@ -177,16 +168,13 @@ export default function AdminDuplicates() {
         <p className={styles.loading}>Loading…</p>
       ) : candidates.length === 0 ? (
         <p className={styles.empty}>
-          No duplicate candidates found. Select a library and scan to detect
-          duplicates.
+          No duplicate candidates found. Select a library and scan to detect duplicates.
         </p>
       ) : (
         candidates.map((candidate) => (
           <div key={candidate.id} className={styles.candidateCard}>
             <div className={styles.candidateHeader}>
-              <span className={styles.similarityBadge}>
-                {candidate.similarity}% similar
-              </span>
+              <span className={styles.similarityBadge}>{candidate.similarity}% similar</span>
             </div>
             <div className={styles.comparison}>
               <MediaCard item={candidate.mediaItem1} label="Item 1" />
@@ -195,10 +183,9 @@ export default function AdminDuplicates() {
             <div className={styles.actions}>
               <button
                 className={styles.keepFirstBtn}
-                onClick={() => handleResolve(candidate.id, 'keep_first')}
+                onClick={() => handleResolve(candidate.id, "keep_first")}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter')
-                    handleResolve(candidate.id, 'keep_first');
+                  if (e.key === "Enter") handleResolve(candidate.id, "keep_first");
                 }}
                 disabled={resolvingId === candidate.id}
                 type="button"
@@ -207,10 +194,9 @@ export default function AdminDuplicates() {
               </button>
               <button
                 className={styles.keepSecondBtn}
-                onClick={() => handleResolve(candidate.id, 'keep_second')}
+                onClick={() => handleResolve(candidate.id, "keep_second")}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter')
-                    handleResolve(candidate.id, 'keep_second');
+                  if (e.key === "Enter") handleResolve(candidate.id, "keep_second");
                 }}
                 disabled={resolvingId === candidate.id}
                 type="button"
@@ -219,10 +205,9 @@ export default function AdminDuplicates() {
               </button>
               <button
                 className={styles.keepBothBtn}
-                onClick={() => handleResolve(candidate.id, 'keep_both')}
+                onClick={() => handleResolve(candidate.id, "keep_both")}
                 onKeyDown={(e) => {
-                  if (e.key === 'Enter')
-                    handleResolve(candidate.id, 'keep_both');
+                  if (e.key === "Enter") handleResolve(candidate.id, "keep_both");
                 }}
                 disabled={resolvingId === candidate.id}
                 type="button"
@@ -237,10 +222,7 @@ export default function AdminDuplicates() {
   );
 }
 
-function MediaCard({
-  item,
-  label,
-}: { item: MediaItemInfo | null; label: string }) {
+function MediaCard({ item, label }: { item: MediaItemInfo | null; label: string }) {
   if (!item) {
     return (
       <div className={styles.mediaCard}>
@@ -255,11 +237,7 @@ function MediaCard({
   return (
     <div className={styles.mediaCard}>
       {item.thumbnailSmall ? (
-        <img
-          src={item.thumbnailSmall}
-          alt={item.title}
-          className={styles.thumb}
-        />
+        <img src={item.thumbnailSmall} alt={item.title} className={styles.thumb} />
       ) : (
         <div className={styles.thumbPlaceholder}>🖼</div>
       )}

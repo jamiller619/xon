@@ -1,16 +1,11 @@
-import { and, eq, inArray } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { autoTagMediaItems } from './autoTag.js';
-import { detectDrm } from './drm.js';
-import { emitEvent } from './events.js';
-import { extractExiftoolMetadata, isImageCategory } from './exiftool.js';
-import { extractFfprobeMetadata, isAudioVideoCategory } from './ffprobe.js';
-import {
-  groupAudiobooks,
-  groupMusicTracks,
-  groupPhotos,
-  groupTvEpisodes,
-} from './grouping.js';
+import { and, eq, inArray } from "drizzle-orm";
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
+import { autoTagMediaItems } from "./autoTag.js";
+import { detectDrm } from "./drm.js";
+import { emitEvent } from "./events.js";
+import { extractExiftoolMetadata, isImageCategory } from "./exiftool.js";
+import { extractFfprobeMetadata, isAudioVideoCategory } from "./ffprobe.js";
+import { groupAudiobooks, groupMusicTracks, groupPhotos, groupTvEpisodes } from "./grouping.js";
 import {
   extract3DModelMetadata,
   extractArchiveMetadata,
@@ -20,13 +15,13 @@ import {
   isArchiveCategory,
   isDocumentCategory,
   isFontCategory,
-} from './miscmeta.js';
-import { extractMusicTags, isMusicCategory } from './musictags.js';
-import { emitPluginEvent } from './pluginManager.js';
-import { scanDataSource } from './scanner.js';
-import { dataSources, libraries, mediaItems } from './schema.js';
-import { generateThumbnails } from './thumbnails.js';
-import { generateVideoThumbnails, isVideoCategory } from './videoThumbnails.js';
+} from "./miscmeta.js";
+import { extractMusicTags, isMusicCategory } from "./musictags.js";
+import { emitPluginEvent } from "./pluginManager.js";
+import { scanDataSource } from "./scanner.js";
+import { dataSources, libraries, mediaItems } from "./schema.js";
+import { generateThumbnails } from "./thumbnails.js";
+import { generateVideoThumbnails, isVideoCategory } from "./videoThumbnails.js";
 
 export type ScanProgress = {
   dataSourceId: string;
@@ -47,13 +42,10 @@ export async function scanLibrary(
   db: LibSQLDatabase,
   libraryId: string,
   onProgress?: (progress: ScanProgress) => void,
-  dataDir?: string,
+  dataDir?: string
 ): Promise<ScanSummary> {
-  const resolvedDataDir = dataDir ?? process.env.DATA_DIR ?? './data';
-  const libraryRows = await db
-    .select()
-    .from(libraries)
-    .where(eq(libraries.id, libraryId));
+  const resolvedDataDir = dataDir ?? process.env.DATA_DIR ?? "./data";
+  const libraryRows = await db.select().from(libraries).where(eq(libraries.id, libraryId));
   if (libraryRows.length === 0) {
     throw new Error(`Library not found: ${libraryId}`);
   }
@@ -61,9 +53,7 @@ export async function scanLibrary(
   const sources = await db
     .select()
     .from(dataSources)
-    .where(
-      and(eq(dataSources.libraryId, libraryId), eq(dataSources.enabled, true)),
-    );
+    .where(and(eq(dataSources.libraryId, libraryId), eq(dataSources.enabled, true)));
 
   let totalNew = 0;
   let totalUpdated = 0;
@@ -92,7 +82,7 @@ export async function scanLibrary(
       progress.currentFile = entry.filePath;
       onProgress?.(progress);
 
-      let metadata = '{}';
+      let metadata = "{}";
       if (isMusicCategory(entry.mediaCategory)) {
         const musicMeta = await extractMusicTags(entry.filePath);
         if (musicMeta) {
@@ -135,20 +125,12 @@ export async function scanLibrary(
 
       let thumbnailPaths: string | null = null;
       if (isImageCategory(entry.mediaCategory)) {
-        const thumbs = await generateThumbnails(
-          entry.filePath,
-          id,
-          resolvedDataDir,
-        );
+        const thumbs = await generateThumbnails(entry.filePath, id, resolvedDataDir);
         if (thumbs) {
           thumbnailPaths = JSON.stringify(thumbs);
         }
       } else if (isVideoCategory(entry.mediaCategory)) {
-        const thumbs = await generateVideoThumbnails(
-          entry.filePath,
-          id,
-          resolvedDataDir,
-        );
+        const thumbs = await generateVideoThumbnails(entry.filePath, id, resolvedDataDir);
         if (thumbs) {
           thumbnailPaths = JSON.stringify(thumbs);
         }
@@ -171,14 +153,8 @@ export async function scanLibrary(
         scannedAt: now,
       });
 
-      emitEvent({
-        type: 'media:added',
-        payload: { libraryId, mediaItemId: id },
-      });
-      emitPluginEvent('media:created', {
-        mediaId: id,
-        filePath: entry.filePath,
-      });
+      emitEvent({ type: "media:added", payload: { libraryId, mediaItemId: id } });
+      emitPluginEvent("media:created", { mediaId: id, filePath: entry.filePath });
       progress.processedFiles++;
       totalNew++;
     }
@@ -191,10 +167,7 @@ export async function scanLibrary(
         .select({ id: mediaItems.id })
         .from(mediaItems)
         .where(
-          and(
-            eq(mediaItems.dataSourceId, source.id),
-            eq(mediaItems.filePath, entry.filePath),
-          ),
+          and(eq(mediaItems.dataSourceId, source.id), eq(mediaItems.filePath, entry.filePath))
         );
       const existingId = existingRows[0]?.id ?? crypto.randomUUID();
 
@@ -223,20 +196,12 @@ export async function scanLibrary(
         if (exifMeta) {
           updateFields.metadata = JSON.stringify(exifMeta);
         }
-        const thumbs = await generateThumbnails(
-          entry.filePath,
-          existingId,
-          resolvedDataDir,
-        );
+        const thumbs = await generateThumbnails(entry.filePath, existingId, resolvedDataDir);
         if (thumbs) {
           updateFields.thumbnailPaths = JSON.stringify(thumbs);
         }
       } else if (isVideoCategory(entry.mediaCategory)) {
-        const thumbs = await generateVideoThumbnails(
-          entry.filePath,
-          existingId,
-          resolvedDataDir,
-        );
+        const thumbs = await generateVideoThumbnails(entry.filePath, existingId, resolvedDataDir);
         if (thumbs) {
           updateFields.thumbnailPaths = JSON.stringify(thumbs);
         }
@@ -266,16 +231,10 @@ export async function scanLibrary(
         .update(mediaItems)
         .set(updateFields)
         .where(
-          and(
-            eq(mediaItems.dataSourceId, source.id),
-            eq(mediaItems.filePath, entry.filePath),
-          ),
+          and(eq(mediaItems.dataSourceId, source.id), eq(mediaItems.filePath, entry.filePath))
         );
 
-      emitPluginEvent('media:updated', {
-        mediaId: existingId,
-        filePath: entry.filePath,
-      });
+      emitPluginEvent("media:updated", { mediaId: existingId, filePath: entry.filePath });
       progress.processedFiles++;
       totalUpdated++;
     }
@@ -287,26 +246,20 @@ export async function scanLibrary(
         .where(
           and(
             eq(mediaItems.dataSourceId, source.id),
-            inArray(mediaItems.filePath, result.removedFilePaths),
-          ),
+            inArray(mediaItems.filePath, result.removedFilePaths)
+          )
         );
       await db
         .delete(mediaItems)
         .where(
           and(
             eq(mediaItems.dataSourceId, source.id),
-            inArray(mediaItems.filePath, result.removedFilePaths),
-          ),
+            inArray(mediaItems.filePath, result.removedFilePaths)
+          )
         );
       for (const row of removedRows) {
-        emitEvent({
-          type: 'media:removed',
-          payload: { libraryId, mediaItemId: row.id },
-        });
-        emitPluginEvent('media:deleted', {
-          mediaId: row.id,
-          filePath: row.filePath,
-        });
+        emitEvent({ type: "media:removed", payload: { libraryId, mediaItemId: row.id } });
+        emitPluginEvent("media:deleted", { mediaId: row.id, filePath: row.filePath });
       }
       totalRemoved += result.removedFilePaths.length;
     }

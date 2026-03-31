@@ -1,4 +1,4 @@
-import { basename, dirname } from 'node:path';
+import { basename, dirname } from "node:path";
 
 export interface ParsedBook {
   isbn?: string | undefined;
@@ -11,7 +11,7 @@ const ISBN13_RE = /\b(97[89]\d{10})\b/;
 
 /** Normalize a raw ISBN string — strip hyphens/spaces. */
 function normalizeIsbn(raw: string): string {
-  return raw.replace(/[-\s]/g, '');
+  return raw.replace(/[-\s]/g, "");
 }
 
 /** Extract a bare ISBN from a filename/path component if present. */
@@ -44,50 +44,46 @@ function extractIsbn(text: string): string | undefined {
 export function parseBookPath(filePath: string): ParsedBook {
   const filename = basename(filePath);
   // Strip extension
-  const stem = filename.replace(/\.[^.]+$/, '');
+  const stem = filename.replace(/\.[^.]+$/, "");
 
   // Try to extract ISBN from the stem
   const isbn = extractIsbn(stem);
 
   // Remove ISBN portion from stem for further parsing
   const withoutIsbn = stem
-    .replace(/\b97[89]\d[\d-]{10,}\b/g, '')
-    .replace(/\b\d{9}[\dX]\b/g, '')
-    .replace(/\s+/g, ' ')
+    .replace(/\b97[89]\d[\d-]{10,}\b/g, "")
+    .replace(/\b\d{9}[\dX]\b/g, "")
+    .replace(/\s+/g, " ")
     .trim();
 
   // Try "Author - Title (Year)" or "Title - Author" dash-separated pattern
   const dashParts = withoutIsbn.split(/\s*-\s*/);
   if (dashParts.length >= 2) {
     // Heuristic: if first part looks like a person name (short, mostly letters, no digits)
-    const first = dashParts[0]?.trim() ?? '';
-    const rest = dashParts.slice(1).join(' - ').trim();
+    const first = dashParts[0]?.trim() ?? "";
+    const rest = dashParts.slice(1).join(" - ").trim();
     // Remove trailing year annotation from rest
-    const title = rest.replace(/\s*\(\d{4}\)\s*$/, '').trim();
+    const title = rest.replace(/\s*\(\d{4}\)\s*$/, "").trim();
 
     // Use directory as author fallback
     const dir = basename(dirname(filePath));
-    const dirIsRoot = dir === '.' || dir === '/' || dir === '';
+    const dirIsRoot = dir === "." || dir === "/" || dir === "";
 
     if (first.length > 0 && title.length > 0) {
       return { isbn, title, author: first };
     }
     if (!dirIsRoot) {
-      return {
-        isbn,
-        title: withoutIsbn.replace(/\s*\(\d{4}\)\s*$/, '').trim(),
-        author: dir,
-      };
+      return { isbn, title: withoutIsbn.replace(/\s*\(\d{4}\)\s*$/, "").trim(), author: dir };
     }
-    return { isbn, title: withoutIsbn.replace(/\s*\(\d{4}\)\s*$/, '').trim() };
+    return { isbn, title: withoutIsbn.replace(/\s*\(\d{4}\)\s*$/, "").trim() };
   }
 
   // No dash separator — try title with optional year in parens
-  const titleClean = withoutIsbn.replace(/\s*\(\d{4}\)\s*$/, '').trim();
+  const titleClean = withoutIsbn.replace(/\s*\(\d{4}\)\s*$/, "").trim();
 
   // Use parent directory as author if available
   const dir = basename(dirname(filePath));
-  const dirIsRoot = dir === '.' || dir === '/' || dir === '';
+  const dirIsRoot = dir === "." || dir === "/" || dir === "";
 
   if (!dirIsRoot) {
     return { isbn, title: titleClean || stem, author: dir };

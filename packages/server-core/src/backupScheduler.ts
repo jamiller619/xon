@@ -1,6 +1,6 @@
-import { and, asc, desc, eq, lt, sql } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { backupJobs, backupTargets } from './schema.js';
+import { and, asc, desc, eq, lt, sql } from "drizzle-orm";
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
+import { backupJobs, backupTargets } from "./schema.js";
 
 // ---------------------------------------------------------------------------
 // Cron expression parsing
@@ -15,21 +15,17 @@ import { backupJobs, backupTargets } from './schema.js';
  * @param min    Minimum allowed value (inclusive)
  * @param max    Maximum allowed value (inclusive)
  */
-function expandCronField(
-  field: string,
-  min: number,
-  max: number,
-): number[] | null {
+function expandCronField(field: string, min: number, max: number): number[] | null {
   const result = new Set<number>();
 
-  for (const part of field.split(',')) {
-    if (part === '*') {
+  for (const part of field.split(",")) {
+    if (part === "*") {
       for (let i = min; i <= max; i++) result.add(i);
       continue;
     }
 
-    if (part.includes('/')) {
-      const slashIdx = part.indexOf('/');
+    if (part.includes("/")) {
+      const slashIdx = part.indexOf("/");
       const rangeStr = part.slice(0, slashIdx);
       const stepStr = part.slice(slashIdx + 1);
       const step = Number.parseInt(stepStr, 10);
@@ -38,9 +34,9 @@ function expandCronField(
       let start = min;
       let end = max;
 
-      if (rangeStr !== '*') {
-        if (rangeStr.includes('-')) {
-          const dashIdx = rangeStr.indexOf('-');
+      if (rangeStr !== "*") {
+        if (rangeStr.includes("-")) {
+          const dashIdx = rangeStr.indexOf("-");
           start = Number.parseInt(rangeStr.slice(0, dashIdx), 10);
           end = Number.parseInt(rangeStr.slice(dashIdx + 1), 10);
           if (Number.isNaN(start) || Number.isNaN(end)) return null;
@@ -55,8 +51,8 @@ function expandCronField(
       continue;
     }
 
-    if (part.includes('-')) {
-      const dashIdx = part.indexOf('-');
+    if (part.includes("-")) {
+      const dashIdx = part.indexOf("-");
       const start = Number.parseInt(part.slice(0, dashIdx), 10);
       const end = Number.parseInt(part.slice(dashIdx + 1), 10);
       if (Number.isNaN(start) || Number.isNaN(end)) return null;
@@ -92,13 +88,7 @@ export function parseCronExpression(expr: string): ParsedCron | null {
   const parts = expr.trim().split(/\s+/);
   if (parts.length !== 5) return null;
 
-  const [minF, hourF, domF, monthF, dowF] = parts as [
-    string,
-    string,
-    string,
-    string,
-    string,
-  ];
+  const [minF, hourF, domF, monthF, dowF] = parts as [string, string, string, string, string];
 
   const minutes = expandCronField(minF, 0, 59);
   const hours = expandCronField(hourF, 0, 23);
@@ -119,7 +109,7 @@ export function parseCronExpression(expr: string): ParsedCron | null {
  * Validate a cron expression and return error message if invalid.
  */
 export function validateCronExpression(
-  expr: string,
+  expr: string
 ): { valid: true } | { valid: false; error: string } {
   const parsed = parseCronExpression(expr);
   if (!parsed) {
@@ -169,11 +159,7 @@ export function getNextCronTime(expr: string, from: Date): Date | null {
     if (!parsed.doms.includes(dom) || !parsed.dows.includes(dow)) {
       // Skip to next UTC day
       const next = new Date(0);
-      next.setUTCFullYear(
-        d.getUTCFullYear(),
-        d.getUTCMonth(),
-        d.getUTCDate() + 1,
-      );
+      next.setUTCFullYear(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate() + 1);
       next.setUTCHours(0, 0, 0, 0);
       ms = next.getTime();
       continue;
@@ -211,10 +197,7 @@ export function getNextCronTime(expr: string, from: Date): Date | null {
  *
  * Both policies are applied if set.
  */
-export async function applyRetentionPolicy(
-  db: LibSQLDatabase,
-  targetId: string,
-): Promise<void> {
+export async function applyRetentionPolicy(db: LibSQLDatabase, targetId: string): Promise<void> {
   const targetRows = await db
     .select({
       retentionKeepCount: backupTargets.retentionKeepCount,
@@ -228,11 +211,7 @@ export async function applyRetentionPolicy(
 
   const { retentionKeepCount, retentionKeepDays } = target;
 
-  if (
-    retentionKeepCount !== null &&
-    retentionKeepCount !== undefined &&
-    retentionKeepCount >= 0
-  ) {
+  if (retentionKeepCount !== null && retentionKeepCount !== undefined && retentionKeepCount >= 0) {
     // Find job ids to keep (N most recent by createdAt)
     const keepRows = await db
       .select({ id: backupJobs.id })
@@ -256,9 +235,7 @@ export async function applyRetentionPolicy(
         .where(eq(backupJobs.targetId, targetId));
 
       const keepSet = new Set(keepIds);
-      const toDelete = allRows
-        .filter((r) => !keepSet.has(r.id))
-        .map((r) => r.id);
+      const toDelete = allRows.filter((r) => !keepSet.has(r.id)).map((r) => r.id);
 
       for (const id of toDelete) {
         await db.delete(backupJobs).where(eq(backupJobs.id, id));
@@ -266,22 +243,13 @@ export async function applyRetentionPolicy(
     }
   }
 
-  if (
-    retentionKeepDays !== null &&
-    retentionKeepDays !== undefined &&
-    retentionKeepDays >= 0
-  ) {
+  if (retentionKeepDays !== null && retentionKeepDays !== undefined && retentionKeepDays >= 0) {
     const cutoff = new Date();
     cutoff.setDate(cutoff.getDate() - retentionKeepDays);
 
     await db
       .delete(backupJobs)
-      .where(
-        and(
-          eq(backupJobs.targetId, targetId),
-          lt(backupJobs.createdAt, cutoff),
-        ),
-      );
+      .where(and(eq(backupJobs.targetId, targetId), lt(backupJobs.createdAt, cutoff)));
   }
 }
 
@@ -312,29 +280,25 @@ export function startBackupScheduler(db: LibSQLDatabase): void {
             eq(backupTargets.enabled, true),
             sql`${backupTargets.schedule} IS NOT NULL`,
             sql`${backupTargets.nextScheduledAt} IS NOT NULL`,
-            sql`${backupTargets.nextScheduledAt} <= ${now.getTime()}`,
-          ),
+            sql`${backupTargets.nextScheduledAt} <= ${now.getTime()}`
+          )
         );
 
       for (const target of due) {
         // Trigger a backup job (fire-and-forget)
-        const { makeAdminBackupMediaRouter: _ } = await import(
-          './routes/adminBackupMedia.js'
-        );
+        const { makeAdminBackupMediaRouter: _ } = await import("./routes/adminBackupMedia.js");
         // Directly call runMediaBackupJob after creating the job record
-        const { runMediaBackupJob } = await import(
-          './routes/adminBackupMedia.js'
-        );
+        const { runMediaBackupJob } = await import("./routes/adminBackupMedia.js");
         const jobId = crypto.randomUUID();
         await db.insert(backupJobs).values({
           id: jobId,
           targetId: target.id,
-          scope: '{}',
-          status: 'pending',
+          scope: "{}",
+          status: "pending",
           totalFiles: 0,
           copiedFiles: 0,
           skippedFiles: 0,
-          errors: '[]',
+          errors: "[]",
           createdAt: new Date(),
         });
         runMediaBackupJob(db, jobId).catch(() => {});

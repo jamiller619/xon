@@ -1,17 +1,17 @@
-import { EventEmitter } from 'node:events';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { EventEmitter } from "node:events";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock('node:child_process', () => ({
+vi.mock("node:child_process", () => ({
   spawn: vi.fn(),
 }));
 
-vi.mock('node:fs/promises', () => ({
+vi.mock("node:fs/promises", () => ({
   readFile: vi.fn(),
 }));
 
-import { spawn } from 'node:child_process';
-import { readFile } from 'node:fs/promises';
-import { MediaCategory } from '@xon/shared';
+import { spawn } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import { MediaCategory } from "@xon/shared";
 import {
   type ArchiveMetadata,
   type DocumentMetadata,
@@ -25,7 +25,7 @@ import {
   isArchiveCategory,
   isDocumentCategory,
   isFontCategory,
-} from './miscmeta.js';
+} from "./miscmeta.js";
 
 type FakeChildProcess = EventEmitter & { stdout: EventEmitter };
 
@@ -44,42 +44,42 @@ beforeEach(() => {
 
 // ── Category helpers ──────────────────────────────────────────────────────────
 
-describe('isDocumentCategory', () => {
-  it('returns true for Documents', () => {
+describe("isDocumentCategory", () => {
+  it("returns true for Documents", () => {
     expect(isDocumentCategory(MediaCategory.Documents)).toBe(true);
   });
-  it('returns false for other categories', () => {
+  it("returns false for other categories", () => {
     expect(isDocumentCategory(MediaCategory.Music)).toBe(false);
     expect(isDocumentCategory(MediaCategory.Movies)).toBe(false);
     expect(isDocumentCategory(null)).toBe(false);
   });
 });
 
-describe('isFontCategory', () => {
-  it('returns true for Fonts', () => {
+describe("isFontCategory", () => {
+  it("returns true for Fonts", () => {
     expect(isFontCategory(MediaCategory.Fonts)).toBe(true);
   });
-  it('returns false for other categories', () => {
+  it("returns false for other categories", () => {
     expect(isFontCategory(MediaCategory.Documents)).toBe(false);
     expect(isFontCategory(null)).toBe(false);
   });
 });
 
-describe('is3DModelCategory', () => {
-  it('returns true for Models3D', () => {
+describe("is3DModelCategory", () => {
+  it("returns true for Models3D", () => {
     expect(is3DModelCategory(MediaCategory.Models3D)).toBe(true);
   });
-  it('returns false for other categories', () => {
+  it("returns false for other categories", () => {
     expect(is3DModelCategory(MediaCategory.Archives)).toBe(false);
     expect(is3DModelCategory(null)).toBe(false);
   });
 });
 
-describe('isArchiveCategory', () => {
-  it('returns true for Archives', () => {
+describe("isArchiveCategory", () => {
+  it("returns true for Archives", () => {
     expect(isArchiveCategory(MediaCategory.Archives)).toBe(true);
   });
-  it('returns false for other categories', () => {
+  it("returns false for other categories", () => {
     expect(isArchiveCategory(MediaCategory.Documents)).toBe(false);
     expect(isArchiveCategory(null)).toBe(false);
   });
@@ -87,35 +87,33 @@ describe('isArchiveCategory', () => {
 
 // ── Document metadata ─────────────────────────────────────────────────────────
 
-describe('extractDocumentMetadata', () => {
-  it('extracts page count, author, and title from PDF exiftool output', async () => {
+describe("extractDocumentMetadata", () => {
+  it("extracts page count, author, and title from PDF exiftool output", async () => {
     const proc = makeProcess();
     mockSpawn.mockReturnValue(proc as ReturnType<typeof spawn>);
 
-    const output = JSON.stringify([
-      { PageCount: 42, Author: 'Jane Doe', Title: 'My Document' },
-    ]);
+    const output = JSON.stringify([{ PageCount: 42, Author: "Jane Doe", Title: "My Document" }]);
 
-    const promise = extractDocumentMetadata('/docs/report.pdf');
-    proc.stdout.emit('data', Buffer.from(output));
-    proc.emit('close', 0);
+    const promise = extractDocumentMetadata("/docs/report.pdf");
+    proc.stdout.emit("data", Buffer.from(output));
+    proc.emit("close", 0);
 
     const result = await promise;
     expect(result).toEqual<DocumentMetadata>({
       pageCount: 42,
-      author: 'Jane Doe',
-      title: 'My Document',
+      author: "Jane Doe",
+      title: "My Document",
     });
   });
 
-  it('returns partial metadata when some fields are missing', async () => {
+  it("returns partial metadata when some fields are missing", async () => {
     const proc = makeProcess();
     mockSpawn.mockReturnValue(proc as ReturnType<typeof spawn>);
 
     const output = JSON.stringify([{ PageCount: 10 }]);
-    const promise = extractDocumentMetadata('/docs/noauthor.pdf');
-    proc.stdout.emit('data', Buffer.from(output));
-    proc.emit('close', 0);
+    const promise = extractDocumentMetadata("/docs/noauthor.pdf");
+    proc.stdout.emit("data", Buffer.from(output));
+    proc.emit("close", 0);
 
     const result = await promise;
     expect(result?.pageCount).toBe(10);
@@ -123,33 +121,33 @@ describe('extractDocumentMetadata', () => {
     expect(result?.title).toBeUndefined();
   });
 
-  it('returns null when exiftool is not available', async () => {
+  it("returns null when exiftool is not available", async () => {
     const proc = makeProcess();
     mockSpawn.mockReturnValue(proc as ReturnType<typeof spawn>);
 
-    const promise = extractDocumentMetadata('/docs/file.pdf');
-    proc.emit('error', new Error('spawn exiftool ENOENT'));
+    const promise = extractDocumentMetadata("/docs/file.pdf");
+    proc.emit("error", new Error("spawn exiftool ENOENT"));
 
     expect(await promise).toBeNull();
   });
 
-  it('returns null when exiftool exits with non-zero code', async () => {
+  it("returns null when exiftool exits with non-zero code", async () => {
     const proc = makeProcess();
     mockSpawn.mockReturnValue(proc as ReturnType<typeof spawn>);
 
-    const promise = extractDocumentMetadata('/docs/corrupt.pdf');
-    proc.emit('close', 1);
+    const promise = extractDocumentMetadata("/docs/corrupt.pdf");
+    proc.emit("close", 1);
 
     expect(await promise).toBeNull();
   });
 
-  it('returns empty object when exiftool output has no entries', async () => {
+  it("returns empty object when exiftool output has no entries", async () => {
     const proc = makeProcess();
     mockSpawn.mockReturnValue(proc as ReturnType<typeof spawn>);
 
-    const promise = extractDocumentMetadata('/docs/empty.pdf');
-    proc.stdout.emit('data', Buffer.from(JSON.stringify([])));
-    proc.emit('close', 0);
+    const promise = extractDocumentMetadata("/docs/empty.pdf");
+    proc.stdout.emit("data", Buffer.from(JSON.stringify([])));
+    proc.emit("close", 0);
 
     expect(await promise).toEqual({});
   });
@@ -157,70 +155,66 @@ describe('extractDocumentMetadata', () => {
 
 // ── Font metadata ─────────────────────────────────────────────────────────────
 
-describe('extractFontMetadata', () => {
-  it('extracts font family, weight, style, and glyph count', async () => {
+describe("extractFontMetadata", () => {
+  it("extracts font family, weight, style, and glyph count", async () => {
     const proc = makeProcess();
     mockSpawn.mockReturnValue(proc as ReturnType<typeof spawn>);
 
     const output = JSON.stringify([
       {
-        FamilyName: 'Inter',
-        FontSubfamily: 'Bold Italic',
+        FamilyName: "Inter",
+        FontSubfamily: "Bold Italic",
         NumGlyphs: 2048,
       },
     ]);
 
-    const promise = extractFontMetadata('/fonts/inter-bold-italic.ttf');
-    proc.stdout.emit('data', Buffer.from(output));
-    proc.emit('close', 0);
+    const promise = extractFontMetadata("/fonts/inter-bold-italic.ttf");
+    proc.stdout.emit("data", Buffer.from(output));
+    proc.emit("close", 0);
 
     const result = await promise;
     expect(result).toEqual<FontMetadata>({
-      fontFamily: 'Inter',
-      fontWeight: 'Bold',
-      fontStyle: 'Italic',
+      fontFamily: "Inter",
+      fontWeight: "Bold",
+      fontStyle: "Italic",
       glyphCount: 2048,
     });
   });
 
-  it('maps Regular subfamily to Regular weight and Normal style', async () => {
+  it("maps Regular subfamily to Regular weight and Normal style", async () => {
     const proc = makeProcess();
     mockSpawn.mockReturnValue(proc as ReturnType<typeof spawn>);
 
-    const output = JSON.stringify([
-      { FamilyName: 'Roboto', FontSubfamily: 'Regular' },
-    ]);
-    const promise = extractFontMetadata('/fonts/roboto.otf');
-    proc.stdout.emit('data', Buffer.from(output));
-    proc.emit('close', 0);
+    const output = JSON.stringify([{ FamilyName: "Roboto", FontSubfamily: "Regular" }]);
+    const promise = extractFontMetadata("/fonts/roboto.otf");
+    proc.stdout.emit("data", Buffer.from(output));
+    proc.emit("close", 0);
 
     const result = await promise;
-    expect(result?.fontWeight).toBe('Regular');
-    expect(result?.fontStyle).toBe('Normal');
+    expect(result?.fontWeight).toBe("Regular");
+    expect(result?.fontStyle).toBe("Normal");
   });
 
-  it('uses FontName fallback when FamilyName is absent', async () => {
+  it("uses FontName fallback when FamilyName is absent", async () => {
     const proc = makeProcess();
     mockSpawn.mockReturnValue(proc as ReturnType<typeof spawn>);
 
-    const output = JSON.stringify([
-      { FontName: 'OpenSans', FontSubfamily: 'Light' },
-    ]);
-    const promise = extractFontMetadata('/fonts/opensans.ttf');
-    proc.stdout.emit('data', Buffer.from(output));
-    proc.emit('close', 0);
+    const output = JSON.stringify([{ FontName: "OpenSans", FontSubfamily: "Light" }]);
+    const promise = extractFontMetadata("/fonts/opensans.ttf");
+    proc.stdout.emit("data", Buffer.from(output));
+    proc.emit("close", 0);
 
     const result = await promise;
-    expect(result?.fontFamily).toBe('OpenSans');
-    expect(result?.fontWeight).toBe('Light');
+    expect(result?.fontFamily).toBe("OpenSans");
+    expect(result?.fontWeight).toBe("Light");
   });
 
-  it('returns null when exiftool is not available', async () => {
+  it("returns null when exiftool is not available", async () => {
     const proc = makeProcess();
     mockSpawn.mockReturnValue(proc as ReturnType<typeof spawn>);
 
-    const promise = extractFontMetadata('/fonts/font.ttf');
-    proc.emit('error', new Error('spawn exiftool ENOENT'));
+    const promise = extractFontMetadata("/fonts/font.ttf");
+    proc.emit("error", new Error("spawn exiftool ENOENT"));
 
     expect(await promise).toBeNull();
   });
@@ -228,21 +222,21 @@ describe('extractFontMetadata', () => {
 
 // ── 3D Model metadata ─────────────────────────────────────────────────────────
 
-describe('extract3DModelMetadata', () => {
-  it('counts vertices and faces from an OBJ file', async () => {
+describe("extract3DModelMetadata", () => {
+  it("counts vertices and faces from an OBJ file", async () => {
     const objContent =
-      '# A simple cube\nv 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nvt 0 0\nf 1 2 3\nf 1 3 4\n';
+      "# A simple cube\nv 0 0 0\nv 1 0 0\nv 1 1 0\nv 0 1 0\nvt 0 0\nf 1 2 3\nf 1 3 4\n";
     mockReadFile.mockResolvedValue(objContent as never);
 
-    const result = await extract3DModelMetadata('/models/cube.obj');
+    const result = await extract3DModelMetadata("/models/cube.obj");
     expect(result).toEqual<Model3DMetadata>({ vertexCount: 4, faceCount: 2 });
   });
 
-  it('extracts vertex and face counts from a glTF file', async () => {
+  it("extracts vertex and face counts from a glTF file", async () => {
     const gltf = {
       accessors: [
-        { count: 24, type: 'VEC3' }, // POSITION — index 0
-        { count: 36, type: 'SCALAR' }, // indices — index 1
+        { count: 24, type: "VEC3" }, // POSITION — index 0
+        { count: 36, type: "SCALAR" }, // indices — index 1
       ],
       meshes: [
         {
@@ -252,28 +246,26 @@ describe('extract3DModelMetadata', () => {
     };
     mockReadFile.mockResolvedValue(JSON.stringify(gltf) as never);
 
-    const result = await extract3DModelMetadata('/models/box.gltf');
+    const result = await extract3DModelMetadata("/models/box.gltf");
     expect(result).toEqual<Model3DMetadata>({ vertexCount: 24, faceCount: 12 }); // 36/3 = 12 faces
   });
 
-  it('returns empty object for unsupported 3D formats', async () => {
-    const result = await extract3DModelMetadata('/models/mesh.fbx');
+  it("returns empty object for unsupported 3D formats", async () => {
+    const result = await extract3DModelMetadata("/models/mesh.fbx");
     expect(result).toEqual({});
   });
 
-  it('returns null when file read fails', async () => {
-    mockReadFile.mockRejectedValue(new Error('ENOENT') as never);
+  it("returns null when file read fails", async () => {
+    mockReadFile.mockRejectedValue(new Error("ENOENT") as never);
 
-    const result = await extract3DModelMetadata('/models/missing.obj');
+    const result = await extract3DModelMetadata("/models/missing.obj");
     expect(result).toBeNull();
   });
 
-  it('returns empty object for glTF with no meshes', async () => {
-    mockReadFile.mockResolvedValue(
-      JSON.stringify({ asset: { version: '2.0' } }) as never,
-    );
+  it("returns empty object for glTF with no meshes", async () => {
+    mockReadFile.mockResolvedValue(JSON.stringify({ asset: { version: "2.0" } }) as never);
 
-    const result = await extract3DModelMetadata('/models/empty.gltf');
+    const result = await extract3DModelMetadata("/models/empty.gltf");
     expect(result).toEqual({});
   });
 });
@@ -291,7 +283,7 @@ function makeZipBuffer(files: Array<{ name: string; size: number }>): Buffer {
   let localOffset = 0;
 
   for (const f of files) {
-    const nameBytes = Buffer.from(f.name, 'utf8');
+    const nameBytes = Buffer.from(f.name, "utf8");
     offsets.push(localOffset);
 
     // Local file header (30 bytes fixed + filename)
@@ -316,8 +308,8 @@ function makeZipBuffer(files: Array<{ name: string; size: number }>): Buffer {
 
   let cdSize = 0;
   for (let i = 0; i < files.length; i++) {
-    const f = files[i] ?? { name: '', size: 0 };
-    const nameBytes = Buffer.from(f.name, 'utf8');
+    const f = files[i] ?? { name: "", size: 0 };
+    const nameBytes = Buffer.from(f.name, "utf8");
     const cd = Buffer.alloc(46 + nameBytes.length);
     cd.writeUInt32LE(0x02014b50, 0); // CD signature
     cd.writeUInt16LE(20, 4); // version made by
@@ -365,7 +357,7 @@ function makeTarBuffer(files: Array<{ name: string; size: number }>): Buffer {
   for (const f of files) {
     const header = Buffer.alloc(512);
     Buffer.from(f.name).copy(header, 0); // filename
-    const sizeOctal = `${f.size.toString(8).padStart(11, '0')}\0`;
+    const sizeOctal = `${f.size.toString(8).padStart(11, "0")}\0`;
     Buffer.from(sizeOctal).copy(header, 124); // size in octal
     header[156] = 0x30; // typeflag: '0' = regular file
 
@@ -377,54 +369,54 @@ function makeTarBuffer(files: Array<{ name: string; size: number }>): Buffer {
   return Buffer.concat(blocks);
 }
 
-describe('extractArchiveMetadata', () => {
-  it('extracts file listing and total uncompressed size from a ZIP file', async () => {
+describe("extractArchiveMetadata", () => {
+  it("extracts file listing and total uncompressed size from a ZIP file", async () => {
     const zip = makeZipBuffer([
-      { name: 'readme.txt', size: 500 },
-      { name: 'data/file.json', size: 1200 },
+      { name: "readme.txt", size: 500 },
+      { name: "data/file.json", size: 1200 },
     ]);
     mockReadFile.mockResolvedValue(zip as never);
 
-    const result = await extractArchiveMetadata('/archives/sample.zip');
+    const result = await extractArchiveMetadata("/archives/sample.zip");
     expect(result).toEqual<ArchiveMetadata>({
       fileCount: 2,
-      files: ['readme.txt', 'data/file.json'],
+      files: ["readme.txt", "data/file.json"],
       totalUncompressedSize: 1700,
     });
   });
 
-  it('extracts file listing and total uncompressed size from a TAR file', async () => {
+  it("extracts file listing and total uncompressed size from a TAR file", async () => {
     const tar = makeTarBuffer([
-      { name: 'hello.txt', size: 13 },
-      { name: 'world.txt', size: 100 },
+      { name: "hello.txt", size: 13 },
+      { name: "world.txt", size: 100 },
     ]);
     mockReadFile.mockResolvedValue(tar as never);
 
-    const result = await extractArchiveMetadata('/archives/sample.tar');
+    const result = await extractArchiveMetadata("/archives/sample.tar");
     expect(result).toEqual<ArchiveMetadata>({
       fileCount: 2,
-      files: ['hello.txt', 'world.txt'],
+      files: ["hello.txt", "world.txt"],
       totalUncompressedSize: 113,
     });
   });
 
-  it('returns empty object for unsupported archive formats', async () => {
-    const result = await extractArchiveMetadata('/archives/file.rar');
+  it("returns empty object for unsupported archive formats", async () => {
+    const result = await extractArchiveMetadata("/archives/file.rar");
     expect(result).toEqual({});
   });
 
-  it('returns null when file read fails', async () => {
-    mockReadFile.mockRejectedValue(new Error('ENOENT') as never);
+  it("returns null when file read fails", async () => {
+    mockReadFile.mockRejectedValue(new Error("ENOENT") as never);
 
-    const result = await extractArchiveMetadata('/archives/missing.zip');
+    const result = await extractArchiveMetadata("/archives/missing.zip");
     expect(result).toBeNull();
   });
 
-  it('handles an empty ZIP archive', async () => {
+  it("handles an empty ZIP archive", async () => {
     const zip = makeZipBuffer([]);
     mockReadFile.mockResolvedValue(zip as never);
 
-    const result = await extractArchiveMetadata('/archives/empty.zip');
+    const result = await extractArchiveMetadata("/archives/empty.zip");
     expect(result).toEqual<ArchiveMetadata>({
       fileCount: 0,
       files: [],

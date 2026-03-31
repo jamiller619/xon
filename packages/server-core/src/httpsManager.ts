@@ -1,7 +1,7 @@
-import { mkdir, readFile, stat, writeFile } from 'node:fs/promises';
-import { createServer as createHttpServer } from 'node:http';
-import { join } from 'node:path';
-import acme from 'acme-client';
+import { mkdir, readFile, stat, writeFile } from "node:fs/promises";
+import { createServer as createHttpServer } from "node:http";
+import { join } from "node:path";
+import acme from "acme-client";
 
 export interface ManualCerts {
   cert: string;
@@ -11,14 +11,8 @@ export interface ManualCerts {
 /**
  * Loads a manually configured TLS certificate and key from disk.
  */
-export async function loadManualCerts(
-  certPath: string,
-  keyPath: string,
-): Promise<ManualCerts> {
-  const [cert, key] = await Promise.all([
-    readFile(certPath, 'utf8'),
-    readFile(keyPath, 'utf8'),
-  ]);
+export async function loadManualCerts(certPath: string, keyPath: string): Promise<ManualCerts> {
+  const [cert, key] = await Promise.all([readFile(certPath, "utf8"), readFile(keyPath, "utf8")]);
   return { cert, key };
 }
 
@@ -73,10 +67,7 @@ export async function acquireAcmeCert(opts: AcmeOptions): Promise<AcmeCerts> {
 
   // Return existing cert if still valid (< 60 days old)
   if (await isCertFileValid(certPath)) {
-    const [cert, key] = await Promise.all([
-      readFile(certPath, 'utf8'),
-      readFile(keyPath, 'utf8'),
-    ]);
+    const [cert, key] = await Promise.all([readFile(certPath, "utf8"), readFile(keyPath, "utf8")]);
     return { cert, key, certPath, keyPath };
   }
 
@@ -98,12 +89,12 @@ export async function acquireAcmeCert(opts: AcmeOptions): Promise<AcmeCerts> {
 
   // Temporary HTTP server to answer HTTP-01 challenges
   const challengeServer = createHttpServer((req, res) => {
-    const prefix = '/.well-known/acme-challenge/';
+    const prefix = "/.well-known/acme-challenge/";
     if (req.url?.startsWith(prefix)) {
       const token = req.url.slice(prefix.length);
-      const content = challengeTokens.get(token ?? '');
+      const content = challengeTokens.get(token ?? "");
       if (content) {
-        res.writeHead(200, { 'Content-Type': 'text/plain' });
+        res.writeHead(200, { "Content-Type": "text/plain" });
         res.end(content);
         return;
       }
@@ -126,7 +117,7 @@ export async function acquireAcmeCert(opts: AcmeOptions): Promise<AcmeCerts> {
       csr,
       email,
       termsOfServiceAgreed: true,
-      challengePriority: ['http-01'],
+      challengePriority: ["http-01"],
       challengeCreateFn: async (_authz, challenge, keyAuthorization) => {
         challengeTokens.set(challenge.token, keyAuthorization);
       },
@@ -135,9 +126,7 @@ export async function acquireAcmeCert(opts: AcmeOptions): Promise<AcmeCerts> {
       },
     });
   } finally {
-    await new Promise<void>((resolve) =>
-      challengeServer.close(() => resolve()),
-    );
+    await new Promise<void>((resolve) => challengeServer.close(() => resolve()));
   }
 
   const keyPem = domainKey.toString();

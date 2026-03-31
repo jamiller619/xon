@@ -1,4 +1,4 @@
-const TMDB_BASE = 'https://api.themoviedb.org/3';
+const TMDB_BASE = "https://api.themoviedb.org/3";
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 
 interface CacheEntry<T> {
@@ -108,13 +108,7 @@ interface SearchResponse<T> {
   results: T[];
 }
 
-const KEY_JOBS = new Set([
-  'Director',
-  'Producer',
-  'Writer',
-  'Executive Producer',
-  'Creator',
-]);
+const KEY_JOBS = new Set(["Director", "Producer", "Writer", "Executive Producer", "Creator"]);
 
 export class TmdbClient {
   private readonly apiKey: string;
@@ -126,10 +120,7 @@ export class TmdbClient {
     this.fetchFn = fetchFn;
   }
 
-  private async get<T>(
-    path: string,
-    params: Record<string, string> = {},
-  ): Promise<T | null> {
+  private async get<T>(path: string, params: Record<string, string> = {}): Promise<T | null> {
     const cacheKey = `${path}|${JSON.stringify(params)}`;
     const cached = this.cache.get(cacheKey) as CacheEntry<T> | undefined;
     if (cached !== undefined && Date.now() < cached.expiresAt) {
@@ -137,7 +128,7 @@ export class TmdbClient {
     }
 
     const url = new URL(`${TMDB_BASE}${path}`);
-    url.searchParams.set('api_key', this.apiKey);
+    url.searchParams.set("api_key", this.apiKey);
     for (const [k, v] of Object.entries(params)) {
       url.searchParams.set(k, v);
     }
@@ -150,26 +141,17 @@ export class TmdbClient {
     return data;
   }
 
-  async fetchMovieMetadata(
-    title: string,
-    year?: number,
-  ): Promise<TmdbMovieMetadata | null> {
+  async fetchMovieMetadata(title: string, year?: number): Promise<TmdbMovieMetadata | null> {
     const params: Record<string, string> = { query: title };
     if (year !== undefined) params.year = String(year);
 
-    const search = await this.get<SearchResponse<TmdbMovieSearchResult>>(
-      '/search/movie',
-      params,
-    );
+    const search = await this.get<SearchResponse<TmdbMovieSearchResult>>("/search/movie", params);
     const first = search?.results[0];
     if (!first) return null;
 
-    const details = await this.get<TmdbMovieDetailsResult>(
-      `/movie/${first.id}`,
-      {
-        append_to_response: 'credits',
-      },
-    );
+    const details = await this.get<TmdbMovieDetailsResult>(`/movie/${first.id}`, {
+      append_to_response: "credits",
+    });
     if (!details) return null;
 
     return {
@@ -190,36 +172,28 @@ export class TmdbClient {
       })),
       crew: details.credits.crew
         .filter((c) => KEY_JOBS.has(c.job))
-        .map((c) => ({
-          id: c.id,
-          name: c.name,
-          job: c.job,
-          department: c.department,
-        })),
+        .map((c) => ({ id: c.id, name: c.name, job: c.job, department: c.department })),
     };
   }
 
   async fetchTvMetadata(
     seriesTitle: string,
     season: number,
-    episode: number,
+    episode: number
   ): Promise<TmdbTvMetadata | null> {
-    const search = await this.get<SearchResponse<TmdbTvSearchResult>>(
-      '/search/tv',
-      {
-        query: seriesTitle,
-      },
-    );
+    const search = await this.get<SearchResponse<TmdbTvSearchResult>>("/search/tv", {
+      query: seriesTitle,
+    });
     const first = search?.results[0];
     if (!first) return null;
 
     const details = await this.get<TmdbTvDetailsResult>(`/tv/${first.id}`, {
-      append_to_response: 'credits',
+      append_to_response: "credits",
     });
     if (!details) return null;
 
     const episodeDetails = await this.get<TmdbEpisodeResult>(
-      `/tv/${first.id}/season/${season}/episode/${episode}`,
+      `/tv/${first.id}/season/${season}/episode/${episode}`
     );
 
     const cast = details.credits?.cast ?? [];
@@ -244,12 +218,7 @@ export class TmdbClient {
       })),
       crew: crew
         .filter((c) => KEY_JOBS.has(c.job))
-        .map((c) => ({
-          id: c.id,
-          name: c.name,
-          job: c.job,
-          department: c.department,
-        })),
+        .map((c) => ({ id: c.id, name: c.name, job: c.job, department: c.department })),
       seasonNumber: season,
       episodeNumber: episode,
     };

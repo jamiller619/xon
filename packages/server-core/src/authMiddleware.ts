@@ -1,9 +1,9 @@
-import { eq } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import type { Context, Next } from 'hono';
-import { verifyAccessToken } from './routes/auth.js';
-import { hashApiToken } from './routes/users.js';
-import { apiTokens, users } from './schema.js';
+import { eq } from "drizzle-orm";
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
+import type { Context, Next } from "hono";
+import { verifyAccessToken } from "./routes/auth.js";
+import { hashApiToken } from "./routes/users.js";
+import { apiTokens, users } from "./schema.js";
 
 export interface AuthUser {
   id: string;
@@ -11,7 +11,7 @@ export interface AuthUser {
   role: string;
 }
 
-declare module 'hono' {
+declare module "hono" {
   interface ContextVariableMap {
     user: AuthUser;
   }
@@ -27,17 +27,17 @@ export function makeAuthMiddleware(db?: LibSQLDatabase) {
     const path = c.req.path;
     // Skip auth, health, and docs endpoints
     if (
-      path.startsWith('/api/v1/auth/') ||
-      path === '/api/v1/health' ||
-      path === '/api/v1/docs' ||
-      path.startsWith('/api/v1/docs/')
+      path.startsWith("/api/v1/auth/") ||
+      path === "/api/v1/health" ||
+      path === "/api/v1/docs" ||
+      path.startsWith("/api/v1/docs/")
     ) {
       return next();
     }
 
-    const authHeader = c.req.header('Authorization');
-    if (!authHeader?.startsWith('Bearer ')) {
-      return c.json({ error: 'Unauthorized' }, 401);
+    const authHeader = c.req.header("Authorization");
+    if (!authHeader?.startsWith("Bearer ")) {
+      return c.json({ error: "Unauthorized" }, 401);
     }
 
     const token = authHeader.slice(7);
@@ -45,16 +45,12 @@ export function makeAuthMiddleware(db?: LibSQLDatabase) {
     // Try JWT first
     const payload = await verifyAccessToken(token);
     if (payload) {
-      c.set('user', {
-        id: payload.sub,
-        username: payload.username,
-        role: payload.role,
-      });
+      c.set("user", { id: payload.sub, username: payload.username, role: payload.role });
       return next();
     }
 
     // Try API token (xon_ prefix or raw hash lookup)
-    if (db && token.startsWith('xon_')) {
+    if (db && token.startsWith("xon_")) {
       const tokenHash = hashApiToken(token);
       const rows = await db
         .select({
@@ -70,7 +66,7 @@ export function makeAuthMiddleware(db?: LibSQLDatabase) {
       if (apiToken) {
         // Check expiry
         if (apiToken.expiresAt && apiToken.expiresAt < new Date()) {
-          return c.json({ error: 'Unauthorized' }, 401);
+          return c.json({ error: "Unauthorized" }, 401);
         }
 
         // Load user details
@@ -88,17 +84,13 @@ export function makeAuthMiddleware(db?: LibSQLDatabase) {
             .where(eq(apiTokens.id, apiToken.id))
             .catch(() => {});
 
-          c.set('user', {
-            id: user.id,
-            username: user.username,
-            role: user.role,
-          });
+          c.set("user", { id: user.id, username: user.username, role: user.role });
           return next();
         }
       }
     }
 
-    return c.json({ error: 'Unauthorized' }, 401);
+    return c.json({ error: "Unauthorized" }, 401);
   };
 }
 

@@ -1,8 +1,8 @@
-import { eq, inArray } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import sharp from 'sharp';
-import { isImageCategory } from './exiftool.js';
-import { duplicateCandidates, imageHashes, mediaItems } from './schema.js';
+import { eq, inArray } from "drizzle-orm";
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
+import sharp from "sharp";
+import { isImageCategory } from "./exiftool.js";
+import { duplicateCandidates, imageHashes, mediaItems } from "./schema.js";
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -17,15 +17,13 @@ export interface PerceptualHashConfig {
  */
 export interface PerceptualHashOnnxSession {
   run(
-    feeds: Record<string, { data: Float32Array; dims: number[] }>,
+    feeds: Record<string, { data: Float32Array; dims: number[] }>
   ): Promise<Record<string, { data: Float32Array; dims: number[] }>>;
 }
 
 let onnxSession: PerceptualHashOnnxSession | null = null;
 
-export function setPerceptualHashOnnxSession(
-  session: PerceptualHashOnnxSession | null,
-): void {
+export function setPerceptualHashOnnxSession(session: PerceptualHashOnnxSession | null): void {
   onnxSession = session;
 }
 
@@ -41,14 +39,12 @@ export function getPerceptualHashOnnxSession(): PerceptualHashOnnxSession | null
  * producing a 64-bit hash encoded as a 16-character hex string.
  * Returns null if the file cannot be processed.
  */
-export async function computePerceptualHash(
-  filePath: string,
-): Promise<string | null> {
+export async function computePerceptualHash(filePath: string): Promise<string | null> {
   // If an ONNX session is injected, attempt visual embedding-based hash
   if (onnxSession) {
     try {
       const raw = await sharp(filePath)
-        .resize(64, 64, { fit: 'fill' })
+        .resize(64, 64, { fit: "fill" })
         .grayscale()
         .raw()
         .toBuffer();
@@ -62,7 +58,7 @@ export async function computePerceptualHash(
       const embedding = result.output;
       if (!embedding) return computeDHash(filePath);
       // Binarize embedding into hash bits
-      let hash = '';
+      let hash = "";
       const data = embedding.data;
       for (let i = 0; i < Math.min(64, data.length); i += 4) {
         let nibble = 0;
@@ -71,7 +67,7 @@ export async function computePerceptualHash(
         }
         hash += nibble.toString(16);
       }
-      return hash.padEnd(16, '0');
+      return hash.padEnd(16, "0");
     } catch {
       // Fall through to dHash
     }
@@ -83,7 +79,7 @@ export async function computePerceptualHash(
 async function computeDHash(filePath: string): Promise<string | null> {
   try {
     const { data } = await sharp(filePath)
-      .resize(9, 8, { fit: 'fill' })
+      .resize(9, 8, { fit: "fill" })
       .grayscale()
       .raw()
       .toBuffer({ resolveWithObject: true });
@@ -99,7 +95,7 @@ async function computeDHash(filePath: string): Promise<string | null> {
         }
       }
     }
-    return hash.toString(16).padStart(16, '0');
+    return hash.toString(16).padStart(16, "0");
   } catch {
     return null;
   }
@@ -112,8 +108,8 @@ export function hammingDistance(hash1: string, hash2: string): number {
   if (hash1.length !== hash2.length) return 64;
   let distance = 0;
   for (let i = 0; i < hash1.length; i++) {
-    const a = Number.parseInt(hash1[i] ?? '0', 16);
-    const b = Number.parseInt(hash2[i] ?? '0', 16);
+    const a = Number.parseInt(hash1[i] ?? "0", 16);
+    const b = Number.parseInt(hash2[i] ?? "0", 16);
     let xor = a ^ b;
     while (xor) {
       distance += xor & 1;
@@ -143,17 +139,12 @@ export function hashSimilarity(hash1: string, hash2: string): number {
 export async function scanLibraryForDuplicates(
   db: LibSQLDatabase,
   libraryId: string,
-  threshold = 10,
+  threshold = 10
 ): Promise<number> {
   // Load all image media items for this library
-  const items = await db
-    .select()
-    .from(mediaItems)
-    .where(eq(mediaItems.libraryId, libraryId));
+  const items = await db.select().from(mediaItems).where(eq(mediaItems.libraryId, libraryId));
 
-  const imageItems = items.filter((item) =>
-    isImageCategory(item.mediaCategory),
-  );
+  const imageItems = items.filter((item) => isImageCategory(item.mediaCategory));
   if (imageItems.length === 0) return 0;
 
   const itemIds = imageItems.map((i) => i.id);
@@ -170,8 +161,7 @@ export async function scanLibraryForDuplicates(
   }
 
   // Compute missing hashes
-  const newHashRows: Array<{ id: string; mediaItemId: string; hash: string }> =
-    [];
+  const newHashRows: Array<{ id: string; mediaItemId: string; hash: string }> = [];
   for (const item of imageItems) {
     if (!hashMap.has(item.id)) {
       const hash = await computePerceptualHash(item.filePath);
@@ -191,10 +181,7 @@ export async function scanLibraryForDuplicates(
       await db
         .insert(imageHashes)
         .values(row)
-        .onConflictDoUpdate({
-          target: imageHashes.mediaItemId,
-          set: { hash: row.hash },
-        });
+        .onConflictDoUpdate({ target: imageHashes.mediaItemId, set: { hash: row.hash } });
     }
   }
 
@@ -208,7 +195,7 @@ export async function scanLibraryForDuplicates(
     .where(eq(duplicateCandidates.libraryId, libraryId));
 
   const existingPairs = new Set(
-    existingCandidates.map((r) => `${r.mediaItemId1}:${r.mediaItemId2}`),
+    existingCandidates.map((r) => `${r.mediaItemId1}:${r.mediaItemId2}`)
   );
 
   // Compare all pairs
@@ -235,7 +222,7 @@ export async function scanLibraryForDuplicates(
             mediaItemId1: a.id,
             mediaItemId2: b.id,
             similarity,
-            status: 'pending',
+            status: "pending",
           });
           existingPairs.add(pairKey);
           found++;

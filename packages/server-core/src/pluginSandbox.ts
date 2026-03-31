@@ -1,46 +1,27 @@
-import {
-  mkdir,
-  readFile,
-  readdir,
-  stat,
-  unlink,
-  writeFile,
-} from 'node:fs/promises';
-import { normalize, resolve } from 'node:path';
+import { mkdir, readFile, readdir, stat, unlink, writeFile } from "node:fs/promises";
+import { normalize, resolve } from "node:path";
 
 export interface SandboxedFs {
   readFile: (path: string) => Promise<Buffer>;
   writeFile: (path: string, data: string | Buffer) => Promise<void>;
   readdir: (path: string) => Promise<string[]>;
   stat: (
-    path: string,
-  ) => Promise<{
-    size: number;
-    isFile: () => boolean;
-    isDirectory: () => boolean;
-  }>;
+    path: string
+  ) => Promise<{ size: number; isFile: () => boolean; isDirectory: () => boolean }>;
   mkdir: (path: string, options?: { recursive?: boolean }) => Promise<void>;
   unlink: (path: string) => Promise<void>;
 }
 
-export type SandboxedFetch = (
-  url: string,
-  init?: RequestInit,
-) => Promise<Response>;
+export type SandboxedFetch = (url: string, init?: RequestInit) => Promise<Response>;
 
 /**
  * Check if a given absolute path is within one of the allowed base directories.
  */
-export function isPathAllowed(
-  targetPath: string,
-  allowedDirs: string[],
-): boolean {
+export function isPathAllowed(targetPath: string, allowedDirs: string[]): boolean {
   const normalized = normalize(resolve(targetPath));
   return allowedDirs.some((dir) => {
     const normalizedDir = normalize(resolve(dir));
-    return (
-      normalized === normalizedDir || normalized.startsWith(`${normalizedDir}/`)
-    );
+    return normalized === normalizedDir || normalized.startsWith(`${normalizedDir}/`);
   });
 }
 
@@ -51,7 +32,7 @@ export function isPathAllowed(
 export function createSandboxedFs(
   pluginId: string,
   pluginDir: string,
-  allowedPaths: string[],
+  allowedPaths: string[]
 ): SandboxedFs {
   const allAllowedDirs = [pluginDir, ...allowedPaths];
 
@@ -65,36 +46,29 @@ export function createSandboxedFs(
 
   return {
     async readFile(path: string): Promise<Buffer> {
-      assertPathAllowed(path, 'readFile');
+      assertPathAllowed(path, "readFile");
       return readFile(path);
     },
 
     async writeFile(path: string, data: string | Buffer): Promise<void> {
-      assertPathAllowed(path, 'writeFile');
+      assertPathAllowed(path, "writeFile");
       await writeFile(path, data);
     },
 
     async readdir(path: string): Promise<string[]> {
-      assertPathAllowed(path, 'readdir');
+      assertPathAllowed(path, "readdir");
       return readdir(path);
     },
 
     async stat(
-      path: string,
-    ): Promise<{
-      size: number;
-      isFile: () => boolean;
-      isDirectory: () => boolean;
-    }> {
-      assertPathAllowed(path, 'stat');
+      path: string
+    ): Promise<{ size: number; isFile: () => boolean; isDirectory: () => boolean }> {
+      assertPathAllowed(path, "stat");
       return stat(path);
     },
 
-    async mkdir(
-      path: string,
-      options?: { recursive?: boolean },
-    ): Promise<void> {
-      assertPathAllowed(path, 'mkdir');
+    async mkdir(path: string, options?: { recursive?: boolean }): Promise<void> {
+      assertPathAllowed(path, "mkdir");
       if (options !== undefined) {
         await mkdir(path, options);
       } else {
@@ -103,7 +77,7 @@ export function createSandboxedFs(
     },
 
     async unlink(path: string): Promise<void> {
-      assertPathAllowed(path, 'unlink');
+      assertPathAllowed(path, "unlink");
       await unlink(path);
     },
   };
@@ -113,14 +87,8 @@ export function createSandboxedFs(
  * Create a sandboxed fetch wrapper for a plugin.
  * Only allows requests to declared network domains.
  */
-export function createSandboxedFetch(
-  pluginId: string,
-  allowedDomains: string[],
-): SandboxedFetch {
-  return async function sandboxedFetch(
-    url: string,
-    init?: RequestInit,
-  ): Promise<Response> {
+export function createSandboxedFetch(pluginId: string, allowedDomains: string[]): SandboxedFetch {
+  return async function sandboxedFetch(url: string, init?: RequestInit): Promise<Response> {
     let hostname: string;
     try {
       hostname = new URL(url).hostname;

@@ -1,5 +1,5 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react';
-import styles from './ErrorBoundary.module.css';
+import { Component, type ErrorInfo, type ReactNode } from "react";
+import styles from "./ErrorBoundary.module.css";
 
 interface Props {
   children: ReactNode;
@@ -21,20 +21,20 @@ export default class ErrorBoundary extends Component<Props, State> {
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('React error boundary caught:', error, info.componentStack);
+    console.error("React error boundary caught:", error, info.componentStack);
   }
 
   render() {
     if (this.state.hasError) {
       return (
-        <div className={styles.page ?? ''}>
-          <div className={styles.card ?? ''}>
-            <div className={styles.code ?? ''}>500</div>
-            <h1 className={styles.title ?? ''}>Something went wrong</h1>
-            <p className={styles.message ?? ''}>{this.state.error?.message}</p>
+        <div className={styles.page ?? ""}>
+          <div className={styles.card ?? ""}>
+            <div className={styles.code ?? ""}>500</div>
+            <h1 className={styles.title ?? ""}>Something went wrong</h1>
+            <p className={styles.message ?? ""}>{this.state.error?.message}</p>
             <button
               type="button"
-              className={styles.button ?? ''}
+              className={styles.button ?? ""}
               onClick={() => {
                 this.setState({ hasError: false, error: null });
                 window.location.reload();

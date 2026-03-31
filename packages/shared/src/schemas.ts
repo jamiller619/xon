@@ -1,4 +1,4 @@
-import { z } from 'zod';
+import { z } from "zod";
 
 /** Common pagination query params (coerces string inputs to numbers). */
 export const paginationSchema = z.object({
@@ -9,6 +9,6 @@ export const paginationSchema = z.object({
 export type PaginationParams = z.infer<typeof paginationSchema>;
 
 /** Common sort order query param. */
-export const sortOrderSchema = z.enum(['asc', 'desc']);
+export const sortOrderSchema = z.enum(["asc", "desc"]);
 
 export type SortOrder = z.infer<typeof sortOrderSchema>;

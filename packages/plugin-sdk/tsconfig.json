@@ -5,6 +5,8 @@
     "outDir": "dist",
     "types": ["node"]
   },
-  "references": [{ "path": "../shared" }],
+  "references": [
+    { "path": "../shared" }
+  ],
   "include": ["src/**/*"]
 }

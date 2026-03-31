@@ -1,19 +1,19 @@
-import { DEFAULT_PORT } from '@xon/shared';
-import { Menu, Tray, app, nativeImage, shell } from 'electron';
-import type { NotificationManager, NotificationType } from './notifications.js';
+import { DEFAULT_PORT } from "@xon/shared";
+import { Menu, Tray, app, nativeImage, shell } from "electron";
+import type { NotificationManager, NotificationType } from "./notifications.js";
 
-export type ServerStatus = 'running' | 'scanning' | 'error';
+export type ServerStatus = "running" | "scanning" | "error";
 
 const STATUS_LABEL: Record<ServerStatus, string> = {
-  running: 'Xon: Running',
-  scanning: 'Xon: Scanning',
-  error: 'Xon: Error',
+  running: "Xon: Running",
+  scanning: "Xon: Scanning",
+  error: "Xon: Error",
 };
 
 function makeColorIcon(
   r: number,
   g: number,
-  b: number,
+  b: number
 ): ReturnType<typeof nativeImage.createFromBuffer> {
   const size = 16;
   const buf = Buffer.alloc(size * size * 4);
@@ -37,38 +37,29 @@ function formatUptime(bootTime: Date): string {
 }
 
 const NOTIFICATION_LABELS: Record<NotificationType, string> = {
-  'scan:complete': 'Scan Complete',
-  'media:added': 'New Media Detected',
-  'backup:complete': 'Backup Complete',
-  error: 'Errors',
+  "scan:complete": "Scan Complete",
+  "media:added": "New Media Detected",
+  "backup:complete": "Backup Complete",
+  error: "Errors",
 };
 
 export interface TrayHandle {
-  updateStatus(
-    status: ServerStatus,
-    activeUsers?: number,
-    scanState?: string,
-  ): void;
+  updateStatus(status: ServerStatus, activeUsers?: number, scanState?: string): void;
   destroy(): void;
 }
 
-export function createTray(
-  notificationManager?: NotificationManager,
-): TrayHandle {
+export function createTray(notificationManager?: NotificationManager): TrayHandle {
   const port = Number(process.env.PORT ?? DEFAULT_PORT);
   const bootTime = new Date();
-  let status: ServerStatus = 'running';
+  let status: ServerStatus = "running";
   let activeUsers = 0;
-  let scanState = 'idle';
+  let scanState = "idle";
 
   const icons = {
     running: makeColorIcon(0, 200, 0),
     scanning: makeColorIcon(255, 200, 0),
     error: makeColorIcon(200, 0, 0),
-  } satisfies Record<
-    ServerStatus,
-    ReturnType<typeof nativeImage.createFromBuffer>
-  >;
+  } satisfies Record<ServerStatus, ReturnType<typeof nativeImage.createFromBuffer>>;
 
   const tray = new Tray(icons.running);
 
@@ -89,63 +80,53 @@ export function createTray(
     tray.setContextMenu(
       Menu.buildFromTemplate([
         {
-          label: 'Open Web UI',
+          label: "Open Web UI",
           click: () => void shell.openExternal(`http://localhost:${port}`),
         },
-        { type: 'separator' },
+        { type: "separator" },
         {
           label: `Server Status: uptime ${formatUptime(bootTime)}, users ${activeUsers}, scan ${scanState}`,
           enabled: false,
         },
-        { type: 'separator' },
+        { type: "separator" },
         {
-          label: 'Launch at Login',
-          type: 'checkbox',
+          label: "Launch at Login",
+          type: "checkbox",
           checked: isAutoStartEnabled(),
           click: () => toggleAutoStart(),
         },
         ...(notificationManager
           ? [
-              { type: 'separator' as const },
+              { type: "separator" as const },
               {
-                label: 'Notifications',
-                submenu: (
-                  Object.entries(NOTIFICATION_LABELS) as [
-                    NotificationType,
-                    string,
-                  ][]
-                ).map(([type, label]) => ({
-                  label,
-                  type: 'checkbox' as const,
-                  checked: notificationManager.getPrefs()[type],
-                  click: () => {
-                    notificationManager.setPref(
-                      type,
-                      !notificationManager.getPrefs()[type],
-                    );
-                    refresh();
-                  },
-                })),
+                label: "Notifications",
+                submenu: (Object.entries(NOTIFICATION_LABELS) as [NotificationType, string][]).map(
+                  ([type, label]) => ({
+                    label,
+                    type: "checkbox" as const,
+                    checked: notificationManager.getPrefs()[type],
+                    click: () => {
+                      notificationManager.setPref(type, !notificationManager.getPrefs()[type]);
+                      refresh();
+                    },
+                  })
+                ),
               },
             ]
           : []),
-        { type: 'separator' },
+        { type: "separator" },
         {
-          label: 'Quit',
+          label: "Quit",
           click: () => app.quit(),
         },
-      ]),
+      ])
     );
   }
 
   refresh();
 
   return {
-    updateStatus(
-      newStatus: ServerStatus,
-      newActiveUsers = 0,
-      newScanState = 'idle',
-    ): void {
+    updateStatus(newStatus: ServerStatus, newActiveUsers = 0, newScanState = "idle"): void {
       status = newStatus;
       activeUsers = newActiveUsers;
       scanState = newScanState;

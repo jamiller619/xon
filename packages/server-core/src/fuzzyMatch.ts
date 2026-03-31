@@ -1,4 +1,4 @@
-import { basename, dirname } from 'node:path';
+import { basename, dirname } from "node:path";
 
 export interface MatchCandidate {
   title: string;
@@ -10,7 +10,7 @@ export interface MatchCandidate {
 export interface MatchResult {
   candidate: MatchCandidate;
   confidence: number; // 0–100
-  source: 'local' | 'cloud';
+  source: "local" | "cloud";
 }
 
 export interface FuzzyMatchConfig {
@@ -28,7 +28,7 @@ export interface FuzzyMatchConfig {
  */
 export interface OnnxInferenceSession {
   run(
-    feeds: Record<string, { data: Float32Array; dims: number[] }>,
+    feeds: Record<string, { data: Float32Array; dims: number[] }>
   ): Promise<Record<string, { data: Float32Array }>>;
 }
 
@@ -74,12 +74,7 @@ function jaro(s1: string, s2: string): number {
     if (s1[i] !== s2[k]) transpositions++;
     k++;
   }
-  return (
-    (matches / len1 +
-      matches / len2 +
-      (matches - transpositions / 2) / matches) /
-    3
-  );
+  return (matches / len1 + matches / len2 + (matches - transpositions / 2) / matches) / 3;
 }
 
 /** Jaro-Winkler similarity (0–1). Gives extra weight to common prefixes. */
@@ -111,24 +106,18 @@ export function ngramSimilarity(s1: string, s2: string, n = 2): number {
 // ── Filename parsing ─────────────────────────────────────────────────────────
 
 /** Extract probable title and year from a media filename. */
-export function parseFilenameInfo(fileName: string): {
-  title: string;
-  year?: number;
-} {
+export function parseFilenameInfo(fileName: string): { title: string; year?: number } {
   // Remove extension
-  let name = fileName.replace(/\.[^.]+$/, '');
+  let name = fileName.replace(/\.[^.]+$/, "");
   // Extract year in parens/brackets (e.g. "(2001)" or "[2001]")
   const yearMatch = name.match(/[\[(](1[89]\d{2}|20\d{2})[\])]/);
-  const year = yearMatch ? Number.parseInt(yearMatch[1] ?? '0', 10) : undefined;
+  const year = yearMatch ? Number.parseInt(yearMatch[1] ?? "0", 10) : undefined;
   // Strip year marker and common quality tags
   name = name
-    .replace(/[\[(](1[89]\d{2}|20\d{2})[\])].*/g, '')
-    .replace(
-      /\.(1080p|720p|4k|bluray|bdrip|dvdrip|webrip|hdtv|x264|x265|hevc).*/gi,
-      '',
-    )
-    .replace(/[._-]/g, ' ')
-    .replace(/\s+/g, ' ')
+    .replace(/[\[(](1[89]\d{2}|20\d{2})[\])].*/g, "")
+    .replace(/\.(1080p|720p|4k|bluray|bdrip|dvdrip|webrip|hdtv|x264|x265|hevc).*/gi, "")
+    .replace(/[._-]/g, " ")
+    .replace(/\s+/g, " ")
     .trim();
   const result: { title: string; year?: number } = { title: name };
   if (year !== undefined) result.year = year;
@@ -144,8 +133,7 @@ function extractFeatures(query: string, candidate: string): Float32Array {
   const lenRatio =
     query.length === 0 && candidate.length === 0
       ? 1
-      : Math.min(query.length, candidate.length) /
-        Math.max(query.length, candidate.length);
+      : Math.min(query.length, candidate.length) / Math.max(query.length, candidate.length);
   return new Float32Array([jw, ng2, ng3, lenRatio]);
 }
 
@@ -158,10 +146,7 @@ async function inferScore(features: Float32Array): Promise<number> {
       });
       const scores = output.output;
       if (scores) {
-        return Math.min(
-          100,
-          Math.max(0, Math.round((scores.data[0] ?? 0) * 100)),
-        );
+        return Math.min(100, Math.max(0, Math.round((scores.data[0] ?? 0) * 100)));
       }
     } catch {
       // ONNX inference failed — fall through to string-similarity fallback
@@ -169,15 +154,14 @@ async function inferScore(features: Float32Array): Promise<number> {
   }
   // Weighted string-similarity combination (local inference default)
   const [jw, ng2, ng3, lr] = features;
-  const score =
-    (jw ?? 0) * 0.5 + (ng2 ?? 0) * 0.25 + (ng3 ?? 0) * 0.15 + (lr ?? 0) * 0.1;
+  const score = (jw ?? 0) * 0.5 + (ng2 ?? 0) * 0.25 + (ng3 ?? 0) * 0.15 + (lr ?? 0) * 0.1;
   return Math.round(score * 100);
 }
 
 /** Compute a 0–100 confidence score for a query title vs a candidate. */
 export async function computeMatchScore(
   queryTitle: string,
-  candidate: MatchCandidate,
+  candidate: MatchCandidate
 ): Promise<number> {
   const q = queryTitle.toLowerCase().trim();
   const c = candidate.title.toLowerCase().trim();
@@ -191,25 +175,24 @@ async function callCloudApi(
   filePath: string,
   metadata: Record<string, unknown>,
   cloudApiUrl: string,
-  cloudApiKey: string,
+  cloudApiKey: string
 ): Promise<MatchCandidate | null> {
   try {
     const response = await fetch(cloudApiUrl, {
-      method: 'POST',
+      method: "POST",
       headers: {
-        'Content-Type': 'application/json',
+        "Content-Type": "application/json",
         Authorization: `Bearer ${cloudApiKey}`,
       },
       body: JSON.stringify({ fileName, filePath, metadata }),
     });
     if (!response.ok) return null;
     const data = (await response.json()) as Record<string, unknown>;
-    if (typeof data.title !== 'string') return null;
+    if (typeof data.title !== "string") return null;
     const candidate: MatchCandidate = { title: data.title };
-    if (typeof data.year === 'number') candidate.year = data.year;
-    if (typeof data.externalId === 'string')
-      candidate.externalId = data.externalId;
-    if (typeof data.metadata === 'object' && data.metadata !== null) {
+    if (typeof data.year === "number") candidate.year = data.year;
+    if (typeof data.externalId === "string") candidate.externalId = data.externalId;
+    if (typeof data.metadata === "object" && data.metadata !== null) {
       candidate.metadata = data.metadata as Record<string, unknown>;
     }
     return candidate;
@@ -232,7 +215,7 @@ export async function matchMediaFile(
   filePath: string,
   metadata: Record<string, unknown>,
   candidates: MatchCandidate[],
-  config: FuzzyMatchConfig = {},
+  config: FuzzyMatchConfig = {}
 ): Promise<MatchResult[]> {
   const { title: parsedTitle } = parseFilenameInfo(fileName);
   const parentDir = basename(dirname(filePath));
@@ -243,23 +226,20 @@ export async function matchMediaFile(
       const fileScore = await computeMatchScore(parsedTitle, candidate);
       const dirScore = await computeMatchScore(parentDir, candidate);
       const confidence = Math.max(fileScore, dirScore);
-      return { candidate, confidence, source: 'local' as const };
-    }),
+      return { candidate, confidence, source: "local" as const };
+    })
   );
   localResults.sort((a, b) => b.confidence - a.confidence);
 
   const bestLocal = localResults[0];
   const hasCloudConfig = config.cloudApiUrl && config.cloudApiKey;
-  if (
-    hasCloudConfig &&
-    (!bestLocal || bestLocal.confidence < autoAcceptThreshold)
-  ) {
+  if (hasCloudConfig && (!bestLocal || bestLocal.confidence < autoAcceptThreshold)) {
     const cloudCandidate = await callCloudApi(
       fileName,
       filePath,
       metadata,
       config.cloudApiUrl as string,
-      config.cloudApiKey as string,
+      config.cloudApiKey as string
     );
     if (cloudCandidate) {
       const cloudScore = await computeMatchScore(parsedTitle, cloudCandidate);
@@ -268,7 +248,7 @@ export async function matchMediaFile(
       localResults.unshift({
         candidate: cloudCandidate,
         confidence: cloudConfidence,
-        source: 'cloud',
+        source: "cloud",
       });
     }
   }

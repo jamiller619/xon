@@ -1,14 +1,14 @@
-import type { MediaCategory } from '@xon/shared';
+import type { MediaCategory } from "@xon/shared";
 
 // Plugin category types
 export type PluginCategory =
-  | 'MediaProvider'
-  | 'MetadataSource'
-  | 'FormatHandler'
-  | 'Processor'
-  | 'Theme'
-  | 'UIExtension'
-  | 'BackupTarget';
+  | "MediaProvider"
+  | "MetadataSource"
+  | "FormatHandler"
+  | "Processor"
+  | "Theme"
+  | "UIExtension"
+  | "BackupTarget";
 
 // Plugin manifest matching the package.json xon field schema
 export interface PluginManifest {
@@ -42,22 +42,22 @@ export interface PluginManifest {
 
 // Event types for plugin event hooks
 export type PluginEvent =
-  | 'scan:start'
-  | 'scan:complete'
-  | 'media:created'
-  | 'media:updated'
-  | 'media:deleted'
-  | 'server:boot'
-  | 'server:shutdown';
+  | "scan:start"
+  | "scan:complete"
+  | "media:created"
+  | "media:updated"
+  | "media:deleted"
+  | "server:boot"
+  | "server:shutdown";
 
 export interface PluginEventPayloads {
-  'scan:start': { libraryId: string };
-  'scan:complete': { libraryId: string; itemsFound: number };
-  'media:created': { mediaId: string; filePath: string };
-  'media:updated': { mediaId: string; filePath: string };
-  'media:deleted': { mediaId: string; filePath: string };
-  'server:boot': Record<string, never>;
-  'server:shutdown': Record<string, never>;
+  "scan:start": { libraryId: string };
+  "scan:complete": { libraryId: string; itemsFound: number };
+  "media:created": { mediaId: string; filePath: string };
+  "media:updated": { mediaId: string; filePath: string };
+  "media:deleted": { mediaId: string; filePath: string };
+  "server:boot": Record<string, never>;
+  "server:shutdown": Record<string, never>;
 }
 
 // Minimal Hono-compatible route handler context (avoids DOM type dependency)
@@ -79,26 +79,26 @@ export interface PluginRouteResponse {
 
 // Route handler type (Hono-compatible)
 export type RouteHandler = (
-  c: PluginRouteContext,
+  c: PluginRouteContext
 ) => PluginRouteResponse | Promise<PluginRouteResponse>;
 
 export interface RouteDefinition {
-  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  method: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
   path: string;
   handler: RouteHandler;
 }
 
 // UI injection point types
 export type UIInjectionPoint =
-  | 'dashboard-widget'
-  | 'detail-panel'
-  | 'admin-page'
-  | 'nav-item'
-  | 'sidebar:top'
-  | 'sidebar:bottom'
-  | 'mediaDetail:actions'
-  | 'library:toolbar'
-  | 'settings:page';
+  | "dashboard-widget"
+  | "detail-panel"
+  | "admin-page"
+  | "nav-item"
+  | "sidebar:top"
+  | "sidebar:bottom"
+  | "mediaDetail:actions"
+  | "library:toolbar"
+  | "settings:page";
 
 export interface UIComponent {
   id: string;
@@ -131,7 +131,7 @@ export interface BackupTargetConfigField {
   /** Human-readable label shown in the admin UI */
   label: string;
   /** Input type for the admin UI */
-  type: 'string' | 'password' | 'number' | 'boolean';
+  type: "string" | "password" | "number" | "boolean";
   /** Whether this field must be filled before saving */
   required?: boolean;
   /** Default value pre-populated in the admin UI */
@@ -177,7 +177,7 @@ export interface MediaProviderFile {
 
 /** Callback invoked by MediaProviderPlugin.watch() when files change */
 export type WatchCallback = (event: {
-  type: 'created' | 'updated' | 'deleted';
+  type: "created" | "updated" | "deleted";
   file: MediaProviderFile;
 }) => void;
 
@@ -188,7 +188,7 @@ export interface MediaProviderConfigField {
   /** Human-readable label shown in the admin UI */
   label: string;
   /** Input type for the admin UI */
-  type: 'string' | 'password' | 'number' | 'boolean';
+  type: "string" | "password" | "number" | "boolean";
   /** Whether this field must be filled before saving */
   required?: boolean;
   /** Default value pre-populated in the admin UI */
@@ -217,7 +217,7 @@ export interface PluginContext {
   /** Register an event hook */
   on: <E extends PluginEvent>(
     event: E,
-    handler: (payload: PluginEventPayloads[E]) => void | Promise<void>,
+    handler: (payload: PluginEventPayloads[E]) => void | Promise<void>
   ) => void;
   /** Register an API route under /api/v1/plugins/:pluginId/ */
   registerRoute: (route: RouteDefinition) => void;
@@ -235,12 +235,8 @@ export interface PluginContext {
     writeFile: (path: string, data: string | Buffer) => Promise<void>;
     readdir: (path: string) => Promise<string[]>;
     stat: (
-      path: string,
-    ) => Promise<{
-      size: number;
-      isFile: () => boolean;
-      isDirectory: () => boolean;
-    }>;
+      path: string
+    ) => Promise<{ size: number; isFile: () => boolean; isDirectory: () => boolean }>;
     mkdir: (path: string, options?: { recursive?: boolean }) => Promise<void>;
     unlink: (path: string) => Promise<void>;
   };

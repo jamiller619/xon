@@ -74,8 +74,12 @@
           "name": "data_sources_library_id_libraries_id_fk",
           "tableFrom": "data_sources",
           "tableTo": "libraries",
-          "columnsFrom": ["library_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "library_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -185,8 +189,12 @@
           "name": "library_access_user_id_users_id_fk",
           "tableFrom": "library_access",
           "tableTo": "users",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -194,8 +202,12 @@
           "name": "library_access_library_id_libraries_id_fk",
           "tableFrom": "library_access",
           "tableTo": "libraries",
-          "columnsFrom": ["library_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "library_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -203,15 +215,22 @@
           "name": "library_access_granted_by_users_id_fk",
           "tableFrom": "library_access",
           "tableTo": "users",
-          "columnsFrom": ["granted_by"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "granted_by"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
       },
       "compositePrimaryKeys": {
         "library_access_user_id_library_id_pk": {
-          "columns": ["user_id", "library_id"],
+          "columns": [
+            "user_id",
+            "library_id"
+          ],
           "name": "library_access_user_id_library_id_pk"
         }
       },
@@ -341,17 +360,23 @@
       "indexes": {
         "media_items_library_id_idx": {
           "name": "media_items_library_id_idx",
-          "columns": ["library_id"],
+          "columns": [
+            "library_id"
+          ],
           "isUnique": false
         },
         "media_items_media_category_idx": {
           "name": "media_items_media_category_idx",
-          "columns": ["media_category"],
+          "columns": [
+            "media_category"
+          ],
           "isUnique": false
         },
         "media_items_file_path_idx": {
           "name": "media_items_file_path_idx",
-          "columns": ["file_path"],
+          "columns": [
+            "file_path"
+          ],
           "isUnique": false
         }
       },
@@ -360,8 +385,12 @@
           "name": "media_items_library_id_libraries_id_fk",
           "tableFrom": "media_items",
           "tableTo": "libraries",
-          "columnsFrom": ["library_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "library_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         },
@@ -369,8 +398,12 @@
           "name": "media_items_data_source_id_data_sources_id_fk",
           "tableFrom": "media_items",
           "tableTo": "data_sources",
-          "columnsFrom": ["data_source_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "data_source_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -422,7 +455,9 @@
       "indexes": {
         "reading_positions_media_item_id_unique": {
           "name": "reading_positions_media_item_id_unique",
-          "columns": ["media_item_id"],
+          "columns": [
+            "media_item_id"
+          ],
           "isUnique": true
         }
       },
@@ -431,8 +466,12 @@
           "name": "reading_positions_media_item_id_media_items_id_fk",
           "tableFrom": "reading_positions",
           "tableTo": "media_items",
-          "columnsFrom": ["media_item_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "media_item_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -480,8 +519,12 @@
           "name": "refresh_tokens_user_id_users_id_fk",
           "tableFrom": "refresh_tokens",
           "tableTo": "users",
-          "columnsFrom": ["user_id"],
-          "columnsTo": ["id"],
+          "columnsFrom": [
+            "user_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
           "onDelete": "cascade",
           "onUpdate": "no action"
         }
@@ -563,12 +606,16 @@
       "indexes": {
         "users_username_unique": {
           "name": "users_username_unique",
-          "columns": ["username"],
+          "columns": [
+            "username"
+          ],
           "isUnique": true
         },
         "users_email_unique": {
           "name": "users_email_unique",
-          "columns": ["email"],
+          "columns": [
+            "email"
+          ],
           "isUnique": true
         }
       },

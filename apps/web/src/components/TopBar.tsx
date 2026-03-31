@@ -1,9 +1,9 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { apiFetch } from '../apiFetch.js';
-import styles from './TopBar.module.css';
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { apiFetch } from "../apiFetch.js";
+import styles from "./TopBar.module.css";
 
-const HISTORY_KEY = 'xon:searchHistory';
+const HISTORY_KEY = "xon:searchHistory";
 const MAX_HISTORY = 10;
 const DEBOUNCE_MS = 300;
 
@@ -16,7 +16,7 @@ interface SuggestionItem {
 
 function loadHistory(): string[] {
   try {
-    return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]') as string[];
+    return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? "[]") as string[];
   } catch {
     return [];
   }
@@ -34,7 +34,7 @@ interface TopBarProps {
 
 export default function TopBar({ onMenuClick }: TopBarProps) {
   const navigate = useNavigate();
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [suggestions, setSuggestions] = useState<SuggestionItem[]>([]);
   const [history, setHistory] = useState<string[]>([]);
   const [open, setOpen] = useState(false);
@@ -45,15 +45,12 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
   // Close dropdown on outside click
   useEffect(() => {
     function handleMouseDown(e: MouseEvent) {
-      if (
-        wrapperRef.current &&
-        !wrapperRef.current.contains(e.target as Node)
-      ) {
+      if (wrapperRef.current && !wrapperRef.current.contains(e.target as Node)) {
         setOpen(false);
       }
     }
-    document.addEventListener('mousedown', handleMouseDown);
-    return () => document.removeEventListener('mousedown', handleMouseDown);
+    document.addEventListener("mousedown", handleMouseDown);
+    return () => document.removeEventListener("mousedown", handleMouseDown);
   }, []);
 
   const fetchSuggestions = useCallback((q: string) => {
@@ -75,10 +72,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
     setHighlightIdx(-1);
     if (debounceRef.current) clearTimeout(debounceRef.current);
     if (val.trim()) {
-      debounceRef.current = setTimeout(
-        () => fetchSuggestions(val),
-        DEBOUNCE_MS,
-      );
+      debounceRef.current = setTimeout(() => fetchSuggestions(val), DEBOUNCE_MS);
     } else {
       setSuggestions([]);
     }
@@ -95,29 +89,26 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
     saveHistory(q.trim());
     setHistory(loadHistory());
     setOpen(false);
-    setQuery('');
+    setQuery("");
     navigate(`/search?q=${encodeURIComponent(q.trim())}`);
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    const items =
-      suggestions.length > 0
-        ? suggestions.map((s) => s.title ?? s.id)
-        : history;
-    if (e.key === 'ArrowDown') {
+    const items = suggestions.length > 0 ? suggestions.map((s) => s.title ?? s.id) : history;
+    if (e.key === "ArrowDown") {
       e.preventDefault();
       setHighlightIdx((i) => Math.min(i + 1, items.length - 1));
-    } else if (e.key === 'ArrowUp') {
+    } else if (e.key === "ArrowUp") {
       e.preventDefault();
       setHighlightIdx((i) => Math.max(i - 1, -1));
-    } else if (e.key === 'Enter') {
+    } else if (e.key === "Enter") {
       e.preventDefault();
       if (highlightIdx >= 0 && items[highlightIdx]) {
         navigate2search(items[highlightIdx]);
       } else {
         navigate2search(query);
       }
-    } else if (e.key === 'Escape') {
+    } else if (e.key === "Escape") {
       setOpen(false);
     }
   }
@@ -133,18 +124,18 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
   const showSuggestions = open && query.trim().length > 0;
 
   return (
-    <header className={styles.topBar ?? ''}>
+    <header className={styles.topBar ?? ""}>
       <button
         type="button"
-        className={styles.menuButton ?? ''}
+        className={styles.menuButton ?? ""}
         onClick={onMenuClick}
         aria-label="Toggle sidebar"
       >
         ☰
       </button>
-      <div className={styles.searchWrapper ?? ''} ref={wrapperRef}>
+      <div className={styles.searchWrapper ?? ""} ref={wrapperRef}>
         <input
-          className={styles.searchInput ?? ''}
+          className={styles.searchInput ?? ""}
           type="search"
           placeholder="Search media..."
           aria-label="Search"
@@ -155,27 +146,23 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
           autoComplete="off"
         />
         {(showHistory || showSuggestions) && (
-          <div className={styles.dropdown ?? ''}>
+          <div className={styles.dropdown ?? ""}>
             {showHistory && (
               <>
-                <div className={styles.dropdownLabel ?? ''}>
-                  Recent searches
-                </div>
+                <div className={styles.dropdownLabel ?? ""}>Recent searches</div>
                 {history.map((item, i) => (
                   <button
                     key={item}
                     type="button"
                     aria-selected={i === highlightIdx}
-                    className={`${styles.dropdownItem ?? ''} ${i === highlightIdx ? (styles.dropdownItemActive ?? '') : ''}`}
+                    className={`${styles.dropdownItem ?? ""} ${i === highlightIdx ? (styles.dropdownItemActive ?? "") : ""}`}
                     onClick={() => navigate2search(item)}
                   >
-                    <span className={styles.historyIcon ?? ''}>↵</span>
-                    <span className={styles.dropdownItemText ?? ''}>
-                      {item}
-                    </span>
+                    <span className={styles.historyIcon ?? ""}>↵</span>
+                    <span className={styles.dropdownItemText ?? ""}>{item}</span>
                     <button
                       type="button"
-                      className={styles.removeHistory ?? ''}
+                      className={styles.removeHistory ?? ""}
                       onClick={(e) => removeHistoryItem(e, item)}
                       aria-label={`Remove ${item} from history`}
                     >
@@ -187,33 +174,29 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
             )}
             {showSuggestions && suggestions.length > 0 && (
               <>
-                <div className={styles.dropdownLabel ?? ''}>Suggestions</div>
+                <div className={styles.dropdownLabel ?? ""}>Suggestions</div>
                 {suggestions.map((item, i) => (
                   <button
                     key={item.id}
                     type="button"
                     aria-selected={i === highlightIdx}
-                    className={`${styles.dropdownItem ?? ''} ${i === highlightIdx ? (styles.dropdownItemActive ?? '') : ''}`}
+                    className={`${styles.dropdownItem ?? ""} ${i === highlightIdx ? (styles.dropdownItemActive ?? "") : ""}`}
                     onClick={() => navigate2search(item.title ?? item.id)}
                   >
                     {item.thumbnailUrls ? (
                       <img
-                        className={styles.suggestionThumb ?? ''}
+                        className={styles.suggestionThumb ?? ""}
                         src={item.thumbnailUrls.small}
                         alt=""
                         loading="lazy"
                       />
                     ) : (
-                      <span
-                        className={styles.suggestionThumbPlaceholder ?? ''}
-                      />
+                      <span className={styles.suggestionThumbPlaceholder ?? ""} />
                     )}
-                    <span className={styles.dropdownItemText ?? ''}>
-                      <span className={styles.suggestionTitle ?? ''}>
-                        {item.title ?? item.id}
-                      </span>
+                    <span className={styles.dropdownItemText ?? ""}>
+                      <span className={styles.suggestionTitle ?? ""}>{item.title ?? item.id}</span>
                       {item.mediaCategory && (
-                        <span className={styles.suggestionCategory ?? ''}>
+                        <span className={styles.suggestionCategory ?? ""}>
                           {item.mediaCategory}
                         </span>
                       )}
@@ -223,18 +206,14 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
               </>
             )}
             {showSuggestions && suggestions.length === 0 && (
-              <div className={styles.dropdownEmpty ?? ''}>No suggestions</div>
+              <div className={styles.dropdownEmpty ?? ""}>No suggestions</div>
             )}
           </div>
         )}
       </div>
-      <span className={styles.spacer ?? ''} />
-      <button
-        type="button"
-        className={styles.userMenu ?? ''}
-        aria-label="User menu"
-      >
-        <span className={styles.avatar ?? ''}>U</span>
+      <span className={styles.spacer ?? ""} />
+      <button type="button" className={styles.userMenu ?? ""} aria-label="User menu">
+        <span className={styles.avatar ?? ""}>U</span>
         <span>User</span>
       </button>
     </header>

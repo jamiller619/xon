@@ -1,18 +1,18 @@
-import type { ChildProcess } from 'node:child_process';
-import { EventEmitter } from 'node:events';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import type { ChildProcess } from "node:child_process";
+import { EventEmitter } from "node:events";
+import { beforeEach, describe, expect, it, vi } from "vitest";
 
-vi.mock('node:child_process', () => ({
+vi.mock("node:child_process", () => ({
   spawn: vi.fn(),
 }));
 
-vi.mock('node:fs/promises', () => ({
+vi.mock("node:fs/promises", () => ({
   readFile: vi.fn(),
 }));
 
-import { spawn } from 'node:child_process';
-import { readFile } from 'node:fs/promises';
-import { type ArchiveEntry, listArchiveContents } from './archive.js';
+import { spawn } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import { type ArchiveEntry, listArchiveContents } from "./archive.js";
 
 type FakeChildProcess = EventEmitter & { stdout: EventEmitter };
 
@@ -38,7 +38,7 @@ function makeZipBuffer(files: Array<{ name: string; size: number }>): Buffer {
   let localOffset = 0;
 
   for (const f of files) {
-    const nameBytes = Buffer.from(f.name, 'utf8');
+    const nameBytes = Buffer.from(f.name, "utf8");
     offsets.push(localOffset);
 
     const lh = Buffer.alloc(30 + nameBytes.length);
@@ -62,8 +62,8 @@ function makeZipBuffer(files: Array<{ name: string; size: number }>): Buffer {
 
   let cdSize = 0;
   for (let i = 0; i < files.length; i++) {
-    const f = files[i] ?? { name: '', size: 0 };
-    const nameBytes = Buffer.from(f.name, 'utf8');
+    const f = files[i] ?? { name: "", size: 0 };
+    const nameBytes = Buffer.from(f.name, "utf8");
     const cd = Buffer.alloc(46 + nameBytes.length);
     cd.writeUInt32LE(0x02014b50, 0);
     cd.writeUInt16LE(20, 4);
@@ -101,15 +101,13 @@ function makeZipBuffer(files: Array<{ name: string; size: number }>): Buffer {
   return Buffer.concat([...localHeaders, ...cdEntries, eocd]);
 }
 
-function makeTarBuffer(
-  files: Array<{ name: string; size: number; isDir?: boolean }>,
-): Buffer {
+function makeTarBuffer(files: Array<{ name: string; size: number; isDir?: boolean }>): Buffer {
   const blocks: Buffer[] = [];
 
   for (const f of files) {
     const header = Buffer.alloc(512);
     Buffer.from(f.name).copy(header, 0);
-    const sizeOctal = `${f.size.toString(8).padStart(11, '0')}\0`;
+    const sizeOctal = `${f.size.toString(8).padStart(11, "0")}\0`;
     Buffer.from(sizeOctal).copy(header, 124);
     header[156] = f.isDir ? 0x35 : 0x30;
 
@@ -125,143 +123,143 @@ function makeTarBuffer(
 
 // ── ZIP listing ───────────────────────────────────────────────────────────────
 
-describe('listArchiveContents — ZIP', () => {
-  it('lists files and directories from a ZIP archive', async () => {
+describe("listArchiveContents — ZIP", () => {
+  it("lists files and directories from a ZIP archive", async () => {
     const zip = makeZipBuffer([
-      { name: 'readme.txt', size: 500 },
-      { name: 'src/main.ts', size: 1200 },
-      { name: 'src/', size: 0 },
+      { name: "readme.txt", size: 500 },
+      { name: "src/main.ts", size: 1200 },
+      { name: "src/", size: 0 },
     ]);
     mockReadFile.mockResolvedValue(zip as never);
 
-    const result = await listArchiveContents('/test/archive.zip');
+    const result = await listArchiveContents("/test/archive.zip");
     expect(result).toEqual<ArchiveEntry[]>([
-      { path: 'readme.txt', size: 500, isDirectory: false },
-      { path: 'src/main.ts', size: 1200, isDirectory: false },
-      { path: 'src/', size: 0, isDirectory: true },
+      { path: "readme.txt", size: 500, isDirectory: false },
+      { path: "src/main.ts", size: 1200, isDirectory: false },
+      { path: "src/", size: 0, isDirectory: true },
     ]);
   });
 
-  it('returns empty array for an empty ZIP', async () => {
+  it("returns empty array for an empty ZIP", async () => {
     const zip = makeZipBuffer([]);
     mockReadFile.mockResolvedValue(zip as never);
 
-    const result = await listArchiveContents('/test/empty.zip');
+    const result = await listArchiveContents("/test/empty.zip");
     expect(result).toEqual([]);
   });
 
-  it('returns empty array when file read fails', async () => {
-    mockReadFile.mockRejectedValue(new Error('ENOENT') as never);
+  it("returns empty array when file read fails", async () => {
+    mockReadFile.mockRejectedValue(new Error("ENOENT") as never);
 
-    const result = await listArchiveContents('/test/missing.zip');
+    const result = await listArchiveContents("/test/missing.zip");
     expect(result).toEqual([]);
   });
 });
 
 // ── TAR listing ───────────────────────────────────────────────────────────────
 
-describe('listArchiveContents — TAR', () => {
-  it('lists regular files from a TAR archive', async () => {
+describe("listArchiveContents — TAR", () => {
+  it("lists regular files from a TAR archive", async () => {
     const tar = makeTarBuffer([
-      { name: 'hello.txt', size: 13 },
-      { name: 'data/world.txt', size: 100 },
+      { name: "hello.txt", size: 13 },
+      { name: "data/world.txt", size: 100 },
     ]);
     mockReadFile.mockResolvedValue(tar as never);
 
-    const result = await listArchiveContents('/test/archive.tar');
+    const result = await listArchiveContents("/test/archive.tar");
     expect(result).toEqual<ArchiveEntry[]>([
-      { path: 'hello.txt', size: 13, isDirectory: false },
-      { path: 'data/world.txt', size: 100, isDirectory: false },
+      { path: "hello.txt", size: 13, isDirectory: false },
+      { path: "data/world.txt", size: 100, isDirectory: false },
     ]);
   });
 
-  it('lists directories from a TAR archive', async () => {
+  it("lists directories from a TAR archive", async () => {
     const tar = makeTarBuffer([
-      { name: 'mydir/', size: 0, isDir: true },
-      { name: 'mydir/file.txt', size: 50 },
+      { name: "mydir/", size: 0, isDir: true },
+      { name: "mydir/file.txt", size: 50 },
     ]);
     mockReadFile.mockResolvedValue(tar as never);
 
-    const result = await listArchiveContents('/test/archive.tar');
+    const result = await listArchiveContents("/test/archive.tar");
     expect(result).toEqual<ArchiveEntry[]>([
-      { path: 'mydir/', size: 0, isDirectory: true },
-      { path: 'mydir/file.txt', size: 50, isDirectory: false },
+      { path: "mydir/", size: 0, isDirectory: true },
+      { path: "mydir/file.txt", size: 50, isDirectory: false },
     ]);
   });
 
-  it('also handles .tgz extension', async () => {
-    const tar = makeTarBuffer([{ name: 'file.txt', size: 10 }]);
+  it("also handles .tgz extension", async () => {
+    const tar = makeTarBuffer([{ name: "file.txt", size: 10 }]);
     mockReadFile.mockResolvedValue(tar as never);
 
-    const result = await listArchiveContents('/test/archive.tgz');
+    const result = await listArchiveContents("/test/archive.tgz");
     expect(result).toHaveLength(1);
   });
 });
 
 // ── 7z listing ────────────────────────────────────────────────────────────────
 
-describe('listArchiveContents — 7z', () => {
-  it('parses 7z l -slt output into entries', async () => {
+describe("listArchiveContents — 7z", () => {
+  it("parses 7z l -slt output into entries", async () => {
     const proc = makeProcess();
     mockSpawn.mockReturnValue(proc as unknown as ChildProcess);
 
     const sevenZOutput = [
-      '7-Zip output header',
-      '',
-      '----------',
-      'Path = readme.txt',
-      'Folder = -',
-      'Size = 1234',
-      '',
-      '----------',
-      'Path = src',
-      'Folder = +',
-      'Size = 0',
-      '',
-      '----------',
-      'Path = src/main.ts',
-      'Folder = -',
-      'Size = 5678',
-      '',
-    ].join('\n');
+      "7-Zip output header",
+      "",
+      "----------",
+      "Path = readme.txt",
+      "Folder = -",
+      "Size = 1234",
+      "",
+      "----------",
+      "Path = src",
+      "Folder = +",
+      "Size = 0",
+      "",
+      "----------",
+      "Path = src/main.ts",
+      "Folder = -",
+      "Size = 5678",
+      "",
+    ].join("\n");
 
-    const resultPromise = listArchiveContents('/test/archive.7z');
+    const resultPromise = listArchiveContents("/test/archive.7z");
 
     await Promise.resolve().then(() => {
-      proc.stdout.emit('data', Buffer.from(sevenZOutput));
-      proc.emit('close', 0);
+      proc.stdout.emit("data", Buffer.from(sevenZOutput));
+      proc.emit("close", 0);
     });
 
     const result = await resultPromise;
     expect(result).toEqual<ArchiveEntry[]>([
-      { path: 'readme.txt', size: 1234, isDirectory: false },
-      { path: 'src', size: 0, isDirectory: true },
-      { path: 'src/main.ts', size: 5678, isDirectory: false },
+      { path: "readme.txt", size: 1234, isDirectory: false },
+      { path: "src", size: 0, isDirectory: true },
+      { path: "src/main.ts", size: 5678, isDirectory: false },
     ]);
   });
 
-  it('returns empty array when 7z is not available', async () => {
+  it("returns empty array when 7z is not available", async () => {
     const proc = makeProcess();
     mockSpawn.mockReturnValue(proc as unknown as ChildProcess);
 
-    const resultPromise = listArchiveContents('/test/archive.7z');
+    const resultPromise = listArchiveContents("/test/archive.7z");
 
     await Promise.resolve().then(() => {
-      proc.emit('error', new Error('ENOENT'));
+      proc.emit("error", new Error("ENOENT"));
     });
 
     const result = await resultPromise;
     expect(result).toEqual([]);
   });
 
-  it('returns empty array when 7z exits non-zero', async () => {
+  it("returns empty array when 7z exits non-zero", async () => {
     const proc = makeProcess();
     mockSpawn.mockReturnValue(proc as unknown as ChildProcess);
 
-    const resultPromise = listArchiveContents('/test/archive.7z');
+    const resultPromise = listArchiveContents("/test/archive.7z");
 
     await Promise.resolve().then(() => {
-      proc.emit('close', 2);
+      proc.emit("close", 2);
     });
 
     const result = await resultPromise;
@@ -271,9 +269,9 @@ describe('listArchiveContents — 7z', () => {
 
 // ── Unsupported format ────────────────────────────────────────────────────────
 
-describe('listArchiveContents — unsupported format', () => {
-  it('returns empty array for unsupported extensions', async () => {
-    const result = await listArchiveContents('/test/archive.rar');
+describe("listArchiveContents — unsupported format", () => {
+  it("returns empty array for unsupported extensions", async () => {
+    const result = await listArchiveContents("/test/archive.rar");
     expect(result).toEqual([]);
   });
 });

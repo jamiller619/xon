@@ -1,8 +1,8 @@
-import { spawn } from 'node:child_process';
-import { readFile } from 'node:fs/promises';
-import { extname } from 'node:path';
-import { gunzipSync } from 'node:zlib';
-import { MediaCategory } from '@xon/shared';
+import { spawn } from "node:child_process";
+import { readFile } from "node:fs/promises";
+import { extname } from "node:path";
+import { gunzipSync } from "node:zlib";
+import { MediaCategory } from "@xon/shared";
 
 const DOCUMENT_CATEGORIES = new Set<string>([MediaCategory.Documents]);
 const FONT_CATEGORIES = new Set<string>([MediaCategory.Fonts]);
@@ -54,27 +54,23 @@ export type ArchiveMetadata = {
 };
 
 // Shared ExifTool runner
-function runExiftool(
-  filePath: string,
-): Promise<Record<string, unknown> | null> {
+function runExiftool(filePath: string): Promise<Record<string, unknown> | null> {
   return new Promise((resolve) => {
-    let stdout = '';
-    const proc = spawn('exiftool', ['-json', '-n', filePath]);
+    let stdout = "";
+    const proc = spawn("exiftool", ["-json", "-n", filePath]);
 
-    proc.stdout?.on('data', (chunk: Buffer) => {
+    proc.stdout?.on("data", (chunk: Buffer) => {
       stdout += chunk.toString();
     });
 
-    proc.on('error', (err: Error) => {
+    proc.on("error", (err: Error) => {
       console.error(`ExifTool not available: ${err.message}`);
       resolve(null);
     });
 
-    proc.on('close', (code: number | null) => {
+    proc.on("close", (code: number | null) => {
       if (code !== 0) {
-        console.error(
-          `ExifTool exited with code ${String(code)} for ${filePath}`,
-        );
+        console.error(`ExifTool exited with code ${String(code)} for ${filePath}`);
         resolve(null);
         return;
       }
@@ -89,50 +85,43 @@ function runExiftool(
   });
 }
 
-export async function extractDocumentMetadata(
-  filePath: string,
-): Promise<DocumentMetadata | null> {
+export async function extractDocumentMetadata(filePath: string): Promise<DocumentMetadata | null> {
   const data = await runExiftool(filePath);
   if (data === null) return null;
 
   const result: DocumentMetadata = {};
   const pageCount = Number(data.PageCount);
   if (!Number.isNaN(pageCount) && pageCount > 0) result.pageCount = pageCount;
-  if (typeof data.Author === 'string') result.author = data.Author;
-  if (typeof data.Title === 'string') result.title = data.Title;
+  if (typeof data.Author === "string") result.author = data.Author;
+  if (typeof data.Title === "string") result.title = data.Title;
   return result;
 }
 
-export async function extractFontMetadata(
-  filePath: string,
-): Promise<FontMetadata | null> {
+export async function extractFontMetadata(filePath: string): Promise<FontMetadata | null> {
   const data = await runExiftool(filePath);
   if (data === null) return null;
 
   const result: FontMetadata = {};
 
   const family = data.FamilyName ?? data.FontFamily ?? data.FontName;
-  if (typeof family === 'string') result.fontFamily = family;
+  if (typeof family === "string") result.fontFamily = family;
 
   const subfamily = data.FontSubfamily ?? data.SubfamilyName;
-  if (typeof subfamily === 'string') {
+  if (typeof subfamily === "string") {
     const sub = subfamily.toLowerCase();
-    if (sub.includes('bold')) result.fontWeight = 'Bold';
-    else if (sub.includes('black') || sub.includes('heavy'))
-      result.fontWeight = 'Black';
-    else if (sub.includes('light')) result.fontWeight = 'Light';
-    else if (sub.includes('thin')) result.fontWeight = 'Thin';
-    else if (sub.includes('medium')) result.fontWeight = 'Medium';
-    else result.fontWeight = 'Regular';
+    if (sub.includes("bold")) result.fontWeight = "Bold";
+    else if (sub.includes("black") || sub.includes("heavy")) result.fontWeight = "Black";
+    else if (sub.includes("light")) result.fontWeight = "Light";
+    else if (sub.includes("thin")) result.fontWeight = "Thin";
+    else if (sub.includes("medium")) result.fontWeight = "Medium";
+    else result.fontWeight = "Regular";
 
-    if (sub.includes('italic') || sub.includes('oblique'))
-      result.fontStyle = 'Italic';
-    else result.fontStyle = 'Normal';
+    if (sub.includes("italic") || sub.includes("oblique")) result.fontStyle = "Italic";
+    else result.fontStyle = "Normal";
   }
 
   const glyphCount = Number(data.NumGlyphs);
-  if (!Number.isNaN(glyphCount) && glyphCount > 0)
-    result.glyphCount = glyphCount;
+  if (!Number.isNaN(glyphCount) && glyphCount > 0) result.glyphCount = glyphCount;
 
   return result;
 }
@@ -145,13 +134,13 @@ type GltfMesh = { primitives?: GltfPrimitive[] };
 type GltfFile = { accessors?: GltfAccessor[]; meshes?: GltfMesh[] };
 
 async function parseObjFile(filePath: string): Promise<Model3DMetadata> {
-  const content = await readFile(filePath, 'utf8');
+  const content = await readFile(filePath, "utf8");
   let vertexCount = 0;
   let faceCount = 0;
-  for (const line of content.split('\n')) {
+  for (const line of content.split("\n")) {
     const t = line.trimStart();
-    if (t.startsWith('v ')) vertexCount++;
-    else if (t.startsWith('f ')) faceCount++;
+    if (t.startsWith("v ")) vertexCount++;
+    else if (t.startsWith("f ")) faceCount++;
   }
   const result: Model3DMetadata = {};
   if (vertexCount > 0) result.vertexCount = vertexCount;
@@ -160,7 +149,7 @@ async function parseObjFile(filePath: string): Promise<Model3DMetadata> {
 }
 
 async function parseGltfFile(filePath: string): Promise<Model3DMetadata> {
-  const content = await readFile(filePath, 'utf8');
+  const content = await readFile(filePath, "utf8");
   const gltf = JSON.parse(content) as GltfFile;
   const accessors = gltf.accessors ?? [];
   const meshes = gltf.meshes ?? [];
@@ -174,8 +163,7 @@ async function parseGltfFile(filePath: string): Promise<Model3DMetadata> {
       }
       if (prim.indices !== undefined) {
         const indAcc = accessors[prim.indices];
-        if (indAcc?.count !== undefined)
-          faceCount += Math.floor(indAcc.count / 3);
+        if (indAcc?.count !== undefined) faceCount += Math.floor(indAcc.count / 3);
       }
     }
   }
@@ -185,18 +173,14 @@ async function parseGltfFile(filePath: string): Promise<Model3DMetadata> {
   return result;
 }
 
-export async function extract3DModelMetadata(
-  filePath: string,
-): Promise<Model3DMetadata | null> {
+export async function extract3DModelMetadata(filePath: string): Promise<Model3DMetadata | null> {
   const ext = extname(filePath).toLowerCase();
   try {
-    if (ext === '.obj') return await parseObjFile(filePath);
-    if (ext === '.gltf') return await parseGltfFile(filePath);
+    if (ext === ".obj") return await parseObjFile(filePath);
+    if (ext === ".gltf") return await parseGltfFile(filePath);
     return {};
   } catch (err) {
-    console.error(
-      `3D model extraction failed for ${filePath}: ${(err as Error).message}`,
-    );
+    console.error(`3D model extraction failed for ${filePath}: ${(err as Error).message}`);
     return null;
   }
 }
@@ -233,9 +217,7 @@ function parseZipBuffer(data: Buffer): ArchiveMetadata {
     const filenameLen = data.readUInt16LE(offset + 28);
     const extraLen = data.readUInt16LE(offset + 30);
     const commentLen = data.readUInt16LE(offset + 32);
-    const filename = data
-      .subarray(offset + 46, offset + 46 + filenameLen)
-      .toString('utf8');
+    const filename = data.subarray(offset + 46, offset + 46 + filenameLen).toString("utf8");
 
     files.push(filename);
     totalUncompressedSize += uncompressedSize;
@@ -258,26 +240,21 @@ function parseTarBuffer(data: Buffer): ArchiveMetadata {
     // Filename at bytes 0-99 (null-terminated), with USTAR prefix at 345-499
     let nameEnd = block.indexOf(0, 0);
     if (nameEnd === -1 || nameEnd > 100) nameEnd = 100;
-    let filename = block.subarray(0, nameEnd).toString('utf8');
+    let filename = block.subarray(0, nameEnd).toString("utf8");
 
     // USTAR prefix: check magic at offset 257
-    const magic = block.subarray(257, 262).toString('utf8');
-    if (magic.startsWith('ustar')) {
+    const magic = block.subarray(257, 262).toString("utf8");
+    if (magic.startsWith("ustar")) {
       const prefixEnd = block.indexOf(0, 345);
-      const prefixLen =
-        prefixEnd === -1 || prefixEnd > 500 ? 155 : prefixEnd - 345;
+      const prefixLen = prefixEnd === -1 || prefixEnd > 500 ? 155 : prefixEnd - 345;
       if (prefixLen > 0) {
-        const prefix = block.subarray(345, 345 + prefixLen).toString('utf8');
+        const prefix = block.subarray(345, 345 + prefixLen).toString("utf8");
         filename = `${prefix}/${filename}`;
       }
     }
 
     // File size in octal at bytes 124-135
-    const sizeOctal = block
-      .subarray(124, 136)
-      .toString('utf8')
-      .replace(/\0/g, '')
-      .trim();
+    const sizeOctal = block.subarray(124, 136).toString("utf8").replace(/\0/g, "").trim();
     const fileSize = Number.parseInt(sizeOctal, 8);
 
     // Typeflag at byte 156: 0x30='0' or 0=regular file, 0x35='5'=directory
@@ -296,16 +273,14 @@ function parseTarBuffer(data: Buffer): ArchiveMetadata {
   return { fileCount: files.length, files, totalUncompressedSize };
 }
 
-export async function extractArchiveMetadata(
-  filePath: string,
-): Promise<ArchiveMetadata | null> {
+export async function extractArchiveMetadata(filePath: string): Promise<ArchiveMetadata | null> {
   const ext = extname(filePath).toLowerCase();
   try {
-    if (ext === '.zip') {
+    if (ext === ".zip") {
       const data = await readFile(filePath);
       return parseZipBuffer(data);
     }
-    if (ext === '.tar' || ext === '.tgz' || filePath.endsWith('.tar.gz')) {
+    if (ext === ".tar" || ext === ".tgz" || filePath.endsWith(".tar.gz")) {
       let data = await readFile(filePath);
       // Decompress if gzipped (magic bytes 1F 8B)
       if (data[0] === 0x1f && data[1] === 0x8b) {
@@ -315,9 +290,7 @@ export async function extractArchiveMetadata(
     }
     return {};
   } catch (err) {
-    console.error(
-      `Archive extraction failed for ${filePath}: ${(err as Error).message}`,
-    );
+    console.error(`Archive extraction failed for ${filePath}: ${(err as Error).message}`);
     return null;
   }
 }

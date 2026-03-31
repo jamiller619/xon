@@ -1,11 +1,11 @@
-import { type FormEvent, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/index.js';
-import styles from './Login.module.css';
+import { type FormEvent, useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuthStore } from "../store/index.js";
+import styles from "./Login.module.css";
 
 export default function Login() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
+  const [username, setUsername] = useState("");
+  const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const setAuth = useAuthStore((s) => s.setAuth);
@@ -13,11 +13,11 @@ export default function Login() {
 
   // Redirect to setup wizard if no users have been created yet
   useEffect(() => {
-    fetch('/api/v1/auth/setup-status')
+    fetch("/api/v1/auth/setup-status")
       .then((r) => r.json())
       .then((data: { setupComplete: boolean }) => {
         if (!data.setupComplete) {
-          navigate('/setup', { replace: true });
+          navigate("/setup", { replace: true });
         }
       })
       .catch(() => {});
@@ -29,44 +29,44 @@ export default function Login() {
     setLoading(true);
 
     try {
-      const res = await fetch('/api/v1/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const res = await fetch("/api/v1/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ username, password }),
       });
 
       if (!res.ok) {
         const body = (await res.json()) as { error?: string };
-        setError(body.error ?? 'Login failed');
+        setError(body.error ?? "Login failed");
         return;
       }
 
       const body = (await res.json()) as { accessToken: string };
       // Decode username and role from the JWT payload (no library needed — just base64)
-      const [, payloadB64] = body.accessToken.split('.');
-      const payload = JSON.parse(atob(payloadB64 ?? '')) as {
+      const [, payloadB64] = body.accessToken.split(".");
+      const payload = JSON.parse(atob(payloadB64 ?? "")) as {
         username: string;
         role: string;
       };
       setAuth(body.accessToken, payload.username, payload.role);
-      navigate('/', { replace: true });
+      navigate("/", { replace: true });
     } catch {
-      setError('Network error — please try again');
+      setError("Network error — please try again");
     } finally {
       setLoading(false);
     }
   }
 
   return (
-    <div className={styles.page ?? ''}>
-      <div className={styles.card ?? ''}>
-        <div className={styles.logo ?? ''}>
-          <span className={styles.logoText ?? ''}>xon</span>
+    <div className={styles.page ?? ""}>
+      <div className={styles.card ?? ""}>
+        <div className={styles.logo ?? ""}>
+          <span className={styles.logoText ?? ""}>xon</span>
         </div>
-        <h1 className={styles.heading ?? ''}>Sign in</h1>
-        <form className={styles.form ?? ''} onSubmit={handleSubmit}>
-          <div className={styles.field ?? ''}>
-            <label htmlFor="username" className={styles.label ?? ''}>
+        <h1 className={styles.heading ?? ""}>Sign in</h1>
+        <form className={styles.form ?? ""} onSubmit={handleSubmit}>
+          <div className={styles.field ?? ""}>
+            <label htmlFor="username" className={styles.label ?? ""}>
               Username
             </label>
             <input
@@ -75,12 +75,12 @@ export default function Login() {
               autoComplete="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className={styles.input ?? ''}
+              className={styles.input ?? ""}
               required
             />
           </div>
-          <div className={styles.field ?? ''}>
-            <label htmlFor="password" className={styles.label ?? ''}>
+          <div className={styles.field ?? ""}>
+            <label htmlFor="password" className={styles.label ?? ""}>
               Password
             </label>
             <input
@@ -89,17 +89,13 @@ export default function Login() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className={styles.input ?? ''}
+              className={styles.input ?? ""}
               required
             />
           </div>
-          {error && <div className={styles.error ?? ''}>{error}</div>}
-          <button
-            type="submit"
-            className={styles.button ?? ''}
-            disabled={loading}
-          >
-            {loading ? 'Signing in…' : 'Sign in'}
+          {error && <div className={styles.error ?? ""}>{error}</div>}
+          <button type="submit" className={styles.button ?? ""} disabled={loading}>
+            {loading ? "Signing in…" : "Sign in"}
           </button>
         </form>
       </div>

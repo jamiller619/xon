@@ -1,4 +1,4 @@
-import type { BackupTargetPlugin } from '@xon/plugin-sdk';
+import type { BackupTargetPlugin } from "@xon/plugin-sdk";
 
 /** Registry mapping pluginId → BackupTargetPlugin instance */
 const registry = new Map<string, BackupTargetPlugin>();
@@ -7,10 +7,7 @@ const registry = new Map<string, BackupTargetPlugin>();
  * Register a BackupTargetPlugin instance under the given pluginId.
  * Typically called when the plugin is activated.
  */
-export function registerBackupTargetPlugin(
-  pluginId: string,
-  plugin: BackupTargetPlugin,
-): void {
+export function registerBackupTargetPlugin(pluginId: string, plugin: BackupTargetPlugin): void {
   registry.set(pluginId, plugin);
 }
 
@@ -18,9 +15,7 @@ export function registerBackupTargetPlugin(
  * Look up a registered BackupTargetPlugin by pluginId.
  * Returns undefined if no plugin is registered for the given id.
  */
-export function getBackupTargetPlugin(
-  pluginId: string,
-): BackupTargetPlugin | undefined {
+export function getBackupTargetPlugin(pluginId: string): BackupTargetPlugin | undefined {
   return registry.get(pluginId);
 }
 

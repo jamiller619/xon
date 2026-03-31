@@ -1,13 +1,13 @@
-import { readFile, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { deflateRawSync, inflateRawSync } from 'node:zlib';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { Hono } from 'hono';
-import { emitEvent } from '../events.js';
-import { registry } from '../pluginManager.js';
+import { readFile, writeFile } from "node:fs/promises";
+import { join } from "node:path";
+import { deflateRawSync, inflateRawSync } from "node:zlib";
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
+import { Hono } from "hono";
+import { emitEvent } from "../events.js";
+import { registry } from "../pluginManager.js";
 
-const BACKUP_VERSION = '1';
-const XON_VERSION = '0.0.1';
+const BACKUP_VERSION = "1";
+const XON_VERSION = "0.0.1";
 
 interface BackupInfo {
   version: string;
@@ -49,7 +49,7 @@ function buildZip(files: { name: string; data: Buffer }[]): Buffer {
   let offset = 0;
 
   for (const file of files) {
-    const nameBytes = Buffer.from(file.name, 'utf8');
+    const nameBytes = Buffer.from(file.name, "utf8");
     const compressed = deflateRawSync(file.data);
     const checksum = crc32(file.data);
 
@@ -124,7 +124,7 @@ function parseZip(buf: Buffer): Map<string, Buffer> {
       break;
     }
   }
-  if (eocdPos < 0) throw new Error('Invalid ZIP: EOCD signature not found');
+  if (eocdPos < 0) throw new Error("Invalid ZIP: EOCD signature not found");
 
   const totalEntries = buf.readUInt16LE(eocdPos + 10);
   const cdOffset = buf.readUInt32LE(eocdPos + 16);
@@ -138,7 +138,7 @@ function parseZip(buf: Buffer): Map<string, Buffer> {
     const extraLen = buf.readUInt16LE(pos + 30);
     const commentLen = buf.readUInt16LE(pos + 32);
     const localOffset = buf.readUInt32LE(pos + 42);
-    const name = buf.toString('utf8', pos + 46, pos + 46 + nameLen);
+    const name = buf.toString("utf8", pos + 46, pos + 46 + nameLen);
 
     // Navigate to local file header to find data start
     const localNameLen = buf.readUInt16LE(localOffset + 26);
@@ -146,8 +146,7 @@ function parseZip(buf: Buffer): Map<string, Buffer> {
     const dataStart = localOffset + 30 + localNameLen + localExtraLen;
 
     const compressed = buf.subarray(dataStart, dataStart + compressedSize);
-    const data =
-      method === 8 ? inflateRawSync(compressed) : Buffer.from(compressed);
+    const data = method === 8 ? inflateRawSync(compressed) : Buffer.from(compressed);
 
     result.set(name, data);
     pos += 46 + nameLen + extraLen + commentLen;
@@ -159,8 +158,8 @@ function parseZip(buf: Buffer): Map<string, Buffer> {
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function getDbPath(): string {
-  const dataDir = process.env.DATA_DIR ?? './data';
-  return join(dataDir, 'xon.db');
+  const dataDir = process.env.DATA_DIR ?? "./data";
+  return join(dataDir, "xon.db");
 }
 
 // ─── Routes ───────────────────────────────────────────────────────────────────
@@ -173,12 +172,9 @@ export function makeAdminBackupRouter(_db: LibSQLDatabase): Hono {
    * Exports the SQLite database, plugin list, and server config as a ZIP archive.
    * Progress is reported via WebSocket events.
    */
-  router.post('/', async (c) => {
+  router.post("/", async (c) => {
     try {
-      emitEvent({
-        type: 'backup:progress',
-        payload: { stage: 'starting', percent: 0 },
-      });
+      emitEvent({ type: "backup:progress", payload: { stage: "starting", percent: 0 } });
 
       // 1. Build backup metadata
       const backupInfo: BackupInfo = {
@@ -186,10 +182,7 @@ export function makeAdminBackupRouter(_db: LibSQLDatabase): Hono {
         xonVersion: XON_VERSION,
         createdAt: new Date().toISOString(),
       };
-      emitEvent({
-        type: 'backup:progress',
-        payload: { stage: 'metadata', percent: 20 },
-      });
+      emitEvent({ type: "backup:progress", payload: { stage: "metadata", percent: 20 } });
 
       // 2. Read the SQLite database file
       let dbData: Buffer;
@@ -199,10 +192,7 @@ export function makeAdminBackupRouter(_db: LibSQLDatabase): Hono {
         // In-memory or test databases have no file — include empty placeholder
         dbData = Buffer.alloc(0);
       }
-      emitEvent({
-        type: 'backup:progress',
-        payload: { stage: 'database', percent: 60 },
-      });
+      emitEvent({ type: "backup:progress", payload: { stage: "database", percent: 60 } });
 
       // 3. Collect plugin list and statuses
       const pluginList = [...registry.entries()].map(([id, entry]) => ({
@@ -215,45 +205,30 @@ export function makeAdminBackupRouter(_db: LibSQLDatabase): Hono {
 
       // 4. Server config (non-sensitive env values)
       const serverConfig = {
-        dataDir: process.env.DATA_DIR ?? './data',
-        port: process.env.PORT ?? '32400',
+        dataDir: process.env.DATA_DIR ?? "./data",
+        port: process.env.PORT ?? "32400",
       };
 
-      emitEvent({
-        type: 'backup:progress',
-        payload: { stage: 'packaging', percent: 80 },
-      });
+      emitEvent({ type: "backup:progress", payload: { stage: "packaging", percent: 80 } });
 
       const zipBuf = buildZip([
-        {
-          name: 'backup-info.json',
-          data: Buffer.from(JSON.stringify(backupInfo, null, 2)),
-        },
-        { name: 'xon.db', data: dbData },
-        {
-          name: 'plugins.json',
-          data: Buffer.from(JSON.stringify(pluginList, null, 2)),
-        },
-        {
-          name: 'server-config.json',
-          data: Buffer.from(JSON.stringify(serverConfig, null, 2)),
-        },
+        { name: "backup-info.json", data: Buffer.from(JSON.stringify(backupInfo, null, 2)) },
+        { name: "xon.db", data: dbData },
+        { name: "plugins.json", data: Buffer.from(JSON.stringify(pluginList, null, 2)) },
+        { name: "server-config.json", data: Buffer.from(JSON.stringify(serverConfig, null, 2)) },
       ]);
 
-      emitEvent({
-        type: 'backup:complete',
-        payload: { sizeBytes: zipBuf.length },
-      });
+      emitEvent({ type: "backup:complete", payload: { sizeBytes: zipBuf.length } });
 
-      const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
+      const timestamp = new Date().toISOString().replace(/[:.]/g, "-");
       return c.body(new Uint8Array(zipBuf), 200, {
-        'Content-Type': 'application/zip',
-        'Content-Disposition': `attachment; filename="xon-backup-${timestamp}.zip"`,
-        'Content-Length': String(zipBuf.length),
+        "Content-Type": "application/zip",
+        "Content-Disposition": `attachment; filename="xon-backup-${timestamp}.zip"`,
+        "Content-Length": String(zipBuf.length),
       });
     } catch (err) {
-      emitEvent({ type: 'backup:error', payload: { error: String(err) } });
-      return c.json({ error: 'Backup failed' }, 500);
+      emitEvent({ type: "backup:error", payload: { error: String(err) } });
+      return c.json({ error: "Backup failed" }, 500);
     }
   });
 
@@ -268,49 +243,37 @@ export function makeAdminRestoreRouter(_db: LibSQLDatabase): Hono {
    * Accepts a ZIP backup archive and restores the database.
    * Validates version compatibility before applying.
    */
-  router.post('/', async (c) => {
+  router.post("/", async (c) => {
     try {
-      emitEvent({
-        type: 'restore:progress',
-        payload: { stage: 'receiving', percent: 0 },
-      });
+      emitEvent({ type: "restore:progress", payload: { stage: "receiving", percent: 0 } });
 
       const arrayBuffer = await c.req.arrayBuffer();
       const zipBuf = Buffer.from(arrayBuffer);
 
       if (zipBuf.length === 0) {
-        return c.json({ error: 'No backup data received' }, 400);
+        return c.json({ error: "No backup data received" }, 400);
       }
 
-      emitEvent({
-        type: 'restore:progress',
-        payload: { stage: 'parsing', percent: 20 },
-      });
+      emitEvent({ type: "restore:progress", payload: { stage: "parsing", percent: 20 } });
 
       let files: Map<string, Buffer>;
       try {
         files = parseZip(zipBuf);
       } catch {
-        return c.json({ error: 'Invalid ZIP file' }, 400);
+        return c.json({ error: "Invalid ZIP file" }, 400);
       }
 
       // Validate backup-info.json
-      const infoData = files.get('backup-info.json');
+      const infoData = files.get("backup-info.json");
       if (!infoData) {
-        return c.json(
-          { error: 'Invalid backup: missing backup-info.json' },
-          400,
-        );
+        return c.json({ error: "Invalid backup: missing backup-info.json" }, 400);
       }
 
       let backupInfo: BackupInfo;
       try {
-        backupInfo = JSON.parse(infoData.toString('utf8')) as BackupInfo;
+        backupInfo = JSON.parse(infoData.toString("utf8")) as BackupInfo;
       } catch {
-        return c.json(
-          { error: 'Invalid backup: corrupt backup-info.json' },
-          400,
-        );
+        return c.json({ error: "Invalid backup: corrupt backup-info.json" }, 400);
       }
 
       if (backupInfo.version !== BACKUP_VERSION) {
@@ -318,25 +281,19 @@ export function makeAdminRestoreRouter(_db: LibSQLDatabase): Hono {
           {
             error: `Incompatible backup version: got ${backupInfo.version}, expected ${BACKUP_VERSION}`,
           },
-          400,
+          400
         );
       }
 
-      emitEvent({
-        type: 'restore:progress',
-        payload: { stage: 'restoring', percent: 50 },
-      });
+      emitEvent({ type: "restore:progress", payload: { stage: "restoring", percent: 50 } });
 
       // Restore database file (skip if empty — in-memory / test scenario)
-      const dbData = files.get('xon.db');
+      const dbData = files.get("xon.db");
       if (dbData && dbData.length > 0) {
         await writeFile(getDbPath(), dbData);
       }
 
-      emitEvent({
-        type: 'restore:complete',
-        payload: { restoredAt: new Date().toISOString() },
-      });
+      emitEvent({ type: "restore:complete", payload: { restoredAt: new Date().toISOString() } });
 
       return c.json({
         success: true,
@@ -344,8 +301,8 @@ export function makeAdminRestoreRouter(_db: LibSQLDatabase): Hono {
         xonVersion: backupInfo.xonVersion,
       });
     } catch (err) {
-      emitEvent({ type: 'restore:error', payload: { error: String(err) } });
-      return c.json({ error: 'Restore failed' }, 500);
+      emitEvent({ type: "restore:error", payload: { error: String(err) } });
+      return c.json({ error: "Restore failed" }, 500);
     }
   });
 

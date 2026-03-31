@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react';
-import { apiFetch } from '../apiFetch.js';
-import styles from './AdminUsers.module.css';
+import { useEffect, useState } from "react";
+import { apiFetch } from "../apiFetch.js";
+import styles from "./AdminUsers.module.css";
 
 interface Library {
   id: string;
@@ -26,22 +26,22 @@ interface AccessEntry {
 export default function AdminLibraryAccess() {
   const [libraries, setLibraries] = useState<Library[]>([]);
   const [users, setUsers] = useState<UserInfo[]>([]);
-  const [selectedLibraryId, setSelectedLibraryId] = useState<string>('');
+  const [selectedLibraryId, setSelectedLibraryId] = useState<string>("");
   const [accessList, setAccessList] = useState<AccessEntry[]>([]);
   const [loadingAccess, setLoadingAccess] = useState(false);
-  const [grantUserId, setGrantUserId] = useState('');
+  const [grantUserId, setGrantUserId] = useState("");
   const [granting, setGranting] = useState(false);
-  const [grantError, setGrantError] = useState('');
+  const [grantError, setGrantError] = useState("");
   const [confirmRevokeId, setConfirmRevokeId] = useState<string | null>(null);
   const [revoking, setRevoking] = useState(false);
   const [savingLibSettings, setSavingLibSettings] = useState(false);
 
   useEffect(() => {
-    apiFetch('/api/v1/libraries')
+    apiFetch("/api/v1/libraries")
       .then((r) => r.json())
       .then((data: Library[]) => setLibraries(data))
       .catch(() => {});
-    apiFetch('/api/v1/admin/users')
+    apiFetch("/api/v1/admin/users")
       .then((r) => r.json())
       .then((data: UserInfo[]) => setUsers(data))
       .catch(() => {});
@@ -63,28 +63,23 @@ export default function AdminLibraryAccess() {
   async function handleGrant() {
     if (!selectedLibraryId || !grantUserId) return;
     setGranting(true);
-    setGrantError('');
+    setGrantError("");
     try {
-      const res = await apiFetch(
-        `/api/v1/admin/libraries/${selectedLibraryId}/access`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId: grantUserId }),
-        },
-      );
+      const res = await apiFetch(`/api/v1/admin/libraries/${selectedLibraryId}/access`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ userId: grantUserId }),
+      });
       if (!res.ok) {
         const body = await res.json();
-        setGrantError(
-          (body as { error?: string }).error ?? 'Failed to grant access',
-        );
+        setGrantError((body as { error?: string }).error ?? "Failed to grant access");
         return;
       }
-      setGrantUserId('');
+      setGrantUserId("");
       // Refresh access list
-      const updated = await apiFetch(
-        `/api/v1/admin/libraries/${selectedLibraryId}/access`,
-      ).then((r) => r.json());
+      const updated = await apiFetch(`/api/v1/admin/libraries/${selectedLibraryId}/access`).then(
+        (r) => r.json()
+      );
       setAccessList(updated as AccessEntry[]);
     } finally {
       setGranting(false);
@@ -96,14 +91,12 @@ export default function AdminLibraryAccess() {
     setSavingLibSettings(true);
     try {
       await apiFetch(`/api/v1/libraries/${selectedLibraryId}`, {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ hideDrmItems: value }),
       });
       setLibraries((prev) =>
-        prev.map((lib) =>
-          lib.id === selectedLibraryId ? { ...lib, hideDrmItems: value } : lib,
-        ),
+        prev.map((lib) => (lib.id === selectedLibraryId ? { ...lib, hideDrmItems: value } : lib))
       );
     } finally {
       setSavingLibSettings(false);
@@ -114,12 +107,9 @@ export default function AdminLibraryAccess() {
     if (!selectedLibraryId) return;
     setRevoking(true);
     try {
-      await apiFetch(
-        `/api/v1/admin/libraries/${selectedLibraryId}/access/${userId}`,
-        {
-          method: 'DELETE',
-        },
-      );
+      await apiFetch(`/api/v1/admin/libraries/${selectedLibraryId}/access/${userId}`, {
+        method: "DELETE",
+      });
       setAccessList((prev) => prev.filter((e) => e.userId !== userId));
       setConfirmRevokeId(null);
     } finally {
@@ -127,9 +117,7 @@ export default function AdminLibraryAccess() {
     }
   }
 
-  const grantableUsers = users.filter(
-    (u) => !accessList.some((a) => a.userId === u.id),
-  );
+  const grantableUsers = users.filter((u) => !accessList.some((a) => a.userId === u.id));
 
   return (
     <div className={styles.page}>
@@ -158,23 +146,15 @@ export default function AdminLibraryAccess() {
           <div className={styles.formCard}>
             <div className={styles.formHeading}>Library Settings</div>
             <label
-              style={{
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.75rem',
-                cursor: 'pointer',
-              }}
+              style={{ display: "flex", alignItems: "center", gap: "0.75rem", cursor: "pointer" }}
             >
               <input
                 type="checkbox"
-                checked={
-                  libraries.find((l) => l.id === selectedLibraryId)
-                    ?.hideDrmItems ?? false
-                }
+                checked={libraries.find((l) => l.id === selectedLibraryId)?.hideDrmItems ?? false}
                 onChange={(e) => handleToggleHideDrm(e.target.checked)}
                 disabled={savingLibSettings}
               />
-              <span style={{ fontSize: '0.9rem' }}>
+              <span style={{ fontSize: "0.9rem" }}>
                 Hide DRM-protected items from this library for all users
               </span>
             </label>
@@ -200,7 +180,7 @@ export default function AdminLibraryAccess() {
                 onClick={handleGrant}
                 disabled={!grantUserId || granting}
               >
-                {granting ? 'Granting…' : 'Grant'}
+                {granting ? "Granting…" : "Grant"}
               </button>
             </div>
             {grantError && <div className={styles.error}>{grantError}</div>}
@@ -210,8 +190,8 @@ export default function AdminLibraryAccess() {
             <div className={styles.loading}>Loading…</div>
           ) : accessList.length === 0 ? (
             <div className={styles.empty}>
-              No users have been granted access to this library. Admin and
-              manager roles can always access all libraries.
+              No users have been granted access to this library. Admin and manager roles can always
+              access all libraries.
             </div>
           ) : (
             <table className={styles.table}>
@@ -227,12 +207,10 @@ export default function AdminLibraryAccess() {
                 {accessList.map((entry) => (
                   <tr key={entry.userId} className={styles.row}>
                     <td className={styles.td}>{entry.displayName}</td>
-                    <td className={`${styles.td} ${styles.mono}`}>
-                      {entry.username}
-                    </td>
+                    <td className={`${styles.td} ${styles.mono}`}>{entry.username}</td>
                     <td className={styles.td}>
                       <span
-                        className={`${styles.badge} ${styles[`role_${entry.role}` as keyof typeof styles] ?? ''}`}
+                        className={`${styles.badge} ${styles[`role_${entry.role}` as keyof typeof styles] ?? ""}`}
                       >
                         {entry.role}
                       </span>

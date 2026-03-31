@@ -1,11 +1,11 @@
-import { eq } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { Hono } from 'hono';
-import { z } from 'zod';
-import { serverSettings } from '../schema.js';
-import { validate } from '../validate.js';
+import { eq } from "drizzle-orm";
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
+import { Hono } from "hono";
+import { z } from "zod";
+import { serverSettings } from "../schema.js";
+import { validate } from "../validate.js";
 
-const SERVER_SETTINGS_ID = 'default';
+const SERVER_SETTINGS_ID = "default";
 
 const updateSchema = z.object({
   corsEnabled: z.boolean().optional(),
@@ -29,10 +29,7 @@ async function getOrInitSettings(db: LibSQLDatabase) {
     .from(serverSettings)
     .where(eq(serverSettings.id, SERVER_SETTINGS_ID));
   if (rows.length > 0) return rows[0];
-  await db
-    .insert(serverSettings)
-    .values({ id: SERVER_SETTINGS_ID })
-    .onConflictDoNothing();
+  await db.insert(serverSettings).values({ id: SERVER_SETTINGS_ID }).onConflictDoNothing();
   const fresh = await db
     .select()
     .from(serverSettings)
@@ -40,9 +37,7 @@ async function getOrInitSettings(db: LibSQLDatabase) {
   return fresh[0] ?? null;
 }
 
-function formatSettings(
-  row: NonNullable<Awaited<ReturnType<typeof getOrInitSettings>>>,
-) {
+function formatSettings(row: NonNullable<Awaited<ReturnType<typeof getOrInitSettings>>>) {
   return {
     corsEnabled: row.corsEnabled,
     corsAllowedOrigins: JSON.parse(row.corsAllowedOrigins) as string[],
@@ -68,9 +63,9 @@ export function makeAdminServerSettingsRouter(db: LibSQLDatabase): Hono {
    * GET /admin/server-settings
    * Returns the current CORS, rate limit, HTTPS, and proxy configuration.
    */
-  router.get('/', async (c) => {
+  router.get("/", async (c) => {
     const row = await getOrInitSettings(db);
-    if (!row) return c.json({ error: 'Settings not found' }, 500);
+    if (!row) return c.json({ error: "Settings not found" }, 500);
     return c.json(formatSettings(row));
   });
 
@@ -78,28 +73,22 @@ export function makeAdminServerSettingsRouter(db: LibSQLDatabase): Hono {
    * PUT /admin/server-settings
    * Updates CORS, rate limit, HTTPS, and proxy configuration.
    */
-  router.put('/', validate('json', updateSchema), async (c) => {
-    const body = c.req.valid('json');
+  router.put("/", validate("json", updateSchema), async (c) => {
+    const body = c.req.valid("json");
 
     const current = await getOrInitSettings(db);
-    if (!current) return c.json({ error: 'Settings not found' }, 500);
+    if (!current) return c.json({ error: "Settings not found" }, 500);
 
-    const update: Partial<typeof serverSettings.$inferInsert> = {
-      updatedAt: new Date(),
-    };
+    const update: Partial<typeof serverSettings.$inferInsert> = { updatedAt: new Date() };
 
     if (body.corsEnabled !== undefined) update.corsEnabled = body.corsEnabled;
     if (body.corsAllowedOrigins !== undefined) {
       update.corsAllowedOrigins = JSON.stringify(body.corsAllowedOrigins);
     }
-    if (body.rateLimitEnabled !== undefined)
-      update.rateLimitEnabled = body.rateLimitEnabled;
-    if (body.rateLimitGeneral !== undefined)
-      update.rateLimitGeneral = body.rateLimitGeneral;
-    if (body.rateLimitAuth !== undefined)
-      update.rateLimitAuth = body.rateLimitAuth;
-    if (body.httpsEnabled !== undefined)
-      update.httpsEnabled = body.httpsEnabled;
+    if (body.rateLimitEnabled !== undefined) update.rateLimitEnabled = body.rateLimitEnabled;
+    if (body.rateLimitGeneral !== undefined) update.rateLimitGeneral = body.rateLimitGeneral;
+    if (body.rateLimitAuth !== undefined) update.rateLimitAuth = body.rateLimitAuth;
+    if (body.httpsEnabled !== undefined) update.httpsEnabled = body.httpsEnabled;
     if (body.httpsCertPath !== undefined) {
       if (body.httpsCertPath === null) update.httpsCertPath = null;
       else update.httpsCertPath = body.httpsCertPath;
@@ -130,7 +119,7 @@ export function makeAdminServerSettingsRouter(db: LibSQLDatabase): Hono {
       .returning();
 
     const row = updated[0];
-    if (!row) return c.json({ error: 'Update failed' }, 500);
+    if (!row) return c.json({ error: "Update failed" }, 500);
     return c.json(formatSettings(row));
   });
 

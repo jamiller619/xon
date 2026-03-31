@@ -1,5 +1,5 @@
-import { BasePlugin } from './BasePlugin.js';
-import type { BackupTargetConfigSchema, BackupVerifyResult } from './types.js';
+import { BasePlugin } from "./BasePlugin.js";
+import type { BackupTargetConfigSchema, BackupVerifyResult } from "./types.js";
 
 /**
  * Abstract base class for BackupTarget plugins.

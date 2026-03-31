@@ -1,8 +1,8 @@
-import { basename, dirname, extname } from 'node:path';
-import { MediaCategory } from '@xon/shared';
-import { and, eq, inArray } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { groupMembers, groups, mediaItems } from './schema.js';
+import { basename, dirname, extname } from "node:path";
+import { MediaCategory } from "@xon/shared";
+import { and, eq, inArray } from "drizzle-orm";
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
+import { groupMembers, groups, mediaItems } from "./schema.js";
 
 export interface TvEpisodeInfo {
   seriesName: string | null;
@@ -22,12 +22,12 @@ export function parseTvEpisode(fileName: string): TvEpisodeInfo | null {
     const rawName =
       sxeMatch[1]
         ?.trim()
-        .replace(/[._-]+/g, ' ')
-        .trim() ?? '';
+        .replace(/[._-]+/g, " ")
+        .trim() ?? "";
     return {
       seriesName: rawName.length > 0 ? rawName : null,
-      season: Number.parseInt(sxeMatch[2] ?? '1', 10),
-      episode: Number.parseInt(sxeMatch[3] ?? '1', 10),
+      season: Number.parseInt(sxeMatch[2] ?? "1", 10),
+      episode: Number.parseInt(sxeMatch[3] ?? "1", 10),
     };
   }
 
@@ -37,12 +37,12 @@ export function parseTvEpisode(fileName: string): TvEpisodeInfo | null {
     const rawName =
       nxMatch[1]
         ?.trim()
-        .replace(/[._-]+/g, ' ')
-        .trim() ?? '';
+        .replace(/[._-]+/g, " ")
+        .trim() ?? "";
     return {
       seriesName: rawName.length > 0 ? rawName : null,
-      season: Number.parseInt(nxMatch[2] ?? '1', 10),
-      episode: Number.parseInt(nxMatch[3] ?? '1', 10),
+      season: Number.parseInt(nxMatch[2] ?? "1", 10),
+      episode: Number.parseInt(nxMatch[3] ?? "1", 10),
     };
   }
 
@@ -56,10 +56,7 @@ export function parseTvEpisode(fileName: string): TvEpisodeInfo | null {
  * 2. Grandparent directory (if parent looks like "Season N" or "SXX")
  * 3. Parent directory
  */
-export function resolveSeriesName(
-  filePath: string,
-  info: TvEpisodeInfo,
-): string {
+export function resolveSeriesName(filePath: string, info: TvEpisodeInfo): string {
   if (info.seriesName) {
     return info.seriesName;
   }
@@ -70,7 +67,7 @@ export function resolveSeriesName(
   if (/^(?:season|s)\s*\d+$/i.test(parentDir)) {
     return grandParentDir.length > 0 ? grandParentDir : parentDir;
   }
-  return parentDir.length > 0 ? parentDir : 'Unknown Series';
+  return parentDir.length > 0 ? parentDir : "Unknown Series";
 }
 
 /**
@@ -90,10 +87,7 @@ function makeSeasonGroupId(seriesGroupId: string, season: number): string {
  * then assigns each episode to its season group.
  * Idempotent: safe to call after every scan.
  */
-export async function groupTvEpisodes(
-  db: LibSQLDatabase,
-  libraryId: string,
-): Promise<void> {
+export async function groupTvEpisodes(db: LibSQLDatabase, libraryId: string): Promise<void> {
   // Fetch all TV Show items for this library
   const tvItems = await db
     .select({
@@ -130,10 +124,7 @@ export async function groupTvEpisodes(
 
   // Build the set of series and season groups we need
   const seriesGroupIds = new Set<string>();
-  const seasonGroupMap = new Map<
-    string,
-    { id: string; seriesGroupId: string; season: number }
-  >();
+  const seasonGroupMap = new Map<string, { id: string; seriesGroupId: string; season: number }>();
 
   for (const ep of episodes) {
     const seriesGroupId = makeSeriesGroupId(libraryId, ep.seriesName);
@@ -162,16 +153,16 @@ export async function groupTvEpisodes(
   for (const seriesGroupId of seriesGroupIds) {
     if (!existingGroupIdSet.has(seriesGroupId)) {
       const seriesTitle = episodes.find(
-        (e) => makeSeriesGroupId(libraryId, e.seriesName) === seriesGroupId,
+        (e) => makeSeriesGroupId(libraryId, e.seriesName) === seriesGroupId
       )?.seriesName;
       if (seriesTitle) {
         seriesInserts.push({
           id: seriesGroupId,
           libraryId,
-          type: 'series',
+          type: "series",
           title: seriesTitle,
           parentGroupId: null,
-          metadata: '{}',
+          metadata: "{}",
         });
       }
     }
@@ -187,10 +178,10 @@ export async function groupTvEpisodes(
       seasonInserts.push({
         id: seasonGroupId,
         libraryId,
-        type: 'season',
+        type: "season",
         title: `Season ${season}`,
         parentGroupId: seriesGroupId,
-        metadata: '{}',
+        metadata: "{}",
       });
     }
   }
@@ -224,17 +215,11 @@ export async function groupTvEpisodes(
   }
 }
 
-function makeAudiobookSeriesGroupId(
-  libraryId: string,
-  seriesTitle: string,
-): string {
+function makeAudiobookSeriesGroupId(libraryId: string, seriesTitle: string): string {
   return `grp:audiobook-series:${libraryId}:${seriesTitle}`;
 }
 
-function makeAudiobookBookGroupId(
-  libraryId: string,
-  bookTitle: string,
-): string {
+function makeAudiobookBookGroupId(libraryId: string, bookTitle: string): string {
   return `grp:book:${libraryId}:${bookTitle}`;
 }
 
@@ -254,17 +239,13 @@ interface AudiobookChapterData {
  */
 export function resolveAudiobookInfo(
   filePath: string,
-  tags: Record<string, unknown>,
+  tags: Record<string, unknown>
 ): { bookTitle: string; seriesName: string | null } {
   const parentDir = basename(dirname(filePath));
   const grandParentDir = basename(dirname(dirname(filePath)));
 
-  const albumTag =
-    typeof tags.album === 'string' && tags.album.length > 0 ? tags.album : null;
-  const seriesTag =
-    typeof tags.series === 'string' && tags.series.length > 0
-      ? tags.series
-      : null;
+  const albumTag = typeof tags.album === "string" && tags.album.length > 0 ? tags.album : null;
+  const seriesTag = typeof tags.series === "string" && tags.series.length > 0 ? tags.series : null;
 
   let bookTitle: string;
   let seriesName: string | null = null;
@@ -273,25 +254,20 @@ export function resolveAudiobookInfo(
     bookTitle = albumTag;
     if (seriesTag) {
       seriesName = seriesTag;
-    } else if (parentDir && parentDir !== '.' && parentDir !== albumTag) {
+    } else if (parentDir && parentDir !== "." && parentDir !== albumTag) {
       // Parent folder is distinct from the book title — likely a series folder
       seriesName = parentDir;
     }
   } else {
     // No album tag — infer from folder structure
     bookTitle =
-      parentDir && parentDir !== '.'
+      parentDir && parentDir !== "."
         ? parentDir
-        : basename(filePath).slice(0, -extname(filePath).length) ||
-          'Unknown Book';
+        : basename(filePath).slice(0, -extname(filePath).length) || "Unknown Book";
 
     if (seriesTag) {
       seriesName = seriesTag;
-    } else if (
-      grandParentDir &&
-      grandParentDir !== '.' &&
-      grandParentDir.length > 0
-    ) {
+    } else if (grandParentDir && grandParentDir !== "." && grandParentDir.length > 0) {
       // Grandparent is likely the series folder when we have a deep folder structure
       seriesName = grandParentDir;
     }
@@ -306,10 +282,7 @@ export function resolveAudiobookInfo(
  * Narrator metadata is stored on the book group.
  * Idempotent: safe to call after every scan.
  */
-export async function groupAudiobooks(
-  db: LibSQLDatabase,
-  libraryId: string,
-): Promise<void> {
+export async function groupAudiobooks(db: LibSQLDatabase, libraryId: string): Promise<void> {
   const audiobookItems = await db
     .select({
       id: mediaItems.id,
@@ -321,8 +294,8 @@ export async function groupAudiobooks(
     .where(
       and(
         eq(mediaItems.libraryId, libraryId),
-        eq(mediaItems.mediaCategory, MediaCategory.Audiobooks),
-      ),
+        eq(mediaItems.mediaCategory, MediaCategory.Audiobooks)
+      )
     );
 
   if (audiobookItems.length === 0) return;
@@ -331,18 +304,14 @@ export async function groupAudiobooks(
   for (const item of audiobookItems) {
     let tags: Record<string, unknown> = {};
     try {
-      tags = JSON.parse(item.metadata ?? '{}');
+      tags = JSON.parse(item.metadata ?? "{}");
     } catch {
       // ignore parse errors
     }
 
     const { bookTitle, seriesName } = resolveAudiobookInfo(item.filePath, tags);
-    const narrator =
-      typeof tags.artist === 'string' && tags.artist.length > 0
-        ? tags.artist
-        : null;
-    const trackNumber =
-      typeof tags.trackNumber === 'number' ? tags.trackNumber : 0;
+    const narrator = typeof tags.artist === "string" && tags.artist.length > 0 ? tags.artist : null;
+    const trackNumber = typeof tags.trackNumber === "number" ? tags.trackNumber : 0;
 
     chapters.push({
       id: item.id,
@@ -398,10 +367,10 @@ export async function groupAudiobooks(
       seriesInserts.push({
         id: seriesGroupId,
         libraryId,
-        type: 'audiobook-series',
+        type: "audiobook-series",
         title: seriesTitle,
         parentGroupId: null,
-        metadata: '{}',
+        metadata: "{}",
       });
     }
   }
@@ -413,13 +382,11 @@ export async function groupAudiobooks(
   const bookInserts: Array<typeof groups.$inferInsert> = [];
   for (const [bookGroupId, { bookTitle, narrator, seriesName }] of bookMap) {
     if (!existingGroupIdSet.has(bookGroupId)) {
-      const parentGroupId = seriesName
-        ? makeAudiobookSeriesGroupId(libraryId, seriesName)
-        : null;
+      const parentGroupId = seriesName ? makeAudiobookSeriesGroupId(libraryId, seriesName) : null;
       bookInserts.push({
         id: bookGroupId,
         libraryId,
-        type: 'book',
+        type: "book",
         title: bookTitle,
         parentGroupId,
         metadata: JSON.stringify({ narrator }),
@@ -458,11 +425,7 @@ function makeMusicArtistGroupId(libraryId: string, artistName: string): string {
   return `grp:artist:${libraryId}:${artistName}`;
 }
 
-function makeMusicAlbumGroupId(
-  libraryId: string,
-  albumArtist: string,
-  albumTitle: string,
-): string {
+function makeMusicAlbumGroupId(libraryId: string, albumArtist: string, albumTitle: string): string {
   return `grp:album:${libraryId}:${albumArtist}:${albumTitle}`;
 }
 
@@ -480,19 +443,13 @@ interface MusicTrackData {
  * Compilation albums (multiple artists) are grouped under "Various Artists".
  * Idempotent: safe to call after every scan.
  */
-export async function groupMusicTracks(
-  db: LibSQLDatabase,
-  libraryId: string,
-): Promise<void> {
+export async function groupMusicTracks(db: LibSQLDatabase, libraryId: string): Promise<void> {
   // Fetch all Music category items for this library
   const musicItems = await db
     .select({ id: mediaItems.id, metadata: mediaItems.metadata })
     .from(mediaItems)
     .where(
-      and(
-        eq(mediaItems.libraryId, libraryId),
-        eq(mediaItems.mediaCategory, MediaCategory.Music),
-      ),
+      and(eq(mediaItems.libraryId, libraryId), eq(mediaItems.mediaCategory, MediaCategory.Music))
     );
 
   if (musicItems.length === 0) return;
@@ -502,19 +459,17 @@ export async function groupMusicTracks(
   for (const item of musicItems) {
     let tags: Record<string, unknown> = {};
     try {
-      tags = JSON.parse(item.metadata ?? '{}');
+      tags = JSON.parse(item.metadata ?? "{}");
     } catch {
       // ignore parse errors
     }
-    if (typeof tags.album === 'string' && tags.album.length > 0) {
+    if (typeof tags.album === "string" && tags.album.length > 0) {
       tracks.push({
         id: item.id,
         album: tags.album,
-        artist:
-          typeof tags.artist === 'string' ? tags.artist : 'Unknown Artist',
-        trackNumber:
-          typeof tags.trackNumber === 'number' ? tags.trackNumber : 0,
-        discNumber: typeof tags.discNumber === 'number' ? tags.discNumber : 1,
+        artist: typeof tags.artist === "string" ? tags.artist : "Unknown Artist",
+        trackNumber: typeof tags.trackNumber === "number" ? tags.trackNumber : 0,
+        discNumber: typeof tags.discNumber === "number" ? tags.discNumber : 1,
       });
     }
   }
@@ -534,37 +489,23 @@ export async function groupMusicTracks(
 
   const getAlbumArtist = (albumTitle: string): string => {
     const artistSet = albumArtistsMap.get(albumTitle);
-    if (!artistSet || artistSet.size > 1) return 'Various Artists';
+    if (!artistSet || artistSet.size > 1) return "Various Artists";
     const first = [...artistSet][0];
-    return first ?? 'Unknown Artist';
+    return first ?? "Unknown Artist";
   };
 
   // Collect unique artist group IDs and album group entries
   const artistGroupIds = new Map<string, string>(); // artistName → groupId
-  const albumGroupMap = new Map<
-    string,
-    { id: string; albumArtist: string; albumTitle: string }
-  >();
+  const albumGroupMap = new Map<string, { id: string; albumArtist: string; albumTitle: string }>();
 
   for (const track of tracks) {
     const albumArtist = getAlbumArtist(track.album);
     if (!artistGroupIds.has(albumArtist)) {
-      artistGroupIds.set(
-        albumArtist,
-        makeMusicArtistGroupId(libraryId, albumArtist),
-      );
+      artistGroupIds.set(albumArtist, makeMusicArtistGroupId(libraryId, albumArtist));
     }
-    const albumGroupId = makeMusicAlbumGroupId(
-      libraryId,
-      albumArtist,
-      track.album,
-    );
+    const albumGroupId = makeMusicAlbumGroupId(libraryId, albumArtist, track.album);
     if (!albumGroupMap.has(albumGroupId)) {
-      albumGroupMap.set(albumGroupId, {
-        id: albumGroupId,
-        albumArtist,
-        albumTitle: track.album,
-      });
+      albumGroupMap.set(albumGroupId, { id: albumGroupId, albumArtist, albumTitle: track.album });
     }
   }
 
@@ -583,10 +524,10 @@ export async function groupMusicTracks(
       artistInserts.push({
         id: artistGroupId,
         libraryId,
-        type: 'artist',
+        type: "artist",
         title: artistName,
         parentGroupId: null,
-        metadata: '{}',
+        metadata: "{}",
       });
     }
   }
@@ -602,10 +543,10 @@ export async function groupMusicTracks(
       albumInserts.push({
         id: albumGroupId,
         libraryId,
-        type: 'album',
+        type: "album",
         title: albumTitle,
         parentGroupId: artistGroupId,
-        metadata: '{}',
+        metadata: "{}",
       });
     }
   }
@@ -626,11 +567,7 @@ export async function groupMusicTracks(
   for (const track of tracks) {
     if (!existingMemberSet.has(track.id)) {
       const albumArtist = getAlbumArtist(track.album);
-      const albumGroupId = makeMusicAlbumGroupId(
-        libraryId,
-        albumArtist,
-        track.album,
-      );
+      const albumGroupId = makeMusicAlbumGroupId(libraryId, albumArtist, track.album);
       memberInserts.push({
         groupId: albumGroupId,
         mediaItemId: track.id,
@@ -647,11 +584,7 @@ function makePhotoDateGroupId(libraryId: string, dateStr: string): string {
   return `grp:photo-date:${libraryId}:${dateStr}`;
 }
 
-function makePhotoLocationGroupId(
-  libraryId: string,
-  lat: string,
-  lon: string,
-): string {
+function makePhotoLocationGroupId(libraryId: string, lat: string, lon: string): string {
   return `grp:photo-location:${libraryId}:${lat}:${lon}`;
 }
 
@@ -671,13 +604,9 @@ export function parseExifDate(dateTaken: string): string | null {
  * Returns 0 if not parseable.
  */
 export function parseExifTimestamp(dateTaken: string): number {
-  const match = dateTaken.match(
-    /^(\d{4}):(\d{2}):(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/,
-  );
+  const match = dateTaken.match(/^(\d{4}):(\d{2}):(\d{2})\s+(\d{2}):(\d{2}):(\d{2})/);
   if (!match) return 0;
-  const d = new Date(
-    `${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:${match[6]}Z`,
-  );
+  const d = new Date(`${match[1]}-${match[2]}-${match[3]}T${match[4]}:${match[5]}:${match[6]}Z`);
   return Math.floor(d.getTime() / 1000);
 }
 
@@ -703,21 +632,15 @@ interface PhotoData {
  * Location groups: one per GPS cluster (rounded to 1 decimal degree, ~11 km).
  * Idempotent: safe to call after every scan.
  */
-export async function groupPhotos(
-  db: LibSQLDatabase,
-  libraryId: string,
-): Promise<void> {
+export async function groupPhotos(db: LibSQLDatabase, libraryId: string): Promise<void> {
   const photoItems = await db
     .select({ id: mediaItems.id, metadata: mediaItems.metadata })
     .from(mediaItems)
     .where(
       and(
         eq(mediaItems.libraryId, libraryId),
-        inArray(mediaItems.mediaCategory, [
-          MediaCategory.Pictures,
-          MediaCategory.Images,
-        ]),
-      ),
+        inArray(mediaItems.mediaCategory, [MediaCategory.Pictures, MediaCategory.Images])
+      )
     );
 
   if (photoItems.length === 0) return;
@@ -726,19 +649,17 @@ export async function groupPhotos(
   for (const item of photoItems) {
     let meta: Record<string, unknown> = {};
     try {
-      meta = JSON.parse(item.metadata ?? '{}');
+      meta = JSON.parse(item.metadata ?? "{}");
     } catch {
       // ignore parse errors
     }
 
-    const dateTaken =
-      typeof meta.dateTaken === 'string' ? meta.dateTaken : null;
+    const dateTaken = typeof meta.dateTaken === "string" ? meta.dateTaken : null;
     const dateStr = dateTaken ? parseExifDate(dateTaken) : null;
     const timestamp = dateTaken ? parseExifTimestamp(dateTaken) : 0;
 
-    const lat = typeof meta.gpsLatitude === 'number' ? meta.gpsLatitude : null;
-    const lon =
-      typeof meta.gpsLongitude === 'number' ? meta.gpsLongitude : null;
+    const lat = typeof meta.gpsLatitude === "number" ? meta.gpsLatitude : null;
+    const lon = typeof meta.gpsLongitude === "number" ? meta.gpsLongitude : null;
     const latCluster = lat !== null ? clusterCoordinate(lat) : null;
     const lonCluster = lon !== null ? clusterCoordinate(lon) : null;
 
@@ -760,16 +681,9 @@ export async function groupPhotos(
   const locationGroupMap = new Map<string, { lat: string; lon: string }>();
   for (const photo of photos) {
     if (photo.latCluster !== null && photo.lonCluster !== null) {
-      const gid = makePhotoLocationGroupId(
-        libraryId,
-        photo.latCluster,
-        photo.lonCluster,
-      );
+      const gid = makePhotoLocationGroupId(libraryId, photo.latCluster, photo.lonCluster);
       if (!locationGroupMap.has(gid)) {
-        locationGroupMap.set(gid, {
-          lat: photo.latCluster,
-          lon: photo.lonCluster,
-        });
+        locationGroupMap.set(gid, { lat: photo.latCluster, lon: photo.lonCluster });
       }
     }
   }
@@ -791,10 +705,10 @@ export async function groupPhotos(
       dateInserts.push({
         id: gid,
         libraryId,
-        type: 'photo-date',
+        type: "photo-date",
         title: dateStr,
         parentGroupId: null,
-        metadata: '{}',
+        metadata: "{}",
       });
     }
   }
@@ -809,7 +723,7 @@ export async function groupPhotos(
       locationInserts.push({
         id: gid,
         libraryId,
-        type: 'photo-location',
+        type: "photo-location",
         title: `${lat}, ${lon}`,
         parentGroupId: null,
         metadata: JSON.stringify({ lat, lon }),
@@ -823,15 +737,10 @@ export async function groupPhotos(
   // Fetch existing members to avoid duplicates (track by groupId:mediaItemId)
   const photoIds = photos.map((p) => p.id);
   const existingMembers = await db
-    .select({
-      groupId: groupMembers.groupId,
-      mediaItemId: groupMembers.mediaItemId,
-    })
+    .select({ groupId: groupMembers.groupId, mediaItemId: groupMembers.mediaItemId })
     .from(groupMembers)
     .where(inArray(groupMembers.mediaItemId, photoIds));
-  const existingMemberKeys = new Set(
-    existingMembers.map((m) => `${m.groupId}:${m.mediaItemId}`),
-  );
+  const existingMemberKeys = new Set(existingMembers.map((m) => `${m.groupId}:${m.mediaItemId}`));
 
   // Insert missing memberships
   const memberInserts: Array<typeof groupMembers.$inferInsert> = [];
@@ -840,26 +749,14 @@ export async function groupPhotos(
       const gid = makePhotoDateGroupId(libraryId, photo.dateStr);
       const key = `${gid}:${photo.id}`;
       if (!existingMemberKeys.has(key)) {
-        memberInserts.push({
-          groupId: gid,
-          mediaItemId: photo.id,
-          sortOrder: photo.timestamp,
-        });
+        memberInserts.push({ groupId: gid, mediaItemId: photo.id, sortOrder: photo.timestamp });
       }
     }
     if (photo.latCluster !== null && photo.lonCluster !== null) {
-      const gid = makePhotoLocationGroupId(
-        libraryId,
-        photo.latCluster,
-        photo.lonCluster,
-      );
+      const gid = makePhotoLocationGroupId(libraryId, photo.latCluster, photo.lonCluster);
       const key = `${gid}:${photo.id}`;
       if (!existingMemberKeys.has(key)) {
-        memberInserts.push({
-          groupId: gid,
-          mediaItemId: photo.id,
-          sortOrder: 0,
-        });
+        memberInserts.push({ groupId: gid, mediaItemId: photo.id, sortOrder: 0 });
       }
     }
   }

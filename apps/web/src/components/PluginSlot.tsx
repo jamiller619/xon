@@ -1,16 +1,16 @@
-import { useEffect, useRef, useState } from 'react';
-import { apiFetch } from '../apiFetch.js';
+import { useEffect, useRef, useState } from "react";
+import { apiFetch } from "../apiFetch.js";
 
 export type UIInjectionPoint =
-  | 'dashboard-widget'
-  | 'detail-panel'
-  | 'admin-page'
-  | 'nav-item'
-  | 'sidebar:top'
-  | 'sidebar:bottom'
-  | 'mediaDetail:actions'
-  | 'library:toolbar'
-  | 'settings:page';
+  | "dashboard-widget"
+  | "detail-panel"
+  | "admin-page"
+  | "nav-item"
+  | "sidebar:top"
+  | "sidebar:bottom"
+  | "mediaDetail:actions"
+  | "library:toolbar"
+  | "settings:page";
 
 interface PluginUIComponent {
   pluginId: string;
@@ -30,10 +30,7 @@ export interface PluginComponentProps {
   libraryId?: string;
 }
 
-type PluginRenderFn = (
-  container: HTMLElement,
-  props: PluginComponentProps,
-) => () => void;
+type PluginRenderFn = (container: HTMLElement, props: PluginComponentProps) => () => void;
 
 // Module-level cache so all PluginSlot instances share one fetch
 let componentsCache: PluginUIComponent[] | null = null;
@@ -42,7 +39,7 @@ let fetchPromise: Promise<PluginUIComponent[]> | null = null;
 async function fetchPluginComponents(): Promise<PluginUIComponent[]> {
   if (componentsCache !== null) return componentsCache;
   if (!fetchPromise) {
-    fetchPromise = apiFetch('/api/v1/plugins/ui-components')
+    fetchPromise = apiFetch("/api/v1/plugins/ui-components")
       .then((r) => r.json() as Promise<PluginUIComponent[]>)
       .then((data) => {
         componentsCache = data;
@@ -67,10 +64,7 @@ interface PluginComponentMountProps {
   slotProps: PluginComponentProps;
 }
 
-function PluginComponentMount({
-  component,
-  slotProps,
-}: PluginComponentMountProps) {
+function PluginComponentMount({ component, slotProps }: PluginComponentMountProps) {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -84,7 +78,7 @@ function PluginComponentMount({
       .then((mod: { default?: PluginRenderFn; render?: PluginRenderFn }) => {
         if (cancelled) return;
         const renderFn = mod.default ?? mod.render;
-        if (typeof renderFn === 'function') {
+        if (typeof renderFn === "function") {
           cleanup = renderFn(container, slotProps);
         }
       })
@@ -101,11 +95,7 @@ function PluginComponentMount({
   }, [component.bundleUrl, component.pluginId, slotProps]);
 
   return (
-    <div
-      data-plugin-id={component.pluginId}
-      data-component-id={component.id}
-      ref={containerRef}
-    />
+    <div data-plugin-id={component.pluginId} data-component-id={component.id} ref={containerRef} />
   );
 }
 
@@ -114,10 +104,7 @@ interface PluginSlotProps {
   props?: PluginComponentProps;
 }
 
-export default function PluginSlot({
-  injectionPoint,
-  props = {},
-}: PluginSlotProps) {
+export default function PluginSlot({ injectionPoint, props = {} }: PluginSlotProps) {
   const [components, setComponents] = useState<PluginUIComponent[]>([]);
 
   useEffect(() => {

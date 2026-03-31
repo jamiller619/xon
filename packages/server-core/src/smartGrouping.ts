@@ -1,21 +1,15 @@
-import { randomUUID } from 'node:crypto';
-import { basename, dirname } from 'node:path';
-import { MediaCategory } from '@xon/shared';
-import { and, eq, inArray } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import {
-  groupMembers,
-  groups,
-  libraries,
-  mediaItems,
-  suggestedGroups,
-} from './schema.js';
+import { randomUUID } from "node:crypto";
+import { basename, dirname } from "node:path";
+import { MediaCategory } from "@xon/shared";
+import { and, eq, inArray } from "drizzle-orm";
+import type { LibSQLDatabase } from "drizzle-orm/libsql";
+import { groupMembers, groups, libraries, mediaItems, suggestedGroups } from "./schema.js";
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface SmartGroupCandidate {
   title: string;
-  type: 'album' | 'book-series' | 'collection';
+  type: "album" | "book-series" | "collection";
   reason: string;
   itemIds: string[];
   confidence: number;
@@ -38,7 +32,7 @@ function getAlbumTitle(item: typeof mediaItems.$inferSelect): string | null {
       return null;
     }
   })();
-  if (typeof meta?.album === 'string' && meta.album.length > 0) {
+  if (typeof meta?.album === "string" && meta.album.length > 0) {
     return meta.album;
   }
   // Fallback: use parent directory name, or grandparent if parent is a disc folder
@@ -50,9 +44,9 @@ function getAlbumTitle(item: typeof mediaItems.$inferSelect): string | null {
   }
   // Strip trailing disc indicator from folder name
   const cleaned = parentDir
-    .replace(DISC_PATTERN, '')
+    .replace(DISC_PATTERN, "")
     .trim()
-    .replace(/[-_\s]+$/, '');
+    .replace(/[-_\s]+$/, "");
   return cleaned.length > 0 ? cleaned : null;
 }
 
@@ -64,7 +58,7 @@ function getAlbumTitle(item: typeof mediaItems.$inferSelect): string | null {
  * indicator, they are flagged as a multi-disc album candidate.
  */
 export function detectMultiDiscAlbums(
-  items: Array<typeof mediaItems.$inferSelect>,
+  items: Array<typeof mediaItems.$inferSelect>
 ): SmartGroupCandidate[] {
   const MUSIC_CATEGORIES: string[] = [
     MediaCategory.Music,
@@ -73,8 +67,7 @@ export function detectMultiDiscAlbums(
   ];
 
   const musicItems = items.filter(
-    (i) =>
-      i.mediaCategory !== null && MUSIC_CATEGORIES.includes(i.mediaCategory),
+    (i) => i.mediaCategory !== null && MUSIC_CATEGORIES.includes(i.mediaCategory)
   );
 
   // Group by album title → collect parent directories
@@ -100,14 +93,12 @@ export function detectMultiDiscAlbums(
     if (dirs.size < 2) continue; // All tracks in same folder → not multi-disc
 
     // Check if any directory contains a disc indicator
-    const hasDiscIndicator = [...dirs].some((d) =>
-      DISC_PATTERN.test(basename(d)),
-    );
+    const hasDiscIndicator = [...dirs].some((d) => DISC_PATTERN.test(basename(d)));
     if (!hasDiscIndicator) continue;
 
     candidates.push({
       title: albumTitle,
-      type: 'album',
+      type: "album",
       reason: `Multi-disc album "${albumTitle}" found across ${dirs.size} directories`,
       itemIds: ids,
       confidence: 85,
@@ -131,10 +122,10 @@ const SERIES_INDICATORS = [
 function normaliseTitleForSeries(title: string): string {
   return title
     .toLowerCase()
-    .replace(/\b(?:vol(?:ume)?|book|part|pt|#|no\.?)\s*\d+\b/gi, '')
-    .replace(/\s\d+(\s*(?:of\s*\d+))?$/i, '')
-    .replace(/[^a-z0-9\s]/g, '')
-    .replace(/\s+/g, ' ')
+    .replace(/\b(?:vol(?:ume)?|book|part|pt|#|no\.?)\s*\d+\b/gi, "")
+    .replace(/\s\d+(\s*(?:of\s*\d+))?$/i, "")
+    .replace(/[^a-z0-9\s]/g, "")
+    .replace(/\s+/g, " ")
     .trim();
 }
 
@@ -144,16 +135,12 @@ function normaliseTitleForSeries(title: string): string {
  * and containing series indicator patterns.
  */
 export function detectBookSeries(
-  items: Array<typeof mediaItems.$inferSelect>,
+  items: Array<typeof mediaItems.$inferSelect>
 ): SmartGroupCandidate[] {
-  const BOOK_CATEGORIES: string[] = [
-    MediaCategory.Documents,
-    MediaCategory.Audiobooks,
-  ];
+  const BOOK_CATEGORIES: string[] = [MediaCategory.Documents, MediaCategory.Audiobooks];
 
   const bookItems = items.filter(
-    (i) =>
-      i.mediaCategory !== null && BOOK_CATEGORIES.includes(i.mediaCategory),
+    (i) => i.mediaCategory !== null && BOOK_CATEGORIES.includes(i.mediaCategory)
   );
 
   // Group by normalised title base
@@ -190,7 +177,7 @@ export function detectBookSeries(
         while (i < prefix.length && i < t.length && prefix[i] === t[i]) i++;
         prefix = prefix
           .slice(0, i)
-          .replace(/[-_\s,]+$/, '')
+          .replace(/[-_\s,]+$/, "")
           .trim();
       }
       return prefix.length > 2 ? prefix : normalised;
@@ -198,7 +185,7 @@ export function detectBookSeries(
 
     candidates.push({
       title: seriesTitle,
-      type: 'book-series',
+      type: "book-series",
       reason: `Book series "${seriesTitle}" detected across ${ids.length} items`,
       itemIds: ids,
       confidence: 75,
@@ -214,15 +201,15 @@ export function detectBookSeries(
  * Strips extension and common quality/format suffixes, then normalises separators.
  */
 function baseNameKey(fileName: string): string {
-  const withoutExt = fileName.replace(/\.[^.]+$/, '');
+  const withoutExt = fileName.replace(/\.[^.]+$/, "");
   return withoutExt
     .toLowerCase()
-    .replace(/[-_.\s]+/g, ' ')
+    .replace(/[-_.\s]+/g, " ")
     .replace(
       /\b(?:guide|manual|readme|notes?|supplement|extras?|bonus|companion|workbook|transcript|slides?|resources?|materials?|handout|worksheet|cheatsheet|reference)\b/gi,
-      '',
+      ""
     )
-    .replace(/\s+/g, ' ')
+    .replace(/\s+/g, " ")
     .trim();
 }
 
@@ -234,7 +221,7 @@ function baseNameKey(fileName: string): string {
  * the same content unit.
  */
 export function detectSupplementaryMaterials(
-  items: Array<typeof mediaItems.$inferSelect>,
+  items: Array<typeof mediaItems.$inferSelect>
 ): SmartGroupCandidate[] {
   const SUPPLEMENTARY_CATEGORIES: string[] = [
     MediaCategory.Documents,
@@ -246,9 +233,7 @@ export function detectSupplementaryMaterials(
   ];
 
   const eligible = items.filter(
-    (i) =>
-      i.mediaCategory !== null &&
-      SUPPLEMENTARY_CATEGORIES.includes(i.mediaCategory),
+    (i) => i.mediaCategory !== null && SUPPLEMENTARY_CATEGORIES.includes(i.mediaCategory)
   );
 
   // Group by normalised base name key
@@ -284,7 +269,7 @@ export function detectSupplementaryMaterials(
 
     candidates.push({
       title: key,
-      type: 'collection',
+      type: "collection",
       reason: `Supplementary materials for "${key}" found across ${categories.size} media type(s)`,
       itemIds: ids,
       confidence: 65,
@@ -300,9 +285,7 @@ export function detectSupplementaryMaterials(
  * Merges overlapping candidates: if two candidates share ≥50% of their item IDs,
  * keep the higher-confidence one.
  */
-function deduplicateCandidates(
-  candidates: SmartGroupCandidate[],
-): SmartGroupCandidate[] {
+function deduplicateCandidates(candidates: SmartGroupCandidate[]): SmartGroupCandidate[] {
   const result: SmartGroupCandidate[] = [];
   const used = new Set<number>();
 
@@ -343,20 +326,14 @@ function deduplicateCandidates(
  */
 export async function scanLibraryForSmartGroups(
   db: LibSQLDatabase,
-  libraryId: string,
+  libraryId: string
 ): Promise<number> {
   // Verify library exists
-  const libRows = await db
-    .select()
-    .from(libraries)
-    .where(eq(libraries.id, libraryId));
+  const libRows = await db.select().from(libraries).where(eq(libraries.id, libraryId));
   if (libRows.length === 0) return 0;
 
   // Load all media items for this library
-  const items = await db
-    .select()
-    .from(mediaItems)
-    .where(eq(mediaItems.libraryId, libraryId));
+  const items = await db.select().from(mediaItems).where(eq(mediaItems.libraryId, libraryId));
 
   if (items.length === 0) return 0;
 
@@ -373,24 +350,19 @@ export async function scanLibraryForSmartGroups(
 
   // Load existing pending/accepted suggestions for this library to avoid duplicates
   const existing = await db
-    .select({
-      title: suggestedGroups.suggestedTitle,
-      type: suggestedGroups.suggestedType,
-    })
+    .select({ title: suggestedGroups.suggestedTitle, type: suggestedGroups.suggestedType })
     .from(suggestedGroups)
     .where(
       and(
         eq(suggestedGroups.libraryId, libraryId),
-        inArray(suggestedGroups.status, ['pending', 'accepted']),
-      ),
+        inArray(suggestedGroups.status, ["pending", "accepted"])
+      )
     );
 
-  const existingKeys = new Set(
-    existing.map((e) => `${e.type}::${e.title.toLowerCase()}`),
-  );
+  const existingKeys = new Set(existing.map((e) => `${e.type}::${e.title.toLowerCase()}`));
 
   const toInsert = candidates.filter(
-    (c) => !existingKeys.has(`${c.type}::${c.title.toLowerCase()}`),
+    (c) => !existingKeys.has(`${c.type}::${c.title.toLowerCase()}`)
   );
 
   if (toInsert.length === 0) return 0;
@@ -405,10 +377,10 @@ export async function scanLibraryForSmartGroups(
       reason: c.reason,
       memberItemIds: JSON.stringify(c.itemIds),
       confidence: c.confidence,
-      status: 'pending' as const,
+      status: "pending" as const,
       createdAt: now,
       updatedAt: now,
-    })),
+    }))
   );
 
   return toInsert.length;
@@ -420,17 +392,14 @@ export async function scanLibraryForSmartGroups(
  */
 export async function acceptSuggestedGroup(
   db: LibSQLDatabase,
-  suggestionId: string,
+  suggestionId: string
 ): Promise<{ groupId: string } | null> {
-  const rows = await db
-    .select()
-    .from(suggestedGroups)
-    .where(eq(suggestedGroups.id, suggestionId));
+  const rows = await db.select().from(suggestedGroups).where(eq(suggestedGroups.id, suggestionId));
 
   if (rows.length === 0) return null;
   const suggestion = rows[0];
   if (!suggestion) return null;
-  if (suggestion.status !== 'pending') return null;
+  if (suggestion.status !== "pending") return null;
 
   const itemIds: string[] = (() => {
     try {
@@ -451,10 +420,7 @@ export async function acceptSuggestedGroup(
       libraryId: suggestion.libraryId,
       type: suggestion.suggestedType,
       title: suggestion.suggestedTitle,
-      metadata: JSON.stringify({
-        source: 'smart-grouping',
-        reason: suggestion.reason,
-      }),
+      metadata: JSON.stringify({ source: "smart-grouping", reason: suggestion.reason }),
       createdAt: now,
     })
     .onConflictDoUpdate({
@@ -475,7 +441,7 @@ export async function acceptSuggestedGroup(
   // Mark suggestion as accepted
   await db
     .update(suggestedGroups)
-    .set({ status: 'accepted', updatedAt: now })
+    .set({ status: "accepted", updatedAt: now })
     .where(eq(suggestedGroups.id, suggestionId));
 
   return { groupId };

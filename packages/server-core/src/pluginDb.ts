@@ -1,17 +1,12 @@
-import type { Client, InValue } from '@libsql/client';
-import type { PluginDatabaseAccess } from '@xon/plugin-sdk';
+import type { Client, InValue } from "@libsql/client";
+import type { PluginDatabaseAccess } from "@xon/plugin-sdk";
 
 /** Core tables that plugins are never permitted to write to */
-const CORE_TABLES = new Set([
-  'libraries',
-  'data_sources',
-  'media_items',
-  'reading_positions',
-]);
+const CORE_TABLES = new Set(["libraries", "data_sources", "media_items", "reading_positions"]);
 
 /** Convert a plugin ID to a safe snake_case segment for table name prefixes */
 function toTableSegment(pluginId: string): string {
-  return pluginId.replace(/[^a-z0-9]/gi, '_').toLowerCase();
+  return pluginId.replace(/[^a-z0-9]/gi, "_").toLowerCase();
 }
 
 /**
@@ -41,32 +36,26 @@ export function validatePluginSql(pluginId: string, sql: string): void {
 
   // Extract the target table name from supported DDL/DML patterns
   const tableMatch =
-    normalized.match(
-      /^create\s+table\s+(?:if\s+not\s+exists\s+)?[`"[]?(\w+)/,
-    ) ??
+    normalized.match(/^create\s+table\s+(?:if\s+not\s+exists\s+)?[`"[]?(\w+)/) ??
     normalized.match(/^insert\s+(?:or\s+\w+\s+)?into\s+[`"[]?(\w+)/) ??
     normalized.match(/^update\s+[`"[]?(\w+)/) ??
     normalized.match(/^delete\s+from\s+[`"[]?(\w+)/) ??
     normalized.match(/^drop\s+table\s+(?:if\s+exists\s+)?[`"[]?(\w+)/);
 
   if (!tableMatch?.[1]) {
-    throw new Error(
-      `Plugin "${pluginId}": unsupported or unrecognised SQL statement`,
-    );
+    throw new Error(`Plugin "${pluginId}": unsupported or unrecognised SQL statement`);
   }
 
   const tableName = tableMatch[1];
 
   if (CORE_TABLES.has(tableName)) {
-    throw new Error(
-      `Plugin "${pluginId}": write access denied to core table "${tableName}"`,
-    );
+    throw new Error(`Plugin "${pluginId}": write access denied to core table "${tableName}"`);
   }
 
   if (!tableName.startsWith(prefix)) {
     throw new Error(
       `Plugin "${pluginId}": write access denied to table "${tableName}". ` +
-        `Plugin tables must be prefixed with "${prefix}"`,
+        `Plugin tables must be prefixed with "${prefix}"`
     );
   }
 }
@@ -79,10 +68,7 @@ export function validatePluginSql(pluginId: string, sql: string): void {
  *   to tables prefixed with `plugin_<pluginId>_`.
  * - Core tables are always read-only.
  */
-export function createPluginDatabaseAccess(
-  pluginId: string,
-  client: Client,
-): PluginDatabaseAccess {
+export function createPluginDatabaseAccess(pluginId: string, client: Client): PluginDatabaseAccess {
   return {
     async query(sql: string, params?: unknown[]): Promise<unknown[]> {
       validatePluginSql(pluginId, sql);

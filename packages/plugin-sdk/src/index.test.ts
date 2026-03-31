@@ -1,14 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
-import { BasePlugin } from './BasePlugin.js';
-import type { PluginContext, PluginManifest } from './types.js';
+import { describe, expect, it, vi } from "vitest";
+import { BasePlugin } from "./BasePlugin.js";
+import type { PluginContext, PluginManifest } from "./types.js";
 
 const testManifest: PluginManifest = {
-  id: 'test-plugin',
-  name: 'Test Plugin',
-  version: '1.0.0',
-  description: 'A test plugin',
-  author: 'Test Author',
-  category: 'Processor',
+  id: "test-plugin",
+  name: "Test Plugin",
+  version: "1.0.0",
+  description: "A test plugin",
+  author: "Test Author",
+  category: "Processor",
 };
 
 class MinimalPlugin extends BasePlugin {
@@ -51,13 +51,13 @@ function makeContext(overrides: Partial<PluginContext> = {}): PluginContext {
   };
 }
 
-describe('BasePlugin', () => {
-  it('exposes the manifest', () => {
+describe("BasePlugin", () => {
+  it("exposes the manifest", () => {
     const plugin = new MinimalPlugin();
     expect(plugin.manifest).toBe(testManifest);
   });
 
-  it('default lifecycle methods are no-ops (do not throw)', async () => {
+  it("default lifecycle methods are no-ops (do not throw)", async () => {
     const plugin = new MinimalPlugin();
     const ctx = makeContext();
     await expect(plugin.init(ctx)).resolves.toBeUndefined();
@@ -66,7 +66,7 @@ describe('BasePlugin', () => {
     await expect(plugin.uninstall()).resolves.toBeUndefined();
   });
 
-  it('subclass can override lifecycle methods', async () => {
+  it("subclass can override lifecycle methods", async () => {
     const plugin = new LifecyclePlugin();
     const ctx = makeContext();
     await plugin.init(ctx);
@@ -79,7 +79,7 @@ describe('BasePlugin', () => {
     expect(plugin.uninstallCalled).toBe(true);
   });
 
-  it('lifecycle methods receive context', async () => {
+  it("lifecycle methods receive context", async () => {
     const plugin = new LifecyclePlugin();
     const ctx = makeContext();
     await plugin.init(ctx);
@@ -88,16 +88,16 @@ describe('BasePlugin', () => {
   });
 });
 
-describe('PluginManifest', () => {
-  it('supports all plugin categories', () => {
+describe("PluginManifest", () => {
+  it("supports all plugin categories", () => {
     const categories = [
-      'MediaProvider',
-      'MetadataSource',
-      'FormatHandler',
-      'Processor',
-      'Theme',
-      'UIExtension',
-      'BackupTarget',
+      "MediaProvider",
+      "MetadataSource",
+      "FormatHandler",
+      "Processor",
+      "Theme",
+      "UIExtension",
+      "BackupTarget",
     ] as const;
     for (const category of categories) {
       const manifest: PluginManifest = { ...testManifest, category };
@@ -105,14 +105,14 @@ describe('PluginManifest', () => {
     }
   });
 
-  it('optional fields are not required', () => {
+  it("optional fields are not required", () => {
     const minimal: PluginManifest = {
-      id: 'min',
-      name: 'Minimal',
-      version: '0.1.0',
-      description: 'Minimal plugin',
-      author: 'Someone',
-      category: 'Theme',
+      id: "min",
+      name: "Minimal",
+      version: "0.1.0",
+      description: "Minimal plugin",
+      author: "Someone",
+      category: "Theme",
     };
     expect(minimal.mediaCategories).toBeUndefined();
     expect(minimal.minServerVersion).toBeUndefined();
@@ -120,41 +120,41 @@ describe('PluginManifest', () => {
   });
 });
 
-describe('PluginContext interface', () => {
-  it('on() can register event hooks', () => {
+describe("PluginContext interface", () => {
+  it("on() can register event hooks", () => {
     const ctx = makeContext();
     const handler = vi.fn();
-    ctx.on('scan:start', handler);
-    expect(ctx.on).toHaveBeenCalledWith('scan:start', handler);
+    ctx.on("scan:start", handler);
+    expect(ctx.on).toHaveBeenCalledWith("scan:start", handler);
   });
 
-  it('registerRoute() can register routes', () => {
+  it("registerRoute() can register routes", () => {
     const ctx = makeContext();
     const route = {
-      method: 'GET' as const,
-      path: '/test',
+      method: "GET" as const,
+      path: "/test",
       handler: vi.fn(),
     };
     ctx.registerRoute(route);
     expect(ctx.registerRoute).toHaveBeenCalledWith(route);
   });
 
-  it('registerUI() can register UI components', () => {
+  it("registerUI() can register UI components", () => {
     const ctx = makeContext();
     const component = {
-      id: 'my-component',
-      injectionPoint: 'sidebar:top' as const,
-      bundleUrl: '/plugins/test/bundle.js',
+      id: "my-component",
+      injectionPoint: "sidebar:top" as const,
+      bundleUrl: "/plugins/test/bundle.js",
     };
     ctx.registerUI(component);
     expect(ctx.registerUI).toHaveBeenCalledWith(component);
   });
 
-  it('db.query() returns results', async () => {
+  it("db.query() returns results", async () => {
     const ctx = makeContext({
-      db: { query: vi.fn().mockResolvedValue([{ id: '1' }]) },
+      db: { query: vi.fn().mockResolvedValue([{ id: "1" }]) },
     });
-    const results = await ctx.db.query('SELECT * FROM media');
-    expect(results).toEqual([{ id: '1' }]);
+    const results = await ctx.db.query("SELECT * FROM media");
+    expect(results).toEqual([{ id: "1" }]);
   });
 });
