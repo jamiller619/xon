@@ -1,7 +1,16 @@
 import { type SQL, eq, sql } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
+import { z } from "zod";
 import { getAllowedRatings, libraryAccess, users } from "../schema.js";
+import { validate } from "../validate.js";
+
+const searchQuerySchema = z.object({
+  q: z.string().trim().min(1, "q is required"),
+  category: z.string().optional(),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+  offset: z.coerce.number().int().min(0).optional().default(0),
+});
 
 const PRIVILEGED_ROLES = ["admin", "manager"] as const;
 
@@ -34,13 +43,8 @@ interface SearchRow {
 export function makeSearchRouter(db: LibSQLDatabase): Hono {
   const router = new Hono();
 
-  router.get("/", async (c) => {
-    const q = c.req.query("q")?.trim();
-    const category = c.req.query("category");
-    const limitNum = Math.min(Math.max(1, Number(c.req.query("limit") || 20)), 100);
-    const offsetNum = Math.max(0, Number(c.req.query("offset") || 0));
-
-    if (!q) return c.json({ error: "q is required" }, 400);
+  router.get("/", validate("query", searchQuerySchema), async (c) => {
+    const { q, category, limit: limitNum, offset: offsetNum } = c.req.valid("query");
 
     const user = c.get("user");
 

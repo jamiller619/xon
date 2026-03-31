@@ -1,4 +1,3 @@
-import { zValidator } from "@hono/zod-validator";
 import { eq } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
@@ -10,6 +9,7 @@ import { emitPluginEvent } from "../pluginManager.js";
 import { requireRole } from "../rbac.js";
 import { parseCronInterval } from "../scheduler.js";
 import { libraries } from "../schema.js";
+import { validate } from "../validate.js";
 
 type ScanState = {
   status: "running" | "completed" | "failed";
@@ -115,7 +115,7 @@ export function makeScanRouter(db: LibSQLDatabase): Hono {
   });
 
   // PUT /schedule — update scan schedule for a library (manager+)
-  router.put("/schedule", requireRole("manager"), zValidator("json", scheduleSchema), async (c) => {
+  router.put("/schedule", requireRole("manager"), validate("json", scheduleSchema), async (c) => {
     const libraryId = c.req.param("libraryId") as string;
     const { scanSchedule } = c.req.valid("json");
 

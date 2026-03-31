@@ -322,15 +322,13 @@ describe("runMediaBackupJob — plugin type", () => {
 
   it("calls plugin.delete when removeDeleted is true and file is stale", async () => {
     // Insert library (no media items - simulates all deleted)
-    await db
-      .insert(libraries)
-      .values({
-        id: "lib1",
-        name: "Movies",
-        allowedMediaTypes: "[]",
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      });
+    await db.insert(libraries).values({
+      id: "lib1",
+      name: "Movies",
+      allowedMediaTypes: "[]",
+      createdAt: new Date(),
+      updatedAt: new Date(),
+    });
 
     // Insert plugin target with removeDeleted
     const targetId = crypto.randomUUID();

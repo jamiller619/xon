@@ -1,11 +1,11 @@
 import { access } from "node:fs/promises";
-import { zValidator } from "@hono/zod-validator";
 import { and, eq } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
 import { requireRole } from "../rbac.js";
 import { dataSources, libraries } from "../schema.js";
+import { validate } from "../validate.js";
 
 const createSourceSchema = z.object({
   type: z.enum(["local", "network", "plugin"]),
@@ -27,7 +27,7 @@ export function makeSourcesRouter(db: LibSQLDatabase): Hono {
   const router = new Hono();
 
   // POST /:libraryId/sources — add data source (manager+)
-  router.post("/", requireRole("manager"), zValidator("json", createSourceSchema), async (c) => {
+  router.post("/", requireRole("manager"), validate("json", createSourceSchema), async (c) => {
     // libraryId comes from parent route /:libraryId/sources
     const libraryId = c.req.param("libraryId") as string;
     const body = c.req.valid("json");
@@ -76,7 +76,7 @@ export function makeSourcesRouter(db: LibSQLDatabase): Hono {
   });
 
   // PUT /:libraryId/sources/:id — update data source (manager+)
-  router.put("/:id", requireRole("manager"), zValidator("json", updateSourceSchema), async (c) => {
+  router.put("/:id", requireRole("manager"), validate("json", updateSourceSchema), async (c) => {
     const libraryId = c.req.param("libraryId") as string;
     const id = c.req.param("id");
     const body = c.req.valid("json");

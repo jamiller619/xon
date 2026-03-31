@@ -1,4 +1,3 @@
-import { zValidator } from "@hono/zod-validator";
 import { eq, lt } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
@@ -7,6 +6,7 @@ import { sign, verify } from "hono/jwt";
 import { z } from "zod";
 import { verifyPassword } from "../password.js";
 import { refreshTokens, users } from "../schema.js";
+import { validate } from "../validate.js";
 
 const REFRESH_COOKIE_NAME = "rt";
 
@@ -62,7 +62,7 @@ export function makeAuthRouter(db: LibSQLDatabase): Hono {
 
   router.post(
     "/login",
-    zValidator("json", z.object({ username: z.string().min(1), password: z.string().min(1) })),
+    validate("json", z.object({ username: z.string().min(1), password: z.string().min(1) })),
     async (c) => {
       const { username, password } = c.req.valid("json");
 

@@ -2,7 +2,6 @@ import { createReadStream } from "node:fs";
 import { readFile, readdir, stat } from "node:fs/promises";
 import { basename, dirname, extname, join } from "node:path";
 import { Readable } from "node:stream";
-import { zValidator } from "@hono/zod-validator";
 import { and, asc, desc, eq, inArray, isNull, or } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
@@ -28,6 +27,7 @@ import {
 } from "../schema.js";
 import type { ThumbnailPaths } from "../thumbnails.js";
 import { generateHlsPlaylist, needsTranscoding, spawnTranscodeSegment } from "../transcode.js";
+import { validate } from "../validate.js";
 
 const VALID_SIZES = ["small", "medium", "large"] as const;
 type ThumbnailSize = (typeof VALID_SIZES)[number];
@@ -148,7 +148,7 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
   });
 
   // PUT /media/:id — update editable metadata fields
-  router.put("/:id", zValidator("json", updateMediaSchema), async (c) => {
+  router.put("/:id", validate("json", updateMediaSchema), async (c) => {
     const id = c.req.param("id");
     const body = c.req.valid("json");
 
@@ -181,7 +181,7 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
   });
 
   // PUT /media/:id/ai-tags — accept or reject AI-generated tag suggestions
-  router.put("/:id/ai-tags", zValidator("json", aiTagsSchema), async (c) => {
+  router.put("/:id/ai-tags", validate("json", aiTagsSchema), async (c) => {
     const id = c.req.param("id");
     const body = c.req.valid("json");
 
@@ -249,7 +249,7 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
   });
 
   // POST /media/bulk — bulk update, delete, or move media items
-  router.post("/bulk", zValidator("json", bulkSchema), async (c) => {
+  router.post("/bulk", validate("json", bulkSchema), async (c) => {
     const body = c.req.valid("json");
     const user = c.get("user");
 
@@ -711,7 +711,7 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
   });
 
   // PUT /media/:id/reading-position — upsert reading position
-  router.put("/:id/reading-position", zValidator("json", readingPositionSchema), async (c) => {
+  router.put("/:id/reading-position", validate("json", readingPositionSchema), async (c) => {
     const id = c.req.param("id");
     const body = c.req.valid("json");
 
@@ -753,7 +753,7 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
   });
 
   // PUT /media/:id/progress — save playback/reading position
-  router.put("/:id/progress", zValidator("json", progressSchema), async (c) => {
+  router.put("/:id/progress", validate("json", progressSchema), async (c) => {
     const id = c.req.param("id");
     const user = c.get("user");
     const body = c.req.valid("json");

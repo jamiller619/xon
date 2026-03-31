@@ -1,6 +1,5 @@
 import { copyFile, mkdir } from "node:fs/promises";
 import { join } from "node:path";
-import { zValidator } from "@hono/zod-validator";
 import { eq } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
@@ -8,6 +7,7 @@ import { z } from "zod";
 import { getNextCronTime, validateCronExpression } from "../backupScheduler.js";
 import { getBackupTargetPlugin } from "../backupTargetPluginRegistry.js";
 import { backupTargets } from "../schema.js";
+import { validate } from "../validate.js";
 
 // ---------------------------------------------------------------------------
 // Config schemas per backup target type
@@ -176,7 +176,7 @@ export function makeAdminBackupTargetsRouter(db: LibSQLDatabase): Hono {
   });
 
   // POST /admin/backup/targets — create target
-  router.post("/", zValidator("json", createSchema), async (c) => {
+  router.post("/", validate("json", createSchema), async (c) => {
     const body = c.req.valid("json");
     const id = crypto.randomUUID();
     const now = new Date();
@@ -198,7 +198,7 @@ export function makeAdminBackupTargetsRouter(db: LibSQLDatabase): Hono {
   });
 
   // PUT /admin/backup/targets/:id — update target
-  router.put("/:id", zValidator("json", updateSchema), async (c) => {
+  router.put("/:id", validate("json", updateSchema), async (c) => {
     const id = c.req.param("id") as string;
     const body = c.req.valid("json");
 
@@ -233,7 +233,7 @@ export function makeAdminBackupTargetsRouter(db: LibSQLDatabase): Hono {
   });
 
   // PUT /admin/backup/targets/:id/schedule — set schedule and retention policy
-  router.put("/:id/schedule", zValidator("json", scheduleSchema), async (c) => {
+  router.put("/:id/schedule", validate("json", scheduleSchema), async (c) => {
     const id = c.req.param("id") as string;
     const body = c.req.valid("json");
 

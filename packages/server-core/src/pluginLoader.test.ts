@@ -44,7 +44,10 @@ describe("discoverPluginManifests", () => {
     it("loads manifest from package.json xon field", async () => {
       const p = join(pluginDir, "my-plugin");
       await mkdir(p);
-      await writeFile(join(p, "package.json"), JSON.stringify({ name: "my-plugin", xon: baseManifest }));
+      await writeFile(
+        join(p, "package.json"),
+        JSON.stringify({ name: "my-plugin", xon: baseManifest })
+      );
 
       const results = await discoverPluginManifests(pluginDir);
       expect(results).toHaveLength(1);
@@ -122,7 +125,7 @@ describe("discoverPluginManifests", () => {
       await mkdir(p);
       await writeFile(
         join(p, "xon.config.json"),
-        JSON.stringify({ ...baseManifest, category: "InvalidCategory" }),
+        JSON.stringify({ ...baseManifest, category: "InvalidCategory" })
       );
 
       const results = await discoverPluginManifests(pluginDir);

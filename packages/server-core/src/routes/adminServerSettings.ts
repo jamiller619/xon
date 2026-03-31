@@ -1,9 +1,9 @@
-import { zValidator } from "@hono/zod-validator";
 import { eq } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
 import { serverSettings } from "../schema.js";
+import { validate } from "../validate.js";
 
 const SERVER_SETTINGS_ID = "default";
 
@@ -73,7 +73,7 @@ export function makeAdminServerSettingsRouter(db: LibSQLDatabase): Hono {
    * PUT /admin/server-settings
    * Updates CORS, rate limit, HTTPS, and proxy configuration.
    */
-  router.put("/", zValidator("json", updateSchema), async (c) => {
+  router.put("/", validate("json", updateSchema), async (c) => {
     const body = c.req.valid("json");
 
     const current = await getOrInitSettings(db);

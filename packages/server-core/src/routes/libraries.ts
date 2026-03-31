@@ -1,4 +1,3 @@
-import { zValidator } from "@hono/zod-validator";
 import { and, asc, desc, eq, inArray, isNull, or, sql } from "drizzle-orm";
 import type { SQL } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
@@ -13,6 +12,7 @@ import {
   mediaItems,
   users,
 } from "../schema.js";
+import { validate } from "../validate.js";
 import { withThumbnailUrls } from "./media.js";
 import { makeScanRouter } from "./scan.js";
 import { makeSourcesRouter } from "./sources.js";
@@ -53,6 +53,16 @@ async function getContentRatingCondition(db: LibSQLDatabase, userId: string) {
   return inArray(mediaItems.contentRating, allowed);
 }
 
+const libraryMediaQuerySchema = z.object({
+  mediaCategory: z.string().optional(),
+  mimeType: z.string().optional(),
+  drmProtected: z.enum(["true", "false"]).optional(),
+  sortBy: z.enum(["title", "fileSize", "releaseDate", "rating", "createdAt"]).optional(),
+  order: z.enum(["asc", "desc"]).optional(),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+});
+
 const createLibrarySchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
@@ -70,7 +80,7 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
   const router = new Hono();
 
   // POST /libraries — create library (manager+)
-  router.post("/", requireRole("manager"), zValidator("json", createLibrarySchema), async (c) => {
+  router.post("/", requireRole("manager"), validate("json", createLibrarySchema), async (c) => {
     const body = c.req.valid("json");
     const id = crypto.randomUUID();
     const now = new Date();
@@ -117,7 +127,7 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
   });
 
   // PUT /libraries/:id — update library (manager+)
-  router.put("/:id", requireRole("manager"), zValidator("json", updateLibrarySchema), async (c) => {
+  router.put("/:id", requireRole("manager"), validate("json", updateLibrarySchema), async (c) => {
     const id = c.req.param("id");
     const body = c.req.valid("json");
     const existing = await db.select().from(libraries).where(eq(libraries.id, id));
@@ -146,7 +156,7 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
   });
 
   // GET /libraries/:libraryId/media — list media items with filtering, sorting, pagination
-  router.get("/:libraryId/media", async (c) => {
+  router.get("/:libraryId/media", validate("query", libraryMediaQuerySchema), async (c) => {
     const libraryId = c.req.param("libraryId") as string;
     const user = c.get("user");
 
@@ -158,10 +168,11 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
       return c.json({ error: "Not found" }, 404);
     }
 
-    const { mediaCategory, mimeType, drmProtected, sortBy, order, page, limit } = c.req.query();
+    const { mediaCategory, mimeType, drmProtected, sortBy, order, page, limit } =
+      c.req.valid("query");
 
-    const pageNum = Math.max(1, Number(page) || 1);
-    const limitNum = Math.min(Math.max(1, Number(limit) || 20), 100);
+    const pageNum = page;
+    const limitNum = limit;
     const offset = (pageNum - 1) * limitNum;
 
     const ratingCond = await getContentRatingCondition(db, user.id);
@@ -178,7 +189,7 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
     const conditions = [eq(mediaItems.libraryId, libraryId)];
     if (mediaCategory) conditions.push(eq(mediaItems.mediaCategory, mediaCategory));
     if (mimeType) conditions.push(eq(mediaItems.mimeType, mimeType));
-    if (drmProtected !== undefined && drmProtected !== "") {
+    if (drmProtected !== undefined) {
       conditions.push(eq(mediaItems.drmProtected, drmProtected === "true"));
     } else if (userHidesDrm || libHidesDrm) {
       conditions.push(eq(mediaItems.drmProtected, false));

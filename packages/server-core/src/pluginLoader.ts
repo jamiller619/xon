@@ -1,5 +1,5 @@
 import type { Dirent } from "node:fs";
-import { readdir, readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 import { join } from "node:path";
 import type { PluginManifest } from "@xon/plugin-sdk";
 
@@ -23,7 +23,14 @@ function validateManifest(data: unknown, source: string): PluginManifest {
   }
   const d = data as Record<string, unknown>;
 
-  const required: Array<keyof PluginManifest> = ["id", "name", "version", "description", "author", "category"];
+  const required: Array<keyof PluginManifest> = [
+    "id",
+    "name",
+    "version",
+    "description",
+    "author",
+    "category",
+  ];
   for (const field of required) {
     if (typeof d[field] !== "string" || (d[field] as string).trim() === "") {
       throw new Error(`${source}: missing or invalid required field "${field}"`);
@@ -32,7 +39,7 @@ function validateManifest(data: unknown, source: string): PluginManifest {
 
   if (!VALID_CATEGORIES.has(d.category as string)) {
     throw new Error(
-      `${source}: invalid category "${d.category}". Must be one of: ${[...VALID_CATEGORIES].join(", ")}`,
+      `${source}: invalid category "${d.category}". Must be one of: ${[...VALID_CATEGORIES].join(", ")}`
     );
   }
 
@@ -61,7 +68,9 @@ async function loadManifestFromDir(pluginDir: string): Promise<PluginManifest> {
   } catch (err) {
     // package.json missing or not valid JSON — fall through to next option
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") {
-      const parseError = err instanceof SyntaxError || !(err instanceof Error && (err as NodeJS.ErrnoException).code);
+      const parseError =
+        err instanceof SyntaxError ||
+        !(err instanceof Error && (err as NodeJS.ErrnoException).code);
       if (parseError) throw err;
     }
   }
@@ -96,7 +105,9 @@ async function loadManifestFromDir(pluginDir: string): Promise<PluginManifest> {
     }
   }
 
-  throw new Error(`No plugin manifest found in ${pluginDir} (tried package.json#xon, xon.config.json, xon.config.ts)`);
+  throw new Error(
+    `No plugin manifest found in ${pluginDir} (tried package.json#xon, xon.config.json, xon.config.ts)`
+  );
 }
 
 /**
@@ -107,7 +118,7 @@ async function loadManifestFromDir(pluginDir: string): Promise<PluginManifest> {
 export async function discoverPluginManifests(pluginDir: string): Promise<PluginLoadResult[]> {
   let entries: Dirent[];
   try {
-    entries = await readdir(pluginDir, { withFileTypes: true }) as Dirent[];
+    entries = (await readdir(pluginDir, { withFileTypes: true })) as Dirent[];
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
       return [];

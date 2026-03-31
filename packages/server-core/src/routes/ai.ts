@@ -1,4 +1,3 @@
-import { zValidator } from "@hono/zod-validator";
 import { and, desc, eq, gte, inArray } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
@@ -12,6 +11,7 @@ import {
   suggestedGroups,
 } from "../schema.js";
 import { acceptSuggestedGroup, scanLibraryForSmartGroups } from "../smartGrouping.js";
+import { validate } from "../validate.js";
 import { withThumbnailUrls } from "./media.js";
 
 const PRIVILEGED_ROLES = ["admin", "manager"] as const;
@@ -127,7 +127,7 @@ export function makeAiRouter(db: LibSQLDatabase): Hono {
     threshold: z.number().int().min(0).max(64).optional(),
   });
 
-  router.post("/duplicates/scan", zValidator("json", scanSchema), async (c) => {
+  router.post("/duplicates/scan", validate("json", scanSchema), async (c) => {
     const user = c.get("user");
     const { libraryId, threshold } = c.req.valid("json");
 
@@ -159,7 +159,7 @@ export function makeAiRouter(db: LibSQLDatabase): Hono {
     action: z.enum(["keep_both", "keep_first", "keep_second"]),
   });
 
-  router.post("/:id/resolve", zValidator("json", resolveSchema), async (c) => {
+  router.post("/:id/resolve", validate("json", resolveSchema), async (c) => {
     const { id } = c.req.param();
     const { action } = c.req.valid("json");
     const user = c.get("user");
@@ -251,7 +251,7 @@ export function makeAiRouter(db: LibSQLDatabase): Hono {
    */
   const smartScanSchema = z.object({ libraryId: z.string().min(1) });
 
-  router.post("/suggested-groups/scan", zValidator("json", smartScanSchema), async (c) => {
+  router.post("/suggested-groups/scan", validate("json", smartScanSchema), async (c) => {
     const user = c.get("user");
     const { libraryId } = c.req.valid("json");
 

@@ -1,10 +1,10 @@
-import { zValidator } from "@hono/zod-validator";
 import { eq } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
 import { decryptSecret, encryptSecret } from "../crypto.js";
 import { aiSettings } from "../schema.js";
+import { validate } from "../validate.js";
 
 const AI_SETTINGS_ID = "default";
 
@@ -63,7 +63,7 @@ export function makeAdminAiSettingsRouter(db: LibSQLDatabase): Hono {
    * Updates AI configuration. Pass cloudApiKey to update the key; omit to leave unchanged.
    * The API key is encrypted at rest using AES-256-GCM.
    */
-  router.put("/", zValidator("json", updateSchema), async (c) => {
+  router.put("/", validate("json", updateSchema), async (c) => {
     const body = c.req.valid("json");
 
     const current = await getOrInitSettings(db);

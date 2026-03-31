@@ -1,6 +1,5 @@
 import { copyFile, mkdir, stat, unlink } from "node:fs/promises";
 import { join } from "node:path";
-import { zValidator } from "@hono/zod-validator";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
@@ -9,6 +8,7 @@ import { applyRetentionPolicy } from "../backupScheduler.js";
 import { getBackupTargetPlugin } from "../backupTargetPluginRegistry.js";
 import { emitEvent } from "../events.js";
 import { backupFileState, backupJobs, backupTargets, mediaItems } from "../schema.js";
+import { validate } from "../validate.js";
 import {
   localConfigSchema,
   networkConfigSchema,
@@ -293,7 +293,7 @@ export function makeAdminBackupMediaRouter(db: LibSQLDatabase): Hono {
   const router = new Hono();
 
   // POST /admin/backup/media — start a media backup job
-  router.post("/", zValidator("json", startBackupSchema), async (c) => {
+  router.post("/", validate("json", startBackupSchema), async (c) => {
     const body = c.req.valid("json");
 
     // Verify target exists and is enabled

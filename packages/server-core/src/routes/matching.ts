@@ -1,9 +1,9 @@
-import { zValidator } from "@hono/zod-validator";
 import { and, asc, eq, inArray, sql } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
 import { libraryAccess, matchingQueue, mediaItems } from "../schema.js";
+import { validate } from "../validate.js";
 import { withThumbnailUrls } from "./media.js";
 
 const PRIVILEGED_ROLES = ["admin", "manager"] as const;
@@ -75,7 +75,7 @@ export function makeMatchingRouter(db: LibSQLDatabase): Hono {
    * Confirms a pending match: updates the media item's title and metadata,
    * then marks the queue entry as confirmed.
    */
-  router.put("/:id/confirm", zValidator("json", confirmSchema), async (c) => {
+  router.put("/:id/confirm", validate("json", confirmSchema), async (c) => {
     const { id } = c.req.param();
     const user = c.get("user");
 

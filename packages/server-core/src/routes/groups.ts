@@ -1,10 +1,10 @@
-import { zValidator } from "@hono/zod-validator";
 import { and, asc, eq, inArray } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
 import { requireRole } from "../rbac.js";
 import { groupMembers, groups, libraryAccess, mediaItems } from "../schema.js";
+import { validate } from "../validate.js";
 
 const PRIVILEGED_ROLES = ["admin", "manager"] as const;
 
@@ -53,7 +53,7 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
   const router = new Hono();
 
   // POST /groups — create a manual group (manager+)
-  router.post("/", requireRole("manager"), zValidator("json", createGroupSchema), async (c) => {
+  router.post("/", requireRole("manager"), validate("json", createGroupSchema), async (c) => {
     const body = c.req.valid("json");
     const id = `grp:manual:${body.libraryId}:${crypto.randomUUID()}`;
     await db.insert(groups).values({
@@ -146,7 +146,7 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
   });
 
   // PUT /groups/:id — update group title/type (manager+)
-  router.put("/:id", requireRole("manager"), zValidator("json", updateGroupSchema), async (c) => {
+  router.put("/:id", requireRole("manager"), validate("json", updateGroupSchema), async (c) => {
     const id = c.req.param("id");
     const body = c.req.valid("json");
     const user = c.get("user");
@@ -203,61 +203,56 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
   });
 
   // POST /groups/:id/items — add item to group (upsert with sortOrder)
-  router.post(
-    "/:id/items",
-    requireRole("manager"),
-    zValidator("json", addItemSchema),
-    async (c) => {
-      const groupId = c.req.param("id");
-      const body = c.req.valid("json");
-      const user = c.get("user");
+  router.post("/:id/items", requireRole("manager"), validate("json", addItemSchema), async (c) => {
+    const groupId = c.req.param("id");
+    const body = c.req.valid("json");
+    const user = c.get("user");
 
-      const groupRows = await db.select().from(groups).where(eq(groups.id, groupId));
-      if (groupRows.length === 0) return c.json({ error: "Not found" }, 404);
-      const group = groupRows[0];
-      if (!group) return c.json({ error: "Not found" }, 404);
+    const groupRows = await db.select().from(groups).where(eq(groups.id, groupId));
+    if (groupRows.length === 0) return c.json({ error: "Not found" }, 404);
+    const group = groupRows[0];
+    if (!group) return c.json({ error: "Not found" }, 404);
 
-      const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role);
-      if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
-        return c.json({ error: "Not found" }, 404);
-      }
-
-      // Verify media item exists and belongs to same library
-      const itemRows = await db
-        .select({ id: mediaItems.id })
-        .from(mediaItems)
-        .where(and(eq(mediaItems.id, body.mediaItemId), eq(mediaItems.libraryId, group.libraryId)));
-      if (itemRows.length === 0) return c.json({ error: "Media item not found" }, 404);
-
-      // Determine sort order: use provided or append to end
-      let sortOrder = body.sortOrder;
-      if (sortOrder === undefined) {
-        const existing = await db
-          .select({ sortOrder: groupMembers.sortOrder })
-          .from(groupMembers)
-          .where(eq(groupMembers.groupId, groupId))
-          .orderBy(asc(groupMembers.sortOrder));
-        const last = existing[existing.length - 1];
-        sortOrder = last ? last.sortOrder + 1 : 0;
-      }
-
-      await db
-        .insert(groupMembers)
-        .values({ groupId, mediaItemId: body.mediaItemId, sortOrder })
-        .onConflictDoUpdate({
-          target: [groupMembers.groupId, groupMembers.mediaItemId],
-          set: { sortOrder },
-        });
-
-      return c.json({ groupId, mediaItemId: body.mediaItemId, sortOrder }, 201);
+    const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role);
+    if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
+      return c.json({ error: "Not found" }, 404);
     }
-  );
+
+    // Verify media item exists and belongs to same library
+    const itemRows = await db
+      .select({ id: mediaItems.id })
+      .from(mediaItems)
+      .where(and(eq(mediaItems.id, body.mediaItemId), eq(mediaItems.libraryId, group.libraryId)));
+    if (itemRows.length === 0) return c.json({ error: "Media item not found" }, 404);
+
+    // Determine sort order: use provided or append to end
+    let sortOrder = body.sortOrder;
+    if (sortOrder === undefined) {
+      const existing = await db
+        .select({ sortOrder: groupMembers.sortOrder })
+        .from(groupMembers)
+        .where(eq(groupMembers.groupId, groupId))
+        .orderBy(asc(groupMembers.sortOrder));
+      const last = existing[existing.length - 1];
+      sortOrder = last ? last.sortOrder + 1 : 0;
+    }
+
+    await db
+      .insert(groupMembers)
+      .values({ groupId, mediaItemId: body.mediaItemId, sortOrder })
+      .onConflictDoUpdate({
+        target: [groupMembers.groupId, groupMembers.mediaItemId],
+        set: { sortOrder },
+      });
+
+    return c.json({ groupId, mediaItemId: body.mediaItemId, sortOrder }, 201);
+  });
 
   // PUT /groups/:id/items — reorder items (batch update sortOrder)
   router.put(
     "/:id/items",
     requireRole("manager"),
-    zValidator("json", reorderItemsSchema),
+    validate("json", reorderItemsSchema),
     async (c) => {
       const groupId = c.req.param("id");
       const body = c.req.valid("json");

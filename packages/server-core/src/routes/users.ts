@@ -1,10 +1,10 @@
 import { createHash, randomBytes } from "node:crypto";
-import { zValidator } from "@hono/zod-validator";
 import { and, desc, eq, isNull, or } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
 import { apiTokens, favorites, mediaItems, mediaProgress, users, watchlist } from "../schema.js";
+import { validate } from "../validate.js";
 import { withThumbnailUrls } from "./media.js";
 
 export function hashApiToken(token: string): string {
@@ -40,7 +40,7 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
   // PATCH /users/me — update current user preferences
   router.patch(
     "/me",
-    zValidator("json", z.object({ hideDrmItems: z.boolean().optional() })),
+    validate("json", z.object({ hideDrmItems: z.boolean().optional() })),
     async (c) => {
       const user = c.get("user");
       const body = c.req.valid("json");
@@ -130,7 +130,7 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
   // POST /users/me/tokens — generate a new API token (returned once)
   router.post(
     "/me/tokens",
-    zValidator(
+    validate(
       "json",
       z.object({
         name: z.string().min(1).max(100),

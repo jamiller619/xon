@@ -1,9 +1,9 @@
-import { zValidator } from "@hono/zod-validator";
 import { and, eq } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
 import { libraries, libraryAccess, users } from "../schema.js";
+import { validate } from "../validate.js";
 
 const grantSchema = z.object({
   userId: z.string().min(1),
@@ -38,7 +38,7 @@ export function makeAdminLibraryAccessRouter(db: LibSQLDatabase): Hono {
   });
 
   // POST /admin/libraries/:libraryId/access — grant a user access to a library
-  router.post("/:libraryId/access", zValidator("json", grantSchema), async (c) => {
+  router.post("/:libraryId/access", validate("json", grantSchema), async (c) => {
     const libraryId = c.req.param("libraryId");
     const body = c.req.valid("json");
     const adminUser = c.get("user");

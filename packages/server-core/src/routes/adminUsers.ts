@@ -1,10 +1,10 @@
-import { zValidator } from "@hono/zod-validator";
 import { eq } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
 import { hashPassword } from "../password.js";
 import { users } from "../schema.js";
+import { validate } from "../validate.js";
 
 const createUserSchema = z.object({
   username: z.string().min(1),
@@ -44,7 +44,7 @@ export function makeAdminUsersRouter(db: LibSQLDatabase): Hono {
   });
 
   // POST /admin/users — create user
-  router.post("/", zValidator("json", createUserSchema), async (c) => {
+  router.post("/", validate("json", createUserSchema), async (c) => {
     const body = c.req.valid("json");
 
     const id = crypto.randomUUID();
@@ -80,7 +80,7 @@ export function makeAdminUsersRouter(db: LibSQLDatabase): Hono {
   });
 
   // PUT /admin/users/:id — update user
-  router.put("/:id", zValidator("json", updateUserSchema), async (c) => {
+  router.put("/:id", validate("json", updateUserSchema), async (c) => {
     const id = c.req.param("id");
     const body = c.req.valid("json");
 

@@ -1,11 +1,11 @@
 import { copyFile, mkdir, writeFile } from "node:fs/promises";
 import { join } from "node:path";
-import { zValidator } from "@hono/zod-validator";
 import { and, desc, eq, inArray } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
 import { mediaItems, syncProfiles, syncRuns } from "../schema.js";
+import { validate } from "../validate.js";
 
 // ---------------------------------------------------------------------------
 // Request schemas
@@ -168,7 +168,7 @@ export function makeSyncRouter(db: LibSQLDatabase): Hono {
   });
 
   // POST /sync/profiles — create profile
-  router.post("/", zValidator("json", createSchema), async (c) => {
+  router.post("/", validate("json", createSchema), async (c) => {
     const body = c.req.valid("json");
     const id = crypto.randomUUID();
     const now = new Date();
@@ -191,7 +191,7 @@ export function makeSyncRouter(db: LibSQLDatabase): Hono {
   });
 
   // PUT /sync/profiles/:id — update profile
-  router.put("/:id", zValidator("json", updateSchema), async (c) => {
+  router.put("/:id", validate("json", updateSchema), async (c) => {
     const id = c.req.param("id") as string;
     const body = c.req.valid("json");
 
