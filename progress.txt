@@ -1,3 +1,15 @@
+## 2026-03-31 - US-109
+- Implemented auto-start on login feature for Electron desktop app
+- Files changed: apps/desktop/src/tray.ts (added `isAutoStartEnabled()`, `toggleAutoStart()` helpers using `app.getLoginItemSettings()`/`app.setLoginItemSettings()`; added "Launch at Login" checkbox menu item to tray context menu)
+- `app.getLoginItemSettings().openAtLogin` reads current state; `app.setLoginItemSettings({ openAtLogin: enabled })` sets it — works on macOS and Windows natively via Electron
+- Tray menu now shows a checkable "Launch at Login" item between server status and Quit; toggling it updates the OS login item and refreshes the menu to reflect new state
+- 913 tests passing; biome clean; typecheck clean
+- **Learnings for future iterations:**
+  - `app.getLoginItemSettings()` / `app.setLoginItemSettings()` are Electron built-ins — no extra packages needed; they're cross-platform (macOS/Windows)
+  - On Linux, `openAtLogin` via `app.setLoginItemSettings` is not supported — the API exists but is a no-op on most distros; for Linux support, would need a separate autostart .desktop file approach
+  - Tray menu items with `type: "checkbox"` and `checked: <boolean>` render as a native checkmark on all platforms
+---
+
 ## 2026-03-31 - US-108
 - Implemented route-level code splitting and lazy loading for the web UI
 - Files changed: apps/web/src/App.tsx (all 19 page imports → React.lazy; wrapped Routes with Suspense + PageLoader fallback), apps/web/src/pages/MediaDetail.tsx (ArchiveViewer, EpubViewer, FontViewer, ImageViewer, PdfViewer, VideoPlayer → React.lazy; each conditional render wrapped with Suspense fallback=null; added loading="lazy" to poster img; inlined ImageSibling type), apps/web/src/components/MediaCard.tsx (added loading="lazy" to all 3 img tags)
