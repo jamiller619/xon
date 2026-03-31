@@ -6,6 +6,7 @@ import AdminAiSettings from "./pages/AdminAiSettings";
 import AdminBackup from "./pages/AdminBackup";
 import AdminDuplicates from "./pages/AdminDuplicates";
 import AdminHealth from "./pages/AdminHealth";
+import AdminLibraries from "./pages/AdminLibraries";
 import AdminLibraryAccess from "./pages/AdminLibraryAccess";
 import AdminNetworkSettings from "./pages/AdminNetworkSettings";
 import AdminPlugins from "./pages/AdminPlugins";
@@ -37,6 +38,7 @@ export default function App() {
           <Route path="/media/:id" element={<MediaDetail />} />
           <Route path="/groups/:id" element={<GroupDetail />} />
           <Route path="/search" element={<Search />} />
+          <Route path="/admin/libraries" element={<AdminLibraries />} />
           <Route path="/admin/plugins" element={<AdminPlugins />} />
           <Route path="/admin/users" element={<AdminUsers />} />
           <Route path="/admin/library-access" element={<AdminLibraryAccess />} />
