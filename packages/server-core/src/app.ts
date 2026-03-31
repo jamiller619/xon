@@ -27,11 +27,15 @@ import { makeSyncRouter } from "./routes/sync.js";
 import { makeThemesRouter } from "./routes/themes.js";
 import { makeUsersRouter } from "./routes/users.js";
 import { serverSettings } from "./schema.js";
+import { makeSecurityHeadersMiddleware } from "./securityHeadersMiddleware.js";
 
 const SERVER_SETTINGS_ID = "default";
 
-export function createApp(db?: LibSQLDatabase): Hono {
+export function createApp(db?: LibSQLDatabase, options?: { isHttps?: boolean }): Hono {
   const app = new Hono().basePath("/api/v1");
+
+  // Security headers on all responses
+  app.use("/*", makeSecurityHeadersMiddleware({ isHttps: options?.isHttps ?? false }));
 
   // CORS middleware (dynamic, reads from server settings)
   if (db) {

@@ -26,12 +26,6 @@ export function boot(): void {
       await migrateDatabase(db);
       await ensureAdminUser(db);
       setPluginDatabase(client);
-      const apiApp = createApp(db);
-      const app = new Hono();
-      app.route("/", apiApp);
-      if (webClientDir) {
-        app.use("/*", makeStaticMiddleware(webClientDir, webSsrBundle));
-      }
       const { handleUpgrade } = createWsServer();
       const scheduler = await startScheduler(db);
 
@@ -77,6 +71,14 @@ export function boot(): void {
             console.log("Falling back to HTTP");
           }
         }
+      }
+
+      const isHttps = !!(tlsCert && tlsKey);
+      const apiApp = createApp(db, { isHttps });
+      const app = new Hono();
+      app.route("/", apiApp);
+      if (webClientDir) {
+        app.use("/*", makeStaticMiddleware(webClientDir, webSsrBundle));
       }
 
       const serveOptions =
