@@ -17,6 +17,7 @@ import { makeAdminServerSettingsRouter } from "./routes/adminServerSettings.js";
 import { makeAdminUsersRouter } from "./routes/adminUsers.js";
 import { makeAiRouter } from "./routes/ai.js";
 import { makeAuthRouter } from "./routes/auth.js";
+import { makeDocsRouter } from "./routes/docs.js";
 import { makeGroupsRouter } from "./routes/groups.js";
 import { makeLibrariesRouter } from "./routes/libraries.js";
 import { makeMatchingRouter } from "./routes/matching.js";
@@ -95,6 +96,9 @@ export function createApp(db?: LibSQLDatabase, options?: { isHttps?: boolean }):
   app.get("/health", (c) => {
     return c.json({ status: "ok", timestamp: new Date().toISOString() });
   });
+
+  // API docs (OpenAPI spec + Swagger UI) — no auth required
+  app.route("/docs", makeDocsRouter());
 
   if (db) {
     app.route("/auth", makeAuthRouter(db));

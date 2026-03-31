@@ -25,8 +25,13 @@ declare module "hono" {
 export function makeAuthMiddleware(db?: LibSQLDatabase) {
   return async function authMiddleware(c: Context, next: Next) {
     const path = c.req.path;
-    // Skip auth and health endpoints
-    if (path.startsWith("/api/v1/auth/") || path === "/api/v1/health") {
+    // Skip auth, health, and docs endpoints
+    if (
+      path.startsWith("/api/v1/auth/") ||
+      path === "/api/v1/health" ||
+      path === "/api/v1/docs" ||
+      path.startsWith("/api/v1/docs/")
+    ) {
       return next();
     }
 
