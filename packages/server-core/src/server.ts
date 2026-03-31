@@ -16,6 +16,16 @@ import { ensureAdminUser } from "./userInit.js";
 
 const SERVER_SETTINGS_ID = "default";
 
+// Catch uncaught exceptions and unhandled rejections so the process doesn't crash silently.
+// These are registered once at module load time, not per boot() call.
+process.on("uncaughtException", (err: Error) => {
+  console.error("Uncaught exception:", err);
+});
+
+process.on("unhandledRejection", (reason: unknown) => {
+  console.error("Unhandled promise rejection:", reason);
+});
+
 export function boot(): void {
   const port = Number(process.env.PORT ?? DEFAULT_PORT);
   const webClientDir = process.env.WEB_CLIENT_DIR;

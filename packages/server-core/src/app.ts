@@ -3,6 +3,7 @@ import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { cors } from "hono/cors";
 import { makeAuthMiddleware } from "./authMiddleware.js";
+import { onError, onNotFound } from "./errorMiddleware.js";
 import { pluginRouteDispatcher } from "./pluginRoutes.js";
 import { makeRateLimitMiddleware } from "./rateLimitMiddleware.js";
 import { requireRole } from "./rbac.js";
@@ -36,6 +37,11 @@ const SERVER_SETTINGS_ID = "default";
 
 export function createApp(db?: LibSQLDatabase, options?: { isHttps?: boolean }): Hono {
   const app = new Hono().basePath("/api/v1");
+
+  // Global error handler: returns consistent JSON for unhandled errors
+  app.onError(onError);
+  // 404 handler: returns consistent JSON for unknown routes
+  app.notFound(onNotFound);
 
   // Security headers on all responses
   app.use("/*", makeSecurityHeadersMiddleware({ isHttps: options?.isHttps ?? false }));

@@ -1,4 +1,5 @@
 import { Route, Routes } from "react-router-dom";
+import ErrorBoundary from "./components/ErrorBoundary";
 import Layout from "./components/Layout";
 import RequireAuth from "./components/RequireAuth";
 import ThemeLoader from "./components/ThemeLoader";
@@ -17,13 +18,14 @@ import GroupDetail from "./pages/GroupDetail";
 import LibraryBrowser from "./pages/LibraryBrowser";
 import Login from "./pages/Login";
 import MediaDetail from "./pages/MediaDetail";
+import NotFound from "./pages/NotFound";
 import Search from "./pages/Search";
 import Settings from "./pages/Settings";
 import Setup from "./pages/Setup";
 
 export default function App() {
   return (
-    <>
+    <ErrorBoundary>
       <ThemeLoader />
       <Routes>
         <Route path="/setup" element={<Setup />} />
@@ -52,7 +54,8 @@ export default function App() {
           <Route path="/admin/health" element={<AdminHealth />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
+        <Route path="*" element={<NotFound />} />
       </Routes>
-    </>
+    </ErrorBoundary>
   );
 }
