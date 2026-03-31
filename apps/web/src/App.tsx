@@ -5,6 +5,7 @@ import ThemeLoader from "./components/ThemeLoader";
 import AdminAiSettings from "./pages/AdminAiSettings";
 import AdminBackup from "./pages/AdminBackup";
 import AdminDuplicates from "./pages/AdminDuplicates";
+import AdminHealth from "./pages/AdminHealth";
 import AdminLibraryAccess from "./pages/AdminLibraryAccess";
 import AdminNetworkSettings from "./pages/AdminNetworkSettings";
 import AdminPlugins from "./pages/AdminPlugins";
@@ -44,6 +45,7 @@ export default function App() {
           <Route path="/admin/backup" element={<AdminBackup />} />
           <Route path="/admin/network" element={<AdminNetworkSettings />} />
           <Route path="/admin/settings" element={<AdminSettings />} />
+          <Route path="/admin/health" element={<AdminHealth />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
       </Routes>

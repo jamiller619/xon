@@ -11,10 +11,11 @@ import { makeAdminBackupRouter, makeAdminRestoreRouter } from "./routes/adminBac
 import { makeAdminBackupMediaRouter } from "./routes/adminBackupMedia.js";
 import { makeAdminBackupTargetsRouter } from "./routes/adminBackupTargets.js";
 import { makeAdminBackupVerifyRouter } from "./routes/adminBackupVerify.js";
+import { makeAdminHealthRouter } from "./routes/adminHealth.js";
 import { makeAdminLibraryAccessRouter } from "./routes/adminLibraryAccess.js";
 import { makeAdminPluginsRouter } from "./routes/adminPlugins.js";
-import { makeAdminSettingsRouter } from "./routes/adminSettings.js";
 import { makeAdminServerSettingsRouter } from "./routes/adminServerSettings.js";
+import { makeAdminSettingsRouter } from "./routes/adminSettings.js";
 import { makeAdminUsersRouter } from "./routes/adminUsers.js";
 import { makeAiRouter } from "./routes/ai.js";
 import { makeAuthRouter } from "./routes/auth.js";
@@ -128,6 +129,7 @@ export function createApp(db?: LibSQLDatabase, options?: { isHttps?: boolean }):
     app.route("/admin/backup/verify", makeAdminBackupVerifyRouter(db));
     app.route("/admin/server-settings", makeAdminServerSettingsRouter(db));
     app.route("/admin/settings", makeAdminSettingsRouter(db));
+    app.route("/admin/health", makeAdminHealthRouter(db));
   }
 
   // Admin: plugin management

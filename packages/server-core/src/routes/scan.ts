@@ -3,21 +3,13 @@ import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
 import { emitEvent } from "../events.js";
-import type { ScanProgress, ScanSummary } from "../orchestrator.js";
 import { scanLibrary } from "../orchestrator.js";
 import { emitPluginEvent } from "../pluginManager.js";
 import { requireRole } from "../rbac.js";
+import { type ScanState, scanRegistry } from "../scanRegistry.js";
 import { parseCronInterval } from "../scheduler.js";
 import { libraries } from "../schema.js";
 import { validate } from "../validate.js";
-
-type ScanState = {
-  status: "running" | "completed" | "failed";
-  startedAt: Date;
-  progress: ScanProgress | null;
-  summary: ScanSummary | null;
-  error: string | null;
-};
 
 const scheduleSchema = z.object({
   scanSchedule: z
@@ -30,7 +22,6 @@ const scheduleSchema = z.object({
 });
 
 export function makeScanRouter(db: LibSQLDatabase): Hono {
-  const scanRegistry = new Map<string, ScanState>();
   const router = new Hono();
 
   // POST / — trigger scan (mounted at /:libraryId/scan) (manager+)
