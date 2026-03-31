@@ -466,3 +466,83 @@
   cursor: pointer;
   font-size: 0.75rem;
 }
+
+/* Scan schedule section */
+.scanInfoRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  margin-bottom: 0.75rem;
+}
+
+.scanInfoLabel {
+  color: var(--color-text-muted, #888);
+  flex-shrink: 0;
+}
+
+.scanInfoValue {
+  color: var(--color-text, #e0e0e0);
+}
+
+.scanResultFailed {
+  color: #ef4444;
+}
+
+.scheduleForm {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.scheduleRow {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  flex-wrap: wrap;
+}
+
+.scheduleLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--color-text-muted, #888);
+  white-space: nowrap;
+}
+
+.watchLabel {
+  font-size: 0.85rem;
+  color: var(--color-text, #e0e0e0);
+}
+
+.nextScanInfo {
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #888);
+}
+
+/* Library card scan meta tags */
+.libraryScanMeta {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+  margin-top: 0.3rem;
+}
+
+.scheduleTag,
+.watchTag,
+.lastScanTag {
+  font-size: 0.7rem;
+  padding: 0.1rem 0.4rem;
+  border-radius: 0.2rem;
+  border: 1px solid var(--color-border, #333);
+  background: #1e1e2e;
+  color: var(--color-text-muted, #888);
+  white-space: nowrap;
+}
+
+.watchTag {
+  color: #22c55e;
+  border-color: #22c55e44;
+}

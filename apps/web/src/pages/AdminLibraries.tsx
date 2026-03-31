@@ -25,6 +25,44 @@ const ALL_MEDIA_TYPES = [
   "Icons",
 ];
 
+const SCHEDULE_PRESETS = [
+  { label: "Disabled", value: null },
+  { label: "Every 15 minutes", value: "*/15 * * * *" },
+  { label: "Every 30 minutes", value: "*/30 * * * *" },
+  { label: "Hourly", value: "0 */1 * * *" },
+  { label: "Every 6 hours", value: "0 */6 * * *" },
+  { label: "Every 12 hours", value: "0 */12 * * *" },
+  { label: "Daily", value: "0 */24 * * *" },
+];
+
+function getNextScanTime(schedule: string | null): string | null {
+  if (!schedule) return null;
+  const parts = schedule.trim().split(/\s+/);
+  if (parts.length !== 5) return null;
+  const [min, hour] = parts;
+  let intervalMs: number | null = null;
+  if (min && /^\*\/\d+$/.test(min) && hour === "*") {
+    const n = Number(min.slice(2));
+    if (n >= 1 && n <= 59) intervalMs = n * 60 * 1000;
+  } else if (min === "0" && hour && /^\*\/\d+$/.test(hour)) {
+    const n = Number(hour.slice(2));
+    if (n >= 1 && n <= 23) intervalMs = n * 60 * 60 * 1000;
+  }
+  if (!intervalMs) return null;
+  const now = Date.now();
+  const next = new Date(Math.ceil(now / intervalMs) * intervalMs);
+  return next.toLocaleString();
+}
+
+function formatDuration(ms: number | null): string {
+  if (ms === null || ms === undefined) return "—";
+  if (ms < 1000) return `${ms}ms`;
+  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
+  const mins = Math.floor(ms / 60000);
+  const secs = Math.round((ms % 60000) / 1000);
+  return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+}
+
 interface DataSource {
   id: string;
   libraryId: string;
@@ -40,6 +78,10 @@ interface Library {
   name: string;
   description: string | null;
   allowedMediaTypes: string;
+  scanSchedule: string | null;
+  watchEnabled: boolean;
+  lastScanResult: string | null;
+  lastScanDuration: number | null;
   hideDrmItems: boolean;
   createdAt: number;
   updatedAt: number;
@@ -81,6 +123,12 @@ export default function AdminLibraries() {
   const [addingSource, setAddingSource] = useState(false);
   const [sourceError, setSourceError] = useState("");
 
+  // Schedule state
+  const [scheduleValue, setScheduleValue] = useState<string | null>(null);
+  const [watchEnabled, setWatchEnabled] = useState(true);
+  const [scheduleError, setScheduleError] = useState("");
+  const [scheduleSaving, setScheduleSaving] = useState(false);
+
   // Delete confirmation state
   const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
@@ -117,6 +165,7 @@ export default function AdminLibraries() {
   async function openEditForm(lib: Library) {
     setFormError("");
     setSourceError("");
+    setScheduleError("");
     setNewSourcePath("");
     setNewSourceType("local");
     setNewSourceRecursive(true);
@@ -128,6 +177,8 @@ export default function AdminLibraries() {
       setFormName(data.name);
       setFormDescription(data.description ?? "");
       setFormMediaTypes(parseAllowedMediaTypes(data.allowedMediaTypes));
+      setScheduleValue(data.scanSchedule);
+      setWatchEnabled(data.watchEnabled);
       setShowCreateForm(false);
     } catch {
       setError("Failed to load library details");
@@ -280,6 +331,38 @@ export default function AdminLibraries() {
     }
   }
 
+  async function handleSaveSchedule(e: React.FormEvent) {
+    e.preventDefault();
+    if (!editingLibrary) return;
+    setScheduleSaving(true);
+    setScheduleError("");
+    try {
+      const [schedRes, watchRes] = await Promise.all([
+        apiFetch(`/api/v1/libraries/${editingLibrary.id}/scan/schedule`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ scanSchedule: scheduleValue }),
+        }),
+        apiFetch(`/api/v1/libraries/${editingLibrary.id}/scan/watch`, {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ watchEnabled }),
+        }),
+      ]);
+      if (!schedRes.ok || !watchRes.ok) {
+        setScheduleError("Failed to save schedule settings");
+      } else {
+        const updated = (await watchRes.json()) as Library;
+        setEditingLibrary({ ...editingLibrary, ...updated });
+        await fetchLibraries();
+      }
+    } catch {
+      setScheduleError("Failed to save schedule settings");
+    } finally {
+      setScheduleSaving(false);
+    }
+  }
+
   async function handleScan(libraryId: string) {
     setScanningIds((prev) => new Set([...prev, libraryId]));
     setScanMessages((prev) => ({ ...prev, [libraryId]: "" }));
@@ -386,6 +469,67 @@ export default function AdminLibraries() {
             </div>
           </form>
 
+          {/* Scan schedule section */}
+          <div className={styles.sourcesSection ?? ""}>
+            <h3 className={styles.sourcesSectionHeading ?? ""}>Scan Schedule</h3>
+
+            {/* Last scan info */}
+            <div className={styles.scanInfoRow ?? ""}>
+              <span className={styles.scanInfoLabel ?? ""}>Last scan:</span>
+              <span
+                className={`${styles.scanInfoValue ?? ""} ${
+                  editingLibrary.lastScanResult === "failed" ? (styles.scanResultFailed ?? "") : ""
+                }`}
+              >
+                {editingLibrary.lastScanResult ?? "Never"}
+                {editingLibrary.lastScanDuration !== null &&
+                  editingLibrary.lastScanDuration !== undefined &&
+                  ` (${formatDuration(editingLibrary.lastScanDuration)})`}
+              </span>
+            </div>
+
+            <form onSubmit={handleSaveSchedule} className={styles.scheduleForm ?? ""}>
+              <div className={styles.scheduleRow ?? ""}>
+                <label className={styles.scheduleLabel ?? ""}>
+                  Schedule
+                  <select
+                    className={styles.select ?? ""}
+                    value={scheduleValue ?? ""}
+                    onChange={(e) => setScheduleValue(e.target.value || null)}
+                  >
+                    {SCHEDULE_PRESETS.map((p) => (
+                      <option key={p.label} value={p.value ?? ""}>
+                        {p.label}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <label className={`${styles.checkboxLabel ?? ""} ${styles.watchLabel ?? ""}`}>
+                  <input
+                    type="checkbox"
+                    checked={watchEnabled}
+                    onChange={(e) => setWatchEnabled(e.target.checked)}
+                  />
+                  Watch filesystem for changes
+                </label>
+              </div>
+
+              {scheduleValue && (
+                <p className={styles.nextScanInfo ?? ""}>
+                  Next scan: {getNextScanTime(scheduleValue) ?? "—"}
+                </p>
+              )}
+
+              {scheduleError && <p className={styles.error ?? ""}>{scheduleError}</p>}
+
+              <div className={styles.formActions ?? ""}>
+                <button type="submit" className={styles.saveBtn ?? ""} disabled={scheduleSaving}>
+                  {scheduleSaving ? "Saving..." : "Save Schedule"}
+                </button>
+              </div>
+            </form>
+          </div>
+
           {/* Data sources section */}
           <div className={styles.sourcesSection ?? ""}>
             <h3 className={styles.sourcesSectionHeading ?? ""}>Data Sources</h3>
@@ -475,6 +619,27 @@ export default function AdminLibraries() {
                 <p className={styles.libraryMeta ?? ""}>
                   {parseAllowedMediaTypes(lib.allowedMediaTypes).join(", ") || "All media types"}
                 </p>
+                <div className={styles.libraryScanMeta ?? ""}>
+                  {lib.scanSchedule && (
+                    <span className={styles.scheduleTag ?? ""}>
+                      {SCHEDULE_PRESETS.find((p) => p.value === lib.scanSchedule)?.label ??
+                        lib.scanSchedule}
+                    </span>
+                  )}
+                  {lib.watchEnabled && <span className={styles.watchTag ?? ""}>Watching</span>}
+                  {lib.lastScanResult && (
+                    <span
+                      className={`${styles.lastScanTag ?? ""} ${
+                        lib.lastScanResult === "failed" ? (styles.scanResultFailed ?? "") : ""
+                      }`}
+                    >
+                      Last: {lib.lastScanResult}
+                      {lib.lastScanDuration !== null &&
+                        lib.lastScanDuration !== undefined &&
+                        ` (${formatDuration(lib.lastScanDuration)})`}
+                    </span>
+                  )}
+                </div>
               </div>
               <div className={styles.libraryCardActions ?? ""}>
                 {scanMessages[lib.id] && (

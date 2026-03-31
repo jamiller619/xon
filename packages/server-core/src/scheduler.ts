@@ -62,6 +62,8 @@ export async function startScheduler(
     // Filesystem watchers for local data sources
     const sources = await db.select().from(dataSources).where(eq(dataSources.libraryId, lib.id));
 
+    if (!lib.watchEnabled) continue;
+
     for (const source of sources) {
       if (source.type !== "local" || !source.enabled) continue;
 

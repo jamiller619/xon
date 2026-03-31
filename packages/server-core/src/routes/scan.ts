@@ -22,6 +22,10 @@ const scheduleSchema = z.object({
     ),
 });
 
+const watchSchema = z.object({
+  watchEnabled: z.boolean(),
+});
+
 export function makeScanRouter(db: LibSQLDatabase): Hono {
   const router = new Hono();
 
@@ -44,6 +48,7 @@ export function makeScanRouter(db: LibSQLDatabase): Hono {
     scanRegistry.set(libraryId, state);
     emitPluginEvent("scan:start", { libraryId });
 
+    const scanStartedAt = Date.now();
     scanLibrary(db, libraryId, (progress) => {
       state.progress = progress;
       const percentComplete =
@@ -60,9 +65,14 @@ export function makeScanRouter(db: LibSQLDatabase): Hono {
         },
       });
     })
-      .then((summary) => {
+      .then(async (summary) => {
+        const duration = Date.now() - scanStartedAt;
         state.status = "completed";
         state.summary = summary;
+        await db
+          .update(libraries)
+          .set({ lastScanResult: "completed", lastScanDuration: duration, updatedAt: new Date() })
+          .where(eq(libraries.id, libraryId));
         // Invalidate caches so updated counts and library list are served fresh
         appCache.invalidate(`media:count:${libraryId}`);
         appCache.invalidate("libraries:all");
@@ -81,10 +91,15 @@ export function makeScanRouter(db: LibSQLDatabase): Hono {
           itemsFound: summary.totalDiscovered,
         });
       })
-      .catch((err: unknown) => {
+      .catch(async (err: unknown) => {
+        const duration = Date.now() - scanStartedAt;
         state.status = "failed";
         const errorMessage = err instanceof Error ? err.message : String(err);
         state.error = errorMessage;
+        await db
+          .update(libraries)
+          .set({ lastScanResult: "failed", lastScanDuration: duration, updatedAt: new Date() })
+          .where(eq(libraries.id, libraryId));
         emitEvent({ type: "scan:error", payload: { libraryId, error: errorMessage } });
       });
 
@@ -120,6 +135,23 @@ export function makeScanRouter(db: LibSQLDatabase): Hono {
     await db
       .update(libraries)
       .set({ scanSchedule, updatedAt: new Date() })
+      .where(eq(libraries.id, libraryId));
+
+    const updated = await db.select().from(libraries).where(eq(libraries.id, libraryId));
+    return c.json(updated[0]);
+  });
+
+  // PUT /watch — enable/disable filesystem watch for a library (manager+)
+  router.put("/watch", requireRole("manager"), validate("json", watchSchema), async (c) => {
+    const libraryId = c.req.param("libraryId") as string;
+    const { watchEnabled } = c.req.valid("json");
+
+    const existing = await db.select().from(libraries).where(eq(libraries.id, libraryId));
+    if (existing.length === 0) return c.json({ error: "Not found" }, 404);
+
+    await db
+      .update(libraries)
+      .set({ watchEnabled, updatedAt: new Date() })
       .where(eq(libraries.id, libraryId));
 
     const updated = await db.select().from(libraries).where(eq(libraries.id, libraryId));
