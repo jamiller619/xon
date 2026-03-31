@@ -1,3 +1,18 @@
+## 2026-03-31 - US-110
+- Implemented native OS notification forwarding for Electron desktop app
+- Files changed: apps/desktop/src/notifications.ts (new: createNotificationManager(), NotificationManager interface, NotificationType, NotificationPrefs — subscribes to eventBus and shows Electron Notification for scan:complete, media:added, backup:complete, and all error events), apps/desktop/src/tray.ts (accepts optional NotificationManager; added NOTIFICATION_LABELS map; Notifications submenu with per-type checkbox items in tray context menu), apps/desktop/src/main.ts (creates notificationManager before createTray(); passes it to createTray(); destroys on quit)
+- `Notification.isSupported()` checked before showing — graceful no-op when notifications not supported
+- Click handler on each notification calls `shell.openExternal(url)` to open the relevant page (scan → /admin/libraries, backup → /admin/health, error → /admin/health)
+- NotificationType: "scan:complete" | "media:added" | "backup:complete" | "error"; all default to enabled (true)
+- Tray "Notifications" submenu auto-rebuilds on click via `refresh()` called inside each item's click handler
+- 913 tests passing; biome clean; typecheck clean
+- **Learnings for future iterations:**
+  - `Notification.isSupported()` is a static method on Electron's Notification class — always check before creating notifications (returns false on Linux without libnotify, etc.)
+  - `n.on("click", handler)` fires when user clicks the OS notification; combine with `shell.openExternal(url)` to open the web UI page
+  - EventBus `handleEvent` function must be held in a named variable so it can be removed via `eventBus.off("event", handleEvent)` in destroy()
+  - Tray submenu refresh: call `refresh()` directly in the click handler after mutating state — the menu rebuilds each time `Menu.buildFromTemplate` + `tray.setContextMenu` is called
+---
+
 ## 2026-03-31 - US-109
 - Implemented auto-start on login feature for Electron desktop app
 - Files changed: apps/desktop/src/tray.ts (added `isAutoStartEnabled()`, `toggleAutoStart()` helpers using `app.getLoginItemSettings()`/`app.setLoginItemSettings()`; added "Launch at Login" checkbox menu item to tray context menu)
