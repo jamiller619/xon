@@ -1,3 +1,19 @@
+## 2026-03-30 - US-097
+- Implemented CORS and rate limiting configuration with admin settings UI
+- Files changed: packages/server-core/src/schema.ts (added serverSettings table), packages/server-core/drizzle/0026_server_settings.sql (migration + default row INSERT), packages/server-core/drizzle/meta/_journal.json (added entry idx 26), packages/server-core/src/rateLimitMiddleware.ts (new: per-db in-memory rate limiter), packages/server-core/src/routes/adminServerSettings.ts (new: GET/PUT /admin/server-settings), packages/server-core/src/routes/adminServerSettings.test.ts (18 tests), packages/server-core/src/app.ts (wired CORS middleware + rate limit middlewares)
+- `server_settings` DB table: id (PK "default"), corsEnabled (bool, default false), corsAllowedOrigins (JSON text, default '["*"]'), rateLimitEnabled (bool, default true), rateLimitGeneral (int, default 100), rateLimitAuth (int, default 10), updatedAt
+- CORS middleware: uses `hono/cors` with dynamic `origin` function that reads settings per request; returns null (no header) when disabled or origin not in allowed list; allows `*` wildcard
+- Rate limit middleware (`makeRateLimitMiddleware(db, type)`): in-memory per-db WeakMap store (prevents test cross-contamination); fixed 1-minute window; sets X-RateLimit-Limit/Remaining/Reset headers; returns 429 when exceeded
+- Auth endpoints get separate stricter rate limit (10/min via `/auth/*`); general API gets 100/min via `/*`
+- `GET/PUT /api/v1/admin/server-settings` (admin-only): returns/updates all CORS+rate-limit settings; corsAllowedOrigins serialized as JSON
+- 841 tests passing; biome clean; typecheck clean (pre-existing errors in plugin packages only)
+- **Learnings for future iterations:**
+  - Rate limit store must be per-db-instance to avoid cross-test contamination — use `WeakMap<LibSQLDatabase, Map<...>>` keyed by the db object
+  - `Promise<Response | void>` in return type triggers biome `noConfusingVoidType` — remove explicit return type and let TypeScript infer, but keep parameter types explicit
+  - Hono `cors()` `origin` function receives the request Origin header value; return the origin string to allow, null to deny
+  - When CORS is disabled (corsEnabled=false), return null from the origin function to suppress the Access-Control-Allow-Origin header entirely
+---
+
 ## 2026-03-30 - US-096
 - Implemented MediaProvider plugin interface in plugin SDK and scanner integration
 - Files changed: packages/plugin-sdk/src/types.ts (added MediaProviderFile, WatchCallback, MediaProviderConfigField, MediaProviderConfigSchema types), packages/plugin-sdk/src/MediaProviderPlugin.ts (new abstract class), packages/plugin-sdk/src/index.ts (exports), packages/server-core/drizzle/0025_datasource_plugin.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added "plugin" to data_sources type enum, added pluginId column), packages/server-core/src/mediaProviderPluginRegistry.ts (new registry), packages/server-core/src/mediaProviderPluginRegistry.test.ts (6 tests), packages/server-core/src/scanner.ts (plugin integration), packages/server-core/src/scannerPlugin.test.ts (8 tests), packages/server-core/src/routes/sources.ts (plugin type support), packages/server-core/src/index.ts (exported registry functions)
