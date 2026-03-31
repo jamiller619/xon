@@ -9,6 +9,7 @@ import { Hono } from "hono";
 import { parse as parseFont } from "opentype.js";
 import { z } from "zod";
 import { listArchiveContents } from "../archive.js";
+import { computeETag } from "../cache.js";
 import { extractFfprobeMetadata, extractStreamTracks } from "../ffprobe.js";
 import { convertMobiToEpub } from "../mobi.js";
 import { convertRawToJpeg, isRawImage } from "../raw.js";
@@ -112,7 +113,11 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     const scopedQuery = whereClause ? baseQuery.where(whereClause) : baseQuery;
     const rows = await scopedQuery.orderBy(orderExpr).limit(limitNum).offset(offset);
 
-    return c.json(rows.map(withThumbnailUrls));
+    const items = rows.map(withThumbnailUrls);
+    const etag = computeETag(items);
+    if (c.req.header("If-None-Match") === etag) return c.body(null, 304);
+    c.header("ETag", etag);
+    return c.json(items);
   });
 
   // GET /media/:id — get single media item (scoped to accessible libraries)
@@ -138,7 +143,11 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       if (allowed.length === 0) return c.json({ error: "Not found" }, 404);
     }
 
-    return c.json(withThumbnailUrls(item));
+    const itemWithUrls = withThumbnailUrls(item);
+    const etag = `"${item.updatedAt.getTime()}"`;
+    if (c.req.header("If-None-Match") === etag) return c.body(null, 304);
+    c.header("ETag", etag);
+    return c.json(itemWithUrls);
   });
 
   const updateMediaSchema = z.object({

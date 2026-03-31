@@ -2,6 +2,7 @@ import { eq } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
+import { appCache } from "../cache.js";
 import { emitEvent } from "../events.js";
 import { scanLibrary } from "../orchestrator.js";
 import { emitPluginEvent } from "../pluginManager.js";
@@ -62,6 +63,9 @@ export function makeScanRouter(db: LibSQLDatabase): Hono {
       .then((summary) => {
         state.status = "completed";
         state.summary = summary;
+        // Invalidate caches so updated counts and library list are served fresh
+        appCache.invalidate(`media:count:${libraryId}`);
+        appCache.invalidate("libraries:all");
         emitEvent({
           type: "scan:complete",
           payload: {

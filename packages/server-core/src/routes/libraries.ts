@@ -3,6 +3,7 @@ import type { SQL } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
+import { appCache, computeETag } from "../cache.js";
 import { requireRole } from "../rbac.js";
 import {
   dataSources,
@@ -16,6 +17,8 @@ import { validate } from "../validate.js";
 import { withThumbnailUrls } from "./media.js";
 import { makeScanRouter } from "./scan.js";
 import { makeSourcesRouter } from "./sources.js";
+
+const LIBRARIES_ALL_KEY = "libraries:all";
 
 const PRIVILEGED_ROLES = ["admin", "manager"] as const;
 
@@ -92,6 +95,7 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
       createdAt: now,
       updatedAt: now,
     });
+    appCache.invalidate(LIBRARIES_ALL_KEY);
     const rows = await db.select().from(libraries).where(eq(libraries.id, id));
     return c.json(rows[0], 201);
   });
@@ -100,12 +104,25 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
   router.get("/", async (c) => {
     const user = c.get("user");
     const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role);
+
     if (accessibleIds === null) {
-      const rows = await db.select().from(libraries);
+      // Admin/manager: serve from cache
+      let rows = appCache.get<(typeof libraries.$inferSelect)[]>(LIBRARIES_ALL_KEY);
+      if (!rows) {
+        rows = await db.select().from(libraries);
+        appCache.set(LIBRARIES_ALL_KEY, rows, 60_000);
+      }
+      const etag = computeETag(rows);
+      if (c.req.header("If-None-Match") === etag) return c.body(null, 304);
+      c.header("ETag", etag);
       return c.json(rows);
     }
+
     if (accessibleIds.length === 0) return c.json([]);
     const rows = await db.select().from(libraries).where(inArray(libraries.id, accessibleIds));
+    const etag = computeETag(rows);
+    if (c.req.header("If-None-Match") === etag) return c.body(null, 304);
+    c.header("ETag", etag);
     return c.json(rows);
   });
 
@@ -123,7 +140,11 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
     }
 
     const sources = await db.select().from(dataSources).where(eq(dataSources.libraryId, id));
-    return c.json({ ...rows[0], dataSources: sources });
+    const payload = { ...rows[0], dataSources: sources };
+    const etag = computeETag(payload);
+    if (c.req.header("If-None-Match") === etag) return c.body(null, 304);
+    c.header("ETag", etag);
+    return c.json(payload);
   });
 
   // PUT /libraries/:id — update library (manager+)
@@ -142,6 +163,7 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
     if (body.hideDrmItems !== undefined) updates.hideDrmItems = body.hideDrmItems;
 
     await db.update(libraries).set(updates).where(eq(libraries.id, id));
+    appCache.invalidate(LIBRARIES_ALL_KEY);
     const updated = await db.select().from(libraries).where(eq(libraries.id, id));
     return c.json(updated[0]);
   });
@@ -152,6 +174,7 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
     const existing = await db.select().from(libraries).where(eq(libraries.id, id));
     if (existing.length === 0) return c.json({ error: "Not found" }, 404);
     await db.delete(libraries).where(eq(libraries.id, id));
+    appCache.invalidate(LIBRARIES_ALL_KEY);
     return c.json({ success: true });
   });
 
@@ -216,7 +239,24 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
       .limit(limitNum)
       .offset(offset);
 
-    return c.json(rows.map(withThumbnailUrls));
+    // Fetch or serve total count from cache for this library
+    const countKey = `media:count:${libraryId}`;
+    let totalCount = appCache.get<number>(countKey);
+    if (totalCount === undefined) {
+      const countRows = await db
+        .select({ total: sql<number>`count(*)` })
+        .from(mediaItems)
+        .where(eq(mediaItems.libraryId, libraryId));
+      totalCount = countRows[0]?.total ?? 0;
+      appCache.set(countKey, totalCount, 60_000);
+    }
+    c.header("X-Total-Count", String(totalCount));
+
+    const items = rows.map(withThumbnailUrls);
+    const etag = computeETag(items);
+    if (c.req.header("If-None-Match") === etag) return c.body(null, 304);
+    c.header("ETag", etag);
+    return c.json(items);
   });
 
   router.route("/:libraryId/sources", makeSourcesRouter(db));

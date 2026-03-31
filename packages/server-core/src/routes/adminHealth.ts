@@ -3,6 +3,7 @@ import { freemem, loadavg, totalmem } from "node:os";
 import { eq, sql } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
+import { appCache } from "../cache.js";
 import { scanRegistry } from "../scanRegistry.js";
 import { libraries, mediaItems } from "../schema.js";
 
@@ -49,23 +50,44 @@ export function makeAdminHealthRouter(db: LibSQLDatabase): Hono {
         progress: s.progress,
       }));
 
-    // Library statistics: item count and last scan time per library
-    const libRows = await db.select().from(libraries);
+    // Library list — serve from cache when available
+    let libRows = appCache.get<(typeof libraries.$inferSelect)[]>("libraries:all");
+    if (!libRows) {
+      libRows = await db.select().from(libraries);
+      appCache.set("libraries:all", libRows, 60_000);
+    }
 
     const libraryStats = await Promise.all(
       libRows.map(async (lib) => {
-        const rows = await db
-          .select({
-            total: sql<number>`count(*)`,
-            lastScan: sql<number | null>`max(${mediaItems.scannedAt})`,
-          })
-          .from(mediaItems)
-          .where(eq(mediaItems.libraryId, lib.id));
-        const row = rows[0];
-        const total = row?.total ?? 0;
-        const lastScanRaw = row?.lastScan ?? null;
-        // scannedAt is stored as unix seconds by drizzle integer(timestamp)
-        const lastScanAt = lastScanRaw !== null ? new Date(lastScanRaw * 1000).toISOString() : null;
+        // Per-library media count — serve from cache when available
+        const countKey = `media:count:${lib.id}`;
+        let total = appCache.get<number>(countKey);
+        let lastScanAt: string | null = null;
+
+        if (total === undefined) {
+          const rows = await db
+            .select({
+              total: sql<number>`count(*)`,
+              lastScan: sql<number | null>`max(${mediaItems.scannedAt})`,
+            })
+            .from(mediaItems)
+            .where(eq(mediaItems.libraryId, lib.id));
+          const row = rows[0];
+          total = row?.total ?? 0;
+          appCache.set(countKey, total, 60_000);
+          const lastScanRaw = row?.lastScan ?? null;
+          // scannedAt is stored as unix seconds by drizzle integer(timestamp)
+          lastScanAt = lastScanRaw !== null ? new Date(lastScanRaw * 1000).toISOString() : null;
+        } else {
+          // Fetch only lastScan when count was cached (inexpensive single-column query)
+          const rows = await db
+            .select({ lastScan: sql<number | null>`max(${mediaItems.scannedAt})` })
+            .from(mediaItems)
+            .where(eq(mediaItems.libraryId, lib.id));
+          const lastScanRaw = rows[0]?.lastScan ?? null;
+          lastScanAt = lastScanRaw !== null ? new Date(lastScanRaw * 1000).toISOString() : null;
+        }
+
         return {
           id: lib.id,
           name: lib.name,
