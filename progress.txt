@@ -1,3 +1,22 @@
+## 2026-03-31 - US-107
+- Implemented API response caching with ETag support and in-memory cache
+- Files changed: packages/server-core/src/cache.ts (new: InMemoryCache class + appCache singleton + computeETag), packages/server-core/src/cache.test.ts (11 tests), packages/server-core/src/routes/libraries.ts (in-memory cache for library list + ETag on all GET endpoints + X-Total-Count on media listing + cache invalidation on write ops), packages/server-core/src/routes/media.ts (ETag on GET /media list and GET /media/:id detail), packages/server-core/src/routes/scan.ts (cache invalidation on scan complete), packages/server-core/src/routes/adminHealth.ts (use cached library list + cached media counts)
+- `InMemoryCache`: TTL-based Map store; `set(key, value, ttlMs=30000)`, `get<T>()`, `invalidate()`, `invalidatePrefix()`, `clear()`
+- `computeETag(data)`: SHA-1 hash truncated to 16 hex chars, returned as quoted HTTP ETag string
+- In-memory cache keys: `libraries:all` (60s TTL) for admin/manager library list; `media:count:{libraryId}` (60s TTL) for total item count per library
+- ETag strategy: `GET /media/:id` uses `updatedAt.getTime()` (no hashing needed — timestamp is always fresh); `GET /media`, `GET /libraries`, `GET /libraries/:id`, `GET /libraries/:libraryId/media` use `computeETag()` hash of response JSON
+- All GET endpoints return 304 if `If-None-Match` matches; `X-Total-Count` header added to library media listing
+- Cache invalidated on: POST/PUT/DELETE /libraries (libraries:all); scan complete (libraries:all + media:count:{libraryId})
+- adminHealth.ts uses cached library list + cached media counts; falls back to DB only on cache miss; lastScan still queried live when count is cached
+- 913 tests passing; biome clean; typecheck clean
+- **Learnings for future iterations:**
+  - ETag for single items: use `updatedAt.getTime()` as ETag value — always accurate, no hashing needed; ETag for lists: use `computeETag(items)` SHA-1 hash
+  - `c.body(null, 304)` is the correct Hono pattern for a 304 Not Modified response (no body)
+  - In-memory cache keys: use structured prefixes like `media:count:` for `invalidatePrefix()` batch eviction
+  - Biome import order: internal (`../cache.js`) sorts after external packages (`opentype.js`, `zod`) alphabetically
+  - Cache shared state across routes: export singleton from `cache.ts` (same pattern as `scanRegistry.ts`)
+---
+
 ## 2026-03-31 - US-106
 - Implemented error handling hardening and user-facing error pages
 - Files changed: packages/server-core/src/errorMiddleware.ts (new: onError + onNotFound handlers), packages/server-core/src/errorMiddleware.test.ts (4 tests), packages/server-core/src/app.ts (registered app.onError + app.notFound), packages/server-core/src/server.ts (uncaughtException + unhandledRejection handlers), apps/web/src/components/ErrorBoundary.tsx (new React class error boundary), apps/web/src/components/ErrorBoundary.module.css, apps/web/src/pages/NotFound.tsx (404 page), apps/web/src/pages/NotFound.module.css, apps/web/src/App.tsx (wrapped with ErrorBoundary, added `* → NotFound` wildcard route)
@@ -1515,6 +1534,8 @@
 ---
 
 ## Codebase Patterns
+- In-memory caching: `appCache` singleton (InMemoryCache from cache.ts) with TTL; keys like `libraries:all` (60s) and `media:count:{id}` (60s); invalidate via `appCache.invalidate(key)` or `appCache.invalidatePrefix(prefix)` on writes/scan completion
+- ETag pattern: single items use `"${updatedAt.getTime()}"` as ETag; lists use `computeETag(items)` (SHA-1 hash); return `c.body(null, 304)` when `If-None-Match` header matches
 - Drizzle migrations: `drizzle-orm/libsql/migrator` `migrate(db, { migrationsFolder })` applies SQL files; path uses `dirname(fileURLToPath(import.meta.url))` to work in both src/ and dist/
 - Drizzle schema for SQLite: use `drizzle-orm/sqlite-core` (sqliteTable, text, integer); integer with `{ mode: "timestamp" }` for dates; integer with `{ mode: "boolean" }` for booleans; FK via `.references(() => table.col, { onDelete: "cascade" })`
 - JSON columns in SQLite: store as text with `.default("[]")` and handle serialization in app code
