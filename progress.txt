@@ -1856,3 +1856,17 @@
   - Pure-Node ZIP with deflateRawSync avoids adm-zip/jszip dependency; CRC32 table computed once and cached in module-level variable
   - `c.req.arrayBuffer()` in Hono gives raw binary body; convert to Node Buffer with `Buffer.from(arrayBuffer)` for binary ZIP parsing
 ---
+## 2026-03-31 - US-111
+- Implemented user profile and preferences page
+- Files changed: packages/server-core/src/routes/users.ts (added `PUT /users/me` for full profile update — displayName, email, avatarUrl, maxContentRating, hideDrmItems; added `PUT /users/me/password` for password change with currentPassword verification), packages/server-core/src/routes/users.test.ts (new: 12 tests covering GET /users/me, PUT /users/me profile fields, PUT /users/me/password success/fail cases), apps/web/src/pages/Settings.tsx (expanded with Profile form, Content preferences with content-rating select, View mode radio, Theme selection, Security/password-change form), apps/web/src/pages/Settings.module.css (added form, fieldGroup, fieldLabel, input, select, button, formMsg, saveRow, viewOptions classes), apps/web/src/store/index.ts (viewMode now persisted to localStorage under "xon:viewMode" key, initialized from localStorage on load)
+- `PUT /users/me` accepts any subset of: displayName, email (validated as email), avatarUrl (validated as URL or null), maxContentRating (enum), hideDrmItems (boolean); returns updated profile
+- `PUT /users/me/password` verifies currentPassword against argon2 hash before setting new hash; returns 400 with clear error on wrong current password
+- Password change form validates client-side that newPassword === confirmPassword before sending
+- viewMode persisted to localStorage ("xon:viewMode") — survives page refresh; defaults to "grid"
+- 925 tests passing; biome clean; typecheck clean
+- **Learnings for future iterations:**
+  - `exactOptionalPropertyTypes: true` + nullable Drizzle columns: `updates.avatarUrl = body.avatarUrl ?? undefined` pattern (null from body → undefined for Drizzle update, skipping the field if not provided via a separate condition)
+  - `z.string().url().nullable().optional()` in Zod: accepts string URL, null (to clear), or undefined (to skip); pair with `if (body.avatarUrl !== undefined) updates.avatarUrl = body.avatarUrl ?? undefined`
+  - Biome inline arrow callbacks: multi-line `onChange` arrow functions get collapsed to single line when they fit within 100 chars — just run `biome check --write`
+  - Store persistence pattern: same as `useThemeStore` — read from `localStorage.getItem()` for initial value, call `localStorage.setItem()` in the setter before `set()`
+---
