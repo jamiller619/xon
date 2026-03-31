@@ -1,3 +1,16 @@
+## 2026-03-31 - US-108
+- Implemented route-level code splitting and lazy loading for the web UI
+- Files changed: apps/web/src/App.tsx (all 19 page imports → React.lazy; wrapped Routes with Suspense + PageLoader fallback), apps/web/src/pages/MediaDetail.tsx (ArchiveViewer, EpubViewer, FontViewer, ImageViewer, PdfViewer, VideoPlayer → React.lazy; each conditional render wrapped with Suspense fallback=null; added loading="lazy" to poster img; inlined ImageSibling type), apps/web/src/components/MediaCard.tsx (added loading="lazy" to all 3 img tags)
+- `React.lazy(() => import(...))` + `<Suspense>` at route level: each page is a separate JS chunk; admin pages only downloaded when navigating to /admin/*; player/viewer components only downloaded when user opens the viewer
+- Image lazy loading: native `loading="lazy"` attribute on all img tags — browsers defer off-screen image fetching using IntersectionObserver internally
+- 913 tests passing; biome clean; typecheck clean
+- **Learnings for future iterations:**
+  - `React.lazy` requires the module to have a default export; named exports (like ImageSibling type) must be imported separately with `import type` or inlined
+  - Biome reformats all img attributes onto separate lines when multiple attributes are present — just run `biome check --write` after edits
+  - `tsc --noEmit` on the web package alone shows false positives; use `tsc --build` from root for the authoritative check
+  - Suspense fallback for overlay viewers (ImageViewer, VideoPlayer, etc.) can be `null` — the viewer opens after the chunk loads without a flash
+---
+
 ## 2026-03-31 - US-107
 - Implemented API response caching with ETag support and in-memory cache
 - Files changed: packages/server-core/src/cache.ts (new: InMemoryCache class + appCache singleton + computeETag), packages/server-core/src/cache.test.ts (11 tests), packages/server-core/src/routes/libraries.ts (in-memory cache for library list + ETag on all GET endpoints + X-Total-Count on media listing + cache invalidation on write ops), packages/server-core/src/routes/media.ts (ETag on GET /media list and GET /media/:id detail), packages/server-core/src/routes/scan.ts (cache invalidation on scan complete), packages/server-core/src/routes/adminHealth.ts (use cached library list + cached media counts)
