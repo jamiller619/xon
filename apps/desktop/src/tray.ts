@@ -55,6 +55,16 @@ export function createTray(): TrayHandle {
 
   const tray = new Tray(icons.running);
 
+  function isAutoStartEnabled(): boolean {
+    return app.getLoginItemSettings().openAtLogin;
+  }
+
+  function toggleAutoStart(): void {
+    const enabled = !isAutoStartEnabled();
+    app.setLoginItemSettings({ openAtLogin: enabled });
+    refresh();
+  }
+
   function refresh(): void {
     const icon = icons[status];
     tray.setImage(icon);
@@ -69,6 +79,13 @@ export function createTray(): TrayHandle {
         {
           label: `Server Status: uptime ${formatUptime(bootTime)}, users ${activeUsers}, scan ${scanState}`,
           enabled: false,
+        },
+        { type: "separator" },
+        {
+          label: "Launch at Login",
+          type: "checkbox",
+          checked: isAutoStartEnabled(),
+          click: () => toggleAutoStart(),
         },
         { type: "separator" },
         {
