@@ -19,12 +19,14 @@ import Login from "./pages/Login";
 import MediaDetail from "./pages/MediaDetail";
 import Search from "./pages/Search";
 import Settings from "./pages/Settings";
+import Setup from "./pages/Setup";
 
 export default function App() {
   return (
     <>
       <ThemeLoader />
       <Routes>
+        <Route path="/setup" element={<Setup />} />
         <Route path="/login" element={<Login />} />
         <Route
           element={

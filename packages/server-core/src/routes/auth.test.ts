@@ -250,3 +250,101 @@ describe("Auth API", () => {
     });
   });
 });
+
+// ─── Setup endpoints (empty DB) ──────────────────────────────────────────────
+
+describe("Setup API (first-time setup)", () => {
+  let client: Client;
+  let db: LibSQLDatabase;
+  let app: ReturnType<typeof createApp>;
+
+  beforeEach(async () => {
+    ({ client, db } = await openDatabase(":memory:"));
+    await migrateDatabase(db);
+    app = createApp(db);
+    // No users inserted — empty database
+  });
+
+  afterEach(() => {
+    client.close();
+  });
+
+  describe("GET /api/v1/auth/setup-status", () => {
+    it("returns setupComplete: false when no users exist", async () => {
+      const res = await app.request("/api/v1/auth/setup-status");
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body).toEqual({ setupComplete: false });
+    });
+
+    it("returns setupComplete: true when users exist", async () => {
+      await db.insert(users).values({
+        id: "u1",
+        username: "admin",
+        email: "admin@localhost",
+        displayName: "Admin",
+        passwordHash: await hashPassword("password"),
+        role: "admin",
+      });
+      const res = await app.request("/api/v1/auth/setup-status");
+      expect(res.status).toBe(200);
+      const body = await res.json();
+      expect(body).toEqual({ setupComplete: true });
+    });
+  });
+
+  describe("POST /api/v1/auth/setup", () => {
+    it("creates the first admin user and returns tokens", async () => {
+      const res = await app.request("/api/v1/auth/setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: "admin", password: "password123", displayName: "Admin" }),
+      });
+      expect(res.status).toBe(201);
+      const body = await res.json();
+      expect(body).toHaveProperty("accessToken");
+      expect(body).toHaveProperty("refreshToken");
+    });
+
+    it("returns 409 if users already exist", async () => {
+      await db.insert(users).values({
+        id: "u1",
+        username: "existing",
+        email: "existing@localhost",
+        displayName: "Existing",
+        passwordHash: await hashPassword("password"),
+        role: "admin",
+      });
+      const res = await app.request("/api/v1/auth/setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: "admin", password: "password123", displayName: "Admin" }),
+      });
+      expect(res.status).toBe(409);
+    });
+
+    it("returns 400 for short password (< 8 chars)", async () => {
+      const res = await app.request("/api/v1/auth/setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: "admin", password: "short", displayName: "Admin" }),
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it("the created user can log in via /auth/login", async () => {
+      await app.request("/api/v1/auth/setup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: "admin", password: "password123", displayName: "Admin" }),
+      });
+
+      const loginRes = await app.request("/api/v1/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username: "admin", password: "password123" }),
+      });
+      expect(loginRes.status).toBe(200);
+    });
+  });
+});

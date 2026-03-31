@@ -1,4 +1,4 @@
-import { type FormEvent, useState } from "react";
+import { type FormEvent, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useAuthStore } from "../store/index.js";
 import styles from "./Login.module.css";
@@ -10,6 +10,18 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const setAuth = useAuthStore((s) => s.setAuth);
   const navigate = useNavigate();
+
+  // Redirect to setup wizard if no users have been created yet
+  useEffect(() => {
+    fetch("/api/v1/auth/setup-status")
+      .then((r) => r.json())
+      .then((data: { setupComplete: boolean }) => {
+        if (!data.setupComplete) {
+          navigate("/setup", { replace: true });
+        }
+      })
+      .catch(() => {});
+  }, [navigate]);
 
   async function handleSubmit(e: FormEvent) {
     e.preventDefault();

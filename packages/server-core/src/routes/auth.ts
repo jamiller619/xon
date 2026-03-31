@@ -4,7 +4,7 @@ import { Hono } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { sign, verify } from "hono/jwt";
 import { z } from "zod";
-import { verifyPassword } from "../password.js";
+import { hashPassword, verifyPassword } from "../password.js";
 import { refreshTokens, users } from "../schema.js";
 import { validate } from "../validate.js";
 
@@ -196,6 +196,62 @@ export function makeAuthRouter(db: LibSQLDatabase): Hono {
 
     return c.json({ message: "Logged out" });
   });
+
+  // GET /setup-status — unauthenticated, returns whether first-time setup is needed
+  router.get("/setup-status", async (c) => {
+    const existing = await db.select({ id: users.id }).from(users).limit(1);
+    return c.json({ setupComplete: existing.length > 0 });
+  });
+
+  // POST /setup — unauthenticated, creates the first admin account
+  // Returns 409 if users already exist (setup already done)
+  router.post(
+    "/setup",
+    validate(
+      "json",
+      z.object({
+        username: z.string().min(1).max(64),
+        password: z.string().min(8),
+        displayName: z.string().min(1).max(128),
+      })
+    ),
+    async (c) => {
+      const existing = await db.select({ id: users.id }).from(users).limit(1);
+      if (existing.length > 0) {
+        return c.json({ error: "Setup already complete" }, 409);
+      }
+
+      const { username, password, displayName } = c.req.valid("json");
+      const email = `${username}@localhost`;
+      const passwordHash = await hashPassword(password);
+      const userId = crypto.randomUUID();
+
+      await db.insert(users).values({
+        id: userId,
+        username,
+        email,
+        displayName,
+        passwordHash,
+        role: "admin",
+      });
+
+      const tokenId = crypto.randomUUID();
+      const expiresAt = new Date(Date.now() + REFRESH_TOKEN_TTL_SECONDS * 1000);
+      await db.insert(refreshTokens).values({ id: tokenId, userId, expiresAt });
+
+      const accessToken = await signAccessToken(userId, username, "admin");
+      const refreshToken = await signRefreshToken(tokenId, userId);
+
+      setCookie(c, REFRESH_COOKIE_NAME, refreshToken, {
+        httpOnly: true,
+        sameSite: "Strict",
+        path: "/api/v1/auth",
+        maxAge: REFRESH_TOKEN_TTL_SECONDS,
+      });
+
+      return c.json({ accessToken, refreshToken }, 201);
+    }
+  );
 
   return router;
 }
