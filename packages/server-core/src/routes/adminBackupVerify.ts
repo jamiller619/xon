@@ -1,17 +1,17 @@
-import { createHash } from "node:crypto";
-import { readFile } from "node:fs/promises";
-import { join } from "node:path";
-import { desc, eq } from "drizzle-orm";
-import type { LibSQLDatabase } from "drizzle-orm/libsql";
-import { Hono } from "hono";
-import { getBackupTargetPlugin } from "../backupTargetPluginRegistry.js";
-import { emitEvent } from "../events.js";
-import { backupFileState, backupTargets, backupVerifyJobs } from "../schema.js";
+import { createHash } from 'node:crypto';
+import { readFile } from 'node:fs/promises';
+import { join } from 'node:path';
+import { desc, eq } from 'drizzle-orm';
+import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import { Hono } from 'hono';
+import { getBackupTargetPlugin } from '../backupTargetPluginRegistry.js';
+import { emitEvent } from '../events.js';
+import { backupFileState, backupTargets, backupVerifyJobs } from '../schema.js';
 import {
   localConfigSchema,
   networkConfigSchema,
   pluginConfigSchema,
-} from "./adminBackupTargets.js";
+} from './adminBackupTargets.js';
 
 // ---------------------------------------------------------------------------
 // Checksum helper
@@ -19,33 +19,44 @@ import {
 
 export async function computeChecksum(filePath: string): Promise<string> {
   const data = await readFile(filePath);
-  return createHash("sha256").update(data).digest("hex");
+  return createHash('sha256').update(data).digest('hex');
 }
 
 // ---------------------------------------------------------------------------
 // Backup handler resolver (mirrors adminBackupMedia logic)
 // ---------------------------------------------------------------------------
 
-type VerifyHandler = { kind: "dir"; destDir: string } | { kind: "plugin"; pluginId: string };
+type VerifyHandler =
+  | { kind: 'dir'; destDir: string }
+  | { kind: 'plugin'; pluginId: string };
 
-function resolveVerifyHandler(target: { type: string; config: string }): VerifyHandler | null {
+function resolveVerifyHandler(target: {
+  type: string;
+  config: string;
+}): VerifyHandler | null {
   let cfg: Record<string, unknown>;
   try {
     cfg = JSON.parse(target.config) as Record<string, unknown>;
   } catch {
     return null;
   }
-  if (target.type === "local") {
+  if (target.type === 'local') {
     const parsed = localConfigSchema.safeParse(cfg);
-    return parsed.success ? { kind: "dir", destDir: parsed.data.destPath } : null;
+    return parsed.success
+      ? { kind: 'dir', destDir: parsed.data.destPath }
+      : null;
   }
-  if (target.type === "network") {
+  if (target.type === 'network') {
     const parsed = networkConfigSchema.safeParse(cfg);
-    return parsed.success ? { kind: "dir", destDir: parsed.data.mountPath } : null;
+    return parsed.success
+      ? { kind: 'dir', destDir: parsed.data.mountPath }
+      : null;
   }
-  if (target.type === "plugin") {
+  if (target.type === 'plugin') {
     const parsed = pluginConfigSchema.safeParse(cfg);
-    return parsed.success ? { kind: "plugin", pluginId: parsed.data.pluginId } : null;
+    return parsed.success
+      ? { kind: 'plugin', pluginId: parsed.data.pluginId }
+      : null;
   }
   return null;
 }
@@ -54,18 +65,27 @@ function resolveVerifyHandler(target: { type: string; config: string }): VerifyH
 // Verify job execution
 // ---------------------------------------------------------------------------
 
-export async function runVerifyJob(db: LibSQLDatabase, jobId: string): Promise<void> {
+export async function runVerifyJob(
+  db: LibSQLDatabase,
+  jobId: string,
+): Promise<void> {
   const now = new Date();
 
   await db
     .update(backupVerifyJobs)
-    .set({ status: "running", startedAt: now })
+    .set({ status: 'running', startedAt: now })
     .where(eq(backupVerifyJobs.id, jobId));
 
-  const jobRows = await db.select().from(backupVerifyJobs).where(eq(backupVerifyJobs.id, jobId));
+  const jobRows = await db
+    .select()
+    .from(backupVerifyJobs)
+    .where(eq(backupVerifyJobs.id, jobId));
   const job = jobRows[0];
   if (!job) {
-    emitEvent({ type: "backup:verify:error", payload: { jobId, error: "Verify job not found" } });
+    emitEvent({
+      type: 'backup:verify:error',
+      payload: { jobId, error: 'Verify job not found' },
+    });
     return;
   }
 
@@ -78,14 +98,16 @@ export async function runVerifyJob(db: LibSQLDatabase, jobId: string): Promise<v
     await db
       .update(backupVerifyJobs)
       .set({
-        status: "failed",
-        failedItems: JSON.stringify([{ filePath: "", reason: "Backup target not found" }]),
+        status: 'failed',
+        failedItems: JSON.stringify([
+          { filePath: '', reason: 'Backup target not found' },
+        ]),
         completedAt: new Date(),
       })
       .where(eq(backupVerifyJobs.id, jobId));
     emitEvent({
-      type: "backup:verify:error",
-      payload: { jobId, error: "Backup target not found" },
+      type: 'backup:verify:error',
+      payload: { jobId, error: 'Backup target not found' },
     });
     return;
   }
@@ -95,14 +117,16 @@ export async function runVerifyJob(db: LibSQLDatabase, jobId: string): Promise<v
     await db
       .update(backupVerifyJobs)
       .set({
-        status: "failed",
-        failedItems: JSON.stringify([{ filePath: "", reason: "Invalid target configuration" }]),
+        status: 'failed',
+        failedItems: JSON.stringify([
+          { filePath: '', reason: 'Invalid target configuration' },
+        ]),
         completedAt: new Date(),
       })
       .where(eq(backupVerifyJobs.id, jobId));
     emitEvent({
-      type: "backup:verify:error",
-      payload: { jobId, error: "Invalid target configuration" },
+      type: 'backup:verify:error',
+      payload: { jobId, error: 'Invalid target configuration' },
     });
     return;
   }
@@ -126,24 +150,29 @@ export async function runVerifyJob(db: LibSQLDatabase, jobId: string): Promise<v
 
   for (const row of stateRows) {
     emitEvent({
-      type: "backup:verify:progress",
-      payload: { jobId, checked: passed + failed + missing, total, currentFile: row.filePath },
+      type: 'backup:verify:progress',
+      payload: {
+        jobId,
+        checked: passed + failed + missing,
+        total,
+        currentFile: row.filePath,
+      },
     });
 
-    const remotePath = row.filePath.replace(/^\//, "");
+    const remotePath = row.filePath.replace(/^\//, '');
 
-    if (handler.kind === "plugin") {
+    if (handler.kind === 'plugin') {
       // Plugin-based verify: delegate to the plugin's verify() method
       const plugin = getBackupTargetPlugin(handler.pluginId);
       let verifyOk = false;
-      let verifyReason = "Plugin not registered";
+      let verifyReason = 'Plugin not registered';
       let remoteChecksum: string | undefined;
 
       if (plugin) {
         try {
           const result = await plugin.verify(remotePath);
           if (!result.exists) {
-            verifyReason = "File missing in remote storage";
+            verifyReason = 'File missing in remote storage';
           } else {
             verifyOk = true;
             remoteChecksum = result.checksum;
@@ -192,10 +221,10 @@ export async function runVerifyJob(db: LibSQLDatabase, jobId: string): Promise<v
       if (srcChecksum === null || destChecksum === null) {
         const reason =
           srcChecksum === null && destChecksum === null
-            ? "Source and destination files missing"
+            ? 'Source and destination files missing'
             : srcChecksum === null
-              ? "Source file missing"
-              : "Destination file missing";
+              ? 'Source file missing'
+              : 'Destination file missing';
         missing++;
         failedItems.push({ filePath: row.filePath, reason });
 
@@ -206,7 +235,10 @@ export async function runVerifyJob(db: LibSQLDatabase, jobId: string): Promise<v
           .where(eq(backupFileState.id, row.id));
       } else if (srcChecksum !== destChecksum) {
         failed++;
-        failedItems.push({ filePath: row.filePath, reason: "Checksum mismatch" });
+        failedItems.push({
+          filePath: row.filePath,
+          reason: 'Checksum mismatch',
+        });
 
         // Flag for re-backup
         await db
@@ -229,7 +261,8 @@ export async function runVerifyJob(db: LibSQLDatabase, jobId: string): Promise<v
       .where(eq(backupVerifyJobs.id, jobId));
   }
 
-  const finalStatus = total === 0 || (failed === 0 && missing === 0) ? "completed" : "completed";
+  const finalStatus =
+    total === 0 || (failed === 0 && missing === 0) ? 'completed' : 'completed';
   await db
     .update(backupVerifyJobs)
     .set({
@@ -243,7 +276,7 @@ export async function runVerifyJob(db: LibSQLDatabase, jobId: string): Promise<v
     .where(eq(backupVerifyJobs.id, jobId));
 
   emitEvent({
-    type: "backup:verify:complete",
+    type: 'backup:verify:complete',
     payload: { jobId, passed, failed, missing },
   });
 }
@@ -256,16 +289,19 @@ export function makeAdminBackupVerifyRouter(db: LibSQLDatabase): Hono {
   const router = new Hono();
 
   // POST /admin/backup/verify/:targetId — start an integrity check
-  router.post("/:targetId", async (c) => {
-    const targetId = c.req.param("targetId") as string;
+  router.post('/:targetId', async (c) => {
+    const targetId = c.req.param('targetId') as string;
 
-    const targetRows = await db.select().from(backupTargets).where(eq(backupTargets.id, targetId));
+    const targetRows = await db
+      .select()
+      .from(backupTargets)
+      .where(eq(backupTargets.id, targetId));
     const target = targetRows[0];
     if (!target) {
-      return c.json({ error: "Backup target not found" }, 404);
+      return c.json({ error: 'Backup target not found' }, 404);
     }
     if (!target.enabled) {
-      return c.json({ error: "Backup target is disabled" }, 400);
+      return c.json({ error: 'Backup target is disabled' }, 400);
     }
 
     const jobId = crypto.randomUUID();
@@ -273,12 +309,12 @@ export function makeAdminBackupVerifyRouter(db: LibSQLDatabase): Hono {
     await db.insert(backupVerifyJobs).values({
       id: jobId,
       targetId,
-      status: "pending",
+      status: 'pending',
       totalFiles: 0,
       passedFiles: 0,
       failedFiles: 0,
       missingFiles: 0,
-      failedItems: "[]",
+      failedItems: '[]',
       createdAt: now,
     });
 
@@ -287,21 +323,27 @@ export function makeAdminBackupVerifyRouter(db: LibSQLDatabase): Hono {
       // errors are stored in the job record
     });
 
-    return c.json({ jobId, status: "running" }, 202);
+    return c.json({ jobId, status: 'running' }, 202);
   });
 
   // GET /admin/backup/verify/jobs — list all verify jobs
-  router.get("/jobs", async (c) => {
-    const rows = await db.select().from(backupVerifyJobs).orderBy(desc(backupVerifyJobs.createdAt));
+  router.get('/jobs', async (c) => {
+    const rows = await db
+      .select()
+      .from(backupVerifyJobs)
+      .orderBy(desc(backupVerifyJobs.createdAt));
     return c.json(rows);
   });
 
   // GET /admin/backup/verify/jobs/:id — get single verify job
-  router.get("/jobs/:id", async (c) => {
-    const id = c.req.param("id") as string;
-    const rows = await db.select().from(backupVerifyJobs).where(eq(backupVerifyJobs.id, id));
+  router.get('/jobs/:id', async (c) => {
+    const id = c.req.param('id') as string;
+    const rows = await db
+      .select()
+      .from(backupVerifyJobs)
+      .where(eq(backupVerifyJobs.id, id));
     const row = rows[0];
-    if (!row) return c.json({ error: "Not found" }, 404);
+    if (!row) return c.json({ error: 'Not found' }, 404);
     return c.json(row);
   });
 

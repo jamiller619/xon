@@ -1,9 +1,9 @@
-import { spawn } from "node:child_process";
-import { mkdir, unlink } from "node:fs/promises";
-import { join } from "node:path";
-import { MediaCategory } from "@xon/shared";
-import sharp from "sharp";
-import type { ThumbnailPaths } from "./thumbnails.js";
+import { spawn } from 'node:child_process';
+import { mkdir, unlink } from 'node:fs/promises';
+import { join } from 'node:path';
+import { MediaCategory } from '@xon/shared';
+import sharp from 'sharp';
+import type { ThumbnailPaths } from './thumbnails.js';
 
 const VIDEO_CATEGORIES = new Set<string>([
   MediaCategory.Movies,
@@ -25,23 +25,23 @@ export function isVideoCategory(category: string | null): boolean {
 
 function getVideoDuration(filePath: string): Promise<number | null> {
   return new Promise((resolve) => {
-    let stdout = "";
-    const proc = spawn("ffprobe", [
-      "-v",
-      "quiet",
-      "-print_format",
-      "json",
-      "-show_format",
+    let stdout = '';
+    const proc = spawn('ffprobe', [
+      '-v',
+      'quiet',
+      '-print_format',
+      'json',
+      '-show_format',
       filePath,
     ]);
 
-    proc.stdout?.on("data", (chunk: Buffer) => {
+    proc.stdout?.on('data', (chunk: Buffer) => {
       stdout += chunk.toString();
     });
 
-    proc.on("error", () => resolve(null));
+    proc.on('error', () => resolve(null));
 
-    proc.on("close", (code: number | null) => {
+    proc.on('close', (code: number | null) => {
       if (code !== 0) {
         resolve(null);
         return;
@@ -57,32 +57,36 @@ function getVideoDuration(filePath: string): Promise<number | null> {
   });
 }
 
-function extractFrame(filePath: string, timestamp: number, outputPath: string): Promise<boolean> {
+function extractFrame(
+  filePath: string,
+  timestamp: number,
+  outputPath: string,
+): Promise<boolean> {
   return new Promise((resolve) => {
-    const proc = spawn("ffmpeg", [
-      "-ss",
+    const proc = spawn('ffmpeg', [
+      '-ss',
       String(timestamp),
-      "-i",
+      '-i',
       filePath,
-      "-frames:v",
-      "1",
-      "-q:v",
-      "2",
-      "-y",
+      '-frames:v',
+      '1',
+      '-q:v',
+      '2',
+      '-y',
       outputPath,
     ]);
 
-    proc.on("error", () => resolve(false));
-    proc.on("close", (code: number | null) => resolve(code === 0));
+    proc.on('error', () => resolve(false));
+    proc.on('close', (code: number | null) => resolve(code === 0));
   });
 }
 
 export async function generateVideoThumbnails(
   filePath: string,
   mediaItemId: string,
-  dataDir: string
+  dataDir: string,
 ): Promise<ThumbnailPaths | null> {
-  const thumbnailDir = join(dataDir, "thumbnails");
+  const thumbnailDir = join(dataDir, 'thumbnails');
   try {
     await mkdir(thumbnailDir, { recursive: true });
   } catch {
@@ -112,7 +116,7 @@ export async function generateVideoThumbnails(
       img
         .clone()
         .resize(THUMBNAIL_SIZES.small, THUMBNAIL_SIZES.small, {
-          fit: "inside",
+          fit: 'inside',
           withoutEnlargement: true,
         })
         .jpeg({ quality: 80 })
@@ -120,7 +124,7 @@ export async function generateVideoThumbnails(
       img
         .clone()
         .resize(THUMBNAIL_SIZES.medium, THUMBNAIL_SIZES.medium, {
-          fit: "inside",
+          fit: 'inside',
           withoutEnlargement: true,
         })
         .jpeg({ quality: 80 })
@@ -128,14 +132,16 @@ export async function generateVideoThumbnails(
       img
         .clone()
         .resize(THUMBNAIL_SIZES.large, THUMBNAIL_SIZES.large, {
-          fit: "inside",
+          fit: 'inside',
           withoutEnlargement: true,
         })
         .jpeg({ quality: 80 })
         .toFile(paths.large),
     ]);
   } catch (err) {
-    console.error(`Video thumbnail resize failed for ${filePath}: ${String(err)}`);
+    console.error(
+      `Video thumbnail resize failed for ${filePath}: ${String(err)}`,
+    );
     try {
       await unlink(tmpPath);
     } catch {}

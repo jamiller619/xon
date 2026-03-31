@@ -1,11 +1,14 @@
-import { open } from "node:fs/promises";
-import { extname } from "node:path";
+import { open } from 'node:fs/promises';
+import { extname } from 'node:path';
 
 // Widevine System ID: edef8ba9-79d6-4ace-a3c8-27dcd51d21ed
-const WIDEVINE_SYSTEM_ID = Buffer.from("edef8ba979d64acea3c827dcd51d21ed", "hex");
+const WIDEVINE_SYSTEM_ID = Buffer.from(
+  'edef8ba979d64acea3c827dcd51d21ed',
+  'hex',
+);
 
 // Adobe ADEPT namespace used in EPUB encryption.xml
-const ADOBE_ADEPT_NS = "http://ns.adobe.com/adept";
+const ADOBE_ADEPT_NS = 'http://ns.adobe.com/adept';
 
 // ZIP local file header signature
 const ZIP_LOCAL_SIG = 0x04034b50;
@@ -15,8 +18,12 @@ const ZIP_EOCD_SIG = 0x06054b50;
 const ZIP_CD_SIG = 0x02014b50;
 
 /** Read up to `length` bytes from a file at `offset`. Returns the bytes read. */
-async function readBytes(filePath: string, offset: number, length: number): Promise<Buffer> {
-  const fh = await open(filePath, "r");
+async function readBytes(
+  filePath: string,
+  offset: number,
+  length: number,
+): Promise<Buffer> {
+  const fh = await open(filePath, 'r');
   try {
     const buf = Buffer.alloc(length);
     const { bytesRead } = await fh.read(buf, 0, length, offset);
@@ -31,7 +38,11 @@ async function readBytes(filePath: string, offset: number, length: number): Prom
  * Returns true if the box type is found at any level of nesting within
  * the first `scanBytes` bytes.
  */
-async function mp4HasBox(filePath: string, boxType: string, scanBytes = 65536): Promise<boolean> {
+async function mp4HasBox(
+  filePath: string,
+  boxType: string,
+  scanBytes = 65536,
+): Promise<boolean> {
   let buf: Buffer;
   try {
     buf = await readBytes(filePath, 0, scanBytes);
@@ -39,7 +50,7 @@ async function mp4HasBox(filePath: string, boxType: string, scanBytes = 65536): 
     return false;
   }
 
-  const target = Buffer.from(boxType, "ascii");
+  const target = Buffer.from(boxType, 'ascii');
   let offset = 0;
 
   while (offset + 8 <= buf.length) {
@@ -64,9 +75,9 @@ async function mp4HasBox(filePath: string, boxType: string, scanBytes = 65536): 
  */
 async function detectFairPlay(filePath: string): Promise<boolean> {
   const ext = extname(filePath).toLowerCase();
-  if (ext !== ".m4v" && ext !== ".m4a") return false;
+  if (ext !== '.m4v' && ext !== '.m4a') return false;
   try {
-    return await mp4HasBox(filePath, "drms");
+    return await mp4HasBox(filePath, 'drms');
   } catch {
     return false;
   }
@@ -78,7 +89,13 @@ async function detectFairPlay(filePath: string): Promise<boolean> {
  */
 async function detectWidevine(filePath: string): Promise<boolean> {
   const ext = extname(filePath).toLowerCase();
-  if (ext !== ".mp4" && ext !== ".m4v" && ext !== ".m4a" && ext !== ".mov" && ext !== ".mpd") {
+  if (
+    ext !== '.mp4' &&
+    ext !== '.m4v' &&
+    ext !== '.m4a' &&
+    ext !== '.mov' &&
+    ext !== '.mpd'
+  ) {
     return false;
   }
 
@@ -90,7 +107,7 @@ async function detectWidevine(filePath: string): Promise<boolean> {
   }
 
   // Search for 'pssh' box (not necessarily top-level — scan linearly)
-  const psshTag = Buffer.from("70737368", "hex"); // 'pssh' in hex
+  const psshTag = Buffer.from('70737368', 'hex'); // 'pssh' in hex
   for (let i = 0; i + 32 <= buf.length; i++) {
     if (
       buf[i + 4] === psshTag[0] &&
@@ -115,12 +132,12 @@ async function detectWidevine(filePath: string): Promise<boolean> {
  */
 async function detectAdobeDrm(filePath: string): Promise<boolean> {
   const ext = extname(filePath).toLowerCase();
-  if (ext !== ".epub") return false;
+  if (ext !== '.epub') return false;
 
   // Read the whole file — EPUBs are typically small
   let buf: Buffer;
   try {
-    const fh = await open(filePath, "r");
+    const fh = await open(filePath, 'r');
     try {
       const stat = await fh.stat();
       const size = Math.min(stat.size, 4 * 1024 * 1024); // max 4 MB
@@ -157,16 +174,20 @@ async function detectAdobeDrm(filePath: string): Promise<boolean> {
     const extraLen = buf.readUInt16LE(cdPos + 30);
     const commentLen = buf.readUInt16LE(cdPos + 32);
     const localOffset = buf.readUInt32LE(cdPos + 42);
-    const fileName = buf.subarray(cdPos + 46, cdPos + 46 + fnLen).toString("utf8");
+    const fileName = buf
+      .subarray(cdPos + 46, cdPos + 46 + fnLen)
+      .toString('utf8');
 
-    if (fileName === "META-INF/encryption.xml") {
+    if (fileName === 'META-INF/encryption.xml') {
       // Read the local file entry
       const localHeader = localOffset + 30;
       const localFnLen = buf.readUInt16LE(localOffset + 26);
       const localExtraLen = buf.readUInt16LE(localOffset + 28);
       const dataStart = localHeader + localFnLen + localExtraLen;
       const compressedSize = buf.readUInt32LE(localOffset + 18);
-      const content = buf.subarray(dataStart, dataStart + compressedSize).toString("utf8");
+      const content = buf
+        .subarray(dataStart, dataStart + compressedSize)
+        .toString('utf8');
       return content.includes(ADOBE_ADEPT_NS);
     }
 

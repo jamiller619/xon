@@ -1,16 +1,16 @@
-import { eq } from "drizzle-orm";
-import type { LibSQLDatabase } from "drizzle-orm/libsql";
-import { Hono } from "hono";
-import { z } from "zod";
-import { appCache } from "../cache.js";
-import { emitEvent } from "../events.js";
-import { scanLibrary } from "../orchestrator.js";
-import { emitPluginEvent } from "../pluginManager.js";
-import { requireRole } from "../rbac.js";
-import { type ScanState, scanRegistry } from "../scanRegistry.js";
-import { parseCronInterval } from "../scheduler.js";
-import { libraries } from "../schema.js";
-import { validate } from "../validate.js";
+import { eq } from 'drizzle-orm';
+import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import { Hono } from 'hono';
+import { z } from 'zod';
+import { appCache } from '../cache.js';
+import { emitEvent } from '../events.js';
+import { scanLibrary } from '../orchestrator.js';
+import { emitPluginEvent } from '../pluginManager.js';
+import { requireRole } from '../rbac.js';
+import { type ScanState, scanRegistry } from '../scanRegistry.js';
+import { parseCronInterval } from '../scheduler.js';
+import { libraries } from '../schema.js';
+import { validate } from '../validate.js';
 
 const scheduleSchema = z.object({
   scanSchedule: z
@@ -18,7 +18,7 @@ const scheduleSchema = z.object({
     .nullable()
     .refine(
       (v) => v === null || parseCronInterval(v) !== null,
-      "Invalid or unsupported cron expression. Supported: '*/N * * * *' or '0 */N * * *'"
+      "Invalid or unsupported cron expression. Supported: '*/N * * * *' or '0 */N * * *'",
     ),
 });
 
@@ -30,23 +30,23 @@ export function makeScanRouter(db: LibSQLDatabase): Hono {
   const router = new Hono();
 
   // POST / — trigger scan (mounted at /:libraryId/scan) (manager+)
-  router.post("/", requireRole("manager"), (c) => {
-    const libraryId = c.req.param("libraryId") as string;
+  router.post('/', requireRole('manager'), (c) => {
+    const libraryId = c.req.param('libraryId') as string;
 
     const current = scanRegistry.get(libraryId);
-    if (current?.status === "running") {
-      return c.json({ status: "already_running" }, 409);
+    if (current?.status === 'running') {
+      return c.json({ status: 'already_running' }, 409);
     }
 
     const state: ScanState = {
-      status: "running",
+      status: 'running',
       startedAt: new Date(),
       progress: null,
       summary: null,
       error: null,
     };
     scanRegistry.set(libraryId, state);
-    emitPluginEvent("scan:start", { libraryId });
+    emitPluginEvent('scan:start', { libraryId });
 
     const scanStartedAt = Date.now();
     scanLibrary(db, libraryId, (progress) => {
@@ -56,7 +56,7 @@ export function makeScanRouter(db: LibSQLDatabase): Hono {
           ? Math.round((progress.processedFiles / progress.totalFiles) * 100)
           : 0;
       emitEvent({
-        type: "scan:progress",
+        type: 'scan:progress',
         payload: {
           libraryId,
           fileCount: progress.totalFiles,
@@ -67,17 +67,21 @@ export function makeScanRouter(db: LibSQLDatabase): Hono {
     })
       .then(async (summary) => {
         const duration = Date.now() - scanStartedAt;
-        state.status = "completed";
+        state.status = 'completed';
         state.summary = summary;
         await db
           .update(libraries)
-          .set({ lastScanResult: "completed", lastScanDuration: duration, updatedAt: new Date() })
+          .set({
+            lastScanResult: 'completed',
+            lastScanDuration: duration,
+            updatedAt: new Date(),
+          })
           .where(eq(libraries.id, libraryId));
         // Invalidate caches so updated counts and library list are served fresh
         appCache.invalidate(`media:count:${libraryId}`);
-        appCache.invalidate("libraries:all");
+        appCache.invalidate('libraries:all');
         emitEvent({
-          type: "scan:complete",
+          type: 'scan:complete',
           payload: {
             libraryId,
             newItems: summary.newItems,
@@ -86,33 +90,40 @@ export function makeScanRouter(db: LibSQLDatabase): Hono {
             totalDiscovered: summary.totalDiscovered,
           },
         });
-        emitPluginEvent("scan:complete", {
+        emitPluginEvent('scan:complete', {
           libraryId,
           itemsFound: summary.totalDiscovered,
         });
       })
       .catch(async (err: unknown) => {
         const duration = Date.now() - scanStartedAt;
-        state.status = "failed";
+        state.status = 'failed';
         const errorMessage = err instanceof Error ? err.message : String(err);
         state.error = errorMessage;
         await db
           .update(libraries)
-          .set({ lastScanResult: "failed", lastScanDuration: duration, updatedAt: new Date() })
+          .set({
+            lastScanResult: 'failed',
+            lastScanDuration: duration,
+            updatedAt: new Date(),
+          })
           .where(eq(libraries.id, libraryId));
-        emitEvent({ type: "scan:error", payload: { libraryId, error: errorMessage } });
+        emitEvent({
+          type: 'scan:error',
+          payload: { libraryId, error: errorMessage },
+        });
       });
 
-    return c.json({ status: "started" }, 202);
+    return c.json({ status: 'started' }, 202);
   });
 
   // GET /status — get scan status (mounted at /:libraryId/scan/status)
-  router.get("/status", (c) => {
-    const libraryId = c.req.param("libraryId") as string;
+  router.get('/status', (c) => {
+    const libraryId = c.req.param('libraryId') as string;
 
     const state = scanRegistry.get(libraryId);
     if (!state) {
-      return c.json({ status: "idle" });
+      return c.json({ status: 'idle' });
     }
 
     return c.json({
@@ -125,38 +136,60 @@ export function makeScanRouter(db: LibSQLDatabase): Hono {
   });
 
   // PUT /schedule — update scan schedule for a library (manager+)
-  router.put("/schedule", requireRole("manager"), validate("json", scheduleSchema), async (c) => {
-    const libraryId = c.req.param("libraryId") as string;
-    const { scanSchedule } = c.req.valid("json");
+  router.put(
+    '/schedule',
+    requireRole('manager'),
+    validate('json', scheduleSchema),
+    async (c) => {
+      const libraryId = c.req.param('libraryId') as string;
+      const { scanSchedule } = c.req.valid('json');
 
-    const existing = await db.select().from(libraries).where(eq(libraries.id, libraryId));
-    if (existing.length === 0) return c.json({ error: "Not found" }, 404);
+      const existing = await db
+        .select()
+        .from(libraries)
+        .where(eq(libraries.id, libraryId));
+      if (existing.length === 0) return c.json({ error: 'Not found' }, 404);
 
-    await db
-      .update(libraries)
-      .set({ scanSchedule, updatedAt: new Date() })
-      .where(eq(libraries.id, libraryId));
+      await db
+        .update(libraries)
+        .set({ scanSchedule, updatedAt: new Date() })
+        .where(eq(libraries.id, libraryId));
 
-    const updated = await db.select().from(libraries).where(eq(libraries.id, libraryId));
-    return c.json(updated[0]);
-  });
+      const updated = await db
+        .select()
+        .from(libraries)
+        .where(eq(libraries.id, libraryId));
+      return c.json(updated[0]);
+    },
+  );
 
   // PUT /watch — enable/disable filesystem watch for a library (manager+)
-  router.put("/watch", requireRole("manager"), validate("json", watchSchema), async (c) => {
-    const libraryId = c.req.param("libraryId") as string;
-    const { watchEnabled } = c.req.valid("json");
+  router.put(
+    '/watch',
+    requireRole('manager'),
+    validate('json', watchSchema),
+    async (c) => {
+      const libraryId = c.req.param('libraryId') as string;
+      const { watchEnabled } = c.req.valid('json');
 
-    const existing = await db.select().from(libraries).where(eq(libraries.id, libraryId));
-    if (existing.length === 0) return c.json({ error: "Not found" }, 404);
+      const existing = await db
+        .select()
+        .from(libraries)
+        .where(eq(libraries.id, libraryId));
+      if (existing.length === 0) return c.json({ error: 'Not found' }, 404);
 
-    await db
-      .update(libraries)
-      .set({ watchEnabled, updatedAt: new Date() })
-      .where(eq(libraries.id, libraryId));
+      await db
+        .update(libraries)
+        .set({ watchEnabled, updatedAt: new Date() })
+        .where(eq(libraries.id, libraryId));
 
-    const updated = await db.select().from(libraries).where(eq(libraries.id, libraryId));
-    return c.json(updated[0]);
-  });
+      const updated = await db
+        .select()
+        .from(libraries)
+        .where(eq(libraries.id, libraryId));
+      return c.json(updated[0]);
+    },
+  );
 
   return router;
 }

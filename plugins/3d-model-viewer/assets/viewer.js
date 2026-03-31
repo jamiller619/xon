@@ -1,10 +1,10 @@
 // @ts-nocheck
 // Three.js 3D Model Viewer — loaded as a browser ESM bundle via the plugin assets endpoint.
 // Imports Three.js and addons from esm.sh CDN at a pinned version.
-import * as THREE from "https://esm.sh/three@0.167.1";
-import { OBJLoader } from "https://esm.sh/three@0.167.1/examples/jsm/loaders/OBJLoader.js";
-import { GLTFLoader } from "https://esm.sh/three@0.167.1/examples/jsm/loaders/GLTFLoader.js";
-import { OrbitControls } from "https://esm.sh/three@0.167.1/examples/jsm/controls/OrbitControls.js";
+import * as THREE from 'https://esm.sh/three@0.167.1';
+import { OrbitControls } from 'https://esm.sh/three@0.167.1/examples/jsm/controls/OrbitControls.js';
+import { GLTFLoader } from 'https://esm.sh/three@0.167.1/examples/jsm/loaders/GLTFLoader.js';
+import { OBJLoader } from 'https://esm.sh/three@0.167.1/examples/jsm/loaders/OBJLoader.js';
 
 /**
  * Plugin render function — called by PluginSlot with (container, props).
@@ -19,34 +19,34 @@ export default function render(container, props) {
   const mediaCategory = props.mediaItem?.mediaCategory;
 
   // Only activate for 3D Models
-  if (mediaCategory !== "3D Models" || !mediaId) {
+  if (mediaCategory !== '3D Models' || !mediaId) {
     return () => {};
   }
 
   // ── Container styling ──────────────────────────────────────────────────────
   Object.assign(container.style, {
-    width: "100%",
-    height: "500px",
-    position: "relative",
-    background: "#1a1a2e",
-    overflow: "hidden",
-    borderRadius: "8px",
-    marginTop: "16px",
+    width: '100%',
+    height: '500px',
+    position: 'relative',
+    background: '#1a1a2e',
+    overflow: 'hidden',
+    borderRadius: '8px',
+    marginTop: '16px',
   });
 
   // Loading overlay
-  const loadingDiv = document.createElement("div");
-  loadingDiv.textContent = "Loading 3D model…";
+  const loadingDiv = document.createElement('div');
+  loadingDiv.textContent = 'Loading 3D model…';
   Object.assign(loadingDiv.style, {
-    position: "absolute",
-    top: "50%",
-    left: "50%",
-    transform: "translate(-50%, -50%)",
-    color: "#ccc",
-    fontFamily: "sans-serif",
-    fontSize: "14px",
-    zIndex: "1",
-    pointerEvents: "none",
+    position: 'absolute',
+    top: '50%',
+    left: '50%',
+    transform: 'translate(-50%, -50%)',
+    color: '#ccc',
+    fontFamily: 'sans-serif',
+    fontSize: '14px',
+    zIndex: '1',
+    pointerEvents: 'none',
   });
   container.appendChild(loadingDiv);
 
@@ -152,20 +152,20 @@ export default function render(container, props) {
 
   // ── Load the model ─────────────────────────────────────────────────────────
   async function loadModel() {
-    let fileName = "";
+    let fileName = '';
     try {
       const res = await fetch(`/api/v1/media/${mediaId}`);
       const item = await res.json();
-      fileName = item.fileName ?? item.filePath ?? "";
+      fileName = item.fileName ?? item.filePath ?? '';
     } catch {
-      loadingDiv.textContent = "Failed to fetch media details";
+      loadingDiv.textContent = 'Failed to fetch media details';
       return;
     }
 
-    const ext = fileName.split(".").pop()?.toLowerCase() ?? "";
+    const ext = fileName.split('.').pop()?.toLowerCase() ?? '';
     const streamUrl = `/api/v1/media/${mediaId}/stream`;
 
-    if (ext === "obj") {
+    if (ext === 'obj') {
       const loader = new OBJLoader();
       loader.load(
         streamUrl,
@@ -176,10 +176,10 @@ export default function render(container, props) {
         },
         undefined,
         () => {
-          loadingDiv.textContent = "Failed to load OBJ model";
-        }
+          loadingDiv.textContent = 'Failed to load OBJ model';
+        },
       );
-    } else if (ext === "gltf" || ext === "glb") {
+    } else if (ext === 'gltf' || ext === 'glb') {
       const loader = new GLTFLoader();
       loader.load(
         streamUrl,
@@ -190,11 +190,11 @@ export default function render(container, props) {
         },
         undefined,
         () => {
-          loadingDiv.textContent = "Failed to load glTF/GLB model";
-        }
+          loadingDiv.textContent = 'Failed to load glTF/GLB model';
+        },
       );
     } else {
-      loadingDiv.textContent = `Unsupported 3D format: .${ext || "unknown"}`;
+      loadingDiv.textContent = `Unsupported 3D format: .${ext || 'unknown'}`;
     }
   }
 

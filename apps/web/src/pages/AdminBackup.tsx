@@ -1,6 +1,6 @@
-import { useEffect, useState } from "react";
-import { apiFetch } from "../apiFetch.js";
-import styles from "./AdminBackup.module.css";
+import { useEffect, useState } from 'react';
+import { apiFetch } from '../apiFetch.js';
+import styles from './AdminBackup.module.css';
 
 // ---------------------------------------------------------------------------
 // Types
@@ -9,7 +9,7 @@ import styles from "./AdminBackup.module.css";
 interface BackupTarget {
   id: string;
   name: string;
-  type: "local" | "network" | "plugin";
+  type: 'local' | 'network' | 'plugin';
   config: string;
   enabled: boolean;
   removeDeleted: boolean;
@@ -24,7 +24,7 @@ interface BackupJob {
   id: string;
   targetId: string;
   scope: string;
-  status: "pending" | "running" | "completed" | "failed";
+  status: 'pending' | 'running' | 'completed' | 'failed';
   totalFiles: number;
   copiedFiles: number;
   skippedFiles: number;
@@ -37,7 +37,7 @@ interface BackupJob {
 interface VerifyJob {
   id: string;
   targetId: string;
-  status: "pending" | "running" | "completed" | "failed";
+  status: 'pending' | 'running' | 'completed' | 'failed';
   totalFiles: number;
   passedFiles: number;
   failedFiles: number;
@@ -53,12 +53,12 @@ interface VerifyJob {
 // ---------------------------------------------------------------------------
 
 function formatDate(ts: string | null): string {
-  if (!ts) return "—";
+  if (!ts) return '—';
   return new Date(ts).toLocaleString();
 }
 
 function formatDuration(start: string | null, end: string | null): string {
-  if (!start || !end) return "—";
+  if (!start || !end) return '—';
   const ms = new Date(end).getTime() - new Date(start).getTime();
   if (ms < 1000) return `${ms}ms`;
   if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
@@ -67,15 +67,15 @@ function formatDuration(start: string | null, end: string | null): string {
 
 function statusBadge(status: string): string {
   switch (status) {
-    case "completed":
-      return styles.badgeGreen ?? "";
-    case "running":
-    case "pending":
-      return styles.badgeBlue ?? "";
-    case "failed":
-      return styles.badgeRed ?? "";
+    case 'completed':
+      return styles.badgeGreen ?? '';
+    case 'running':
+    case 'pending':
+      return styles.badgeBlue ?? '';
+    case 'failed':
+      return styles.badgeRed ?? '';
     default:
-      return styles.badge ?? "";
+      return styles.badge ?? '';
   }
 }
 
@@ -85,7 +85,7 @@ function statusBadge(status: string): string {
 
 interface TargetFormState {
   name: string;
-  type: "local" | "network" | "plugin";
+  type: 'local' | 'network' | 'plugin';
   destPath: string;
   mountPath: string;
   pluginId: string;
@@ -94,27 +94,27 @@ interface TargetFormState {
 }
 
 const EMPTY_TARGET_FORM: TargetFormState = {
-  name: "",
-  type: "local",
-  destPath: "",
-  mountPath: "",
-  pluginId: "",
+  name: '',
+  type: 'local',
+  destPath: '',
+  mountPath: '',
+  pluginId: '',
   enabled: true,
   removeDeleted: false,
 };
 
 function buildConfig(form: TargetFormState): Record<string, string> {
-  if (form.type === "local") return { destPath: form.destPath };
-  if (form.type === "network") return { mountPath: form.mountPath };
+  if (form.type === 'local') return { destPath: form.destPath };
+  if (form.type === 'network') return { mountPath: form.mountPath };
   return { pluginId: form.pluginId };
 }
 
 function parseConfig(type: string, config: string): Partial<TargetFormState> {
   try {
     const cfg = JSON.parse(config) as Record<string, string>;
-    if (type === "local") return { destPath: cfg.destPath ?? "" };
-    if (type === "network") return { mountPath: cfg.mountPath ?? "" };
-    if (type === "plugin") return { pluginId: cfg.pluginId ?? "" };
+    if (type === 'local') return { destPath: cfg.destPath ?? '' };
+    if (type === 'network') return { mountPath: cfg.mountPath ?? '' };
+    if (type === 'plugin') return { pluginId: cfg.pluginId ?? '' };
   } catch {
     // ignore
   }
@@ -129,7 +129,13 @@ interface TargetModalProps {
   error: string;
 }
 
-function TargetModal({ initial, title, onSave, onClose, error }: TargetModalProps) {
+function TargetModal({
+  initial,
+  title,
+  onSave,
+  onClose,
+  error,
+}: TargetModalProps) {
   const [form, setForm] = useState<TargetFormState>(initial);
   const [saving, setSaving] = useState(false);
 
@@ -162,7 +168,9 @@ function TargetModal({ initial, title, onSave, onClose, error }: TargetModalProp
           Type
           <select
             value={form.type}
-            onChange={(e) => set({ type: e.target.value as TargetFormState["type"] })}
+            onChange={(e) =>
+              set({ type: e.target.value as TargetFormState['type'] })
+            }
           >
             <option value="local">Local</option>
             <option value="network">Network (mount)</option>
@@ -170,7 +178,7 @@ function TargetModal({ initial, title, onSave, onClose, error }: TargetModalProp
           </select>
         </label>
 
-        {form.type === "local" && (
+        {form.type === 'local' && (
           <label>
             Destination Path
             <input
@@ -182,7 +190,7 @@ function TargetModal({ initial, title, onSave, onClose, error }: TargetModalProp
           </label>
         )}
 
-        {form.type === "network" && (
+        {form.type === 'network' && (
           <label>
             Mount Path
             <input
@@ -194,7 +202,7 @@ function TargetModal({ initial, title, onSave, onClose, error }: TargetModalProp
           </label>
         )}
 
-        {form.type === "plugin" && (
+        {form.type === 'plugin' && (
           <label>
             Plugin ID
             <input
@@ -228,7 +236,7 @@ function TargetModal({ initial, title, onSave, onClose, error }: TargetModalProp
 
         <div className={styles.modalActions}>
           <button type="button" onClick={handleSave} disabled={saving}>
-            {saving ? "Saving…" : "Save"}
+            {saving ? 'Saving…' : 'Save'}
           </button>
           <button type="button" onClick={onClose}>
             Cancel
@@ -257,7 +265,13 @@ interface ScheduleModalProps {
   error: string;
 }
 
-function ScheduleModal({ targetId, initial, onSave, onClose, error }: ScheduleModalProps) {
+function ScheduleModal({
+  targetId,
+  initial,
+  onSave,
+  onClose,
+  error,
+}: ScheduleModalProps) {
   const [form, setForm] = useState<ScheduleForm>(initial);
   const [saving, setSaving] = useState(false);
 
@@ -278,7 +292,9 @@ function ScheduleModal({ targetId, initial, onSave, onClose, error }: ScheduleMo
             type="text"
             placeholder="e.g. 0 2 * * * (daily at 2am)"
             value={form.schedule}
-            onChange={(e) => setForm((f) => ({ ...f, schedule: e.target.value }))}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, schedule: e.target.value }))
+            }
           />
         </label>
 
@@ -289,7 +305,9 @@ function ScheduleModal({ targetId, initial, onSave, onClose, error }: ScheduleMo
             min={0}
             placeholder="e.g. 10"
             value={form.retentionKeepCount}
-            onChange={(e) => setForm((f) => ({ ...f, retentionKeepCount: e.target.value }))}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, retentionKeepCount: e.target.value }))
+            }
           />
         </label>
 
@@ -300,7 +318,9 @@ function ScheduleModal({ targetId, initial, onSave, onClose, error }: ScheduleMo
             min={0}
             placeholder="e.g. 30"
             value={form.retentionKeepDays}
-            onChange={(e) => setForm((f) => ({ ...f, retentionKeepDays: e.target.value }))}
+            onChange={(e) =>
+              setForm((f) => ({ ...f, retentionKeepDays: e.target.value }))
+            }
           />
         </label>
 
@@ -308,7 +328,7 @@ function ScheduleModal({ targetId, initial, onSave, onClose, error }: ScheduleMo
 
         <div className={styles.modalActions}>
           <button type="button" onClick={handleSave} disabled={saving}>
-            {saving ? "Saving…" : "Save"}
+            {saving ? 'Saving…' : 'Save'}
           </button>
           <button type="button" onClick={onClose}>
             Cancel
@@ -338,13 +358,18 @@ interface BackupTriggerModalProps {
   error: string;
 }
 
-function BackupTriggerModal({ targets, onTrigger, onClose, error }: BackupTriggerModalProps) {
+function BackupTriggerModal({
+  targets,
+  onTrigger,
+  onClose,
+  error,
+}: BackupTriggerModalProps) {
   const [form, setForm] = useState<BackupScopeForm>({
-    targetId: targets[0]?.id ?? "",
+    targetId: targets[0]?.id ?? '',
     scopeAll: true,
-    libraryIds: "",
-    mediaTypes: "",
-    itemIds: "",
+    libraryIds: '',
+    mediaTypes: '',
+    itemIds: '',
   });
   const [running, setRunning] = useState(false);
 
@@ -365,7 +390,10 @@ function BackupTriggerModal({ targets, onTrigger, onClose, error }: BackupTrigge
 
         <label>
           Backup Target
-          <select value={form.targetId} onChange={(e) => set({ targetId: e.target.value })}>
+          <select
+            value={form.targetId}
+            onChange={(e) => set({ targetId: e.target.value })}
+          >
             {targets
               .filter((t) => t.enabled)
               .map((t) => (
@@ -423,7 +451,7 @@ function BackupTriggerModal({ targets, onTrigger, onClose, error }: BackupTrigge
 
         <div className={styles.modalActions}>
           <button type="button" onClick={handleTrigger} disabled={running}>
-            {running ? "Starting…" : "Start Backup"}
+            {running ? 'Starting…' : 'Start Backup'}
           </button>
           <button type="button" onClick={onClose}>
             Cancel
@@ -444,7 +472,11 @@ interface VerifyResultsModalProps {
   onClose: () => void;
 }
 
-function VerifyResultsModal({ job, targetName, onClose }: VerifyResultsModalProps) {
+function VerifyResultsModal({
+  job,
+  targetName,
+  onClose,
+}: VerifyResultsModalProps) {
   type FailedItem = { filePath: string; reason: string };
   let failedItems: FailedItem[] = [];
   try {
@@ -484,8 +516,12 @@ function VerifyResultsModal({ job, targetName, onClose }: VerifyResultsModalProp
         </div>
 
         <p className={styles.verifyMeta}>
-          Status: <span className={`${styles.badge} ${statusBadge(job.status)}`}>{job.status}</span>
-          &nbsp;&nbsp; Duration: {formatDuration(job.startedAt, job.completedAt)}
+          Status:{' '}
+          <span className={`${styles.badge} ${statusBadge(job.status)}`}>
+            {job.status}
+          </span>
+          &nbsp;&nbsp; Duration:{' '}
+          {formatDuration(job.startedAt, job.completedAt)}
         </p>
 
         {failedItems.length > 0 && (
@@ -518,22 +554,22 @@ function VerifyResultsModal({ job, targetName, onClose }: VerifyResultsModalProp
 // ---------------------------------------------------------------------------
 
 type ModalState =
-  | { kind: "none" }
-  | { kind: "addTarget" }
-  | { kind: "editTarget"; target: BackupTarget }
-  | { kind: "deleteConfirm"; target: BackupTarget }
-  | { kind: "schedule"; target: BackupTarget }
-  | { kind: "triggerBackup" }
-  | { kind: "verifyResults"; job: VerifyJob; targetName: string };
+  | { kind: 'none' }
+  | { kind: 'addTarget' }
+  | { kind: 'editTarget'; target: BackupTarget }
+  | { kind: 'deleteConfirm'; target: BackupTarget }
+  | { kind: 'schedule'; target: BackupTarget }
+  | { kind: 'triggerBackup' }
+  | { kind: 'verifyResults'; job: VerifyJob; targetName: string };
 
 export default function AdminBackup() {
   const [targets, setTargets] = useState<BackupTarget[]>([]);
   const [jobs, setJobs] = useState<BackupJob[]>([]);
   const [verifyJobs, setVerifyJobs] = useState<VerifyJob[]>([]);
   const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState<ModalState>({ kind: "none" });
-  const [modalError, setModalError] = useState("");
-  const [actionError, setActionError] = useState("");
+  const [modal, setModal] = useState<ModalState>({ kind: 'none' });
+  const [modalError, setModalError] = useState('');
+  const [actionError, setActionError] = useState('');
 
   useEffect(() => {
     loadAll();
@@ -543,9 +579,9 @@ export default function AdminBackup() {
     setLoading(true);
     try {
       const [tRes, jRes, vRes] = await Promise.all([
-        apiFetch("/api/v1/admin/backup/targets"),
-        apiFetch("/api/v1/admin/backup/media/jobs"),
-        apiFetch("/api/v1/admin/backup/verify/jobs"),
+        apiFetch('/api/v1/admin/backup/targets'),
+        apiFetch('/api/v1/admin/backup/media/jobs'),
+        apiFetch('/api/v1/admin/backup/verify/jobs'),
       ]);
       if (tRes.ok) setTargets((await tRes.json()) as BackupTarget[]);
       if (jRes.ok) setJobs((await jRes.json()) as BackupJob[]);
@@ -562,10 +598,10 @@ export default function AdminBackup() {
   // -- Target CRUD --
 
   async function handleAddTarget(form: TargetFormState) {
-    setModalError("");
-    const res = await apiFetch("/api/v1/admin/backup/targets", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    setModalError('');
+    const res = await apiFetch('/api/v1/admin/backup/targets', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
         name: form.name,
         type: form.type,
@@ -579,73 +615,85 @@ export default function AdminBackup() {
       setModalError(data.error ?? `HTTP ${res.status}`);
       return;
     }
-    setModal({ kind: "none" });
+    setModal({ kind: 'none' });
     await loadAll();
   }
 
   async function handleEditTarget(form: TargetFormState) {
-    if (modal.kind !== "editTarget") return;
-    setModalError("");
-    const res = await apiFetch(`/api/v1/admin/backup/targets/${modal.target.id}`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        name: form.name,
-        type: form.type,
-        config: buildConfig(form),
-        enabled: form.enabled,
-        removeDeleted: form.removeDeleted,
-      }),
-    });
+    if (modal.kind !== 'editTarget') return;
+    setModalError('');
+    const res = await apiFetch(
+      `/api/v1/admin/backup/targets/${modal.target.id}`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: form.name,
+          type: form.type,
+          config: buildConfig(form),
+          enabled: form.enabled,
+          removeDeleted: form.removeDeleted,
+        }),
+      },
+    );
     if (!res.ok) {
       const data = (await res.json()) as { error?: string };
       setModalError(data.error ?? `HTTP ${res.status}`);
       return;
     }
-    setModal({ kind: "none" });
+    setModal({ kind: 'none' });
     await loadAll();
   }
 
   async function handleDeleteTarget(target: BackupTarget) {
-    setModalError("");
-    const res = await apiFetch(`/api/v1/admin/backup/targets/${target.id}`, { method: "DELETE" });
+    setModalError('');
+    const res = await apiFetch(`/api/v1/admin/backup/targets/${target.id}`, {
+      method: 'DELETE',
+    });
     if (!res.ok) {
       const data = (await res.json()) as { error?: string };
       setActionError(data.error ?? `HTTP ${res.status}`);
     }
-    setModal({ kind: "none" });
+    setModal({ kind: 'none' });
     await loadAll();
   }
 
   // -- Schedule --
 
   async function handleSaveSchedule(targetId: string, form: ScheduleForm) {
-    setModalError("");
+    setModalError('');
     const body: Record<string, unknown> = {
       schedule: form.schedule || null,
       retentionKeepCount:
-        form.retentionKeepCount !== "" ? Number.parseInt(form.retentionKeepCount, 10) : null,
+        form.retentionKeepCount !== ''
+          ? Number.parseInt(form.retentionKeepCount, 10)
+          : null,
       retentionKeepDays:
-        form.retentionKeepDays !== "" ? Number.parseInt(form.retentionKeepDays, 10) : null,
+        form.retentionKeepDays !== ''
+          ? Number.parseInt(form.retentionKeepDays, 10)
+          : null,
     };
-    const res = await apiFetch(`/api/v1/admin/backup/targets/${targetId}/schedule`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body),
-    });
+    const res = await apiFetch(
+      `/api/v1/admin/backup/targets/${targetId}/schedule`,
+      {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(body),
+      },
+    );
     if (!res.ok) {
       const data = (await res.json()) as { error?: string };
       setModalError(data.error ?? `HTTP ${res.status}`);
       return;
     }
-    setModal({ kind: "none" });
+    setModal({ kind: 'none' });
     await loadAll();
   }
 
   // -- Backup trigger --
 
   async function handleTriggerBackup(form: BackupScopeForm) {
-    setModalError("");
+    setModalError('');
 
     const scope: Record<string, unknown> = {};
     if (form.scopeAll) {
@@ -653,27 +701,27 @@ export default function AdminBackup() {
     } else {
       if (form.libraryIds.trim()) {
         scope.libraryIds = form.libraryIds
-          .split(",")
+          .split(',')
           .map((s) => s.trim())
           .filter(Boolean);
       }
       if (form.mediaTypes.trim()) {
         scope.mediaTypes = form.mediaTypes
-          .split(",")
+          .split(',')
           .map((s) => s.trim())
           .filter(Boolean);
       }
       if (form.itemIds.trim()) {
         scope.itemIds = form.itemIds
-          .split(",")
+          .split(',')
           .map((s) => s.trim())
           .filter(Boolean);
       }
     }
 
-    const res = await apiFetch("/api/v1/admin/backup/media", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+    const res = await apiFetch('/api/v1/admin/backup/media', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ targetId: form.targetId, scope }),
     });
     if (!res.ok) {
@@ -681,15 +729,17 @@ export default function AdminBackup() {
       setModalError(data.error ?? `HTTP ${res.status}`);
       return;
     }
-    setModal({ kind: "none" });
+    setModal({ kind: 'none' });
     await loadAll();
   }
 
   // -- Verify --
 
   async function handleVerify(target: BackupTarget) {
-    setActionError("");
-    const res = await apiFetch(`/api/v1/admin/backup/verify/${target.id}`, { method: "POST" });
+    setActionError('');
+    const res = await apiFetch(`/api/v1/admin/backup/verify/${target.id}`, {
+      method: 'POST',
+    });
     if (!res.ok) {
       const data = (await res.json()) as { error?: string };
       setActionError(data.error ?? `HTTP ${res.status}`);
@@ -701,7 +751,7 @@ export default function AdminBackup() {
   function showVerifyResults(targetId: string) {
     const job = verifyJobs.find((j) => j.targetId === targetId);
     if (!job) return;
-    setModal({ kind: "verifyResults", job, targetName: targetName(targetId) });
+    setModal({ kind: 'verifyResults', job, targetName: targetName(targetId) });
   }
 
   // ---------------------------------------------------------------------------
@@ -726,8 +776,8 @@ export default function AdminBackup() {
             <button
               type="button"
               onClick={() => {
-                setModalError("");
-                setModal({ kind: "triggerBackup" });
+                setModalError('');
+                setModal({ kind: 'triggerBackup' });
               }}
             >
               Trigger Backup
@@ -735,8 +785,8 @@ export default function AdminBackup() {
             <button
               type="button"
               onClick={() => {
-                setModalError("");
-                setModal({ kind: "addTarget" });
+                setModalError('');
+                setModal({ kind: 'addTarget' });
               }}
             >
               Add Target
@@ -761,14 +811,16 @@ export default function AdminBackup() {
             </thead>
             <tbody>
               {targets.map((target) => {
-                const latestVerify = verifyJobs.find((j) => j.targetId === target.id);
+                const latestVerify = verifyJobs.find(
+                  (j) => j.targetId === target.id,
+                );
                 return (
                   <tr key={target.id}>
                     <td>{target.name}</td>
                     <td>{target.type}</td>
-                    <td>{target.enabled ? "Yes" : "No"}</td>
+                    <td>{target.enabled ? 'Yes' : 'No'}</td>
                     <td>
-                      <code>{target.schedule ?? "—"}</code>
+                      <code>{target.schedule ?? '—'}</code>
                     </td>
                     <td>{formatDate(target.nextScheduledAt)}</td>
                     <td>
@@ -776,14 +828,14 @@ export default function AdminBackup() {
                         ? `Keep ${target.retentionKeepCount} jobs`
                         : target.retentionKeepDays !== null
                           ? `Keep ${target.retentionKeepDays} days`
-                          : "—"}
+                          : '—'}
                     </td>
                     <td className={styles.actions}>
                       <button
                         type="button"
                         onClick={() => {
-                          setModalError("");
-                          setModal({ kind: "editTarget", target });
+                          setModalError('');
+                          setModal({ kind: 'editTarget', target });
                         }}
                       >
                         Edit
@@ -791,8 +843,8 @@ export default function AdminBackup() {
                       <button
                         type="button"
                         onClick={() => {
-                          setModalError("");
-                          setModal({ kind: "schedule", target });
+                          setModalError('');
+                          setModal({ kind: 'schedule', target });
                         }}
                       >
                         Schedule
@@ -801,7 +853,11 @@ export default function AdminBackup() {
                         type="button"
                         onClick={() => handleVerify(target)}
                         disabled={!target.enabled}
-                        title={!target.enabled ? "Target is disabled" : "Run integrity check"}
+                        title={
+                          !target.enabled
+                            ? 'Target is disabled'
+                            : 'Run integrity check'
+                        }
                       >
                         Verify
                       </button>
@@ -818,8 +874,8 @@ export default function AdminBackup() {
                         type="button"
                         className={styles.btnDanger}
                         onClick={() => {
-                          setModalError("");
-                          setModal({ kind: "deleteConfirm", target });
+                          setModalError('');
+                          setModal({ kind: 'deleteConfirm', target });
                         }}
                       >
                         Delete
@@ -872,14 +928,18 @@ export default function AdminBackup() {
                   <tr key={job.id}>
                     <td>{targetName(job.targetId)}</td>
                     <td>
-                      <span className={`${styles.badge} ${statusBadge(job.status)}`}>
+                      <span
+                        className={`${styles.badge} ${statusBadge(job.status)}`}
+                      >
                         {job.status}
                       </span>
                     </td>
                     <td>{job.totalFiles}</td>
                     <td>{job.copiedFiles}</td>
                     <td>{job.skippedFiles}</td>
-                    <td className={errorCount > 0 ? styles.colorRed : ""}>{errorCount}</td>
+                    <td className={errorCount > 0 ? styles.colorRed : ''}>
+                      {errorCount}
+                    </td>
                     <td>{formatDuration(job.startedAt, job.completedAt)}</td>
                     <td>{formatDate(job.createdAt)}</td>
                   </tr>
@@ -894,17 +954,17 @@ export default function AdminBackup() {
       {/* Modals                                                               */}
       {/* ------------------------------------------------------------------ */}
 
-      {modal.kind === "addTarget" && (
+      {modal.kind === 'addTarget' && (
         <TargetModal
           title="Add Backup Target"
           initial={EMPTY_TARGET_FORM}
           onSave={handleAddTarget}
-          onClose={() => setModal({ kind: "none" })}
+          onClose={() => setModal({ kind: 'none' })}
           error={modalError}
         />
       )}
 
-      {modal.kind === "editTarget" && (
+      {modal.kind === 'editTarget' && (
         <TargetModal
           title="Edit Backup Target"
           initial={{
@@ -916,18 +976,18 @@ export default function AdminBackup() {
             removeDeleted: modal.target.removeDeleted,
           }}
           onSave={handleEditTarget}
-          onClose={() => setModal({ kind: "none" })}
+          onClose={() => setModal({ kind: 'none' })}
           error={modalError}
         />
       )}
 
-      {modal.kind === "deleteConfirm" && (
+      {modal.kind === 'deleteConfirm' && (
         <div className={styles.modal}>
           <div className={styles.modalContent}>
             <h2>Delete Target</h2>
             <p>
-              Delete backup target <strong>{modal.target.name}</strong>? This will also remove all
-              associated jobs and file state.
+              Delete backup target <strong>{modal.target.name}</strong>? This
+              will also remove all associated jobs and file state.
             </p>
             <div className={styles.modalActions}>
               <button
@@ -937,7 +997,7 @@ export default function AdminBackup() {
               >
                 Delete
               </button>
-              <button type="button" onClick={() => setModal({ kind: "none" })}>
+              <button type="button" onClick={() => setModal({ kind: 'none' })}>
                 Cancel
               </button>
             </div>
@@ -945,38 +1005,40 @@ export default function AdminBackup() {
         </div>
       )}
 
-      {modal.kind === "schedule" && (
+      {modal.kind === 'schedule' && (
         <ScheduleModal
           targetId={modal.target.id}
           initial={{
-            schedule: modal.target.schedule ?? "",
+            schedule: modal.target.schedule ?? '',
             retentionKeepCount:
               modal.target.retentionKeepCount !== null
                 ? String(modal.target.retentionKeepCount)
-                : "",
+                : '',
             retentionKeepDays:
-              modal.target.retentionKeepDays !== null ? String(modal.target.retentionKeepDays) : "",
+              modal.target.retentionKeepDays !== null
+                ? String(modal.target.retentionKeepDays)
+                : '',
           }}
           onSave={handleSaveSchedule}
-          onClose={() => setModal({ kind: "none" })}
+          onClose={() => setModal({ kind: 'none' })}
           error={modalError}
         />
       )}
 
-      {modal.kind === "triggerBackup" && (
+      {modal.kind === 'triggerBackup' && (
         <BackupTriggerModal
           targets={targets}
           onTrigger={handleTriggerBackup}
-          onClose={() => setModal({ kind: "none" })}
+          onClose={() => setModal({ kind: 'none' })}
           error={modalError}
         />
       )}
 
-      {modal.kind === "verifyResults" && (
+      {modal.kind === 'verifyResults' && (
         <VerifyResultsModal
           job={modal.job}
           targetName={modal.targetName}
-          onClose={() => setModal({ kind: "none" })}
+          onClose={() => setModal({ kind: 'none' })}
         />
       )}
     </div>

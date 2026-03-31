@@ -1,10 +1,10 @@
-const MB_BASE = "https://musicbrainz.org/ws/2";
-const CAA_BASE = "https://coverartarchive.org";
+const MB_BASE = 'https://musicbrainz.org/ws/2';
+const CAA_BASE = 'https://coverartarchive.org';
 const CACHE_TTL_MS = 60 * 60 * 1000; // 1 hour
 // MusicBrainz requires at least 1 request per second for anonymous users
 const RATE_LIMIT_MS = 1100;
 
-const USER_AGENT = "XonMediaCenter/1.0 (https://github.com/xon-media-center)";
+const USER_AGENT = 'XonMediaCenter/1.0 (https://github.com/xon-media-center)';
 
 interface CacheEntry<T> {
   data: T;
@@ -19,7 +19,7 @@ interface MbArtistCredit {
   artist: {
     id: string;
     name: string;
-    "sort-name": string;
+    'sort-name': string;
   };
   name: string;
   joinphrase: string;
@@ -32,7 +32,7 @@ interface MbLabel {
 
 interface MbLabelInfo {
   label: MbLabel | null;
-  "catalog-number": string | null;
+  'catalog-number': string | null;
 }
 
 interface MbGenre {
@@ -44,25 +44,25 @@ interface MbGenre {
 interface MbReleaseGroup {
   id: string;
   title: string;
-  "primary-type": string | null;
-  "secondary-types": string[];
+  'primary-type': string | null;
+  'secondary-types': string[];
 }
 
 interface MbRelease {
   id: string;
   title: string;
   date: string;
-  "artist-credit": MbArtistCredit[];
-  "label-info": MbLabelInfo[];
+  'artist-credit': MbArtistCredit[];
+  'label-info': MbLabelInfo[];
   genres?: MbGenre[];
-  "release-group"?: MbReleaseGroup;
+  'release-group'?: MbReleaseGroup;
 }
 
 interface MbRecording {
   id: string;
   title: string;
   length: number | null;
-  "artist-credit": MbArtistCredit[];
+  'artist-credit': MbArtistCredit[];
   releases: MbRelease[];
   genres?: MbGenre[];
 }
@@ -154,8 +154,8 @@ export class MusicBrainzClient {
 
     const res = await this.fetchFn(url, {
       headers: {
-        "User-Agent": USER_AGENT,
-        Accept: "application/json",
+        'User-Agent': USER_AGENT,
+        Accept: 'application/json',
       },
     });
 
@@ -172,13 +172,13 @@ export class MusicBrainzClient {
   async searchRecording(
     title: string,
     artist?: string,
-    album?: string
+    album?: string,
   ): Promise<MusicBrainzMetadata | null> {
     const parts: string[] = [`recording:"${title}"`];
     if (artist) parts.push(`artist:"${artist}"`);
     if (album) parts.push(`release:"${album}"`);
 
-    const query = parts.join(" AND ");
+    const query = parts.join(' AND ');
     const url = `${MB_BASE}/recording?query=${encodeURIComponent(query)}&fmt=json&limit=5&inc=artist-credits+releases+genres`;
 
     const result = await this.get<MbSearchResult<MbRecording>>(url);
@@ -191,25 +191,29 @@ export class MusicBrainzClient {
   /**
    * Fetches detailed release info including labels, genres, and cover art.
    */
-  async fetchReleaseDetails(releaseMbid: string): Promise<Partial<MusicBrainzMetadata> | null> {
+  async fetchReleaseDetails(
+    releaseMbid: string,
+  ): Promise<Partial<MusicBrainzMetadata> | null> {
     const url = `${MB_BASE}/release/${releaseMbid}?fmt=json&inc=artist-credits+labels+genres+release-groups`;
     const release = await this.get<MbRelease>(url);
     if (!release) return null;
 
-    const labelInfo = release["label-info"]?.[0];
+    const labelInfo = release['label-info']?.[0];
     const label = labelInfo?.label?.name ?? null;
-    const catalogNumber = labelInfo?.["catalog-number"] ?? null;
+    const catalogNumber = labelInfo?.['catalog-number'] ?? null;
     const genres = (release.genres ?? [])
       .sort((a, b) => b.count - a.count)
       .slice(0, 5)
       .map((g) => g.name);
 
-    const releaseGroup = release["release-group"];
-    const secondaryTypes = releaseGroup?.["secondary-types"] ?? [];
+    const releaseGroup = release['release-group'];
+    const secondaryTypes = releaseGroup?.['secondary-types'] ?? [];
     const isCompilation =
-      releaseGroup?.["primary-type"] === "Compilation" ||
-      secondaryTypes.includes("Compilation") ||
-      release["artist-credit"].some((ac) => ac.artist.name.toLowerCase() === "various artists");
+      releaseGroup?.['primary-type'] === 'Compilation' ||
+      secondaryTypes.includes('Compilation') ||
+      release['artist-credit'].some(
+        (ac) => ac.artist.name.toLowerCase() === 'various artists',
+      );
 
     const coverArtUrl = await this.fetchCoverArtUrl(releaseMbid);
 
@@ -227,8 +231,13 @@ export class MusicBrainzClient {
     // To verify it exists, we make a HEAD request.
     await this.rateLimiter.throttle();
     try {
-      const res = await this.fetchFn(url, { method: "HEAD" });
-      if (res.ok || res.status === 307 || res.status === 302 || res.status === 301) {
+      const res = await this.fetchFn(url, { method: 'HEAD' });
+      if (
+        res.ok ||
+        res.status === 307 ||
+        res.status === 302 ||
+        res.status === 301
+      ) {
         return url;
       }
     } catch {
@@ -238,11 +247,13 @@ export class MusicBrainzClient {
   }
 
   private recordingToMetadata(recording: MbRecording): MusicBrainzMetadata {
-    const artists: MusicBrainzArtist[] = recording["artist-credit"].map((ac) => ({
-      mbid: ac.artist.id,
-      name: ac.name || ac.artist.name,
-      sortName: ac.artist["sort-name"],
-    }));
+    const artists: MusicBrainzArtist[] = recording['artist-credit'].map(
+      (ac) => ({
+        mbid: ac.artist.id,
+        name: ac.name || ac.artist.name,
+        sortName: ac.artist['sort-name'],
+      }),
+    );
 
     const primaryRelease = recording.releases?.[0];
     const releaseMbid = primaryRelease?.id ?? null;
@@ -256,7 +267,8 @@ export class MusicBrainzClient {
       .map((g) => g.name);
 
     const isCompilation =
-      artists.some((a) => a.name.toLowerCase() === "various artists") || artists.length > 1;
+      artists.some((a) => a.name.toLowerCase() === 'various artists') ||
+      artists.length > 1;
 
     return {
       recordingMbid: recording.id,

@@ -1,7 +1,7 @@
-export { app } from "./app.js";
-export { emitEvent, eventBus, type XonEvent } from "./events.js";
-export { openDatabase, type LibSQLDatabase } from "./db.js";
-export { migrateDatabase } from "./migrate.js";
+export { app } from './app.js';
+export { emitEvent, eventBus, type XonEvent } from './events.js';
+export { openDatabase, type LibSQLDatabase } from './db.js';
+export { migrateDatabase } from './migrate.js';
 export {
   libraries,
   dataSources,
@@ -73,7 +73,7 @@ export {
   syncRuns,
   type SyncRun,
   type NewSyncRun,
-} from "./schema.js";
+} from './schema.js';
 export {
   parseTvEpisode,
   resolveSeriesName,
@@ -86,7 +86,7 @@ export {
   parseExifTimestamp,
   clusterCoordinate,
   type TvEpisodeInfo,
-} from "./grouping.js";
+} from './grouping.js';
 export {
   matchMediaFile,
   computeMatchScore,
@@ -99,7 +99,7 @@ export {
   type MatchResult,
   type FuzzyMatchConfig,
   type OnnxInferenceSession,
-} from "./fuzzyMatch.js";
+} from './fuzzyMatch.js';
 export {
   autoTagMediaItems,
   computeDocumentTags,
@@ -108,7 +108,7 @@ export {
   setAutoTagOnnxSession,
   type AutoTag,
   type AutoTagOnnxSession,
-} from "./autoTag.js";
+} from './autoTag.js';
 export {
   computePerceptualHash,
   hammingDistance,
@@ -118,7 +118,7 @@ export {
   getPerceptualHashOnnxSession,
   type PerceptualHashConfig,
   type PerceptualHashOnnxSession,
-} from "./perceptualHash.js";
+} from './perceptualHash.js';
 export {
   scanLibraryForSmartGroups,
   acceptSuggestedGroup,
@@ -126,43 +126,43 @@ export {
   detectBookSeries,
   detectSupplementaryMaterials,
   type SmartGroupCandidate,
-} from "./smartGrouping.js";
-export { hashPassword, verifyPassword } from "./password.js";
+} from './smartGrouping.js';
+export { hashPassword, verifyPassword } from './password.js';
 export {
   copyFilesToDestination,
   runBackupToTarget,
   type LocalBackupConfig,
   type NetworkBackupConfig,
   type PluginBackupConfig,
-} from "./routes/adminBackupTargets.js";
+} from './routes/adminBackupTargets.js';
 export {
   registerBackupTargetPlugin,
   getBackupTargetPlugin,
   unregisterBackupTargetPlugin,
-} from "./backupTargetPluginRegistry.js";
+} from './backupTargetPluginRegistry.js';
 export {
   registerMediaProviderPlugin,
   getMediaProviderPlugin,
   unregisterMediaProviderPlugin,
-} from "./mediaProviderPluginRegistry.js";
-export { runMediaBackupJob } from "./routes/adminBackupMedia.js";
-export { runVerifyJob, computeChecksum } from "./routes/adminBackupVerify.js";
-export { runSyncJob } from "./routes/sync.js";
+} from './mediaProviderPluginRegistry.js';
+export { runMediaBackupJob } from './routes/adminBackupMedia.js';
+export { runVerifyJob, computeChecksum } from './routes/adminBackupVerify.js';
+export { runSyncJob } from './routes/sync.js';
 export {
   extractExiftoolMetadata,
   isImageCategory,
   type ExiftoolMetadata,
-} from "./exiftool.js";
+} from './exiftool.js';
 export {
   extractFfprobeMetadata,
   isAudioVideoCategory,
   type FfprobeMetadata,
-} from "./ffprobe.js";
+} from './ffprobe.js';
 export {
   extractMusicTags,
   isMusicCategory,
   type MusicTagsMetadata,
-} from "./musictags.js";
+} from './musictags.js';
 export {
   extractDocumentMetadata,
   extractFontMetadata,
@@ -176,23 +176,27 @@ export {
   type FontMetadata,
   type Model3DMetadata,
   type ArchiveMetadata,
-} from "./miscmeta.js";
-export { detectDrm } from "./drm.js";
-export { generateThumbnails, type ThumbnailPaths } from "./thumbnails.js";
-export { generateVideoThumbnails, isVideoCategory } from "./videoThumbnails.js";
-export { scanDataSource, type FileEntry, type ScanResult } from "./scanner.js";
-export { scanLibrary, type ScanProgress, type ScanSummary } from "./orchestrator.js";
-export { boot } from "./server.js";
+} from './miscmeta.js';
+export { detectDrm } from './drm.js';
+export { generateThumbnails, type ThumbnailPaths } from './thumbnails.js';
+export { generateVideoThumbnails, isVideoCategory } from './videoThumbnails.js';
+export { scanDataSource, type FileEntry, type ScanResult } from './scanner.js';
+export {
+  scanLibrary,
+  type ScanProgress,
+  type ScanSummary,
+} from './orchestrator.js';
+export { boot } from './server.js';
 export {
   startScheduler,
   parseCronInterval,
   type TriggerFn,
   type SchedulerHandle,
-} from "./scheduler.js";
+} from './scheduler.js';
 export {
   discoverPluginManifests,
   type PluginLoadResult,
-} from "./pluginLoader.js";
+} from './pluginLoader.js';
 export {
   discoverAndActivatePlugins,
   activatePlugin,
@@ -204,4 +208,4 @@ export {
   registry as pluginRegistry,
   type PluginEntry,
   type PluginStatus,
-} from "./pluginManager.js";
+} from './pluginManager.js';

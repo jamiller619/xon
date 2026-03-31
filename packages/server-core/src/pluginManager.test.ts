@@ -1,6 +1,6 @@
-import { BasePlugin } from "@xon/plugin-sdk";
-import type { PluginContext, PluginManifest } from "@xon/plugin-sdk";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { BasePlugin } from '@xon/plugin-sdk';
+import type { PluginContext, PluginManifest } from '@xon/plugin-sdk';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   _registerPlugin,
   _resetForTesting,
@@ -11,17 +11,17 @@ import {
   loadPlugin,
   registry,
   uninstallPlugin,
-} from "./pluginManager.js";
+} from './pluginManager.js';
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
 const baseManifest: PluginManifest = {
-  id: "test-plugin",
-  name: "Test Plugin",
-  version: "1.0.0",
-  description: "A test plugin",
-  author: "Tester",
-  category: "Processor",
+  id: 'test-plugin',
+  name: 'Test Plugin',
+  version: '1.0.0',
+  description: 'A test plugin',
+  author: 'Tester',
+  category: 'Processor',
 };
 
 class SimplePlugin extends BasePlugin {
@@ -48,12 +48,15 @@ class SimplePlugin extends BasePlugin {
   }
 }
 
-function makeEntry(manifest: PluginManifest = baseManifest, instance?: BasePlugin) {
+function makeEntry(
+  manifest: PluginManifest = baseManifest,
+  instance?: BasePlugin,
+) {
   return _registerPlugin({
     manifest,
-    pluginDir: "/fake/plugins/test-plugin",
+    pluginDir: '/fake/plugins/test-plugin',
     instance: instance ?? new SimplePlugin(),
-    status: "loaded",
+    status: 'loaded',
     hooks: [],
     routes: [],
     uiComponents: [],
@@ -70,51 +73,51 @@ afterEach(() => {
   _resetForTesting();
 });
 
-describe("_registerPlugin", () => {
-  it("adds entry to registry", () => {
+describe('_registerPlugin', () => {
+  it('adds entry to registry', () => {
     makeEntry();
-    expect(registry.has("test-plugin")).toBe(true);
+    expect(registry.has('test-plugin')).toBe(true);
   });
 
-  it("returns the entry", () => {
+  it('returns the entry', () => {
     const instance = new SimplePlugin();
     const entry = _registerPlugin({
       manifest: baseManifest,
-      pluginDir: "/fake",
+      pluginDir: '/fake',
       instance,
-      status: "loaded",
+      status: 'loaded',
       hooks: [],
       routes: [],
       uiComponents: [],
     });
     expect(entry.instance).toBe(instance);
-    expect(entry.status).toBe("loaded");
+    expect(entry.status).toBe('loaded');
   });
 });
 
-describe("activatePlugin", () => {
-  it("calls init then activate with a context", async () => {
+describe('activatePlugin', () => {
+  it('calls init then activate with a context', async () => {
     const plugin = new SimplePlugin();
     makeEntry(baseManifest, plugin);
 
-    await activatePlugin("test-plugin");
+    await activatePlugin('test-plugin');
 
     expect(plugin.initCalled).toBe(true);
     expect(plugin.activateCalled).toBe(true);
     expect(plugin.capturedContext).toBeTruthy();
   });
 
-  it("sets status to active", async () => {
+  it('sets status to active', async () => {
     makeEntry();
-    await activatePlugin("test-plugin");
-    expect(registry.get("test-plugin")?.status).toBe("active");
+    await activatePlugin('test-plugin');
+    expect(registry.get('test-plugin')?.status).toBe('active');
   });
 
-  it("is idempotent when called twice", async () => {
+  it('is idempotent when called twice', async () => {
     const plugin = new SimplePlugin();
     makeEntry(baseManifest, plugin);
-    await activatePlugin("test-plugin");
-    await activatePlugin("test-plugin");
+    await activatePlugin('test-plugin');
+    await activatePlugin('test-plugin');
     // init/activate should only be called once
     expect(plugin.initCalled).toBe(true);
     expect(plugin.activateCalled).toBe(true);
@@ -125,184 +128,197 @@ describe("activatePlugin", () => {
       callCount++;
       return orig(ctx);
     };
-    await activatePlugin("test-plugin");
+    await activatePlugin('test-plugin');
     expect(callCount).toBe(0); // already active, init not called again
   });
 
-  it("throws if plugin not in registry", async () => {
-    await expect(activatePlugin("nonexistent")).rejects.toThrow('"nonexistent" not found');
+  it('throws if plugin not in registry', async () => {
+    await expect(activatePlugin('nonexistent')).rejects.toThrow(
+      '"nonexistent" not found',
+    );
   });
 
-  it("provides context with logger, db, and registration methods", async () => {
+  it('provides context with logger, db, and registration methods', async () => {
     const plugin = new SimplePlugin();
     makeEntry(baseManifest, plugin);
-    await activatePlugin("test-plugin");
+    await activatePlugin('test-plugin');
 
     const ctx = plugin.capturedContext;
     expect(ctx).toBeTruthy();
-    expect(typeof ctx?.logger.info).toBe("function");
-    expect(typeof ctx?.logger.warn).toBe("function");
-    expect(typeof ctx?.logger.error).toBe("function");
-    expect(typeof ctx?.db.query).toBe("function");
-    expect(typeof ctx?.on).toBe("function");
-    expect(typeof ctx?.registerRoute).toBe("function");
-    expect(typeof ctx?.registerUI).toBe("function");
+    expect(typeof ctx?.logger.info).toBe('function');
+    expect(typeof ctx?.logger.warn).toBe('function');
+    expect(typeof ctx?.logger.error).toBe('function');
+    expect(typeof ctx?.db.query).toBe('function');
+    expect(typeof ctx?.on).toBe('function');
+    expect(typeof ctx?.registerRoute).toBe('function');
+    expect(typeof ctx?.registerUI).toBe('function');
   });
 });
 
-describe("deactivatePlugin", () => {
-  it("calls deactivate on the plugin", async () => {
+describe('deactivatePlugin', () => {
+  it('calls deactivate on the plugin', async () => {
     const plugin = new SimplePlugin();
     makeEntry(baseManifest, plugin);
-    await activatePlugin("test-plugin");
-    await deactivatePlugin("test-plugin");
+    await activatePlugin('test-plugin');
+    await deactivatePlugin('test-plugin');
     expect(plugin.deactivateCalled).toBe(true);
   });
 
-  it("sets status to inactive", async () => {
+  it('sets status to inactive', async () => {
     makeEntry();
-    await activatePlugin("test-plugin");
-    await deactivatePlugin("test-plugin");
-    expect(registry.get("test-plugin")?.status).toBe("inactive");
+    await activatePlugin('test-plugin');
+    await deactivatePlugin('test-plugin');
+    expect(registry.get('test-plugin')?.status).toBe('inactive');
   });
 
-  it("cleans up registered event hooks", async () => {
+  it('cleans up registered event hooks', async () => {
     const plugin = new SimplePlugin();
     makeEntry(baseManifest, plugin);
-    await activatePlugin("test-plugin");
+    await activatePlugin('test-plugin');
 
     // Register a hook via context
     const ctx = plugin.capturedContext;
     const hookFn = vi.fn();
-    ctx?.on("scan:start", hookFn);
+    ctx?.on('scan:start', hookFn);
 
     // Emit before deactivation — hook should fire
-    emitPluginEvent("scan:start", { libraryId: "lib-1" });
+    emitPluginEvent('scan:start', { libraryId: 'lib-1' });
     await Promise.resolve();
     await Promise.resolve();
     expect(hookFn).toHaveBeenCalledTimes(1);
 
-    await deactivatePlugin("test-plugin");
+    await deactivatePlugin('test-plugin');
 
     // Emit after deactivation — hook should NOT fire
-    emitPluginEvent("scan:start", { libraryId: "lib-2" });
+    emitPluginEvent('scan:start', { libraryId: 'lib-2' });
     await Promise.resolve();
     await Promise.resolve();
     expect(hookFn).toHaveBeenCalledTimes(1); // still 1
   });
 
-  it("clears registered routes", async () => {
+  it('clears registered routes', async () => {
     const plugin = new SimplePlugin();
     makeEntry(baseManifest, plugin);
-    await activatePlugin("test-plugin");
+    await activatePlugin('test-plugin');
 
     plugin.capturedContext?.registerRoute({
-      method: "GET",
-      path: "/test",
+      method: 'GET',
+      path: '/test',
       handler: async (c) => c.json({ ok: true }),
     });
 
-    expect(registry.get("test-plugin")?.routes).toHaveLength(1);
-    await deactivatePlugin("test-plugin");
-    expect(registry.get("test-plugin")?.routes).toHaveLength(0);
+    expect(registry.get('test-plugin')?.routes).toHaveLength(1);
+    await deactivatePlugin('test-plugin');
+    expect(registry.get('test-plugin')?.routes).toHaveLength(0);
   });
 
-  it("is a no-op if not active", async () => {
+  it('is a no-op if not active', async () => {
     const plugin = new SimplePlugin();
     makeEntry(baseManifest, plugin);
     // status is "loaded", not "active"
-    await deactivatePlugin("test-plugin");
+    await deactivatePlugin('test-plugin');
     expect(plugin.deactivateCalled).toBe(false);
   });
 
-  it("throws if plugin not in registry", async () => {
-    await expect(deactivatePlugin("nonexistent")).rejects.toThrow('"nonexistent" not found');
+  it('throws if plugin not in registry', async () => {
+    await expect(deactivatePlugin('nonexistent')).rejects.toThrow(
+      '"nonexistent" not found',
+    );
   });
 });
 
-describe("uninstallPlugin", () => {
-  it("deactivates an active plugin before uninstalling", async () => {
+describe('uninstallPlugin', () => {
+  it('deactivates an active plugin before uninstalling', async () => {
     const plugin = new SimplePlugin();
     makeEntry(baseManifest, plugin);
-    await activatePlugin("test-plugin");
-    await uninstallPlugin("test-plugin");
+    await activatePlugin('test-plugin');
+    await uninstallPlugin('test-plugin');
 
     expect(plugin.deactivateCalled).toBe(true);
     expect(plugin.uninstallCalled).toBe(true);
   });
 
-  it("removes plugin from registry", async () => {
+  it('removes plugin from registry', async () => {
     makeEntry();
-    await activatePlugin("test-plugin");
-    await uninstallPlugin("test-plugin");
-    expect(registry.has("test-plugin")).toBe(false);
+    await activatePlugin('test-plugin');
+    await uninstallPlugin('test-plugin');
+    expect(registry.has('test-plugin')).toBe(false);
   });
 
-  it("calls uninstall even if not active", async () => {
+  it('calls uninstall even if not active', async () => {
     const plugin = new SimplePlugin();
     makeEntry(baseManifest, plugin);
-    await uninstallPlugin("test-plugin");
+    await uninstallPlugin('test-plugin');
     expect(plugin.uninstallCalled).toBe(true);
     expect(plugin.deactivateCalled).toBe(false);
-    expect(registry.has("test-plugin")).toBe(false);
+    expect(registry.has('test-plugin')).toBe(false);
   });
 
-  it("throws if plugin not in registry", async () => {
-    await expect(uninstallPlugin("nonexistent")).rejects.toThrow('"nonexistent" not found');
+  it('throws if plugin not in registry', async () => {
+    await expect(uninstallPlugin('nonexistent')).rejects.toThrow(
+      '"nonexistent" not found',
+    );
   });
 });
 
-describe("emitPluginEvent", () => {
-  it("calls all registered hooks with payload", async () => {
+describe('emitPluginEvent', () => {
+  it('calls all registered hooks with payload', async () => {
     const plugin = new SimplePlugin();
     makeEntry(baseManifest, plugin);
-    await activatePlugin("test-plugin");
+    await activatePlugin('test-plugin');
 
     const handler = vi.fn();
-    plugin.capturedContext?.on("media:created", handler);
+    plugin.capturedContext?.on('media:created', handler);
 
-    emitPluginEvent("media:created", { mediaId: "m-1", filePath: "/a.jpg" });
+    emitPluginEvent('media:created', { mediaId: 'm-1', filePath: '/a.jpg' });
     await Promise.resolve();
     await Promise.resolve();
 
-    expect(handler).toHaveBeenCalledWith({ mediaId: "m-1", filePath: "/a.jpg" });
+    expect(handler).toHaveBeenCalledWith({
+      mediaId: 'm-1',
+      filePath: '/a.jpg',
+    });
   });
 
-  it("does not throw when no handlers registered", () => {
-    expect(() => emitPluginEvent("server:boot", {})).not.toThrow();
+  it('does not throw when no handlers registered', () => {
+    expect(() => emitPluginEvent('server:boot', {})).not.toThrow();
   });
 
-  it("logs errors from failing hooks but does not rethrow", async () => {
+  it('logs errors from failing hooks but does not rethrow', async () => {
     const plugin = new SimplePlugin();
     makeEntry(baseManifest, plugin);
-    await activatePlugin("test-plugin");
+    await activatePlugin('test-plugin');
 
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
 
-    plugin.capturedContext?.on("server:shutdown", async () => {
-      throw new Error("hook failure");
+    plugin.capturedContext?.on('server:shutdown', async () => {
+      throw new Error('hook failure');
     });
 
-    emitPluginEvent("server:shutdown", {});
+    emitPluginEvent('server:shutdown', {});
     await Promise.resolve();
     await Promise.resolve();
 
     expect(consoleError).toHaveBeenCalledWith(
-      expect.stringContaining("[plugin-manager]"),
-      expect.any(Error)
+      expect.stringContaining('[plugin-manager]'),
+      expect.any(Error),
     );
     consoleError.mockRestore();
   });
 });
 
-describe("discoverAndActivatePlugins", () => {
-  it("does nothing when plugin dir does not exist", async () => {
-    await expect(discoverAndActivatePlugins("/nonexistent/dir")).resolves.not.toThrow();
+describe('discoverAndActivatePlugins', () => {
+  it('does nothing when plugin dir does not exist', async () => {
+    await expect(
+      discoverAndActivatePlugins('/nonexistent/dir'),
+    ).resolves.not.toThrow();
     expect(registry.size).toBe(0);
   });
 
-  it("loads and activates discovered plugins", async () => {
-    const { discoverPluginManifests } = await import("./pluginLoader.js");
+  it('loads and activates discovered plugins', async () => {
+    const { discoverPluginManifests } = await import('./pluginLoader.js');
     vi.mocked(discoverPluginManifests);
 
     // We'll test this via a mocked discoverPluginManifests
@@ -311,32 +327,38 @@ describe("discoverAndActivatePlugins", () => {
     expect(registry.size).toBe(0); // starts empty
   });
 
-  it("skips plugins with invalid manifests and continues", async () => {
+  it('skips plugins with invalid manifests and continues', async () => {
     // Verify that one bad plugin doesn't block others
     // We test this by mocking discoverPluginManifests
-    vi.mock("./pluginLoader.js", () => ({
+    vi.mock('./pluginLoader.js', () => ({
       discoverPluginManifests: vi
         .fn()
-        .mockResolvedValue([{ success: false, pluginDir: "/bad-plugin", error: "bad manifest" }]),
+        .mockResolvedValue([
+          { success: false, pluginDir: '/bad-plugin', error: 'bad manifest' },
+        ]),
     }));
 
-    const consoleError = vi.spyOn(console, "error").mockImplementation(() => {});
-    await discoverAndActivatePlugins("/some/dir");
+    const consoleError = vi
+      .spyOn(console, 'error')
+      .mockImplementation(() => {});
+    await discoverAndActivatePlugins('/some/dir');
     expect(registry.size).toBe(0);
-    expect(consoleError).toHaveBeenCalledWith(expect.stringContaining("Skipping plugin"));
+    expect(consoleError).toHaveBeenCalledWith(
+      expect.stringContaining('Skipping plugin'),
+    );
     consoleError.mockRestore();
     vi.restoreAllMocks();
   });
 });
 
-describe("loadPlugin", () => {
-  it("throws if module path does not exist", async () => {
-    await expect(loadPlugin("/nonexistent/plugin", baseManifest)).rejects.toThrow(
-      "Failed to import plugin module"
-    );
+describe('loadPlugin', () => {
+  it('throws if module path does not exist', async () => {
+    await expect(
+      loadPlugin('/nonexistent/plugin', baseManifest),
+    ).rejects.toThrow('Failed to import plugin module');
   });
 
-  it("throws if module does not export a BasePlugin subclass", async () => {
+  it('throws if module does not export a BasePlugin subclass', async () => {
     // Use a data URL or a module that exports a non-plugin value
     // We test via a mocked import by providing a temp fixture:
     // Not easily feasible without file I/O; cover via integration test or trust
@@ -346,28 +368,35 @@ describe("loadPlugin", () => {
     // by using a module path that resolves to a non-plugin export
     // (dynamic import of a JSON file returns the object, not a class)
     await expect(
-      loadPlugin("/nonexistent/plugin", { ...baseManifest, main: "index.json" })
-    ).rejects.toThrow("Failed to import plugin module");
+      loadPlugin('/nonexistent/plugin', {
+        ...baseManifest,
+        main: 'index.json',
+      }),
+    ).rejects.toThrow('Failed to import plugin module');
   });
 });
 
-describe("context.on — multiple plugins", () => {
-  it("isolates hooks between plugins", async () => {
-    const manifest2: PluginManifest = { ...baseManifest, id: "plugin-b", name: "Plugin B" };
+describe('context.on — multiple plugins', () => {
+  it('isolates hooks between plugins', async () => {
+    const manifest2: PluginManifest = {
+      ...baseManifest,
+      id: 'plugin-b',
+      name: 'Plugin B',
+    };
     const p1 = new SimplePlugin();
     const p2 = new SimplePlugin();
     makeEntry(baseManifest, p1);
     makeEntry(manifest2, p2);
 
-    await activatePlugin("test-plugin");
-    await activatePlugin("plugin-b");
+    await activatePlugin('test-plugin');
+    await activatePlugin('plugin-b');
 
     const h1 = vi.fn();
     const h2 = vi.fn();
-    p1.capturedContext?.on("scan:complete", h1);
-    p2.capturedContext?.on("scan:complete", h2);
+    p1.capturedContext?.on('scan:complete', h1);
+    p2.capturedContext?.on('scan:complete', h2);
 
-    emitPluginEvent("scan:complete", { libraryId: "lib", itemsFound: 5 });
+    emitPluginEvent('scan:complete', { libraryId: 'lib', itemsFound: 5 });
     await Promise.resolve();
     await Promise.resolve();
 
@@ -375,8 +404,8 @@ describe("context.on — multiple plugins", () => {
     expect(h2).toHaveBeenCalledTimes(1);
 
     // Deactivate p1 — h1 removed, h2 still runs
-    await deactivatePlugin("test-plugin");
-    emitPluginEvent("scan:complete", { libraryId: "lib", itemsFound: 3 });
+    await deactivatePlugin('test-plugin');
+    emitPluginEvent('scan:complete', { libraryId: 'lib', itemsFound: 3 });
     await Promise.resolve();
     await Promise.resolve();
 

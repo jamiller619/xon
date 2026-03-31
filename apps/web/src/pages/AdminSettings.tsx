@@ -1,8 +1,8 @@
-import { useCallback, useEffect, useState } from "react";
-import { apiFetch } from "../apiFetch.js";
-import styles from "./AdminSettings.module.css";
+import { useCallback, useEffect, useState } from 'react';
+import { apiFetch } from '../apiFetch.js';
+import styles from './AdminSettings.module.css';
 
-type ThumbnailSize = "small" | "medium" | "large" | "xlarge";
+type ThumbnailSize = 'small' | 'medium' | 'large' | 'xlarge';
 
 interface ServerConfigData {
   serverPort: number;
@@ -12,43 +12,51 @@ interface ServerConfigData {
   requiresRestart: boolean;
 }
 
-const THUMBNAIL_SIZE_OPTIONS: ThumbnailSize[] = ["small", "medium", "large", "xlarge"];
+const THUMBNAIL_SIZE_OPTIONS: ThumbnailSize[] = [
+  'small',
+  'medium',
+  'large',
+  'xlarge',
+];
 
 const DEFAULT_CONFIG: ServerConfigData = {
   serverPort: 32400,
-  dataDirectory: "./data",
+  dataDirectory: './data',
   defaultScanSchedule: null,
-  thumbnailSizes: ["small", "medium"],
+  thumbnailSizes: ['small', 'medium'],
   requiresRestart: false,
 };
 
 export default function AdminSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
   const [restartNotice, setRestartNotice] = useState(false);
 
   const [serverPort, setServerPort] = useState(32400);
-  const [dataDirectory, setDataDirectory] = useState("./data");
-  const [defaultScanSchedule, setDefaultScanSchedule] = useState("");
-  const [thumbnailSizes, setThumbnailSizes] = useState<ThumbnailSize[]>(["small", "medium"]);
+  const [dataDirectory, setDataDirectory] = useState('./data');
+  const [defaultScanSchedule, setDefaultScanSchedule] = useState('');
+  const [thumbnailSizes, setThumbnailSizes] = useState<ThumbnailSize[]>([
+    'small',
+    'medium',
+  ]);
 
   const applyConfig = useCallback((data: ServerConfigData) => {
     setServerPort(data.serverPort);
     setDataDirectory(data.dataDirectory);
-    setDefaultScanSchedule(data.defaultScanSchedule ?? "");
+    setDefaultScanSchedule(data.defaultScanSchedule ?? '');
     setThumbnailSizes(data.thumbnailSizes);
   }, []);
 
   useEffect(() => {
     setLoading(true);
-    apiFetch("/api/v1/admin/settings")
+    apiFetch('/api/v1/admin/settings')
       .then((r) => r.json() as Promise<ServerConfigData>)
       .then((data) => {
         applyConfig(data);
       })
-      .catch(() => setError("Failed to load settings"))
+      .catch(() => setError('Failed to load settings'))
       .finally(() => setLoading(false));
   }, [applyConfig]);
 
@@ -65,14 +73,14 @@ export default function AdminSettings() {
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    setError("");
-    setSuccess("");
+    setError('');
+    setSuccess('');
     setRestartNotice(false);
 
     try {
-      const res = await apiFetch("/api/v1/admin/settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+      const res = await apiFetch('/api/v1/admin/settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           serverPort,
           dataDirectory,
@@ -81,16 +89,16 @@ export default function AdminSettings() {
         }),
       });
       if (!res.ok) {
-        setError("Failed to save settings");
+        setError('Failed to save settings');
       } else {
         const data = (await res.json()) as ServerConfigData;
         applyConfig(data);
-        setSuccess("Settings saved");
+        setSuccess('Settings saved');
         if (data.requiresRestart) setRestartNotice(true);
-        setTimeout(() => setSuccess(""), 3000);
+        setTimeout(() => setSuccess(''), 3000);
       }
     } catch {
-      setError("Failed to save settings");
+      setError('Failed to save settings');
     } finally {
       setSaving(false);
     }
@@ -98,95 +106,99 @@ export default function AdminSettings() {
 
   if (loading) {
     return (
-      <div className={styles.page ?? ""}>
-        <p className={styles.loading ?? ""}>Loading...</p>
+      <div className={styles.page ?? ''}>
+        <p className={styles.loading ?? ''}>Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className={styles.page ?? ""}>
-      <div className={styles.header ?? ""}>
-        <h1 className={styles.heading ?? ""}>Server Configuration</h1>
+    <div className={styles.page ?? ''}>
+      <div className={styles.header ?? ''}>
+        <h1 className={styles.heading ?? ''}>Server Configuration</h1>
       </div>
 
       {restartNotice && (
-        <div className={styles.restartBanner ?? ""}>
+        <div className={styles.restartBanner ?? ''}>
           Some changes require a server restart to take effect.
         </div>
       )}
 
       <form onSubmit={handleSave}>
-        <section className={styles.section ?? ""}>
-          <h2 className={styles.sectionHeading ?? ""}>
+        <section className={styles.section ?? ''}>
+          <h2 className={styles.sectionHeading ?? ''}>
             Network
-            <span className={styles.restartTag ?? ""}>requires restart</span>
+            <span className={styles.restartTag ?? ''}>requires restart</span>
           </h2>
-          <div className={styles.fieldGroup ?? ""}>
-            <label className={styles.fieldLabel ?? ""}>
+          <div className={styles.fieldGroup ?? ''}>
+            <label className={styles.fieldLabel ?? ''}>
               Server Port
               <input
                 type="number"
-                className={styles.input ?? ""}
+                className={styles.input ?? ''}
                 value={serverPort}
                 min={1}
                 max={65535}
                 onChange={(e) => setServerPort(Number(e.target.value))}
               />
-              <span className={styles.hint ?? ""}>Default: 32400. Requires restart.</span>
+              <span className={styles.hint ?? ''}>
+                Default: 32400. Requires restart.
+              </span>
             </label>
           </div>
         </section>
 
-        <section className={styles.section ?? ""}>
-          <h2 className={styles.sectionHeading ?? ""}>
+        <section className={styles.section ?? ''}>
+          <h2 className={styles.sectionHeading ?? ''}>
             Storage
-            <span className={styles.restartTag ?? ""}>requires restart</span>
+            <span className={styles.restartTag ?? ''}>requires restart</span>
           </h2>
-          <div className={styles.fieldGroup ?? ""}>
-            <label className={styles.fieldLabel ?? ""}>
+          <div className={styles.fieldGroup ?? ''}>
+            <label className={styles.fieldLabel ?? ''}>
               Data Directory
               <input
                 type="text"
-                className={styles.input ?? ""}
+                className={styles.input ?? ''}
                 value={dataDirectory}
                 onChange={(e) => setDataDirectory(e.target.value)}
                 placeholder="./data"
               />
-              <span className={styles.hint ?? ""}>
-                Path where the database and media metadata are stored. Requires restart.
+              <span className={styles.hint ?? ''}>
+                Path where the database and media metadata are stored. Requires
+                restart.
               </span>
             </label>
           </div>
         </section>
 
-        <section className={styles.section ?? ""}>
-          <h2 className={styles.sectionHeading ?? ""}>Scanning</h2>
-          <div className={styles.fieldGroup ?? ""}>
-            <label className={styles.fieldLabel ?? ""}>
+        <section className={styles.section ?? ''}>
+          <h2 className={styles.sectionHeading ?? ''}>Scanning</h2>
+          <div className={styles.fieldGroup ?? ''}>
+            <label className={styles.fieldLabel ?? ''}>
               Default Scan Schedule (cron)
               <input
                 type="text"
-                className={styles.input ?? ""}
+                className={styles.input ?? ''}
                 value={defaultScanSchedule}
                 onChange={(e) => setDefaultScanSchedule(e.target.value)}
                 placeholder="0 2 * * * (daily at 2 AM)"
               />
-              <span className={styles.hint ?? ""}>
-                Cron expression for automatic library scans. Leave blank to disable.
+              <span className={styles.hint ?? ''}>
+                Cron expression for automatic library scans. Leave blank to
+                disable.
               </span>
             </label>
           </div>
         </section>
 
-        <section className={styles.section ?? ""}>
-          <h2 className={styles.sectionHeading ?? ""}>Thumbnails</h2>
-          <p className={styles.sectionDesc ?? ""}>
+        <section className={styles.section ?? ''}>
+          <h2 className={styles.sectionHeading ?? ''}>Thumbnails</h2>
+          <p className={styles.sectionDesc ?? ''}>
             Select which thumbnail sizes are generated during scans.
           </p>
-          <div className={styles.checkboxGroup ?? ""}>
+          <div className={styles.checkboxGroup ?? ''}>
             {THUMBNAIL_SIZE_OPTIONS.map((size) => (
-              <label key={size} className={styles.checkbox ?? ""}>
+              <label key={size} className={styles.checkbox ?? ''}>
                 <input
                   type="checkbox"
                   checked={thumbnailSizes.includes(size)}
@@ -198,12 +210,16 @@ export default function AdminSettings() {
           </div>
         </section>
 
-        {error && <p className={styles.error ?? ""}>{error}</p>}
-        {success && <p className={styles.success ?? ""}>{success}</p>}
+        {error && <p className={styles.error ?? ''}>{error}</p>}
+        {success && <p className={styles.success ?? ''}>{success}</p>}
 
-        <div className={styles.actions ?? ""}>
-          <button type="submit" className={styles.saveBtn ?? ""} disabled={saving}>
-            {saving ? "Saving..." : "Save settings"}
+        <div className={styles.actions ?? ''}>
+          <button
+            type="submit"
+            className={styles.saveBtn ?? ''}
+            disabled={saving}
+          >
+            {saving ? 'Saving...' : 'Save settings'}
           </button>
         </div>
       </form>

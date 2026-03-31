@@ -1,8 +1,8 @@
-import { extname } from "node:path";
-import type { MediaCategory } from "@xon/shared";
-import { EXTENSION_TO_CATEGORY } from "./categories.js";
+import { extname } from 'node:path';
+import type { MediaCategory } from '@xon/shared';
+import { EXTENSION_TO_CATEGORY } from './categories.js';
 
-export * from "./categories.js";
+export * from './categories.js';
 
 /**
  * Returns the primary media category for the given file path based on its extension.

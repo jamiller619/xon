@@ -1,13 +1,13 @@
-import * as pdfjsLib from "pdfjs-dist";
-import type { PDFDocumentProxy, PDFPageProxy, RenderTask } from "pdfjs-dist";
-import { useCallback, useEffect, useRef, useState } from "react";
-import { apiFetch } from "../apiFetch.js";
-import styles from "./PdfViewer.module.css";
+import * as pdfjsLib from 'pdfjs-dist';
+import type { PDFDocumentProxy, PDFPageProxy, RenderTask } from 'pdfjs-dist';
+import { useCallback, useEffect, useRef, useState } from 'react';
+import { apiFetch } from '../apiFetch.js';
+import styles from './PdfViewer.module.css';
 
 // Configure worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  "pdfjs-dist/build/pdf.worker.min.mjs",
-  import.meta.url
+  'pdfjs-dist/build/pdf.worker.min.mjs',
+  import.meta.url,
 ).href;
 
 interface Props {
@@ -43,7 +43,9 @@ export default function PdfViewer({ mediaId, title, onClose }: Props) {
 
     const loadDoc = async () => {
       try {
-        const loadingTask = pdfjsLib.getDocument(`/api/v1/media/${mediaId}/stream`);
+        const loadingTask = pdfjsLib.getDocument(
+          `/api/v1/media/${mediaId}/stream`,
+        );
         const doc = await loadingTask.promise;
         if (cancelled) {
           doc.destroy();
@@ -55,7 +57,7 @@ export default function PdfViewer({ mediaId, title, onClose }: Props) {
         setLoading(false);
       } catch {
         if (!cancelled) {
-          setError("Failed to load PDF document.");
+          setError('Failed to load PDF document.');
           setLoading(false);
         }
       }
@@ -68,41 +70,44 @@ export default function PdfViewer({ mediaId, title, onClose }: Props) {
   }, [mediaId]);
 
   // Render main page
-  const renderPage = useCallback(async (doc: PDFDocumentProxy, pageNum: number, scale: number) => {
-    const canvas = mainCanvasRef.current;
-    if (!canvas) return;
+  const renderPage = useCallback(
+    async (doc: PDFDocumentProxy, pageNum: number, scale: number) => {
+      const canvas = mainCanvasRef.current;
+      if (!canvas) return;
 
-    // Cancel any in-flight render
-    if (mainRenderTaskRef.current) {
-      mainRenderTaskRef.current.cancel();
-      mainRenderTaskRef.current = null;
-    }
+      // Cancel any in-flight render
+      if (mainRenderTaskRef.current) {
+        mainRenderTaskRef.current.cancel();
+        mainRenderTaskRef.current = null;
+      }
 
-    let page: PDFPageProxy;
-    try {
-      page = await doc.getPage(pageNum);
-    } catch {
-      return;
-    }
+      let page: PDFPageProxy;
+      try {
+        page = await doc.getPage(pageNum);
+      } catch {
+        return;
+      }
 
-    const viewport = page.getViewport({ scale });
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
+      const viewport = page.getViewport({ scale });
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
 
-    const task = page.render({ canvas, canvasContext: ctx, viewport });
-    mainRenderTaskRef.current = task;
+      const task = page.render({ canvas, canvasContext: ctx, viewport });
+      mainRenderTaskRef.current = task;
 
-    try {
-      await task.promise;
-    } catch {
-      // render cancelled or failed — ignore
-    } finally {
-      page.cleanup();
-    }
-  }, []);
+      try {
+        await task.promise;
+      } catch {
+        // render cancelled or failed — ignore
+      } finally {
+        page.cleanup();
+      }
+    },
+    [],
+  );
 
   useEffect(() => {
     if (!pdfDoc) return;
@@ -114,51 +119,58 @@ export default function PdfViewer({ mediaId, title, onClose }: Props) {
     if (!pdfDoc || numPages === 0) return;
     const completed = currentPage >= numPages;
     apiFetch(`/api/v1/media/${mediaId}/progress`, {
-      method: "PUT",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ position: currentPage, duration: numPages, completed }),
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        position: currentPage,
+        duration: numPages,
+        completed,
+      }),
     }).catch(() => {
       // best-effort save
     });
   }, [mediaId, currentPage, numPages, pdfDoc]);
 
   // Render thumbnail for a given page index
-  const renderThumbnail = useCallback(async (doc: PDFDocumentProxy, pageNum: number) => {
-    const canvas = thumbCanvasRefs.current[pageNum - 1];
-    if (!canvas) return;
+  const renderThumbnail = useCallback(
+    async (doc: PDFDocumentProxy, pageNum: number) => {
+      const canvas = thumbCanvasRefs.current[pageNum - 1];
+      if (!canvas) return;
 
-    // Cancel any in-flight render for this thumb
-    const prev = thumbRenderTasksRef.current[pageNum - 1];
-    if (prev) {
-      prev.cancel();
-      thumbRenderTasksRef.current[pageNum - 1] = null;
-    }
+      // Cancel any in-flight render for this thumb
+      const prev = thumbRenderTasksRef.current[pageNum - 1];
+      if (prev) {
+        prev.cancel();
+        thumbRenderTasksRef.current[pageNum - 1] = null;
+      }
 
-    let page: PDFPageProxy;
-    try {
-      page = await doc.getPage(pageNum);
-    } catch {
-      return;
-    }
+      let page: PDFPageProxy;
+      try {
+        page = await doc.getPage(pageNum);
+      } catch {
+        return;
+      }
 
-    const viewport = page.getViewport({ scale: THUMBNAIL_SCALE });
-    canvas.width = viewport.width;
-    canvas.height = viewport.height;
+      const viewport = page.getViewport({ scale: THUMBNAIL_SCALE });
+      canvas.width = viewport.width;
+      canvas.height = viewport.height;
 
-    const ctx = canvas.getContext("2d");
-    if (!ctx) return;
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return;
 
-    const task = page.render({ canvas, canvasContext: ctx, viewport });
-    thumbRenderTasksRef.current[pageNum - 1] = task;
+      const task = page.render({ canvas, canvasContext: ctx, viewport });
+      thumbRenderTasksRef.current[pageNum - 1] = task;
 
-    try {
-      await task.promise;
-    } catch {
-      // cancelled or failed
-    } finally {
-      page.cleanup();
-    }
-  }, []);
+      try {
+        await task.promise;
+      } catch {
+        // cancelled or failed
+      } finally {
+        page.cleanup();
+      }
+    },
+    [],
+  );
 
   // Render all thumbnails when doc loads
   useEffect(() => {
@@ -172,57 +184,61 @@ export default function PdfViewer({ mediaId, title, onClose }: Props) {
   // Keyboard shortcuts
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") {
+      if (e.key === 'Escape') {
         onClose();
-      } else if (e.key === "ArrowRight" || e.key === "ArrowDown") {
+      } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
         setCurrentPage((p) => Math.min(p + 1, numPages));
-      } else if (e.key === "ArrowLeft" || e.key === "ArrowUp") {
+      } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
         setCurrentPage((p) => Math.max(p - 1, 1));
-      } else if (e.key === "+" || e.key === "=") {
+      } else if (e.key === '+' || e.key === '=') {
         setZoomIdx((z) => Math.min(z + 1, ZOOM_LEVELS.length - 1));
-      } else if (e.key === "-") {
+      } else if (e.key === '-') {
         setZoomIdx((z) => Math.max(z - 1, 0));
       }
     }
-    document.addEventListener("keydown", onKeyDown);
-    return () => document.removeEventListener("keydown", onKeyDown);
+    document.addEventListener('keydown', onKeyDown);
+    return () => document.removeEventListener('keydown', onKeyDown);
   }, [onClose, numPages]);
 
   // Scroll active thumbnail into view
   useEffect(() => {
     const el = thumbCanvasRefs.current[currentPage - 1];
-    el?.parentElement?.scrollIntoView({ block: "nearest" });
+    el?.parentElement?.scrollIntoView({ block: 'nearest' });
   }, [currentPage]);
 
   return (
-    <dialog open className={styles.overlay ?? ""} aria-label={`PDF Viewer: ${title}`}>
+    <dialog
+      open
+      className={styles.overlay ?? ''}
+      aria-label={`PDF Viewer: ${title}`}
+    >
       {/* Toolbar */}
-      <div className={styles.toolbar ?? ""}>
+      <div className={styles.toolbar ?? ''}>
         <button
           type="button"
-          className={styles.closeBtn ?? ""}
+          className={styles.closeBtn ?? ''}
           onClick={onClose}
           title="Close (Esc)"
         >
           ✕
         </button>
-        <span className={styles.toolbarTitle ?? ""}>{title}</span>
-        <div className={styles.toolbarControls ?? ""}>
+        <span className={styles.toolbarTitle ?? ''}>{title}</span>
+        <div className={styles.toolbarControls ?? ''}>
           <button
             type="button"
-            className={styles.navBtn ?? ""}
+            className={styles.navBtn ?? ''}
             onClick={() => setCurrentPage((p) => Math.max(p - 1, 1))}
             disabled={currentPage <= 1}
             title="Previous page (←)"
           >
             ‹
           </button>
-          <span className={styles.pageCounter ?? ""}>
-            {loading ? "…" : `${currentPage} / ${numPages}`}
+          <span className={styles.pageCounter ?? ''}>
+            {loading ? '…' : `${currentPage} / ${numPages}`}
           </span>
           <button
             type="button"
-            className={styles.navBtn ?? ""}
+            className={styles.navBtn ?? ''}
             onClick={() => setCurrentPage((p) => Math.min(p + 1, numPages))}
             disabled={currentPage >= numPages}
             title="Next page (→)"
@@ -231,18 +247,22 @@ export default function PdfViewer({ mediaId, title, onClose }: Props) {
           </button>
           <button
             type="button"
-            className={styles.zoomBtn ?? ""}
+            className={styles.zoomBtn ?? ''}
             onClick={() => setZoomIdx((z) => Math.max(z - 1, 0))}
             disabled={zoomIdx === 0}
             title="Zoom out (-)"
           >
             −
           </button>
-          <span className={styles.zoomLevel ?? ""}>{Math.round(zoom * 100)}%</span>
+          <span className={styles.zoomLevel ?? ''}>
+            {Math.round(zoom * 100)}%
+          </span>
           <button
             type="button"
-            className={styles.zoomBtn ?? ""}
-            onClick={() => setZoomIdx((z) => Math.min(z + 1, ZOOM_LEVELS.length - 1))}
+            className={styles.zoomBtn ?? ''}
+            onClick={() =>
+              setZoomIdx((z) => Math.min(z + 1, ZOOM_LEVELS.length - 1))
+            }
             disabled={zoomIdx === ZOOM_LEVELS.length - 1}
             title="Zoom in (+)"
           >
@@ -250,7 +270,7 @@ export default function PdfViewer({ mediaId, title, onClose }: Props) {
           </button>
           <button
             type="button"
-            className={styles.zoomBtn ?? ""}
+            className={styles.zoomBtn ?? ''}
             onClick={() => setZoomIdx(DEFAULT_ZOOM_IDX)}
             title="Reset zoom"
           >
@@ -259,15 +279,15 @@ export default function PdfViewer({ mediaId, title, onClose }: Props) {
         </div>
       </div>
 
-      <div className={styles.body ?? ""}>
+      <div className={styles.body ?? ''}>
         {/* Thumbnail sidebar */}
-        <div className={styles.sidebar ?? ""}>
+        <div className={styles.sidebar ?? ''}>
           {!loading &&
             Array.from({ length: numPages }, (_, i) => i + 1).map((pageNum) => (
               <button
                 key={pageNum}
                 type="button"
-                className={`${styles.thumbWrapper ?? ""} ${pageNum === currentPage ? (styles.thumbActive ?? "") : ""}`}
+                className={`${styles.thumbWrapper ?? ''} ${pageNum === currentPage ? (styles.thumbActive ?? '') : ''}`}
                 onClick={() => setCurrentPage(pageNum)}
                 title={`Page ${pageNum}`}
               >
@@ -275,20 +295,20 @@ export default function PdfViewer({ mediaId, title, onClose }: Props) {
                   ref={(el) => {
                     thumbCanvasRefs.current[pageNum - 1] = el;
                   }}
-                  className={styles.thumbCanvas ?? ""}
+                  className={styles.thumbCanvas ?? ''}
                 />
-                <span className={styles.thumbLabel ?? ""}>{pageNum}</span>
+                <span className={styles.thumbLabel ?? ''}>{pageNum}</span>
               </button>
             ))}
         </div>
 
         {/* Main content area */}
-        <div className={styles.main ?? ""}>
-          {loading && <p className={styles.loadingMsg ?? ""}>Loading PDF…</p>}
-          {error && <p className={styles.errorMsg ?? ""}>{error}</p>}
+        <div className={styles.main ?? ''}>
+          {loading && <p className={styles.loadingMsg ?? ''}>Loading PDF…</p>}
+          {error && <p className={styles.errorMsg ?? ''}>{error}</p>}
           {!loading && !error && (
-            <div className={styles.canvasWrapper ?? ""}>
-              <canvas ref={mainCanvasRef} className={styles.mainCanvas ?? ""} />
+            <div className={styles.canvasWrapper ?? ''}>
+              <canvas ref={mainCanvasRef} className={styles.mainCanvas ?? ''} />
             </div>
           )}
         </div>

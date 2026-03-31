@@ -1,8 +1,8 @@
-import { useEffect, useRef, useState } from "react";
-import { apiFetch } from "../apiFetch.js";
-import type { QueueItem } from "../store/index";
-import { useAudioStore } from "../store/index";
-import styles from "./AudioPlayer.module.css";
+import { useEffect, useRef, useState } from 'react';
+import { apiFetch } from '../apiFetch.js';
+import type { QueueItem } from '../store/index';
+import { useAudioStore } from '../store/index';
+import styles from './AudioPlayer.module.css';
 
 export default function AudioPlayer() {
   const queue = useAudioStore((s) => s.queue);
@@ -61,7 +61,7 @@ export default function AudioPlayer() {
       audio.load();
       if (playingRef.current) audio.play().catch(() => setPlaying(false));
     } else {
-      audio.src = "";
+      audio.src = '';
     }
     setCurrentTime(0);
     setDuration(0);
@@ -78,8 +78,8 @@ export default function AudioPlayer() {
       if (!audio.paused && audio.duration > 0) {
         const completed = audio.currentTime >= audio.duration - 1;
         apiFetch(`/api/v1/media/${trackId}/progress`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
             position: Math.floor(audio.currentTime),
             duration: Math.floor(audio.duration),
@@ -115,18 +115,22 @@ export default function AudioPlayer() {
   }
 
   function formatTime(s: number): string {
-    if (!Number.isFinite(s)) return "0:00";
+    if (!Number.isFinite(s)) return '0:00';
     const m = Math.floor(s / 60);
     const sec = Math.floor(s % 60);
-    return `${m}:${sec.toString().padStart(2, "0")}`;
+    return `${m}:${sec.toString().padStart(2, '0')}`;
   }
 
-  const repeatLabel = repeat === "none" ? "↺" : repeat === "all" ? "↺" : "↺¹";
+  const repeatLabel = repeat === 'none' ? '↺' : repeat === 'all' ? '↺' : '↺¹';
   const repeatTitle =
-    repeat === "none" ? "Repeat: off" : repeat === "all" ? "Repeat: all" : "Repeat: one";
+    repeat === 'none'
+      ? 'Repeat: off'
+      : repeat === 'all'
+        ? 'Repeat: all'
+        : 'Repeat: one';
 
   return (
-    <div className={styles.bar ?? ""}>
+    <div className={styles.bar ?? ''}>
       {/* biome-ignore lint/a11y/useMediaCaption: audio player — captions not applicable for music */}
       <audio
         ref={audioRef}
@@ -137,37 +141,41 @@ export default function AudioPlayer() {
 
       {/* Queue panel */}
       {showQueue && (
-        <div className={styles.queuePanel ?? ""}>
-          <div className={styles.queueHeader ?? ""}>
-            <span className={styles.queueTitle ?? ""}>Queue ({queue.length})</span>
+        <div className={styles.queuePanel ?? ''}>
+          <div className={styles.queueHeader ?? ''}>
+            <span className={styles.queueTitle ?? ''}>
+              Queue ({queue.length})
+            </span>
             <button
               type="button"
-              className={styles.queueClear ?? ""}
+              className={styles.queueClear ?? ''}
               onClick={clearQueue}
               title="Clear queue"
             >
               Clear all
             </button>
           </div>
-          <ul className={styles.queueList ?? ""}>
+          <ul className={styles.queueList ?? ''}>
             {queue.map((item, i) => (
               <li
                 key={item.id}
-                className={`${styles.queueItem ?? ""}${i === currentIndex ? ` ${styles.queueItemActive ?? ""}` : ""}`}
+                className={`${styles.queueItem ?? ''}${i === currentIndex ? ` ${styles.queueItemActive ?? ''}` : ''}`}
               >
                 <button
                   type="button"
-                  className={styles.queueItemPlay ?? ""}
+                  className={styles.queueItemPlay ?? ''}
                   onClick={() => playAtIndex(i)}
                   title="Play this track"
                 >
-                  {i === currentIndex && playing ? "▶" : "▷"}
+                  {i === currentIndex && playing ? '▶' : '▷'}
                 </button>
-                <span className={styles.queueItemTitle ?? ""}>{item.title}</span>
-                <div className={styles.queueItemActions ?? ""}>
+                <span className={styles.queueItemTitle ?? ''}>
+                  {item.title}
+                </span>
+                <div className={styles.queueItemActions ?? ''}>
                   <button
                     type="button"
-                    className={styles.queueMoveBtn ?? ""}
+                    className={styles.queueMoveBtn ?? ''}
                     onClick={() => moveUp(i)}
                     disabled={i === 0}
                     title="Move up"
@@ -176,7 +184,7 @@ export default function AudioPlayer() {
                   </button>
                   <button
                     type="button"
-                    className={styles.queueMoveBtn ?? ""}
+                    className={styles.queueMoveBtn ?? ''}
                     onClick={() => moveDown(i)}
                     disabled={i === queue.length - 1}
                     title="Move down"
@@ -185,7 +193,7 @@ export default function AudioPlayer() {
                   </button>
                   <button
                     type="button"
-                    className={styles.queueRemoveBtn ?? ""}
+                    className={styles.queueRemoveBtn ?? ''}
                     onClick={() => removeFromQueue(i)}
                     title="Remove from queue"
                   >
@@ -199,28 +207,30 @@ export default function AudioPlayer() {
       )}
 
       {/* Player bar */}
-      <div className={styles.controls ?? ""}>
+      <div className={styles.controls ?? ''}>
         {/* Track info */}
-        <div className={styles.trackInfo ?? ""}>
-          <span className={styles.trackTitle ?? ""}>{currentTrack?.title ?? "—"}</span>
-          <span className={styles.trackType ?? ""}>
-            {currentTrack?.mimeType?.split("/")[1]?.toUpperCase() ?? ""}
+        <div className={styles.trackInfo ?? ''}>
+          <span className={styles.trackTitle ?? ''}>
+            {currentTrack?.title ?? '—'}
+          </span>
+          <span className={styles.trackType ?? ''}>
+            {currentTrack?.mimeType?.split('/')[1]?.toUpperCase() ?? ''}
           </span>
         </div>
 
         {/* Playback controls */}
-        <div className={styles.playbackControls ?? ""}>
+        <div className={styles.playbackControls ?? ''}>
           <button
             type="button"
-            className={`${styles.iconBtn ?? ""}${shuffle ? ` ${styles.active ?? ""}` : ""}`}
+            className={`${styles.iconBtn ?? ''}${shuffle ? ` ${styles.active ?? ''}` : ''}`}
             onClick={toggleShuffle}
-            title={shuffle ? "Shuffle: on" : "Shuffle: off"}
+            title={shuffle ? 'Shuffle: on' : 'Shuffle: off'}
           >
             ⇄
           </button>
           <button
             type="button"
-            className={styles.iconBtn ?? ""}
+            className={styles.iconBtn ?? ''}
             onClick={playPrev}
             title="Previous"
             disabled={queue.length === 0}
@@ -229,15 +239,15 @@ export default function AudioPlayer() {
           </button>
           <button
             type="button"
-            className={styles.playBtn ?? ""}
+            className={styles.playBtn ?? ''}
             onClick={() => setPlaying(!playing)}
-            title={playing ? "Pause" : "Play"}
+            title={playing ? 'Pause' : 'Play'}
           >
-            {playing ? "⏸" : "▶"}
+            {playing ? '⏸' : '▶'}
           </button>
           <button
             type="button"
-            className={styles.iconBtn ?? ""}
+            className={styles.iconBtn ?? ''}
             onClick={playNext}
             title="Next"
             disabled={queue.length === 0}
@@ -246,7 +256,7 @@ export default function AudioPlayer() {
           </button>
           <button
             type="button"
-            className={`${styles.iconBtn ?? ""}${repeat !== "none" ? ` ${styles.active ?? ""}` : ""}`}
+            className={`${styles.iconBtn ?? ''}${repeat !== 'none' ? ` ${styles.active ?? ''}` : ''}`}
             onClick={toggleRepeat}
             title={repeatTitle}
           >
@@ -255,26 +265,28 @@ export default function AudioPlayer() {
         </div>
 
         {/* Seek bar */}
-        <div className={styles.seekArea ?? ""}>
-          <span className={styles.timeLabel ?? ""}>{formatTime(currentTime)}</span>
+        <div className={styles.seekArea ?? ''}>
+          <span className={styles.timeLabel ?? ''}>
+            {formatTime(currentTime)}
+          </span>
           <input
             type="range"
-            className={styles.seekBar ?? ""}
+            className={styles.seekBar ?? ''}
             min={0}
             max={duration || 1}
             step={0.1}
             value={currentTime}
             onChange={handleSeek}
           />
-          <span className={styles.timeLabel ?? ""}>{formatTime(duration)}</span>
+          <span className={styles.timeLabel ?? ''}>{formatTime(duration)}</span>
         </div>
 
         {/* Volume + queue toggle */}
-        <div className={styles.rightControls ?? ""}>
-          <span className={styles.volIcon ?? ""}>🔊</span>
+        <div className={styles.rightControls ?? ''}>
+          <span className={styles.volIcon ?? ''}>🔊</span>
           <input
             type="range"
-            className={styles.volumeBar ?? ""}
+            className={styles.volumeBar ?? ''}
             min={0}
             max={1}
             step={0.02}
@@ -284,7 +296,7 @@ export default function AudioPlayer() {
           />
           <button
             type="button"
-            className={`${styles.iconBtn ?? ""}${showQueue ? ` ${styles.active ?? ""}` : ""}`}
+            className={`${styles.iconBtn ?? ''}${showQueue ? ` ${styles.active ?? ''}` : ''}`}
             onClick={() => setShowQueue(!showQueue)}
             title="Toggle queue"
           >

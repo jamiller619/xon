@@ -1,29 +1,29 @@
-import { createServer as createHttpsServer } from "node:https";
-import { serve } from "@hono/node-server";
-import { DEFAULT_PORT } from "@xon/shared";
-import { eq } from "drizzle-orm";
-import { Hono } from "hono";
-import { createApp } from "./app.js";
-import { openDatabase } from "./db.js";
-import { acquireAcmeCert, loadManualCerts } from "./httpsManager.js";
-import { migrateDatabase } from "./migrate.js";
-import { emitPluginEvent, setPluginDatabase } from "./pluginManager.js";
-import { WS_PATH, createWsServer } from "./routes/ws.js";
-import { startScheduler } from "./scheduler.js";
-import { serverSettings } from "./schema.js";
-import { makeStaticMiddleware } from "./staticFiles.js";
-import { ensureAdminUser } from "./userInit.js";
+import { createServer as createHttpsServer } from 'node:https';
+import { serve } from '@hono/node-server';
+import { DEFAULT_PORT } from '@xon/shared';
+import { eq } from 'drizzle-orm';
+import { Hono } from 'hono';
+import { createApp } from './app.js';
+import { openDatabase } from './db.js';
+import { acquireAcmeCert, loadManualCerts } from './httpsManager.js';
+import { migrateDatabase } from './migrate.js';
+import { emitPluginEvent, setPluginDatabase } from './pluginManager.js';
+import { WS_PATH, createWsServer } from './routes/ws.js';
+import { startScheduler } from './scheduler.js';
+import { serverSettings } from './schema.js';
+import { makeStaticMiddleware } from './staticFiles.js';
+import { ensureAdminUser } from './userInit.js';
 
-const SERVER_SETTINGS_ID = "default";
+const SERVER_SETTINGS_ID = 'default';
 
 // Catch uncaught exceptions and unhandled rejections so the process doesn't crash silently.
 // These are registered once at module load time, not per boot() call.
-process.on("uncaughtException", (err: Error) => {
-  console.error("Uncaught exception:", err);
+process.on('uncaughtException', (err: Error) => {
+  console.error('Uncaught exception:', err);
 });
 
-process.on("unhandledRejection", (reason: unknown) => {
-  console.error("Unhandled promise rejection:", reason);
+process.on('unhandledRejection', (reason: unknown) => {
+  console.error('Unhandled promise rejection:', reason);
 });
 
 export function boot(): void {
@@ -50,10 +50,16 @@ export function boot(): void {
       let tlsKey: string | undefined;
 
       if (httpsConfig?.httpsEnabled) {
-        if (httpsConfig.acmeEnabled && httpsConfig.acmeDomain && httpsConfig.acmeEmail) {
+        if (
+          httpsConfig.acmeEnabled &&
+          httpsConfig.acmeDomain &&
+          httpsConfig.acmeEmail
+        ) {
           // Automatic HTTPS via Let's Encrypt ACME
-          const certsDir = httpsConfig.acmeCertsDir ?? "./certs";
-          console.log(`Acquiring ACME certificate for ${httpsConfig.acmeDomain}...`);
+          const certsDir = httpsConfig.acmeCertsDir ?? './certs';
+          console.log(
+            `Acquiring ACME certificate for ${httpsConfig.acmeDomain}...`,
+          );
           try {
             const certs = await acquireAcmeCert({
               domain: httpsConfig.acmeDomain,
@@ -64,21 +70,21 @@ export function boot(): void {
             tlsKey = certs.key;
             console.log(`ACME certificate ready for ${httpsConfig.acmeDomain}`);
           } catch (err) {
-            console.error("Failed to acquire ACME certificate:", err);
-            console.log("Falling back to HTTP");
+            console.error('Failed to acquire ACME certificate:', err);
+            console.log('Falling back to HTTP');
           }
         } else if (httpsConfig.httpsCertPath && httpsConfig.httpsKeyPath) {
           // Manual certificate
           try {
             const certs = await loadManualCerts(
               httpsConfig.httpsCertPath,
-              httpsConfig.httpsKeyPath
+              httpsConfig.httpsKeyPath,
             );
             tlsCert = certs.cert;
             tlsKey = certs.key;
           } catch (err) {
-            console.error("Failed to load TLS certificates:", err);
-            console.log("Falling back to HTTP");
+            console.error('Failed to load TLS certificates:', err);
+            console.log('Falling back to HTTP');
           }
         }
       }
@@ -86,9 +92,9 @@ export function boot(): void {
       const isHttps = !!(tlsCert && tlsKey);
       const apiApp = createApp(db, { isHttps });
       const app = new Hono();
-      app.route("/", apiApp);
+      app.route('/', apiApp);
       if (webClientDir) {
-        app.use("/*", makeStaticMiddleware(webClientDir, webSsrBundle));
+        app.use('/*', makeStaticMiddleware(webClientDir, webSsrBundle));
       }
 
       const serveOptions =
@@ -102,12 +108,14 @@ export function boot(): void {
           : { fetch: app.fetch, port };
 
       const server = serve(serveOptions, (info) => {
-        const protocol = tlsCert ? "https" : "http";
-        console.log(`Xon server listening on ${protocol}://0.0.0.0:${info.port}`);
-        emitPluginEvent("server:boot", {});
+        const protocol = tlsCert ? 'https' : 'http';
+        console.log(
+          `Xon server listening on ${protocol}://0.0.0.0:${info.port}`,
+        );
+        emitPluginEvent('server:boot', {});
       });
 
-      server.on("upgrade", (req, socket, head) => {
+      server.on('upgrade', (req, socket, head) => {
         if (req.url === WS_PATH) {
           handleUpgrade(req, socket, head);
         } else {
@@ -116,7 +124,7 @@ export function boot(): void {
       });
 
       function shutdown(): void {
-        emitPluginEvent("server:shutdown", {});
+        emitPluginEvent('server:shutdown', {});
         scheduler.stop();
         server.close(() => {
           client.close();
@@ -124,11 +132,11 @@ export function boot(): void {
         });
       }
 
-      process.on("SIGTERM", shutdown);
-      process.on("SIGINT", shutdown);
+      process.on('SIGTERM', shutdown);
+      process.on('SIGINT', shutdown);
     })
     .catch((err: unknown) => {
-      console.error("Failed to start server:", err);
+      console.error('Failed to start server:', err);
       process.exit(1);
     });
 }

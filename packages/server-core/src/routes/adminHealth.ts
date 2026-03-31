@@ -1,11 +1,11 @@
-import { statfs } from "node:fs/promises";
-import { freemem, loadavg, totalmem } from "node:os";
-import { eq, sql } from "drizzle-orm";
-import type { LibSQLDatabase } from "drizzle-orm/libsql";
-import { Hono } from "hono";
-import { appCache } from "../cache.js";
-import { scanRegistry } from "../scanRegistry.js";
-import { libraries, mediaItems } from "../schema.js";
+import { statfs } from 'node:fs/promises';
+import { freemem, loadavg, totalmem } from 'node:os';
+import { eq, sql } from 'drizzle-orm';
+import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import { Hono } from 'hono';
+import { appCache } from '../cache.js';
+import { scanRegistry } from '../scanRegistry.js';
+import { libraries, mediaItems } from '../schema.js';
 
 export function makeAdminHealthRouter(db: LibSQLDatabase): Hono {
   const router = new Hono();
@@ -15,7 +15,7 @@ export function makeAdminHealthRouter(db: LibSQLDatabase): Hono {
    * Returns system health info: uptime, memory, CPU load, storage, active scans,
    * and per-library statistics.
    */
-  router.get("/", async (c) => {
+  router.get('/', async (c) => {
     const uptimeSeconds = process.uptime();
 
     // Memory
@@ -32,7 +32,7 @@ export function makeAdminHealthRouter(db: LibSQLDatabase): Hono {
     // Disk stats for the data directory
     let diskTotal = 0;
     let diskFree = 0;
-    const dataDir = process.env.DATA_DIR ?? "./data";
+    const dataDir = process.env.DATA_DIR ?? './data';
     try {
       const stats = await statfs(dataDir);
       diskTotal = stats.bsize * stats.blocks;
@@ -43,7 +43,7 @@ export function makeAdminHealthRouter(db: LibSQLDatabase): Hono {
 
     // Active scans from shared registry
     const activeScans = [...scanRegistry.entries()]
-      .filter(([, s]) => s.status === "running")
+      .filter(([, s]) => s.status === 'running')
       .map(([libraryId, s]) => ({
         libraryId,
         startedAt: s.startedAt.toISOString(),
@@ -51,10 +51,11 @@ export function makeAdminHealthRouter(db: LibSQLDatabase): Hono {
       }));
 
     // Library list — serve from cache when available
-    let libRows = appCache.get<(typeof libraries.$inferSelect)[]>("libraries:all");
+    let libRows =
+      appCache.get<(typeof libraries.$inferSelect)[]>('libraries:all');
     if (!libRows) {
       libRows = await db.select().from(libraries);
-      appCache.set("libraries:all", libRows, 60_000);
+      appCache.set('libraries:all', libRows, 60_000);
     }
 
     const libraryStats = await Promise.all(
@@ -77,15 +78,23 @@ export function makeAdminHealthRouter(db: LibSQLDatabase): Hono {
           appCache.set(countKey, total, 60_000);
           const lastScanRaw = row?.lastScan ?? null;
           // scannedAt is stored as unix seconds by drizzle integer(timestamp)
-          lastScanAt = lastScanRaw !== null ? new Date(lastScanRaw * 1000).toISOString() : null;
+          lastScanAt =
+            lastScanRaw !== null
+              ? new Date(lastScanRaw * 1000).toISOString()
+              : null;
         } else {
           // Fetch only lastScan when count was cached (inexpensive single-column query)
           const rows = await db
-            .select({ lastScan: sql<number | null>`max(${mediaItems.scannedAt})` })
+            .select({
+              lastScan: sql<number | null>`max(${mediaItems.scannedAt})`,
+            })
             .from(mediaItems)
             .where(eq(mediaItems.libraryId, lib.id));
           const lastScanRaw = rows[0]?.lastScan ?? null;
-          lastScanAt = lastScanRaw !== null ? new Date(lastScanRaw * 1000).toISOString() : null;
+          lastScanAt =
+            lastScanRaw !== null
+              ? new Date(lastScanRaw * 1000).toISOString()
+              : null;
         }
 
         return {
@@ -94,7 +103,7 @@ export function makeAdminHealthRouter(db: LibSQLDatabase): Hono {
           totalItems: total,
           lastScanAt,
         };
-      })
+      }),
     );
 
     return c.json({

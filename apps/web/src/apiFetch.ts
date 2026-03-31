@@ -1,4 +1,4 @@
-import { useAuthStore } from "./store/index.js";
+import { useAuthStore } from './store/index.js';
 
 /**
  * fetch wrapper that injects the current access token as a Bearer header.
@@ -8,7 +8,7 @@ export function apiFetch(url: string, init?: RequestInit): Promise<Response> {
   const token = useAuthStore.getState().accessToken;
   const headers = new Headers(init?.headers);
   if (token) {
-    headers.set("Authorization", `Bearer ${token}`);
+    headers.set('Authorization', `Bearer ${token}`);
   }
   return fetch(url, { ...init, headers });
 }
