@@ -569,6 +569,14 @@ export const serverSettings = sqliteTable("server_settings", {
   acmeCertsDir: text("acme_certs_dir"),
   /** Trust X-Forwarded-For and X-Forwarded-Proto headers from reverse proxies */
   trustProxy: integer("trust_proxy", { mode: "boolean" }).notNull().default(false),
+  /** Server port (requires restart) */
+  serverPort: integer("server_port").notNull().default(32400),
+  /** Data directory path (requires restart) */
+  dataDirectory: text("data_directory").notNull().default("./data"),
+  /** Default cron expression for library scan schedule, e.g. "0 2 * * *" */
+  defaultScanSchedule: text("default_scan_schedule"),
+  /** JSON array of enabled thumbnail sizes, e.g. ["small","medium"] */
+  thumbnailSizes: text("thumbnail_sizes").notNull().default('["small","medium"]'),
   updatedAt: integer("updated_at", { mode: "timestamp" }).notNull().default(sql`(unixepoch())`),
 });
 

@@ -13,6 +13,7 @@ import { makeAdminBackupTargetsRouter } from "./routes/adminBackupTargets.js";
 import { makeAdminBackupVerifyRouter } from "./routes/adminBackupVerify.js";
 import { makeAdminLibraryAccessRouter } from "./routes/adminLibraryAccess.js";
 import { makeAdminPluginsRouter } from "./routes/adminPlugins.js";
+import { makeAdminSettingsRouter } from "./routes/adminSettings.js";
 import { makeAdminServerSettingsRouter } from "./routes/adminServerSettings.js";
 import { makeAdminUsersRouter } from "./routes/adminUsers.js";
 import { makeAiRouter } from "./routes/ai.js";
@@ -126,6 +127,7 @@ export function createApp(db?: LibSQLDatabase, options?: { isHttps?: boolean }):
     app.route("/admin/backup/media", makeAdminBackupMediaRouter(db));
     app.route("/admin/backup/verify", makeAdminBackupVerifyRouter(db));
     app.route("/admin/server-settings", makeAdminServerSettingsRouter(db));
+    app.route("/admin/settings", makeAdminSettingsRouter(db));
   }
 
   // Admin: plugin management

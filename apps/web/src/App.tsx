@@ -8,6 +8,7 @@ import AdminDuplicates from "./pages/AdminDuplicates";
 import AdminLibraryAccess from "./pages/AdminLibraryAccess";
 import AdminNetworkSettings from "./pages/AdminNetworkSettings";
 import AdminPlugins from "./pages/AdminPlugins";
+import AdminSettings from "./pages/AdminSettings";
 import AdminUsers from "./pages/AdminUsers";
 import Dashboard from "./pages/Dashboard";
 import GroupDetail from "./pages/GroupDetail";
@@ -42,6 +43,7 @@ export default function App() {
           <Route path="/admin/ai-settings" element={<AdminAiSettings />} />
           <Route path="/admin/backup" element={<AdminBackup />} />
           <Route path="/admin/network" element={<AdminNetworkSettings />} />
+          <Route path="/admin/settings" element={<AdminSettings />} />
           <Route path="/settings" element={<Settings />} />
         </Route>
       </Routes>
