@@ -1,3 +1,16 @@
+## 2026-03-31 - US-112
+- Implemented scan scheduling admin UI on the library management page
+- Files changed: packages/server-core/src/schema.ts (added watchEnabled boolean default true, lastScanResult text nullable, lastScanDuration integer nullable to libraries table), packages/server-core/drizzle/0029_scan_schedule_settings.sql (new migration), packages/server-core/drizzle/meta/_journal.json (added idx 29 entry), packages/server-core/src/routes/scan.ts (record lastScanResult/lastScanDuration on scan completion/failure via DB update; added watchSchema + PUT /watch endpoint to toggle watchEnabled), packages/server-core/src/scheduler.ts (skip filesystem watchers when !lib.watchEnabled), apps/web/src/pages/AdminLibraries.tsx (added SCHEDULE_PRESETS array, getNextScanTime() helper, formatDuration() helper; Library interface updated with scanSchedule/watchEnabled/lastScanResult/lastScanDuration; schedule state vars; handleSaveSchedule() calls PUT /scan/schedule + PUT /scan/watch in parallel; schedule section in edit panel with preset dropdown, watch toggle, next scan time display; library cards show schedule tag, watching tag, last scan result+duration), apps/web/src/pages/AdminLibraries.module.css (new styles for schedule section and library card scan meta tags)
+- Schedule presets: Disabled, Every 15 min, Every 30 min, Hourly, Every 6h, Every 12h, Daily
+- Next scan time computed from cron interval in browser (no server round-trip needed)
+- Last scan result ("completed"/"failed") and duration (formatted) shown in edit panel and on library cards
+- 925 tests passing; biome clean; typecheck clean
+- **Learnings for future iterations:**
+  - Two PUT endpoints called in parallel with `Promise.all([...])` allows atomic-ish save of schedule + watch toggle in one user action
+  - `Math.ceil(now / intervalMs) * intervalMs` computes the next interval boundary from the current time — works for any fixed-interval cron
+  - When adding fields to the libraries table, also update the Library interface in AdminLibraries.tsx (not just schema.ts) or TypeScript will silently use stale field types
+---
+
 ## 2026-03-31 - US-110
 - Implemented native OS notification forwarding for Electron desktop app
 - Files changed: apps/desktop/src/notifications.ts (new: createNotificationManager(), NotificationManager interface, NotificationType, NotificationPrefs — subscribes to eventBus and shows Electron Notification for scan:complete, media:added, backup:complete, and all error events), apps/desktop/src/tray.ts (accepts optional NotificationManager; added NOTIFICATION_LABELS map; Notifications submenu with per-type checkbox items in tray context menu), apps/desktop/src/main.ts (creates notificationManager before createTray(); passes it to createTray(); destroys on quit)
