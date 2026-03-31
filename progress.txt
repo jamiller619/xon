@@ -1,3 +1,17 @@
+## 2026-03-30 - US-104
+- Implemented library management admin page at /admin/libraries
+- Files changed: apps/web/src/pages/AdminLibraries.tsx (new admin page), apps/web/src/pages/AdminLibraries.module.css, apps/web/src/App.tsx (added route + import)
+- UI features: list all libraries with inline create form; edit panel (update name/description/allowed media types, add/remove/enable/disable data sources); delete with confirmation; trigger scan per library with status feedback
+- Data sources: type (local/network), path, recursive toggle; add via inline form; toggle enable/disable; remove
+- Media types: checkbox grid with all 20 MediaCategory values hardcoded in frontend (avoids dependency on @xon/media-types in web app)
+- Scan trigger: POST /api/v1/libraries/:id/scan; shows "already running" (409) or "Scan started" feedback
+- 893 tests passing; biome clean; typecheck clean
+- **Learnings for future iterations:**
+  - Library `allowedMediaTypes` is stored as a JSON string in DB — must JSON.parse on the frontend before display/editing
+  - GET /api/v1/libraries/:id returns `{ ...library, dataSources: [...] }` — use this endpoint when opening edit form to get sources in one request
+  - Biome import order: AdminLibraries (Li) sorts after AdminHealth (He) and before AdminLibraryAccess (Li-b > Li-b-r...) — alphabetical by full name
+---
+
 ## 2026-03-30 - US-103
 - Implemented admin system health monitoring page and API
 - Files changed: packages/server-core/src/scanRegistry.ts (new: shared scan state singleton), packages/server-core/src/routes/scan.ts (refactored to use shared scanRegistry), packages/server-core/src/routes/adminHealth.ts (new: GET /admin/health), packages/server-core/src/routes/adminHealth.test.ts (5 tests), packages/server-core/src/app.ts (registered /admin/health), apps/web/src/App.tsx (route /admin/health), apps/web/src/pages/AdminHealth.tsx (new admin page), apps/web/src/pages/AdminHealth.module.css
