@@ -3,6 +3,7 @@ import { and, desc, eq, isNull, or } from "drizzle-orm";
 import type { LibSQLDatabase } from "drizzle-orm/libsql";
 import { Hono } from "hono";
 import { z } from "zod";
+import { hashPassword, verifyPassword } from "../password.js";
 import { apiTokens, favorites, mediaItems, mediaProgress, users, watchlist } from "../schema.js";
 import { validate } from "../validate.js";
 import { withThumbnailUrls } from "./media.js";
@@ -37,7 +38,7 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
     return c.json(rows[0]);
   });
 
-  // PATCH /users/me — update current user preferences
+  // PATCH /users/me — update current user preferences (legacy, kept for backwards compat)
   router.patch(
     "/me",
     validate("json", z.object({ hideDrmItems: z.boolean().optional() })),
@@ -64,6 +65,79 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
         .where(eq(users.id, user.id))
         .limit(1);
       return c.json(rows[0]);
+    }
+  );
+
+  const profileUpdateSchema = z.object({
+    displayName: z.string().min(1).max(128).optional(),
+    email: z.string().email().optional(),
+    avatarUrl: z.string().url().nullable().optional(),
+    maxContentRating: z.enum(["G", "PG", "PG-13", "R", "unrated", "none"]).optional(),
+    hideDrmItems: z.boolean().optional(),
+  });
+
+  // PUT /users/me — update full profile and preferences
+  router.put("/me", validate("json", profileUpdateSchema), async (c) => {
+    const user = c.get("user");
+    const body = c.req.valid("json");
+    const updates: Partial<typeof users.$inferInsert> = { updatedAt: new Date() };
+    if (body.displayName !== undefined) updates.displayName = body.displayName;
+    if (body.email !== undefined) updates.email = body.email;
+    if (body.avatarUrl !== undefined) updates.avatarUrl = body.avatarUrl ?? undefined;
+    if (body.maxContentRating !== undefined) updates.maxContentRating = body.maxContentRating;
+    if (body.hideDrmItems !== undefined) updates.hideDrmItems = body.hideDrmItems;
+    await db.update(users).set(updates).where(eq(users.id, user.id));
+    const rows = await db
+      .select({
+        id: users.id,
+        username: users.username,
+        email: users.email,
+        displayName: users.displayName,
+        avatarUrl: users.avatarUrl,
+        role: users.role,
+        maxContentRating: users.maxContentRating,
+        hideDrmItems: users.hideDrmItems,
+        createdAt: users.createdAt,
+        updatedAt: users.updatedAt,
+      })
+      .from(users)
+      .where(eq(users.id, user.id))
+      .limit(1);
+    if (!rows[0]) return c.json({ error: "Not found" }, 404);
+    return c.json(rows[0]);
+  });
+
+  // PUT /users/me/password — change current user's password
+  router.put(
+    "/me/password",
+    validate(
+      "json",
+      z.object({
+        currentPassword: z.string().min(1),
+        newPassword: z.string().min(8),
+      })
+    ),
+    async (c) => {
+      const user = c.get("user");
+      const { currentPassword, newPassword } = c.req.valid("json");
+
+      const rows = await db
+        .select({ passwordHash: users.passwordHash })
+        .from(users)
+        .where(eq(users.id, user.id))
+        .limit(1);
+      if (!rows[0]) return c.json({ error: "Not found" }, 404);
+
+      const valid = await verifyPassword(rows[0].passwordHash, currentPassword);
+      if (!valid) return c.json({ error: "Current password is incorrect" }, 400);
+
+      const newHash = await hashPassword(newPassword);
+      await db
+        .update(users)
+        .set({ passwordHash: newHash, updatedAt: new Date() })
+        .where(eq(users.id, user.id));
+
+      return c.json({ message: "Password updated" });
     }
   );
 

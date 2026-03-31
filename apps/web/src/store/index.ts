@@ -16,6 +16,8 @@ export const useAuthStore = create<AuthState>((set) => ({
   clearAuth: () => set({ accessToken: null, username: null, role: null }),
 }));
 
+const VIEW_MODE_STORAGE_KEY = "xon:viewMode";
+
 interface AppState {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
@@ -26,8 +28,11 @@ interface AppState {
 export const useAppStore = create<AppState>((set) => ({
   sidebarOpen: true,
   setSidebarOpen: (open) => set({ sidebarOpen: open }),
-  viewMode: "grid",
-  setViewMode: (mode) => set({ viewMode: mode }),
+  viewMode: (localStorage.getItem(VIEW_MODE_STORAGE_KEY) as "grid" | "list" | null) ?? "grid",
+  setViewMode: (mode) => {
+    localStorage.setItem(VIEW_MODE_STORAGE_KEY, mode);
+    set({ viewMode: mode });
+  },
 }));
 
 const THEME_STORAGE_KEY = "xon:activeTheme";
