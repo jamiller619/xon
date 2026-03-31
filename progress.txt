@@ -1,3 +1,20 @@
+## 2026-03-30 - US-098
+- Implemented HTTPS and reverse proxy configuration
+- Files changed: packages/server-core/drizzle/0027_https_settings.sql (new migration), packages/server-core/drizzle/meta/_journal.json, packages/server-core/src/schema.ts (added httpsEnabled, httpsCertPath, httpsKeyPath, acmeEnabled, acmeDomain, acmeEmail, acmeCertsDir, trustProxy columns to serverSettings), packages/server-core/src/httpsManager.ts (new: loadManualCerts, isCertFileValid, acquireAcmeCert), packages/server-core/src/httpsManager.test.ts (12 tests), packages/server-core/src/routes/adminServerSettings.ts (extended with HTTPS/proxy fields), packages/server-core/src/routes/adminServerSettings.test.ts (6 new tests), packages/server-core/src/rateLimitMiddleware.ts (trustProxy check before reading X-Forwarded-For), packages/server-core/src/app.ts (added proxy middleware for X-Forwarded-Proto pass-through), packages/server-core/src/server.ts (HTTPS support via createServer + ACME cert acquisition at boot), apps/web/src/pages/AdminNetworkSettings.tsx (new admin page), apps/web/src/pages/AdminNetworkSettings.module.css, apps/web/src/App.tsx (route /admin/network)
+- `httpsManager.ts`: `loadManualCerts(certPath, keyPath)` reads PEM cert+key; `isCertFileValid(certPath)` checks file age < 60 days; `acquireAcmeCert(opts)` handles full ACME HTTP-01 flow via `acme-client` v5 with temporary challenge server
+- `server.ts`: reads DB settings at boot, uses `createServer: createHttpsServer` with cert+key when HTTPS is enabled; ACME certs acquired before server starts
+- Rate limit middleware: only reads `X-Forwarded-For` when `trustProxy=true`; otherwise uses `"unknown"` as IP (prevents IP spoofing when not behind a proxy)
+- App.ts proxy middleware: when `trustProxy=true`, echoes `X-Forwarded-Proto` in response and sets clientIp context variable
+- Admin UI `/admin/network`: sections for Manual Certificate, Let's Encrypt ACME, and Reverse Proxy trust
+- 859 tests passing; biome clean; typecheck clean (pre-existing errors in plugin packages only)
+- **Learnings for future iterations:**
+  - `acme-client` v5 API: `acme.crypto.createPrivateKey()` (not `createPrivateRsaKey()`); `createCsr({ commonName })` returns `[domainKey, csr]` tuple; `client.auto()` returns cert PEM string
+  - ACME cert validity check: use `stat(certPath).mtimeMs` to check file age — simpler than ASN.1 parsing; 60-day threshold = renew before 90-day Let's Encrypt expiry
+  - `@hono/node-server` HTTPS: pass `createServer: createHttpsServer` and `serverOptions: { cert, key }` to `serve()`
+  - trustProxy security: ONLY read X-Forwarded-For when explicitly configured — default `"unknown"` prevents rate limit bypass when spoofed headers
+  - acme-client package.json entry is `"main"` not `"exports"` — works with NodeNext ESM via the `default` export
+---
+
 ## 2026-03-30 - US-097
 - Implemented CORS and rate limiting configuration with admin settings UI
 - Files changed: packages/server-core/src/schema.ts (added serverSettings table), packages/server-core/drizzle/0026_server_settings.sql (migration + default row INSERT), packages/server-core/drizzle/meta/_journal.json (added entry idx 26), packages/server-core/src/rateLimitMiddleware.ts (new: per-db in-memory rate limiter), packages/server-core/src/routes/adminServerSettings.ts (new: GET/PUT /admin/server-settings), packages/server-core/src/routes/adminServerSettings.test.ts (18 tests), packages/server-core/src/app.ts (wired CORS middleware + rate limit middlewares)
