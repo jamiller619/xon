@@ -1,3 +1,18 @@
+## 2026-03-30 - US-101
+- Implemented OpenAPI 3.1 spec and Swagger UI docs endpoint
+- Files changed: packages/server-core/src/routes/docs.ts (new: makeDocsRouter with GET /docs and GET /docs/openapi.json), packages/server-core/src/routes/docs.test.ts (7 tests), packages/server-core/src/app.ts (registered docs router, added docs import), packages/server-core/src/authMiddleware.ts (exempted /api/v1/docs and /api/v1/docs/* from auth)
+- `makeDocsRouter()`: Hono sub-router with two routes — `GET /` returns CDN-hosted Swagger UI HTML; `GET /openapi.json` returns the OpenAPI 3.1 spec as JSON
+- OpenAPI spec is a comprehensive hand-crafted TypeScript object (`OPENAPI_SPEC`) covering all major API groups: Auth, Libraries, Media, Search, Groups, Users, Sync, Admin (Users/Backup/Server Settings/Plugins)
+- Swagger UI served via cdn.jsdelivr.net (swagger-ui-dist@5) — no npm package needed; `persistAuthorization: true` lets users keep their JWT across page reloads
+- Docs exempted from auth middleware alongside /api/v1/health — allows unauthenticated developers to browse the API
+- 879 tests passing; biome clean; typecheck clean
+- **Learnings for future iterations:**
+  - OpenAPI 3.1 spec can be hand-crafted as a plain TypeScript `const` — no special library needed; `c.json(SPEC)` serves it with correct content-type
+  - Swagger UI CDN: `https://cdn.jsdelivr.net/npm/swagger-ui-dist@5/swagger-ui.css` and `swagger-ui-bundle.js`; initialize with `SwaggerUIBundle({ url, dom_id, presets, deepLinking, persistAuthorization })`
+  - Auth middleware exemption: add path checks alongside existing /api/v1/health — use `path.startsWith("/api/v1/docs/")` for the JSON sub-path
+  - `c.html(htmlString)` in Hono returns a response with `Content-Type: text/html`
+---
+
 ## 2026-03-30 - US-100
 - Implemented consistent input validation across all API endpoints
 - Files changed: packages/server-core/src/validate.ts (new validate() wrapper), packages/server-core/src/validate.test.ts (6 tests), packages/shared/src/schemas.ts (paginationSchema + sortOrderSchema), packages/shared/src/index.ts (export schemas), packages/shared/package.json (added zod dep), all 16 route files in src/routes/ (replaced zValidator imports/calls with validate()), packages/server-core/src/routes/libraries.ts (added query validation for /:libraryId/media), packages/server-core/src/routes/search.ts (added query validation for search endpoint)
