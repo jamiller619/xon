@@ -1,15 +1,22 @@
-import { useEffect, useState } from "react";
+import { Suspense, lazy, useEffect, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { apiFetch } from "../apiFetch.js";
-import ArchiveViewer from "../components/ArchiveViewer.js";
-import EpubViewer from "../components/EpubViewer.js";
-import FontViewer from "../components/FontViewer.js";
-import ImageViewer, { type ImageSibling } from "../components/ImageViewer.js";
-import PdfViewer from "../components/PdfViewer.js";
 import PluginSlot from "../components/PluginSlot.js";
-import VideoPlayer from "../components/VideoPlayer.js";
 import { useAudioStore } from "../store/index";
 import styles from "./MediaDetail.module.css";
+
+// Player/viewer components loaded on demand — separate JS chunks
+const ArchiveViewer = lazy(() => import("../components/ArchiveViewer.js"));
+const EpubViewer = lazy(() => import("../components/EpubViewer.js"));
+const FontViewer = lazy(() => import("../components/FontViewer.js"));
+const ImageViewer = lazy(() => import("../components/ImageViewer.js"));
+const PdfViewer = lazy(() => import("../components/PdfViewer.js"));
+const VideoPlayer = lazy(() => import("../components/VideoPlayer.js"));
+
+interface ImageSibling {
+  id: string;
+  title: string;
+}
 
 interface MediaDetailItem {
   id: string;
@@ -289,40 +296,50 @@ export default function MediaDetail() {
   return (
     <div className={styles.page ?? ""}>
       {showImageViewer && id && (
-        <ImageViewer
-          mediaId={id}
-          title={item.title ?? item.fileName}
-          onClose={() => setShowImageViewer(false)}
-          {...(imageSiblings.length > 1 ? { siblings: imageSiblings } : {})}
-        />
+        <Suspense fallback={null}>
+          <ImageViewer
+            mediaId={id}
+            title={item.title ?? item.fileName}
+            onClose={() => setShowImageViewer(false)}
+            {...(imageSiblings.length > 1 ? { siblings: imageSiblings } : {})}
+          />
+        </Suspense>
       )}
       {showPdfViewer && id && (
-        <PdfViewer
-          mediaId={id}
-          title={item.title ?? item.fileName}
-          onClose={() => setShowPdfViewer(false)}
-        />
+        <Suspense fallback={null}>
+          <PdfViewer
+            mediaId={id}
+            title={item.title ?? item.fileName}
+            onClose={() => setShowPdfViewer(false)}
+          />
+        </Suspense>
       )}
       {showEpubViewer && id && (
-        <EpubViewer
-          mediaId={id}
-          title={item.title ?? item.fileName}
-          onClose={() => setShowEpubViewer(false)}
-        />
+        <Suspense fallback={null}>
+          <EpubViewer
+            mediaId={id}
+            title={item.title ?? item.fileName}
+            onClose={() => setShowEpubViewer(false)}
+          />
+        </Suspense>
       )}
       {showFontViewer && id && (
-        <FontViewer
-          mediaId={id}
-          title={item.title ?? item.fileName}
-          onClose={() => setShowFontViewer(false)}
-        />
+        <Suspense fallback={null}>
+          <FontViewer
+            mediaId={id}
+            title={item.title ?? item.fileName}
+            onClose={() => setShowFontViewer(false)}
+          />
+        </Suspense>
       )}
       {showArchiveViewer && id && (
-        <ArchiveViewer
-          mediaId={id}
-          title={item.title ?? item.fileName}
-          onClose={() => setShowArchiveViewer(false)}
-        />
+        <Suspense fallback={null}>
+          <ArchiveViewer
+            mediaId={id}
+            title={item.title ?? item.fileName}
+            onClose={() => setShowArchiveViewer(false)}
+          />
+        </Suspense>
       )}
       <div className={styles.breadcrumb ?? ""}>
         <Link to="/" className={styles.breadcrumbLink ?? ""}>
@@ -336,11 +353,13 @@ export default function MediaDetail() {
         {/* Video player, image viewer trigger, or poster */}
         <div className={styles.poster ?? ""}>
           {showPlayer && id ? (
-            <VideoPlayer
-              mediaId={id}
-              {...(item.mimeType ? { mimeType: item.mimeType } : {})}
-              onClose={() => setShowPlayer(false)}
-            />
+            <Suspense fallback={null}>
+              <VideoPlayer
+                mediaId={id}
+                {...(item.mimeType ? { mimeType: item.mimeType } : {})}
+                onClose={() => setShowPlayer(false)}
+              />
+            </Suspense>
           ) : (
             <>
               {item.drmProtected && (
@@ -352,6 +371,7 @@ export default function MediaDetail() {
                 <img
                   src={item.thumbnailUrls.large}
                   alt={item.title ?? item.fileName}
+                  loading="lazy"
                   className={`${styles.posterImg ?? ""} ${isImage && !item.drmProtected ? (styles.posterImgClickable ?? "") : ""}`}
                   onClick={
                     isImage && !item.drmProtected ? () => setShowImageViewer(true) : undefined

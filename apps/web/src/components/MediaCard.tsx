@@ -96,7 +96,12 @@ export default function MediaCard({
               className={`${styles.listThumbLink ?? ""} ${item.drmProtected ? (styles.listThumbDrm ?? "") : ""}`}
             >
               {item.thumbnailUrls ? (
-                <img src={item.thumbnailUrls.small} alt="" className={styles.listThumbImg ?? ""} />
+                <img
+                  src={item.thumbnailUrls.small}
+                  alt=""
+                  loading="lazy"
+                  className={styles.listThumbImg ?? ""}
+                />
               ) : (
                 <div className={styles.listThumbPlaceholder ?? ""}>{isAudio ? "♪" : "▶"}</div>
               )}
@@ -108,7 +113,12 @@ export default function MediaCard({
               className={`${styles.listThumbLink ?? ""} ${item.drmProtected ? (styles.listThumbDrm ?? "") : ""}`}
             >
               {item.thumbnailUrls ? (
-                <img src={item.thumbnailUrls.small} alt="" className={styles.listThumbImg ?? ""} />
+                <img
+                  src={item.thumbnailUrls.small}
+                  alt=""
+                  loading="lazy"
+                  className={styles.listThumbImg ?? ""}
+                />
               ) : (
                 <div className={styles.listThumbPlaceholder ?? ""}>{isAudio ? "♪" : "▶"}</div>
               )}
@@ -156,7 +166,12 @@ export default function MediaCard({
     <>
       <div className={styles.thumb ?? ""}>
         {item.thumbnailUrls ? (
-          <img src={item.thumbnailUrls.medium} alt={item.title} className={styles.thumbImg ?? ""} />
+          <img
+            src={item.thumbnailUrls.medium}
+            alt={item.title}
+            loading="lazy"
+            className={styles.thumbImg ?? ""}
+          />
         ) : (
           <div className={styles.thumbPlaceholder ?? ""}>
             <span>{isAudio ? "♪" : "▶"}</span>
