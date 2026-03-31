@@ -1,5 +1,6 @@
 import { DEFAULT_PORT } from "@xon/shared";
 import { Menu, Tray, app, nativeImage, shell } from "electron";
+import type { NotificationManager, NotificationType } from "./notifications.js";
 
 export type ServerStatus = "running" | "scanning" | "error";
 
@@ -35,12 +36,19 @@ function formatUptime(bootTime: Date): string {
   return `${s}s`;
 }
 
+const NOTIFICATION_LABELS: Record<NotificationType, string> = {
+  "scan:complete": "Scan Complete",
+  "media:added": "New Media Detected",
+  "backup:complete": "Backup Complete",
+  error: "Errors",
+};
+
 export interface TrayHandle {
   updateStatus(status: ServerStatus, activeUsers?: number, scanState?: string): void;
   destroy(): void;
 }
 
-export function createTray(): TrayHandle {
+export function createTray(notificationManager?: NotificationManager): TrayHandle {
   const port = Number(process.env.PORT ?? DEFAULT_PORT);
   const bootTime = new Date();
   let status: ServerStatus = "running";
@@ -87,6 +95,25 @@ export function createTray(): TrayHandle {
           checked: isAutoStartEnabled(),
           click: () => toggleAutoStart(),
         },
+        ...(notificationManager
+          ? [
+              { type: "separator" as const },
+              {
+                label: "Notifications",
+                submenu: (Object.entries(NOTIFICATION_LABELS) as [NotificationType, string][]).map(
+                  ([type, label]) => ({
+                    label,
+                    type: "checkbox" as const,
+                    checked: notificationManager.getPrefs()[type],
+                    click: () => {
+                      notificationManager.setPref(type, !notificationManager.getPrefs()[type]);
+                      refresh();
+                    },
+                  })
+                ),
+              },
+            ]
+          : []),
         { type: "separator" },
         {
           label: "Quit",
