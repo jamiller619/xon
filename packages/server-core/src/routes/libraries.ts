@@ -4,7 +4,7 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { Hono } from 'hono';
 import { z } from 'zod';
 import { appCache, computeETag } from '../cache.js';
-import { requireRole } from '../rbac.js';
+import { requireRole } from '../auth/rbac.js';
 import {
   dataSources,
   getAllowedRatings,
@@ -12,8 +12,8 @@ import {
   libraryAccess,
   mediaItems,
   users,
-} from '../schema.js';
-import { validate } from '../validate.js';
+} from '../db/schema.js';
+import { validate } from '../http/validate.js';
 import { withThumbnailUrls } from './media.js';
 import { makeScanRouter } from './scan.js';
 import { makeSourcesRouter } from './sources.js';

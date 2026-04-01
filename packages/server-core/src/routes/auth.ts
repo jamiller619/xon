@@ -4,9 +4,9 @@ import { Hono } from 'hono';
 import { deleteCookie, getCookie, setCookie } from 'hono/cookie';
 import { sign, verify } from 'hono/jwt';
 import { z } from 'zod';
-import { hashPassword, verifyPassword } from '../password.js';
-import { refreshTokens, users } from '../schema.js';
-import { validate } from '../validate.js';
+import { hashPassword, verifyPassword } from '../auth/password.js';
+import { refreshTokens, users } from '../db/schema.js';
+import { validate } from '../http/validate.js';
 
 const REFRESH_COOKIE_NAME = 'rt';
 

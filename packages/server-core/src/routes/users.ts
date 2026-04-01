@@ -3,7 +3,7 @@ import { and, desc, eq, isNull, or } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { hashPassword, verifyPassword } from '../password.js';
+import { hashPassword, verifyPassword } from '../auth/password.js';
 import {
   apiTokens,
   favorites,
@@ -11,8 +11,8 @@ import {
   mediaProgress,
   users,
   watchlist,
-} from '../schema.js';
-import { validate } from '../validate.js';
+} from '../db/schema.js';
+import { validate } from '../http/validate.js';
 import { withThumbnailUrls } from './media.js';
 
 export function hashApiToken(token: string): string {

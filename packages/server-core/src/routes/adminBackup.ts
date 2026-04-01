@@ -4,7 +4,7 @@ import { deflateRawSync, inflateRawSync } from 'node:zlib';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { Hono } from 'hono';
 import { emitEvent } from '../events.js';
-import { registry } from '../pluginManager.js';
+import { registry } from '../plugins/pluginManager.js';
 
 const BACKUP_VERSION = '1';
 const XON_VERSION = '0.0.1';

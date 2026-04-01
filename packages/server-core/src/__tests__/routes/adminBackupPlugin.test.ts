@@ -13,9 +13,9 @@ import { createApp } from '../../app.js';
 import {
   _resetBackupTargetPluginRegistry,
   registerBackupTargetPlugin,
-} from '../../backupTargetPluginRegistry.js';
-import { openDatabase } from '../../db.js';
-import { migrateDatabase } from '../../migrate.js';
+} from '../../plugins/backupTargetPluginRegistry.js';
+import { openDatabase } from '../../db/db.js';
+import { migrateDatabase } from '../../db/migrate.js';
 import {
   backupFileState,
   backupJobs,
@@ -24,7 +24,7 @@ import {
   dataSources,
   libraries,
   mediaItems,
-} from '../../schema.js';
+} from '../../db/schema.js';
 import { runMediaBackupJob } from '../../routes/adminBackupMedia.js';
 import { runBackupToTarget } from '../../routes/adminBackupTargets.js';
 import { runVerifyJob } from '../../routes/adminBackupVerify.js';

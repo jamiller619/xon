@@ -2,11 +2,11 @@ import type { Client } from '@libsql/client';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../../app.js';
-import { openDatabase } from '../../db.js';
-import { migrateDatabase } from '../../migrate.js';
-import { hashPassword } from '../../password.js';
+import { openDatabase } from '../../db/db.js';
+import { migrateDatabase } from '../../db/migrate.js';
+import { hashPassword } from '../../auth/password.js';
 import { signAccessToken } from '../../routes/auth.js';
-import { apiTokens, users } from '../../schema.js';
+import { apiTokens, users } from '../../db/schema.js';
 
 const AUTH = `Bearer ${await signAccessToken('user-1', 'testuser', 'user')}`;
 

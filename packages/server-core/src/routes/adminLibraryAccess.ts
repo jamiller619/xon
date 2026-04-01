@@ -2,8 +2,8 @@ import { and, eq } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { libraries, libraryAccess, users } from '../schema.js';
-import { validate } from '../validate.js';
+import { libraries, libraryAccess, users } from '../db/schema.js';
+import { validate } from '../http/validate.js';
 
 const grantSchema = z.object({
   userId: z.string().min(1),

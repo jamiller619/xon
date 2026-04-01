@@ -3,9 +3,9 @@ import type { Client } from '@libsql/client';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../../app.js';
-import { openDatabase } from '../../db.js';
-import { migrateDatabase } from '../../migrate.js';
-import { syncProfiles, syncRuns } from '../../schema.js';
+import { openDatabase } from '../../db/db.js';
+import { migrateDatabase } from '../../db/migrate.js';
+import { syncProfiles, syncRuns } from '../../db/schema.js';
 import { signAccessToken } from '../../routes/auth.js';
 
 vi.mock('node:fs/promises', () => ({

@@ -2,9 +2,9 @@ import { and, asc, eq, inArray } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { requireRole } from '../rbac.js';
-import { groupMembers, groups, libraryAccess, mediaItems } from '../schema.js';
-import { validate } from '../validate.js';
+import { requireRole } from '../auth/rbac.js';
+import { groupMembers, groups, libraryAccess, mediaItems } from '../db/schema.js';
+import { validate } from '../http/validate.js';
 
 const PRIVILEGED_ROLES = ['admin', 'manager'] as const;
 

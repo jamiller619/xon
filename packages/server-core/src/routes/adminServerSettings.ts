@@ -2,8 +2,8 @@ import { eq } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { serverSettings } from '../schema.js';
-import { validate } from '../validate.js';
+import { serverSettings } from '../db/schema.js';
+import { validate } from '../http/validate.js';
 
 const SERVER_SETTINGS_ID = 'default';
 

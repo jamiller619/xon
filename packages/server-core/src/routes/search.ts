@@ -2,8 +2,8 @@ import { type SQL, eq, sql } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { getAllowedRatings, libraryAccess, users } from '../schema.js';
-import { validate } from '../validate.js';
+import { getAllowedRatings, libraryAccess, users } from '../db/schema.js';
+import { validate } from '../http/validate.js';
 
 const searchQuerySchema = z.object({
   q: z.string().trim().min(1, 'q is required'),

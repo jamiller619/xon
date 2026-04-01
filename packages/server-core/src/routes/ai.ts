@@ -2,19 +2,19 @@ import { and, desc, eq, gte, inArray } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { scanLibraryForDuplicates } from '../perceptualHash.js';
+import { scanLibraryForDuplicates } from '../media/perceptualHash.js';
 import {
   duplicateCandidates,
   libraries,
   libraryAccess,
   mediaItems,
   suggestedGroups,
-} from '../schema.js';
+} from '../db/schema.js';
 import {
   acceptSuggestedGroup,
   scanLibraryForSmartGroups,
-} from '../smartGrouping.js';
-import { validate } from '../validate.js';
+} from '../media/smartGrouping.js';
+import { validate } from '../http/validate.js';
 import { withThumbnailUrls } from './media.js';
 
 const PRIVILEGED_ROLES = ['admin', 'manager'] as const;

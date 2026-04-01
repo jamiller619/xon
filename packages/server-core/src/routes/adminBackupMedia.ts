@@ -4,16 +4,16 @@ import { and, desc, eq, inArray } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { applyRetentionPolicy } from '../backupScheduler.js';
-import { getBackupTargetPlugin } from '../backupTargetPluginRegistry.js';
+import { applyRetentionPolicy } from '../scanner/backupScheduler.js';
+import { getBackupTargetPlugin } from '../plugins/backupTargetPluginRegistry.js';
 import { emitEvent } from '../events.js';
 import {
   backupFileState,
   backupJobs,
   backupTargets,
   mediaItems,
-} from '../schema.js';
-import { validate } from '../validate.js';
+} from '../db/schema.js';
+import { validate } from '../http/validate.js';
 import {
   localConfigSchema,
   networkConfigSchema,

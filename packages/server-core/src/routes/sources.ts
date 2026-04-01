@@ -3,9 +3,9 @@ import { and, eq } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { requireRole } from '../rbac.js';
-import { dataSources, libraries } from '../schema.js';
-import { validate } from '../validate.js';
+import { requireRole } from '../auth/rbac.js';
+import { dataSources, libraries } from '../db/schema.js';
+import { validate } from '../http/validate.js';
 
 const createSourceSchema = z.object({
   type: z.enum(['local', 'network', 'plugin']),

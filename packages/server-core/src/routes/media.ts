@@ -8,12 +8,12 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { Hono } from 'hono';
 import { parse as parseFont } from 'opentype.js';
 import { z } from 'zod';
-import { listArchiveContents } from '../archive.js';
+import { listArchiveContents } from '../media/archive.js';
 import { computeETag } from '../cache.js';
-import { extractFfprobeMetadata, extractStreamTracks } from '../ffprobe.js';
-import { convertMobiToEpub } from '../mobi.js';
-import { convertRawToJpeg, isRawImage } from '../raw.js';
-import type { MediaItem } from '../schema.js';
+import { extractFfprobeMetadata, extractStreamTracks } from '../media/ffprobe.js';
+import { convertMobiToEpub } from '../media/mobi.js';
+import { convertRawToJpeg, isRawImage } from '../media/raw.js';
+import type { MediaItem } from '../db/schema.js';
 import {
   favorites,
   getAllowedRatings,
@@ -25,14 +25,14 @@ import {
   readingPositions,
   users,
   watchlist,
-} from '../schema.js';
-import type { ThumbnailPaths } from '../thumbnails.js';
+} from '../db/schema.js';
+import type { ThumbnailPaths } from '../media/thumbnails.js';
 import {
   generateHlsPlaylist,
   needsTranscoding,
   spawnTranscodeSegment,
-} from '../transcode.js';
-import { validate } from '../validate.js';
+} from '../media/transcode.js';
+import { validate } from '../http/validate.js';
 
 const VALID_SIZES = ['small', 'medium', 'large'] as const;
 type ThumbnailSize = (typeof VALID_SIZES)[number];

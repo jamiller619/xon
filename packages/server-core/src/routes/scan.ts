@@ -4,13 +4,13 @@ import { Hono } from 'hono';
 import { z } from 'zod';
 import { appCache } from '../cache.js';
 import { emitEvent } from '../events.js';
-import { scanLibrary } from '../orchestrator.js';
-import { emitPluginEvent } from '../pluginManager.js';
-import { requireRole } from '../rbac.js';
-import { type ScanState, scanRegistry } from '../scanRegistry.js';
-import { parseCronInterval } from '../scheduler.js';
-import { libraries } from '../schema.js';
-import { validate } from '../validate.js';
+import { scanLibrary } from '../scanner/orchestrator.js';
+import { emitPluginEvent } from '../plugins/pluginManager.js';
+import { requireRole } from '../auth/rbac.js';
+import { type ScanState, scanRegistry } from '../scanner/scanRegistry.js';
+import { parseCronInterval } from '../scanner/scheduler.js';
+import { libraries } from '../db/schema.js';
+import { validate } from '../http/validate.js';
 
 const scheduleSchema = z.object({
   scanSchedule: z

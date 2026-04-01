@@ -2,11 +2,11 @@ import { eq } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import { makeAuthMiddleware } from './authMiddleware.js';
-import { onError, onNotFound } from './errorMiddleware.js';
-import { pluginRouteDispatcher } from './pluginRoutes.js';
-import { makeRateLimitMiddleware } from './rateLimitMiddleware.js';
-import { requireRole } from './rbac.js';
+import { makeAuthMiddleware } from './auth/authMiddleware.js';
+import { onError, onNotFound } from './http/errorMiddleware.js';
+import { pluginRouteDispatcher } from './plugins/pluginRoutes.js';
+import { makeRateLimitMiddleware } from './http/rateLimitMiddleware.js';
+import { requireRole } from './auth/rbac.js';
 import { makeAdminAiSettingsRouter } from './routes/adminAiSettings.js';
 import {
   makeAdminBackupRouter,
@@ -33,8 +33,8 @@ import { makeSearchRouter } from './routes/search.js';
 import { makeSyncRouter } from './routes/sync.js';
 import { makeThemesRouter } from './routes/themes.js';
 import { makeUsersRouter } from './routes/users.js';
-import { serverSettings } from './schema.js';
-import { makeSecurityHeadersMiddleware } from './securityHeadersMiddleware.js';
+import { serverSettings } from './db/schema.js';
+import { makeSecurityHeadersMiddleware } from './http/securityHeadersMiddleware.js';
 
 const SERVER_SETTINGS_ID = 'default';
 

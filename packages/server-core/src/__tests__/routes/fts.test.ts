@@ -1,9 +1,9 @@
 import type { Client } from '@libsql/client';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { openDatabase } from '../../db.js';
-import { migrateDatabase } from '../../migrate.js';
-import { dataSources, libraries, mediaItems } from '../../schema.js';
+import { openDatabase } from '../../db/db.js';
+import { migrateDatabase } from '../../db/migrate.js';
+import { dataSources, libraries, mediaItems } from '../../db/schema.js';
 
 describe('FTS5 full-text search index', () => {
   let client: Client;

@@ -2,8 +2,8 @@ import { createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { beforeEach, describe, expect, it } from 'vitest';
-import { migrateDatabase } from '../migrate.js';
-import { users } from '../schema.js';
+import { migrateDatabase } from '../db/migrate.js';
+import { users } from '../db/schema.js';
 import { ensureAdminUser } from '../userInit.js';
 
 describe('ensureAdminUser', () => {

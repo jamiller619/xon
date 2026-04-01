@@ -2,8 +2,8 @@ import { and, asc, eq, inArray, sql } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { libraryAccess, matchingQueue, mediaItems } from '../schema.js';
-import { validate } from '../validate.js';
+import { libraryAccess, matchingQueue, mediaItems } from '../db/schema.js';
+import { validate } from '../http/validate.js';
 import { withThumbnailUrls } from './media.js';
 
 const PRIVILEGED_ROLES = ['admin', 'manager'] as const;
