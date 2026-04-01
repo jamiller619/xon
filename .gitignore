@@ -14,3 +14,5 @@ build/
 
 .data/
 prd.json
+
+*.db
