@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from "react";
-import { apiFetch } from "../apiFetch.js";
-import styles from "./AdminNetworkSettings.module.css";
+import { useCallback, useEffect, useState } from 'react';
+import { apiFetch } from '../apiFetch.js';
+import styles from './AdminNetworkSettings.module.css';
 
 interface NetworkSettingsData {
   httpsEnabled: boolean;
@@ -27,45 +27,45 @@ const DEFAULT_SETTINGS: NetworkSettingsData = {
 export default function AdminNetworkSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState("");
-  const [success, setSuccess] = useState("");
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
 
   const [httpsEnabled, setHttpsEnabled] = useState(false);
-  const [httpsCertPath, setHttpsCertPath] = useState("");
-  const [httpsKeyPath, setHttpsKeyPath] = useState("");
+  const [httpsCertPath, setHttpsCertPath] = useState('');
+  const [httpsKeyPath, setHttpsKeyPath] = useState('');
   const [acmeEnabled, setAcmeEnabled] = useState(false);
-  const [acmeDomain, setAcmeDomain] = useState("");
-  const [acmeEmail, setAcmeEmail] = useState("");
-  const [acmeCertsDir, setAcmeCertsDir] = useState("");
+  const [acmeDomain, setAcmeDomain] = useState('');
+  const [acmeEmail, setAcmeEmail] = useState('');
+  const [acmeCertsDir, setAcmeCertsDir] = useState('');
   const [trustProxy, setTrustProxy] = useState(false);
 
   const applySettings = useCallback((data: NetworkSettingsData) => {
     setHttpsEnabled(data.httpsEnabled);
-    setHttpsCertPath(data.httpsCertPath ?? "");
-    setHttpsKeyPath(data.httpsKeyPath ?? "");
+    setHttpsCertPath(data.httpsCertPath ?? '');
+    setHttpsKeyPath(data.httpsKeyPath ?? '');
     setAcmeEnabled(data.acmeEnabled);
-    setAcmeDomain(data.acmeDomain ?? "");
-    setAcmeEmail(data.acmeEmail ?? "");
-    setAcmeCertsDir(data.acmeCertsDir ?? "");
+    setAcmeDomain(data.acmeDomain ?? '');
+    setAcmeEmail(data.acmeEmail ?? '');
+    setAcmeCertsDir(data.acmeCertsDir ?? '');
     setTrustProxy(data.trustProxy);
   }, []);
 
   useEffect(() => {
     setLoading(true);
-    apiFetch("/api/v1/admin/server-settings")
+    apiFetch('/api/v1/admin/server-settings')
       .then((r) => r.json() as Promise<NetworkSettingsData>)
       .then((data) => {
         applySettings(data);
       })
-      .catch(() => setError("Failed to load network settings"))
+      .catch(() => setError('Failed to load network settings'))
       .finally(() => setLoading(false));
   }, [applySettings]);
 
   async function handleSave(e: React.FormEvent) {
     e.preventDefault();
     setSaving(true);
-    setError("");
-    setSuccess("");
+    setError('');
+    setSuccess('');
 
     const body: Record<string, unknown> = {
       httpsEnabled,
@@ -79,22 +79,26 @@ export default function AdminNetworkSettings() {
     };
 
     try {
-      const res = await apiFetch("/api/v1/admin/server-settings", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+      const res = await apiFetch('/api/v1/admin/server-settings', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       });
       if (!res.ok) {
-        const errBody = (await res.json().catch(() => ({}))) as { error?: string };
-        setError(errBody.error ?? "Failed to save settings");
+        const errBody = (await res.json().catch(() => ({}))) as {
+          error?: string;
+        };
+        setError(errBody.error ?? 'Failed to save settings');
       } else {
         const data = (await res.json()) as NetworkSettingsData;
         applySettings(data);
-        setSuccess("Settings saved. Restart the server to apply HTTPS changes.");
-        setTimeout(() => setSuccess(""), 5000);
+        setSuccess(
+          'Settings saved. Restart the server to apply HTTPS changes.',
+        );
+        setTimeout(() => setSuccess(''), 5000);
       }
     } catch {
-      setError("Failed to save settings");
+      setError('Failed to save settings');
     } finally {
       setSaving(false);
     }
@@ -102,23 +106,23 @@ export default function AdminNetworkSettings() {
 
   if (loading) {
     return (
-      <div className={styles.page ?? ""}>
-        <p className={styles.loading ?? ""}>Loading...</p>
+      <div className={styles.page ?? ''}>
+        <p className={styles.loading ?? ''}>Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className={styles.page ?? ""}>
-      <div className={styles.header ?? ""}>
-        <h1 className={styles.heading ?? ""}>Network &amp; Security</h1>
+    <div className={styles.page ?? ''}>
+      <div className={styles.header ?? ''}>
+        <h1 className={styles.heading ?? ''}>Network &amp; Security</h1>
       </div>
 
       <form onSubmit={handleSave}>
         {/* HTTPS section */}
-        <section className={styles.section ?? ""}>
-          <h2 className={styles.sectionHeading ?? ""}>HTTPS</h2>
-          <label className={styles.toggle ?? ""}>
+        <section className={styles.section ?? ''}>
+          <h2 className={styles.sectionHeading ?? ''}>HTTPS</h2>
+          <label className={styles.toggle ?? ''}>
             <input
               type="checkbox"
               checked={httpsEnabled}
@@ -128,29 +132,30 @@ export default function AdminNetworkSettings() {
           </label>
 
           {httpsEnabled && (
-            <div className={styles.subsection ?? ""}>
+            <div className={styles.subsection ?? ''}>
               {/* Manual certificate */}
-              <h3 className={styles.subHeading ?? ""}>Manual Certificate</h3>
-              <p className={styles.hint ?? ""}>
-                Provide paths to your own TLS certificate and private key (PEM format).
+              <h3 className={styles.subHeading ?? ''}>Manual Certificate</h3>
+              <p className={styles.hint ?? ''}>
+                Provide paths to your own TLS certificate and private key (PEM
+                format).
               </p>
-              <div className={styles.fieldGroup ?? ""}>
-                <label className={styles.fieldLabel ?? ""}>
+              <div className={styles.fieldGroup ?? ''}>
+                <label className={styles.fieldLabel ?? ''}>
                   Certificate file path
                   <input
                     type="text"
-                    className={`${styles.input ?? ""} ${acmeEnabled ? (styles.disabled ?? "") : ""}`}
+                    className={`${styles.input ?? ''} ${acmeEnabled ? (styles.disabled ?? '') : ''}`}
                     value={httpsCertPath}
                     onChange={(e) => setHttpsCertPath(e.target.value)}
                     placeholder="/etc/ssl/cert.pem"
                     disabled={acmeEnabled}
                   />
                 </label>
-                <label className={styles.fieldLabel ?? ""}>
+                <label className={styles.fieldLabel ?? ''}>
                   Private key file path
                   <input
                     type="text"
-                    className={`${styles.input ?? ""} ${acmeEnabled ? (styles.disabled ?? "") : ""}`}
+                    className={`${styles.input ?? ''} ${acmeEnabled ? (styles.disabled ?? '') : ''}`}
                     value={httpsKeyPath}
                     onChange={(e) => setHttpsKeyPath(e.target.value)}
                     placeholder="/etc/ssl/key.pem"
@@ -160,12 +165,15 @@ export default function AdminNetworkSettings() {
               </div>
 
               {/* ACME / Let's Encrypt */}
-              <h3 className={styles.subHeading ?? ""}>Let&apos;s Encrypt (ACME)</h3>
-              <p className={styles.hint ?? ""}>
-                Automatically obtain and renew a free TLS certificate from Let&apos;s Encrypt.
-                Requires the server to be accessible on port 80 from the internet.
+              <h3 className={styles.subHeading ?? ''}>
+                Let&apos;s Encrypt (ACME)
+              </h3>
+              <p className={styles.hint ?? ''}>
+                Automatically obtain and renew a free TLS certificate from
+                Let&apos;s Encrypt. Requires the server to be accessible on port
+                80 from the internet.
               </p>
-              <label className={styles.toggle ?? ""}>
+              <label className={styles.toggle ?? ''}>
                 <input
                   type="checkbox"
                   checked={acmeEnabled}
@@ -175,34 +183,34 @@ export default function AdminNetworkSettings() {
               </label>
 
               {acmeEnabled && (
-                <div className={styles.fieldGroup ?? ""}>
-                  <label className={styles.fieldLabel ?? ""}>
+                <div className={styles.fieldGroup ?? ''}>
+                  <label className={styles.fieldLabel ?? ''}>
                     Domain name
                     <input
                       type="text"
-                      className={styles.input ?? ""}
+                      className={styles.input ?? ''}
                       value={acmeDomain}
                       onChange={(e) => setAcmeDomain(e.target.value)}
                       placeholder="media.example.com"
                       required
                     />
                   </label>
-                  <label className={styles.fieldLabel ?? ""}>
+                  <label className={styles.fieldLabel ?? ''}>
                     Email address
                     <input
                       type="email"
-                      className={styles.input ?? ""}
+                      className={styles.input ?? ''}
                       value={acmeEmail}
                       onChange={(e) => setAcmeEmail(e.target.value)}
                       placeholder="admin@example.com"
                       required
                     />
                   </label>
-                  <label className={styles.fieldLabel ?? ""}>
+                  <label className={styles.fieldLabel ?? ''}>
                     Certificate storage directory
                     <input
                       type="text"
-                      className={styles.input ?? ""}
+                      className={styles.input ?? ''}
                       value={acmeCertsDir}
                       onChange={(e) => setAcmeCertsDir(e.target.value)}
                       placeholder="./certs"
@@ -215,15 +223,16 @@ export default function AdminNetworkSettings() {
         </section>
 
         {/* Reverse proxy section */}
-        <section className={styles.section ?? ""}>
-          <h2 className={styles.sectionHeading ?? ""}>Reverse Proxy</h2>
-          <p className={styles.hint ?? ""}>
-            Enable this if Xon runs behind a reverse proxy (nginx, Caddy, Traefik, etc.). When
-            enabled, the real client IP is read from{" "}
-            <code className={styles.code ?? ""}>X-Forwarded-For</code> and the protocol from{" "}
-            <code className={styles.code ?? ""}>X-Forwarded-Proto</code>.
+        <section className={styles.section ?? ''}>
+          <h2 className={styles.sectionHeading ?? ''}>Reverse Proxy</h2>
+          <p className={styles.hint ?? ''}>
+            Enable this if Xon runs behind a reverse proxy (nginx, Caddy,
+            Traefik, etc.). When enabled, the real client IP is read from{' '}
+            <code className={styles.code ?? ''}>X-Forwarded-For</code> and the
+            protocol from{' '}
+            <code className={styles.code ?? ''}>X-Forwarded-Proto</code>.
           </p>
-          <label className={styles.toggle ?? ""}>
+          <label className={styles.toggle ?? ''}>
             <input
               type="checkbox"
               checked={trustProxy}
@@ -233,12 +242,16 @@ export default function AdminNetworkSettings() {
           </label>
         </section>
 
-        {error && <p className={styles.error ?? ""}>{error}</p>}
-        {success && <p className={styles.success ?? ""}>{success}</p>}
+        {error && <p className={styles.error ?? ''}>{error}</p>}
+        {success && <p className={styles.success ?? ''}>{success}</p>}
 
-        <div className={styles.actions ?? ""}>
-          <button type="submit" className={styles.saveBtn ?? ""} disabled={saving}>
-            {saving ? "Saving..." : "Save settings"}
+        <div className={styles.actions ?? ''}>
+          <button
+            type="submit"
+            className={styles.saveBtn ?? ''}
+            disabled={saving}
+          >
+            {saving ? 'Saving...' : 'Save settings'}
           </button>
         </div>
       </form>

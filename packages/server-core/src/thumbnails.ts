@@ -1,7 +1,7 @@
-import { mkdir } from "node:fs/promises";
-import { join } from "node:path";
-import sharp from "sharp";
-import { convertRawToJpeg, isRawImage } from "./raw.js";
+import { mkdir } from 'node:fs/promises';
+import { join } from 'node:path';
+import sharp from 'sharp';
+import { convertRawToJpeg, isRawImage } from './raw.js';
 
 export type ThumbnailPaths = {
   small: string;
@@ -18,9 +18,9 @@ const THUMBNAIL_SIZES = {
 export async function generateThumbnails(
   filePath: string,
   mediaItemId: string,
-  dataDir: string
+  dataDir: string,
 ): Promise<ThumbnailPaths | null> {
-  const thumbnailDir = join(dataDir, "thumbnails");
+  const thumbnailDir = join(dataDir, 'thumbnails');
   try {
     await mkdir(thumbnailDir, { recursive: true });
   } catch {
@@ -46,7 +46,7 @@ export async function generateThumbnails(
       img
         .clone()
         .resize(THUMBNAIL_SIZES.small, THUMBNAIL_SIZES.small, {
-          fit: "inside",
+          fit: 'inside',
           withoutEnlargement: true,
         })
         .jpeg({ quality: 80 })
@@ -54,7 +54,7 @@ export async function generateThumbnails(
       img
         .clone()
         .resize(THUMBNAIL_SIZES.medium, THUMBNAIL_SIZES.medium, {
-          fit: "inside",
+          fit: 'inside',
           withoutEnlargement: true,
         })
         .jpeg({ quality: 80 })
@@ -62,7 +62,7 @@ export async function generateThumbnails(
       img
         .clone()
         .resize(THUMBNAIL_SIZES.large, THUMBNAIL_SIZES.large, {
-          fit: "inside",
+          fit: 'inside',
           withoutEnlargement: true,
         })
         .jpeg({ quality: 80 })
@@ -70,7 +70,9 @@ export async function generateThumbnails(
     ]);
     return paths;
   } catch (err) {
-    console.error(`Thumbnail generation failed for ${filePath}: ${String(err)}`);
+    console.error(
+      `Thumbnail generation failed for ${filePath}: ${String(err)}`,
+    );
     return null;
   }
 }

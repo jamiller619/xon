@@ -1,5 +1,5 @@
-import { spawn } from "node:child_process";
-import { MediaCategory } from "@xon/shared";
+import { spawn } from 'node:child_process';
+import { MediaCategory } from '@xon/shared';
 
 const VIDEO_CATEGORIES = new Set<string>([
   MediaCategory.Movies,
@@ -27,7 +27,7 @@ export type FfprobeMetadata = {
 
 export type StreamTrack = {
   index: number;
-  codecType: "audio" | "subtitle";
+  codecType: 'audio' | 'subtitle';
   codec: string;
   language?: string;
   title?: string;
@@ -38,28 +38,30 @@ export function isAudioVideoCategory(category: string | null): boolean {
   return VIDEO_CATEGORIES.has(category) || AUDIO_CATEGORIES.has(category);
 }
 
-export async function extractStreamTracks(filePath: string): Promise<StreamTrack[]> {
+export async function extractStreamTracks(
+  filePath: string,
+): Promise<StreamTrack[]> {
   return new Promise((resolve) => {
-    let stdout = "";
+    let stdout = '';
 
-    const proc = spawn("ffprobe", [
-      "-v",
-      "quiet",
-      "-print_format",
-      "json",
-      "-show_streams",
+    const proc = spawn('ffprobe', [
+      '-v',
+      'quiet',
+      '-print_format',
+      'json',
+      '-show_streams',
       filePath,
     ]);
 
-    proc.stdout?.on("data", (chunk: Buffer) => {
+    proc.stdout?.on('data', (chunk: Buffer) => {
       stdout += chunk.toString();
     });
 
-    proc.on("error", () => {
+    proc.on('error', () => {
       resolve([]);
     });
 
-    proc.on("close", (code: number | null) => {
+    proc.on('close', (code: number | null) => {
       if (code !== 0) {
         resolve([]);
         return;
@@ -73,10 +75,13 @@ export async function extractStreamTracks(filePath: string): Promise<StreamTrack
 
         for (const stream of data.streams ?? []) {
           const codecType = stream.codec_type as string | undefined;
-          if (codecType !== "audio" && codecType !== "subtitle") continue;
+          if (codecType !== 'audio' && codecType !== 'subtitle') continue;
 
           const index = Number(stream.index);
-          const codec = typeof stream.codec_name === "string" ? stream.codec_name : "unknown";
+          const codec =
+            typeof stream.codec_name === 'string'
+              ? stream.codec_name
+              : 'unknown';
           const tags = stream.tags as Record<string, string> | undefined;
           const language = tags?.language;
           const title = tags?.title;
@@ -98,32 +103,36 @@ export async function extractStreamTracks(filePath: string): Promise<StreamTrack
   });
 }
 
-export async function extractFfprobeMetadata(filePath: string): Promise<FfprobeMetadata | null> {
+export async function extractFfprobeMetadata(
+  filePath: string,
+): Promise<FfprobeMetadata | null> {
   return new Promise((resolve) => {
-    let stdout = "";
+    let stdout = '';
 
-    const proc = spawn("ffprobe", [
-      "-v",
-      "quiet",
-      "-print_format",
-      "json",
-      "-show_streams",
-      "-show_format",
+    const proc = spawn('ffprobe', [
+      '-v',
+      'quiet',
+      '-print_format',
+      'json',
+      '-show_streams',
+      '-show_format',
       filePath,
     ]);
 
-    proc.stdout?.on("data", (chunk: Buffer) => {
+    proc.stdout?.on('data', (chunk: Buffer) => {
       stdout += chunk.toString();
     });
 
-    proc.on("error", (err: Error) => {
+    proc.on('error', (err: Error) => {
       console.error(`FFprobe not available: ${err.message}`);
       resolve(null);
     });
 
-    proc.on("close", (code: number | null) => {
+    proc.on('close', (code: number | null) => {
       if (code !== 0) {
-        console.error(`FFprobe exited with code ${String(code)} for ${filePath}`);
+        console.error(
+          `FFprobe exited with code ${String(code)} for ${filePath}`,
+        );
         resolve(null);
         return;
       }
@@ -145,17 +154,18 @@ export async function extractFfprobeMetadata(filePath: string): Promise<FfprobeM
 
         for (const stream of data.streams ?? []) {
           const codecType = stream.codec_type as string | undefined;
-          if (codecType === "video" && result.codec === undefined) {
+          if (codecType === 'video' && result.codec === undefined) {
             const codecName = stream.codec_name;
-            if (typeof codecName === "string") result.codec = codecName;
+            if (typeof codecName === 'string') result.codec = codecName;
             const w = Number(stream.width);
             const h = Number(stream.height);
             if (w > 0 && h > 0) {
               result.resolution = { width: w, height: h };
             }
-          } else if (codecType === "audio" && result.audioCodec === undefined) {
+          } else if (codecType === 'audio' && result.audioCodec === undefined) {
             const audioCodecName = stream.codec_name;
-            if (typeof audioCodecName === "string") result.audioCodec = audioCodecName;
+            if (typeof audioCodecName === 'string')
+              result.audioCodec = audioCodecName;
             const sr = Number(stream.sample_rate);
             if (sr > 0) result.sampleRate = sr;
             const ch = Number(stream.channels);

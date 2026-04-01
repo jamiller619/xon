@@ -1,4 +1,4 @@
-import { createHash } from "node:crypto";
+import { createHash } from 'node:crypto';
 
 interface CacheEntry<T> {
   value: T;
@@ -57,5 +57,5 @@ export const appCache = new InMemoryCache();
  */
 export function computeETag(data: unknown): string {
   const json = JSON.stringify(data);
-  return `"${createHash("sha1").update(json).digest("hex").slice(0, 16)}"`;
+  return `"${createHash('sha1').update(json).digest('hex').slice(0, 16)}"`;
 }

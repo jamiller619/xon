@@ -1,22 +1,22 @@
-import { deflateRawSync } from "node:zlib";
-import type { Client } from "@libsql/client";
-import type { LibSQLDatabase } from "drizzle-orm/libsql";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { createApp } from "../app.js";
-import { openDatabase } from "../db.js";
-import { migrateDatabase } from "../migrate.js";
-import { hashPassword } from "../password.js";
-import { signAccessToken } from "../routes/auth.js";
-import { users } from "../schema.js";
+import { deflateRawSync } from 'node:zlib';
+import type { Client } from '@libsql/client';
+import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createApp } from '../app.js';
+import { openDatabase } from '../db.js';
+import { migrateDatabase } from '../migrate.js';
+import { hashPassword } from '../password.js';
+import { signAccessToken } from '../routes/auth.js';
+import { users } from '../schema.js';
 
 // Mock fs/promises so tests don't touch the real filesystem
-vi.mock("node:fs/promises", () => ({
+vi.mock('node:fs/promises', () => ({
   readFile: vi.fn(),
   writeFile: vi.fn(),
 }));
 
-const ADMIN_AUTH = `Bearer ${await signAccessToken("admin-1", "admin", "admin")}`;
-const USER_AUTH = `Bearer ${await signAccessToken("user-1", "user", "user")}`;
+const ADMIN_AUTH = `Bearer ${await signAccessToken('admin-1', 'admin', 'admin')}`;
+const USER_AUTH = `Bearer ${await signAccessToken('user-1', 'user', 'user')}`;
 
 // ─── ZIP helpers used in tests ────────────────────────────────────────────────
 
@@ -43,7 +43,7 @@ function buildTestZip(files: { name: string; data: Buffer }[]): Buffer {
   let offset = 0;
 
   for (const file of files) {
-    const nameBytes = Buffer.from(file.name, "utf8");
+    const nameBytes = Buffer.from(file.name, 'utf8');
     const compressed = deflateRawSync(file.data);
     const checksum = crc32(file.data);
 
@@ -102,43 +102,47 @@ function buildTestZip(files: { name: string; data: Buffer }[]): Buffer {
 }
 
 function buildValidBackupZip(opts?: { version?: string }): Buffer {
-  const version = opts?.version ?? "1";
-  const backupInfo = { version, xonVersion: "0.0.1", createdAt: new Date().toISOString() };
+  const version = opts?.version ?? '1';
+  const backupInfo = {
+    version,
+    xonVersion: '0.0.1',
+    createdAt: new Date().toISOString(),
+  };
   return buildTestZip([
-    { name: "backup-info.json", data: Buffer.from(JSON.stringify(backupInfo)) },
-    { name: "xon.db", data: Buffer.from("SQLite format 3") },
-    { name: "plugins.json", data: Buffer.from("[]") },
-    { name: "server-config.json", data: Buffer.from("{}") },
+    { name: 'backup-info.json', data: Buffer.from(JSON.stringify(backupInfo)) },
+    { name: 'xon.db', data: Buffer.from('SQLite format 3') },
+    { name: 'plugins.json', data: Buffer.from('[]') },
+    { name: 'server-config.json', data: Buffer.from('{}') },
   ]);
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
 
-describe("Admin Backup API", () => {
+describe('Admin Backup API', () => {
   let client: Client;
   let db: LibSQLDatabase;
   let app: ReturnType<typeof createApp>;
 
   beforeEach(async () => {
-    ({ client, db } = await openDatabase(":memory:"));
+    ({ client, db } = await openDatabase(':memory:'));
     await migrateDatabase(db);
     app = createApp(db);
 
     await db.insert(users).values({
-      id: "admin-1",
-      username: "admin",
-      email: "admin@example.com",
-      displayName: "Admin",
-      passwordHash: await hashPassword("pass"),
-      role: "admin",
+      id: 'admin-1',
+      username: 'admin',
+      email: 'admin@example.com',
+      displayName: 'Admin',
+      passwordHash: await hashPassword('pass'),
+      role: 'admin',
     });
     await db.insert(users).values({
-      id: "user-1",
-      username: "regularuser",
-      email: "user@example.com",
-      displayName: "User",
-      passwordHash: await hashPassword("pass"),
-      role: "user",
+      id: 'user-1',
+      username: 'regularuser',
+      email: 'user@example.com',
+      displayName: 'User',
+      passwordHash: await hashPassword('pass'),
+      role: 'user',
     });
   });
 
@@ -149,42 +153,48 @@ describe("Admin Backup API", () => {
 
   // ─── POST /admin/backup/metadata ───────────────────────────────────────────
 
-  describe("POST /api/v1/admin/backup/metadata", () => {
-    it("returns 200 with a ZIP for admin", async () => {
-      const { readFile } = await import("node:fs/promises");
-      vi.mocked(readFile).mockResolvedValueOnce(Buffer.from("fake-db") as never);
+  describe('POST /api/v1/admin/backup/metadata', () => {
+    it('returns 200 with a ZIP for admin', async () => {
+      const { readFile } = await import('node:fs/promises');
+      vi.mocked(readFile).mockResolvedValueOnce(
+        Buffer.from('fake-db') as never,
+      );
 
-      const res = await app.request("/api/v1/admin/backup/metadata", {
-        method: "POST",
+      const res = await app.request('/api/v1/admin/backup/metadata', {
+        method: 'POST',
         headers: { Authorization: ADMIN_AUTH },
       });
 
       expect(res.status).toBe(200);
-      expect(res.headers.get("Content-Type")).toBe("application/zip");
-      const disposition = res.headers.get("Content-Disposition") ?? "";
-      expect(disposition).toContain("xon-backup-");
-      expect(disposition).toContain(".zip");
+      expect(res.headers.get('Content-Type')).toBe('application/zip');
+      const disposition = res.headers.get('Content-Disposition') ?? '';
+      expect(disposition).toContain('xon-backup-');
+      expect(disposition).toContain('.zip');
     });
 
-    it("returns 403 for non-admin", async () => {
-      const res = await app.request("/api/v1/admin/backup/metadata", {
-        method: "POST",
+    it('returns 403 for non-admin', async () => {
+      const res = await app.request('/api/v1/admin/backup/metadata', {
+        method: 'POST',
         headers: { Authorization: USER_AUTH },
       });
       expect(res.status).toBe(403);
     });
 
-    it("returns 401 without auth", async () => {
-      const res = await app.request("/api/v1/admin/backup/metadata", { method: "POST" });
+    it('returns 401 without auth', async () => {
+      const res = await app.request('/api/v1/admin/backup/metadata', {
+        method: 'POST',
+      });
       expect(res.status).toBe(401);
     });
 
-    it("ZIP contains backup-info.json with version 1", async () => {
-      const { readFile } = await import("node:fs/promises");
-      vi.mocked(readFile).mockResolvedValueOnce(Buffer.from("fake-db") as never);
+    it('ZIP contains backup-info.json with version 1', async () => {
+      const { readFile } = await import('node:fs/promises');
+      vi.mocked(readFile).mockResolvedValueOnce(
+        Buffer.from('fake-db') as never,
+      );
 
-      const res = await app.request("/api/v1/admin/backup/metadata", {
-        method: "POST",
+      const res = await app.request('/api/v1/admin/backup/metadata', {
+        method: 'POST',
         headers: { Authorization: ADMIN_AUTH },
       });
 
@@ -206,34 +216,34 @@ describe("Admin Backup API", () => {
       expect(entries).toBeGreaterThanOrEqual(3); // backup-info.json, xon.db, plugins.json
     });
 
-    it("produces a valid ZIP even when DB file is missing (in-memory mode)", async () => {
-      const { readFile } = await import("node:fs/promises");
-      vi.mocked(readFile).mockRejectedValueOnce(new Error("ENOENT") as never);
+    it('produces a valid ZIP even when DB file is missing (in-memory mode)', async () => {
+      const { readFile } = await import('node:fs/promises');
+      vi.mocked(readFile).mockRejectedValueOnce(new Error('ENOENT') as never);
 
-      const res = await app.request("/api/v1/admin/backup/metadata", {
-        method: "POST",
+      const res = await app.request('/api/v1/admin/backup/metadata', {
+        method: 'POST',
         headers: { Authorization: ADMIN_AUTH },
       });
 
       expect(res.status).toBe(200);
-      expect(res.headers.get("Content-Type")).toBe("application/zip");
+      expect(res.headers.get('Content-Type')).toBe('application/zip');
     });
   });
 
   // ─── POST /admin/restore/metadata ─────────────────────────────────────────
 
-  describe("POST /api/v1/admin/restore/metadata", () => {
-    it("returns 200 and restores DB from valid backup ZIP", async () => {
-      const { writeFile } = await import("node:fs/promises");
+  describe('POST /api/v1/admin/restore/metadata', () => {
+    it('returns 200 and restores DB from valid backup ZIP', async () => {
+      const { writeFile } = await import('node:fs/promises');
       vi.mocked(writeFile).mockResolvedValueOnce(undefined as never);
 
       const zipBuf = buildValidBackupZip();
 
-      const res = await app.request("/api/v1/admin/restore/metadata", {
-        method: "POST",
+      const res = await app.request('/api/v1/admin/restore/metadata', {
+        method: 'POST',
         headers: {
           Authorization: ADMIN_AUTH,
-          "Content-Type": "application/octet-stream",
+          'Content-Type': 'application/octet-stream',
         },
         body: zipBuf,
       });
@@ -241,107 +251,116 @@ describe("Admin Backup API", () => {
       expect(res.status).toBe(200);
       const body = await res.json();
       expect(body.success).toBe(true);
-      expect(body).toHaveProperty("restoredFrom");
-      expect(body).toHaveProperty("xonVersion");
+      expect(body).toHaveProperty('restoredFrom');
+      expect(body).toHaveProperty('xonVersion');
       expect(vi.mocked(writeFile)).toHaveBeenCalledOnce();
     });
 
-    it("returns 400 for an incompatible backup version", async () => {
-      const zipBuf = buildValidBackupZip({ version: "99" });
+    it('returns 400 for an incompatible backup version', async () => {
+      const zipBuf = buildValidBackupZip({ version: '99' });
 
-      const res = await app.request("/api/v1/admin/restore/metadata", {
-        method: "POST",
+      const res = await app.request('/api/v1/admin/restore/metadata', {
+        method: 'POST',
         headers: {
           Authorization: ADMIN_AUTH,
-          "Content-Type": "application/octet-stream",
+          'Content-Type': 'application/octet-stream',
         },
         body: zipBuf,
       });
 
       expect(res.status).toBe(400);
       const body = await res.json();
-      expect(body.error).toContain("Incompatible backup version");
+      expect(body.error).toContain('Incompatible backup version');
     });
 
-    it("returns 400 when ZIP is missing backup-info.json", async () => {
-      const zipBuf = buildTestZip([{ name: "xon.db", data: Buffer.from("fake-db") }]);
+    it('returns 400 when ZIP is missing backup-info.json', async () => {
+      const zipBuf = buildTestZip([
+        { name: 'xon.db', data: Buffer.from('fake-db') },
+      ]);
 
-      const res = await app.request("/api/v1/admin/restore/metadata", {
-        method: "POST",
+      const res = await app.request('/api/v1/admin/restore/metadata', {
+        method: 'POST',
         headers: {
           Authorization: ADMIN_AUTH,
-          "Content-Type": "application/octet-stream",
+          'Content-Type': 'application/octet-stream',
         },
         body: zipBuf,
       });
 
       expect(res.status).toBe(400);
       const body = await res.json();
-      expect(body.error).toContain("missing backup-info.json");
+      expect(body.error).toContain('missing backup-info.json');
     });
 
-    it("returns 400 for an invalid (non-ZIP) body", async () => {
-      const res = await app.request("/api/v1/admin/restore/metadata", {
-        method: "POST",
+    it('returns 400 for an invalid (non-ZIP) body', async () => {
+      const res = await app.request('/api/v1/admin/restore/metadata', {
+        method: 'POST',
         headers: {
           Authorization: ADMIN_AUTH,
-          "Content-Type": "application/octet-stream",
+          'Content-Type': 'application/octet-stream',
         },
-        body: Buffer.from("not a zip file"),
+        body: Buffer.from('not a zip file'),
       });
 
       expect(res.status).toBe(400);
       const body = await res.json();
-      expect(body.error).toContain("Invalid ZIP");
+      expect(body.error).toContain('Invalid ZIP');
     });
 
-    it("returns 400 for empty body", async () => {
-      const res = await app.request("/api/v1/admin/restore/metadata", {
-        method: "POST",
+    it('returns 400 for empty body', async () => {
+      const res = await app.request('/api/v1/admin/restore/metadata', {
+        method: 'POST',
         headers: {
           Authorization: ADMIN_AUTH,
-          "Content-Type": "application/octet-stream",
+          'Content-Type': 'application/octet-stream',
         },
         body: Buffer.alloc(0),
       });
 
       expect(res.status).toBe(400);
       const body = await res.json();
-      expect(body.error).toContain("No backup data");
+      expect(body.error).toContain('No backup data');
     });
 
-    it("returns 403 for non-admin", async () => {
-      const res = await app.request("/api/v1/admin/restore/metadata", {
-        method: "POST",
+    it('returns 403 for non-admin', async () => {
+      const res = await app.request('/api/v1/admin/restore/metadata', {
+        method: 'POST',
         headers: { Authorization: USER_AUTH },
         body: Buffer.alloc(0),
       });
       expect(res.status).toBe(403);
     });
 
-    it("returns 401 without auth", async () => {
-      const res = await app.request("/api/v1/admin/restore/metadata", {
-        method: "POST",
+    it('returns 401 without auth', async () => {
+      const res = await app.request('/api/v1/admin/restore/metadata', {
+        method: 'POST',
       });
       expect(res.status).toBe(401);
     });
 
-    it("skips writeFile when backup xon.db is empty (in-memory scenario)", async () => {
-      const { writeFile } = await import("node:fs/promises");
+    it('skips writeFile when backup xon.db is empty (in-memory scenario)', async () => {
+      const { writeFile } = await import('node:fs/promises');
       vi.mocked(writeFile).mockResolvedValue(undefined as never);
 
       // Build ZIP with empty xon.db
-      const backupInfo = { version: "1", xonVersion: "0.0.1", createdAt: new Date().toISOString() };
+      const backupInfo = {
+        version: '1',
+        xonVersion: '0.0.1',
+        createdAt: new Date().toISOString(),
+      };
       const zipBuf = buildTestZip([
-        { name: "backup-info.json", data: Buffer.from(JSON.stringify(backupInfo)) },
-        { name: "xon.db", data: Buffer.alloc(0) },
+        {
+          name: 'backup-info.json',
+          data: Buffer.from(JSON.stringify(backupInfo)),
+        },
+        { name: 'xon.db', data: Buffer.alloc(0) },
       ]);
 
-      const res = await app.request("/api/v1/admin/restore/metadata", {
-        method: "POST",
+      const res = await app.request('/api/v1/admin/restore/metadata', {
+        method: 'POST',
         headers: {
           Authorization: ADMIN_AUTH,
-          "Content-Type": "application/octet-stream",
+          'Content-Type': 'application/octet-stream',
         },
         body: zipBuf,
       });

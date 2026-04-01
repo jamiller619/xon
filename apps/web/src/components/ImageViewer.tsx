@@ -1,5 +1,5 @@
-import { useCallback, useEffect, useRef, useState } from "react";
-import styles from "./ImageViewer.module.css";
+import { useCallback, useEffect, useRef, useState } from 'react';
+import styles from './ImageViewer.module.css';
 
 export interface ImageSibling {
   id: string;
@@ -21,20 +21,29 @@ function clamp(value: number, min: number, max: number): number {
   return Math.min(max, Math.max(min, value));
 }
 
-export default function ImageViewer({ mediaId, title, onClose, siblings }: ImageViewerProps) {
+export default function ImageViewer({
+  mediaId,
+  title,
+  onClose,
+  siblings,
+}: ImageViewerProps) {
   // Find starting index in siblings list
   const startIndex = siblings
     ? Math.max(
         0,
-        siblings.findIndex((s) => s.id === mediaId)
+        siblings.findIndex((s) => s.id === mediaId),
       )
     : 0;
   const [currentIndex, setCurrentIndex] = useState(startIndex);
 
   const currentId =
-    siblings && siblings.length > 0 ? (siblings[currentIndex]?.id ?? mediaId) : mediaId;
+    siblings && siblings.length > 0
+      ? (siblings[currentIndex]?.id ?? mediaId)
+      : mediaId;
   const currentTitle =
-    siblings && siblings.length > 0 ? (siblings[currentIndex]?.title ?? title) : title;
+    siblings && siblings.length > 0
+      ? (siblings[currentIndex]?.title ?? title)
+      : title;
 
   const [scale, setScale] = useState(1);
   const [translateX, setTranslateX] = useState(0);
@@ -44,7 +53,12 @@ export default function ImageViewer({ mediaId, title, onClose, siblings }: Image
   const [loaded, setLoaded] = useState(false);
 
   const containerRef = useRef<HTMLDivElement>(null);
-  const dragStart = useRef<{ x: number; y: number; tx: number; ty: number } | null>(null);
+  const dragStart = useRef<{
+    x: number;
+    y: number;
+    tx: number;
+    ty: number;
+  } | null>(null);
   const pinchRef = useRef<{ dist: number; scale: number } | null>(null);
 
   const hasSiblings = siblings && siblings.length > 1;
@@ -64,7 +78,9 @@ export default function ImageViewer({ mediaId, title, onClose, siblings }: Image
 
   const goPrev = useCallback(() => {
     if (!hasSiblings) return;
-    setCurrentIndex((i) => (i - 1 + (siblings?.length ?? 1)) % (siblings?.length ?? 1));
+    setCurrentIndex(
+      (i) => (i - 1 + (siblings?.length ?? 1)) % (siblings?.length ?? 1),
+    );
     resetTransform();
     setLoaded(false);
   }, [hasSiblings, siblings?.length, resetTransform]);
@@ -73,18 +89,18 @@ export default function ImageViewer({ mediaId, title, onClose, siblings }: Image
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       switch (e.key) {
-        case "Escape":
+        case 'Escape':
           onClose();
           break;
-        case "ArrowLeft":
+        case 'ArrowLeft':
           e.preventDefault();
           goPrev();
           break;
-        case "ArrowRight":
+        case 'ArrowRight':
           e.preventDefault();
           goNext();
           break;
-        case " ":
+        case ' ':
           e.preventDefault();
           if (hasSiblings) setSlideshowActive((a) => !a);
           break;
@@ -92,8 +108,8 @@ export default function ImageViewer({ mediaId, title, onClose, siblings }: Image
           break;
       }
     }
-    document.addEventListener("keydown", handleKeyDown);
-    return () => document.removeEventListener("keydown", handleKeyDown);
+    document.addEventListener('keydown', handleKeyDown);
+    return () => document.removeEventListener('keydown', handleKeyDown);
   }, [onClose, goNext, goPrev, hasSiblings]);
 
   // Slideshow timer
@@ -123,7 +139,12 @@ export default function ImageViewer({ mediaId, title, onClose, siblings }: Image
     if (scale <= 1) return;
     e.preventDefault();
     setDragging(true);
-    dragStart.current = { x: e.clientX, y: e.clientY, tx: translateX, ty: translateY };
+    dragStart.current = {
+      x: e.clientX,
+      y: e.clientY,
+      tx: translateX,
+      ty: translateY,
+    };
   }
 
   function handleMouseMove(e: React.MouseEvent) {
@@ -150,7 +171,12 @@ export default function ImageViewer({ mediaId, title, onClose, siblings }: Image
     } else if (e.touches.length === 1 && scale > 1) {
       const t = e.touches[0];
       if (!t) return;
-      dragStart.current = { x: t.clientX, y: t.clientY, tx: translateX, ty: translateY };
+      dragStart.current = {
+        x: t.clientX,
+        y: t.clientY,
+        tx: translateX,
+        ty: translateY,
+      };
     }
   }
 
@@ -164,7 +190,7 @@ export default function ImageViewer({ mediaId, title, onClose, siblings }: Image
       const newScale = clamp(
         pinchRef.current.scale * (dist / pinchRef.current.dist),
         MIN_SCALE,
-        MAX_SCALE
+        MAX_SCALE,
       );
       setScale(newScale);
       if (newScale === MIN_SCALE) {
@@ -187,25 +213,25 @@ export default function ImageViewer({ mediaId, title, onClose, siblings }: Image
   }
 
   return (
-    <dialog open className={styles.overlay ?? ""} aria-label="Image viewer">
+    <dialog open className={styles.overlay ?? ''} aria-label="Image viewer">
       {/* Top bar */}
-      <div className={styles.topBar ?? ""}>
-        <span className={styles.imageTitle ?? ""}>{currentTitle}</span>
-        <div className={styles.topBarActions ?? ""}>
+      <div className={styles.topBar ?? ''}>
+        <span className={styles.imageTitle ?? ''}>{currentTitle}</span>
+        <div className={styles.topBarActions ?? ''}>
           {hasSiblings && (
             <button
               type="button"
-              className={`${styles.controlBtn ?? ""} ${slideshowActive ? (styles.controlBtnActive ?? "") : ""}`}
+              className={`${styles.controlBtn ?? ''} ${slideshowActive ? (styles.controlBtnActive ?? '') : ''}`}
               onClick={() => setSlideshowActive((a) => !a)}
-              title={slideshowActive ? "Stop slideshow" : "Start slideshow"}
+              title={slideshowActive ? 'Stop slideshow' : 'Start slideshow'}
             >
-              {slideshowActive ? "⏸ Pause" : "▶ Slideshow"}
+              {slideshowActive ? '⏸ Pause' : '▶ Slideshow'}
             </button>
           )}
           {scale > 1 && (
             <button
               type="button"
-              className={styles.controlBtn ?? ""}
+              className={styles.controlBtn ?? ''}
               onClick={resetTransform}
               title="Reset zoom"
             >
@@ -214,7 +240,7 @@ export default function ImageViewer({ mediaId, title, onClose, siblings }: Image
           )}
           <button
             type="button"
-            className={styles.closeBtn ?? ""}
+            className={styles.closeBtn ?? ''}
             onClick={onClose}
             title="Close viewer (Esc)"
           >
@@ -226,7 +252,7 @@ export default function ImageViewer({ mediaId, title, onClose, siblings }: Image
       {/* Image area */}
       <div
         ref={containerRef}
-        className={`${styles.imageContainer ?? ""} ${dragging ? (styles.dragging ?? "") : ""}`}
+        className={`${styles.imageContainer ?? ''} ${dragging ? (styles.dragging ?? '') : ''}`}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
         onMouseMove={handleMouseMove}
@@ -236,15 +262,15 @@ export default function ImageViewer({ mediaId, title, onClose, siblings }: Image
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {!loaded && <div className={styles.spinner ?? ""} />}
+        {!loaded && <div className={styles.spinner ?? ''} />}
         <img
           key={currentId}
           src={`/api/v1/media/${currentId}/stream`}
           alt={currentTitle}
-          className={styles.image ?? ""}
+          className={styles.image ?? ''}
           style={{
             transform: `translate(${translateX}px, ${translateY}px) scale(${scale})`,
-            cursor: scale > 1 ? (dragging ? "grabbing" : "grab") : "default",
+            cursor: scale > 1 ? (dragging ? 'grabbing' : 'grab') : 'default',
             opacity: loaded ? 1 : 0,
           }}
           draggable={false}
@@ -257,7 +283,7 @@ export default function ImageViewer({ mediaId, title, onClose, siblings }: Image
         <>
           <button
             type="button"
-            className={`${styles.navBtn ?? ""} ${styles.navPrev ?? ""}`}
+            className={`${styles.navBtn ?? ''} ${styles.navPrev ?? ''}`}
             onClick={goPrev}
             title="Previous image (←)"
           >
@@ -265,13 +291,13 @@ export default function ImageViewer({ mediaId, title, onClose, siblings }: Image
           </button>
           <button
             type="button"
-            className={`${styles.navBtn ?? ""} ${styles.navNext ?? ""}`}
+            className={`${styles.navBtn ?? ''} ${styles.navNext ?? ''}`}
             onClick={goNext}
             title="Next image (→)"
           >
             ›
           </button>
-          <div className={styles.counter ?? ""}>
+          <div className={styles.counter ?? ''}>
             {currentIndex + 1} / {siblings?.length ?? 1}
           </div>
         </>

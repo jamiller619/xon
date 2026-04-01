@@ -1,23 +1,27 @@
-import { mkdtemp, rm, writeFile } from "node:fs/promises";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
-import type { Client } from "@libsql/client";
-import type { LibSQLDatabase } from "drizzle-orm/libsql";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
-import { openDatabase } from "./db.js";
-import { migrateDatabase } from "./migrate.js";
-import { type ScanProgress, type ScanSummary, scanLibrary } from "./orchestrator.js";
-import { dataSources, libraries, mediaItems } from "./schema.js";
+import { mkdtemp, rm, writeFile } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+import type { Client } from '@libsql/client';
+import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { openDatabase } from './db.js';
+import { migrateDatabase } from './migrate.js';
+import {
+  type ScanProgress,
+  type ScanSummary,
+  scanLibrary,
+} from './orchestrator.js';
+import { dataSources, libraries, mediaItems } from './schema.js';
 
-describe("scanLibrary", () => {
+describe('scanLibrary', () => {
   let client: Client;
   let db: LibSQLDatabase;
   let tmpDir: string;
 
   beforeEach(async () => {
-    ({ client, db } = await openDatabase(":memory:"));
+    ({ client, db } = await openDatabase(':memory:'));
     await migrateDatabase(db);
-    tmpDir = await mkdtemp(join(tmpdir(), "xon-orchestrator-test-"));
+    tmpDir = await mkdtemp(join(tmpdir(), 'xon-orchestrator-test-'));
   });
 
   afterEach(async () => {
@@ -25,20 +29,26 @@ describe("scanLibrary", () => {
     await rm(tmpDir, { recursive: true, force: true });
   });
 
-  async function createLibraryRecord(name = "Test Library") {
+  async function createLibraryRecord(name = 'Test Library') {
     const id = crypto.randomUUID();
     const now = new Date();
-    await db.insert(libraries).values({ id, name, createdAt: now, updatedAt: now });
+    await db
+      .insert(libraries)
+      .values({ id, name, createdAt: now, updatedAt: now });
     return id;
   }
 
-  async function createDataSource(libraryId: string, path: string, recursive = false) {
+  async function createDataSource(
+    libraryId: string,
+    path: string,
+    recursive = false,
+  ) {
     const id = crypto.randomUUID();
     const now = new Date();
     await db.insert(dataSources).values({
       id,
       libraryId,
-      type: "local",
+      type: 'local',
       path,
       recursive,
       enabled: true,
@@ -48,11 +58,13 @@ describe("scanLibrary", () => {
     return id;
   }
 
-  it("throws if library does not exist", async () => {
-    await expect(scanLibrary(db, "nonexistent-id")).rejects.toThrow("Library not found");
+  it('throws if library does not exist', async () => {
+    await expect(scanLibrary(db, 'nonexistent-id')).rejects.toThrow(
+      'Library not found',
+    );
   });
 
-  it("returns zero summary for library with no data sources", async () => {
+  it('returns zero summary for library with no data sources', async () => {
     const libraryId = await createLibraryRecord();
     const summary = await scanLibrary(db, libraryId);
     expect(summary).toEqual<ScanSummary>({
@@ -64,10 +76,10 @@ describe("scanLibrary", () => {
     });
   });
 
-  it("creates media items for new files", async () => {
+  it('creates media items for new files', async () => {
     const libraryId = await createLibraryRecord();
-    await writeFile(join(tmpDir, "movie.mp4"), Buffer.alloc(1024));
-    await writeFile(join(tmpDir, "song.mp3"), Buffer.alloc(512));
+    await writeFile(join(tmpDir, 'movie.mp4'), Buffer.alloc(1024));
+    await writeFile(join(tmpDir, 'song.mp3'), Buffer.alloc(512));
     await createDataSource(libraryId, tmpDir);
 
     const summary = await scanLibrary(db, libraryId);
@@ -80,14 +92,14 @@ describe("scanLibrary", () => {
     const items = await db.select().from(mediaItems).where();
     expect(items).toHaveLength(2);
     const fileNames = items.map((i) => i.fileName);
-    expect(fileNames).toContain("movie.mp4");
-    expect(fileNames).toContain("song.mp3");
+    expect(fileNames).toContain('movie.mp4');
+    expect(fileNames).toContain('song.mp3');
   });
 
-  it("media items have correct fields populated", async () => {
+  it('media items have correct fields populated', async () => {
     const libraryId = await createLibraryRecord();
     const sourceId = await createDataSource(libraryId, tmpDir);
-    await writeFile(join(tmpDir, "video.mp4"), Buffer.alloc(2048));
+    await writeFile(join(tmpDir, 'video.mp4'), Buffer.alloc(2048));
 
     await scanLibrary(db, libraryId);
 
@@ -99,19 +111,19 @@ describe("scanLibrary", () => {
 
     expect(item.libraryId).toBe(libraryId);
     expect(item.dataSourceId).toBe(sourceId);
-    expect(item.fileName).toBe("video.mp4");
+    expect(item.fileName).toBe('video.mp4');
     expect(item.fileSize).toBe(2048);
-    expect(item.mimeType).toBe("video/mp4");
-    expect(item.mediaCategory).toBe("Movies");
+    expect(item.mimeType).toBe('video/mp4');
+    expect(item.mediaCategory).toBe('Movies');
     expect(item.scannedAt).toBeTruthy();
     expect(item.createdAt).toBeTruthy();
     expect(item.updatedAt).toBeTruthy();
   });
 
-  it("updates changed files (size differs)", async () => {
+  it('updates changed files (size differs)', async () => {
     const libraryId = await createLibraryRecord();
     const sourceId = await createDataSource(libraryId, tmpDir);
-    const filePath = join(tmpDir, "track.mp3");
+    const filePath = join(tmpDir, 'track.mp3');
     await writeFile(filePath, Buffer.alloc(512));
 
     // First scan — creates item
@@ -132,10 +144,10 @@ describe("scanLibrary", () => {
     expect(items[0]?.fileSize).toBe(999);
   });
 
-  it("removes deleted files from the database", async () => {
+  it('removes deleted files from the database', async () => {
     const libraryId = await createLibraryRecord();
     const sourceId = await createDataSource(libraryId, tmpDir);
-    const filePath = join(tmpDir, "deleteme.mp4");
+    const filePath = join(tmpDir, 'deleteme.mp4');
     await writeFile(filePath, Buffer.alloc(100));
 
     // First scan — creates item
@@ -154,20 +166,20 @@ describe("scanLibrary", () => {
     expect(afterSecond).toHaveLength(0);
   });
 
-  it("skips disabled data sources", async () => {
+  it('skips disabled data sources', async () => {
     const libraryId = await createLibraryRecord();
     const now = new Date();
     await db.insert(dataSources).values({
       id: crypto.randomUUID(),
       libraryId,
-      type: "local",
+      type: 'local',
       path: tmpDir,
       recursive: false,
       enabled: false,
       createdAt: now,
       updatedAt: now,
     });
-    await writeFile(join(tmpDir, "video.mkv"), Buffer.alloc(500));
+    await writeFile(join(tmpDir, 'video.mkv'), Buffer.alloc(500));
 
     const summary = await scanLibrary(db, libraryId);
 
@@ -175,9 +187,9 @@ describe("scanLibrary", () => {
     expect(summary.totalDiscovered).toBe(0);
   });
 
-  it("calls onProgress callback with progress updates", async () => {
+  it('calls onProgress callback with progress updates', async () => {
     const libraryId = await createLibraryRecord();
-    await writeFile(join(tmpDir, "clip.mp4"), Buffer.alloc(256));
+    await writeFile(join(tmpDir, 'clip.mp4'), Buffer.alloc(256));
     await createDataSource(libraryId, tmpDir);
 
     const progressUpdates: ScanProgress[] = [];
@@ -185,17 +197,17 @@ describe("scanLibrary", () => {
 
     expect(progressUpdates.length).toBeGreaterThan(0);
     const last = progressUpdates[progressUpdates.length - 1];
-    expect(last?.currentFile).toContain("clip.mp4");
+    expect(last?.currentFile).toContain('clip.mp4');
   });
 
-  it("processes multiple data sources", async () => {
+  it('processes multiple data sources', async () => {
     const libraryId = await createLibraryRecord();
-    const { mkdtemp: mk2 } = await import("node:fs/promises");
-    const tmpDir2 = await mkdtemp(join(tmpdir(), "xon-orch-test2-"));
+    const { mkdtemp: mk2 } = await import('node:fs/promises');
+    const tmpDir2 = await mkdtemp(join(tmpdir(), 'xon-orch-test2-'));
 
     try {
-      await writeFile(join(tmpDir, "movie.mp4"), Buffer.alloc(100));
-      await writeFile(join(tmpDir2, "song.mp3"), Buffer.alloc(200));
+      await writeFile(join(tmpDir, 'movie.mp4'), Buffer.alloc(100));
+      await writeFile(join(tmpDir2, 'song.mp3'), Buffer.alloc(200));
       await createDataSource(libraryId, tmpDir);
       await createDataSource(libraryId, tmpDir2);
 

@@ -1,21 +1,22 @@
-import { BasePlugin } from "@xon/plugin-sdk";
-import type { PluginContext, PluginManifest } from "@xon/plugin-sdk";
-import { MediaCategory } from "@xon/shared";
-import { MusicBrainzClient } from "./musicBrainzClient.js";
-import { parseMusicPath } from "./musicParser.js";
+import { BasePlugin } from '@xon/plugin-sdk';
+import type { PluginContext, PluginManifest } from '@xon/plugin-sdk';
+import { MediaCategory } from '@xon/shared';
+import { MusicBrainzClient } from './musicBrainzClient.js';
+import { parseMusicPath } from './musicParser.js';
 
 export class MusicBrainzMetadataPlugin extends BasePlugin {
   override readonly manifest: PluginManifest = {
-    id: "musicbrainz-metadata",
-    name: "MusicBrainz Metadata",
-    version: "1.0.0",
-    description: "Fetches music metadata from MusicBrainz and cover art from the Cover Art Archive",
-    author: "Xon",
-    category: "MetadataSource",
+    id: 'musicbrainz-metadata',
+    name: 'MusicBrainz Metadata',
+    version: '1.0.0',
+    description:
+      'Fetches music metadata from MusicBrainz and cover art from the Cover Art Archive',
+    author: 'Xon',
+    category: 'MetadataSource',
     mediaCategories: [MediaCategory.Music],
-    main: "dist/index.js",
+    main: 'dist/index.js',
     permissions: {
-      network: ["musicbrainz.org", "coverartarchive.org"],
+      network: ['musicbrainz.org', 'coverartarchive.org'],
     },
   };
 
@@ -45,23 +46,23 @@ export class MusicBrainzMetadataPlugin extends BasePlugin {
       )
     `);
 
-    context.on("media:created", async ({ mediaId, filePath }) => {
+    context.on('media:created', async ({ mediaId, filePath }) => {
       await this.enrichMedia(mediaId, filePath);
     });
 
-    context.on("media:updated", async ({ mediaId, filePath }) => {
+    context.on('media:updated', async ({ mediaId, filePath }) => {
       await this.enrichMedia(mediaId, filePath);
     });
 
     // Route: GET /api/v1/plugins/musicbrainz-metadata/metadata/:mediaId
     context.registerRoute({
-      method: "GET",
-      path: "/metadata/:mediaId",
+      method: 'GET',
+      path: '/metadata/:mediaId',
       handler: async (c) => {
-        const mediaId = c.req.param("mediaId") as string;
+        const mediaId = c.req.param('mediaId') as string;
         const metadata = await this.getStoredMetadata(mediaId);
         if (!metadata) {
-          return c.json({ error: "No metadata found" }, 404);
+          return c.json({ error: 'No metadata found' }, 404);
         }
         return c.json(metadata);
       },
@@ -75,23 +76,33 @@ export class MusicBrainzMetadataPlugin extends BasePlugin {
     const now = Date.now();
 
     try {
-      const metadata = await this.client.searchRecording(parsed.title, parsed.artist, parsed.album);
+      const metadata = await this.client.searchRecording(
+        parsed.title,
+        parsed.artist,
+        parsed.album,
+      );
 
       if (!metadata) {
         this.ctx.logger.warn(
-          `MusicBrainz: no match for "${parsed.title}"${parsed.artist ? ` by "${parsed.artist}"` : ""}`
+          `MusicBrainz: no match for "${parsed.title}"${parsed.artist ? ` by "${parsed.artist}"` : ''}`,
         );
         return;
       }
 
       // Enrich with release details (label, catalog number, genres, cover art)
       if (metadata.releaseMbid) {
-        const releaseDetails = await this.client.fetchReleaseDetails(metadata.releaseMbid);
+        const releaseDetails = await this.client.fetchReleaseDetails(
+          metadata.releaseMbid,
+        );
         if (releaseDetails) {
-          if (releaseDetails.label !== undefined) metadata.label = releaseDetails.label;
+          if (releaseDetails.label !== undefined)
+            metadata.label = releaseDetails.label;
           if (releaseDetails.catalogNumber !== undefined)
             metadata.catalogNumber = releaseDetails.catalogNumber;
-          if (releaseDetails.genres !== undefined && releaseDetails.genres.length > 0)
+          if (
+            releaseDetails.genres !== undefined &&
+            releaseDetails.genres.length > 0
+          )
             metadata.genres = releaseDetails.genres;
           if (releaseDetails.isCompilation !== undefined)
             metadata.isCompilation = releaseDetails.isCompilation;
@@ -120,16 +131,16 @@ export class MusicBrainzMetadataPlugin extends BasePlugin {
           metadata.isCompilation ? 1 : 0,
           metadata.durationMs,
           now,
-        ]
+        ],
       );
 
-      const artistNames = metadata.artists.map((a) => a.name).join(", ");
+      const artistNames = metadata.artists.map((a) => a.name).join(', ');
       this.ctx.logger.info(
-        `MusicBrainz: enriched "${metadata.title}" by ${artistNames} for ${mediaId}`
+        `MusicBrainz: enriched "${metadata.title}" by ${artistNames} for ${mediaId}`,
       );
     } catch (err) {
       this.ctx.logger.error(
-        `MusicBrainz: enrichment failed for ${mediaId}: ${err instanceof Error ? err.message : String(err)}`
+        `MusicBrainz: enrichment failed for ${mediaId}: ${err instanceof Error ? err.message : String(err)}`,
       );
     }
   }
@@ -138,16 +149,16 @@ export class MusicBrainzMetadataPlugin extends BasePlugin {
     if (!this.ctx) return null;
 
     const rows = await this.ctx.db.query(
-      "SELECT * FROM plugin_musicbrainz_metadata_tracks WHERE media_id = ?",
-      [mediaId]
+      'SELECT * FROM plugin_musicbrainz_metadata_tracks WHERE media_id = ?',
+      [mediaId],
     );
     if (rows.length === 0) return null;
 
     const row = rows[0] as Record<string, unknown>;
     return {
       ...row,
-      artists: JSON.parse((row.artists as string | null) ?? "[]"),
-      genres: JSON.parse((row.genres as string | null) ?? "[]"),
+      artists: JSON.parse((row.artists as string | null) ?? '[]'),
+      genres: JSON.parse((row.genres as string | null) ?? '[]'),
       isCompilation: row.is_compilation === 1,
     };
   }

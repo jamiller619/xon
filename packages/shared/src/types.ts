@@ -1,5 +1,5 @@
-import type { MediaCategory } from "./constants.js";
-import type { UserRole } from "./constants.js";
+import type { MediaCategory } from './constants.js';
+import type { UserRole } from './constants.js';
 
 export interface Library {
   id: string;
@@ -13,7 +13,7 @@ export interface Library {
 export interface DataSource {
   id: string;
   libraryId: string;
-  type: "local" | "network";
+  type: 'local' | 'network';
   path: string;
   recursive: boolean;
   enabled: boolean;

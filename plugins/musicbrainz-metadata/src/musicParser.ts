@@ -1,4 +1,4 @@
-import { basename, dirname } from "node:path";
+import { basename, dirname } from 'node:path';
 
 export interface ParsedMusic {
   artist?: string;
@@ -12,26 +12,32 @@ export interface ParsedMusic {
  * Strips common audio file extensions.
  */
 function stripExtension(name: string): string {
-  return name.replace(/\.(mp3|flac|ogg|m4a|aac|wav|wma|opus|ape|alac|aiff?|dsf|dsd)$/i, "");
+  return name.replace(
+    /\.(mp3|flac|ogg|m4a|aac|wav|wma|opus|ape|alac|aiff?|dsf|dsd)$/i,
+    '',
+  );
 }
 
 /**
  * Normalizes separators (underscores/dots to spaces) and trims.
  */
 function normalize(s: string): string {
-  return s.replace(/[_]/g, " ").trim();
+  return s.replace(/[_]/g, ' ').trim();
 }
 
 /**
  * Extracts a leading track number like "01", "01.", "01 -", "Track 01", etc.
  * Returns { trackNumber, rest } or { trackNumber: undefined, rest: original }.
  */
-function extractTrackNumber(name: string): { trackNumber: number | undefined; rest: string } {
+function extractTrackNumber(name: string): {
+  trackNumber: number | undefined;
+  rest: string;
+} {
   // "01 - Title", "01. Title", "01 Title"
   const m = /^(\d{1,3})[.\s-]+(.+)$/.exec(name);
   if (m) {
-    const n = Number.parseInt(m[1] ?? "0", 10);
-    const rest = (m[2] ?? "").trim();
+    const n = Number.parseInt(m[1] ?? '0', 10);
+    const rest = (m[2] ?? '').trim();
     return { trackNumber: n, rest };
   }
   return { trackNumber: undefined, rest: name };
@@ -40,12 +46,17 @@ function extractTrackNumber(name: string): { trackNumber: number | undefined; re
 /**
  * Tries to parse "Artist - Title" or "Artist - TrackNo - Title" pattern.
  */
-function parseArtistDashTitle(name: string): { artist: string; title: string } | null {
-  const parts = name.split(" - ").map((p) => p.trim());
+function parseArtistDashTitle(
+  name: string,
+): { artist: string; title: string } | null {
+  const parts = name.split(' - ').map((p) => p.trim());
   if (parts.length >= 2) {
-    const artist = parts[0] ?? "";
+    const artist = parts[0] ?? '';
     // Middle part might be a track number — skip it
-    const titlePart = parts.length >= 3 ? parts.slice(2).join(" - ") : parts.slice(1).join(" - ");
+    const titlePart =
+      parts.length >= 3
+        ? parts.slice(2).join(' - ')
+        : parts.slice(1).join(' - ');
     if (artist.length > 0 && titlePart.length > 0) {
       return { artist, title: titlePart };
     }
@@ -63,7 +74,7 @@ function make(
     artist?: string | undefined;
     album?: string | undefined;
     trackNumber?: number | undefined;
-  }
+  },
 ): ParsedMusic {
   const result: ParsedMusic = { title };
   if (opts.artist !== undefined) result.artist = opts.artist;
@@ -89,7 +100,7 @@ export function parseMusicPath(filePath: string): ParsedMusic {
   const dirParts = dir
     .split(/[\\/]/)
     .map((p) => p.trim())
-    .filter((p) => p.length > 0 && p !== "." && p !== "..");
+    .filter((p) => p.length > 0 && p !== '.' && p !== '..');
 
   // Extract the immediate parent and grandparent directory names
   const parentDir = dirParts[dirParts.length - 1];
@@ -151,7 +162,10 @@ export function parseMusicPath(filePath: string): ParsedMusic {
       });
     }
 
-    return make(normalize(fileBase), { artist: normalize(parentDir), trackNumber });
+    return make(normalize(fileBase), {
+      artist: normalize(parentDir),
+      trackNumber,
+    });
   }
 
   // ── Case 3: flat — only filename available ────────────────────────────────

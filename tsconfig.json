@@ -30,5 +30,12 @@
     { "path": "./plugins/openlibrary-metadata" },
     { "path": "./plugins/3d-model-viewer" }
   ],
-  "exclude": ["node_modules", "dist", "**/dist", "**/*.test.ts", "**/*.spec.ts", "apps/web"]
+  "exclude": [
+    "node_modules",
+    "dist",
+    "**/dist",
+    "**/*.test.ts",
+    "**/*.spec.ts",
+    "apps/web"
+  ]
 }

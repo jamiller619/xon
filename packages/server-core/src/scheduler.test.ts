@@ -1,43 +1,43 @@
-import { watch } from "node:fs";
-import type { Client } from "@libsql/client";
-import type { LibSQLDatabase } from "drizzle-orm/libsql";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { openDatabase } from "./db.js";
-import { migrateDatabase } from "./migrate.js";
-import { parseCronInterval, startScheduler } from "./scheduler.js";
-import { dataSources, libraries } from "./schema.js";
+import { watch } from 'node:fs';
+import type { Client } from '@libsql/client';
+import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { openDatabase } from './db.js';
+import { migrateDatabase } from './migrate.js';
+import { parseCronInterval, startScheduler } from './scheduler.js';
+import { dataSources, libraries } from './schema.js';
 
-vi.mock("node:fs", () => ({
+vi.mock('node:fs', () => ({
   watch: vi.fn(),
 }));
 
 const mockWatch = vi.mocked(watch);
 
-describe("parseCronInterval", () => {
-  it("parses every-N-minutes pattern", () => {
-    expect(parseCronInterval("*/30 * * * *")).toBe(30 * 60 * 1000);
-    expect(parseCronInterval("*/1 * * * *")).toBe(60 * 1000);
-    expect(parseCronInterval("*/59 * * * *")).toBe(59 * 60 * 1000);
+describe('parseCronInterval', () => {
+  it('parses every-N-minutes pattern', () => {
+    expect(parseCronInterval('*/30 * * * *')).toBe(30 * 60 * 1000);
+    expect(parseCronInterval('*/1 * * * *')).toBe(60 * 1000);
+    expect(parseCronInterval('*/59 * * * *')).toBe(59 * 60 * 1000);
   });
 
-  it("parses every-N-hours pattern", () => {
-    expect(parseCronInterval("0 */6 * * *")).toBe(6 * 60 * 60 * 1000);
-    expect(parseCronInterval("0 */1 * * *")).toBe(60 * 60 * 1000);
-    expect(parseCronInterval("0 */23 * * *")).toBe(23 * 60 * 60 * 1000);
+  it('parses every-N-hours pattern', () => {
+    expect(parseCronInterval('0 */6 * * *')).toBe(6 * 60 * 60 * 1000);
+    expect(parseCronInterval('0 */1 * * *')).toBe(60 * 60 * 1000);
+    expect(parseCronInterval('0 */23 * * *')).toBe(23 * 60 * 60 * 1000);
   });
 
-  it("returns null for unsupported or invalid expressions", () => {
-    expect(parseCronInterval("* * * * *")).toBeNull();
-    expect(parseCronInterval("0 0 * * *")).toBeNull();
-    expect(parseCronInterval("*/0 * * * *")).toBeNull();
-    expect(parseCronInterval("*/60 * * * *")).toBeNull();
-    expect(parseCronInterval("0 */24 * * *")).toBeNull();
-    expect(parseCronInterval("not a cron")).toBeNull();
-    expect(parseCronInterval("0 */6 1 * *")).toBeNull();
+  it('returns null for unsupported or invalid expressions', () => {
+    expect(parseCronInterval('* * * * *')).toBeNull();
+    expect(parseCronInterval('0 0 * * *')).toBeNull();
+    expect(parseCronInterval('*/0 * * * *')).toBeNull();
+    expect(parseCronInterval('*/60 * * * *')).toBeNull();
+    expect(parseCronInterval('0 */24 * * *')).toBeNull();
+    expect(parseCronInterval('not a cron')).toBeNull();
+    expect(parseCronInterval('0 */6 1 * *')).toBeNull();
   });
 });
 
-describe("startScheduler", () => {
+describe('startScheduler', () => {
   let client: Client;
   let db: LibSQLDatabase;
 
@@ -45,8 +45,10 @@ describe("startScheduler", () => {
     vi.useFakeTimers();
     mockWatch.mockReset();
     // Default mock: return a watcher with a close() no-op
-    mockWatch.mockReturnValue({ close: vi.fn() } as unknown as ReturnType<typeof watch>);
-    ({ client, db } = await openDatabase(":memory:"));
+    mockWatch.mockReturnValue({ close: vi.fn() } as unknown as ReturnType<
+      typeof watch
+    >);
+    ({ client, db } = await openDatabase(':memory:'));
     await migrateDatabase(db);
   });
 
@@ -55,12 +57,12 @@ describe("startScheduler", () => {
     client.close();
   });
 
-  it("calls trigger at the scheduled interval for a library with scanSchedule", async () => {
+  it('calls trigger at the scheduled interval for a library with scanSchedule', async () => {
     const trigger = vi.fn().mockResolvedValue(undefined);
     await db.insert(libraries).values({
-      id: "lib-1",
-      name: "Scheduled Lib",
-      scanSchedule: "0 */6 * * *",
+      id: 'lib-1',
+      name: 'Scheduled Lib',
+      scanSchedule: '0 */6 * * *',
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -71,7 +73,7 @@ describe("startScheduler", () => {
 
     await vi.advanceTimersByTimeAsync(6 * 60 * 60 * 1000);
     expect(trigger).toHaveBeenCalledTimes(1);
-    expect(trigger).toHaveBeenCalledWith(db, "lib-1");
+    expect(trigger).toHaveBeenCalledWith(db, 'lib-1');
 
     await vi.advanceTimersByTimeAsync(6 * 60 * 60 * 1000);
     expect(trigger).toHaveBeenCalledTimes(2);
@@ -79,11 +81,11 @@ describe("startScheduler", () => {
     handle.stop();
   });
 
-  it("does not set up interval timer for library without scanSchedule", async () => {
+  it('does not set up interval timer for library without scanSchedule', async () => {
     const trigger = vi.fn().mockResolvedValue(undefined);
     await db.insert(libraries).values({
-      id: "lib-2",
-      name: "No Schedule Lib",
+      id: 'lib-2',
+      name: 'No Schedule Lib',
       createdAt: new Date(),
       updatedAt: new Date(),
     });
@@ -95,18 +97,18 @@ describe("startScheduler", () => {
     handle.stop();
   });
 
-  it("sets up fs.watch for local enabled data sources", async () => {
+  it('sets up fs.watch for local enabled data sources', async () => {
     await db.insert(libraries).values({
-      id: "lib-3",
-      name: "Watch Lib",
+      id: 'lib-3',
+      name: 'Watch Lib',
       createdAt: new Date(),
       updatedAt: new Date(),
     });
     await db.insert(dataSources).values({
-      id: "src-1",
-      libraryId: "lib-3",
-      type: "local",
-      path: "/media/movies",
+      id: 'src-1',
+      libraryId: 'lib-3',
+      type: 'local',
+      path: '/media/movies',
       recursive: true,
       enabled: true,
       createdAt: new Date(),
@@ -117,26 +119,26 @@ describe("startScheduler", () => {
     const handle = await startScheduler(db, trigger);
 
     expect(mockWatch).toHaveBeenCalledWith(
-      "/media/movies",
+      '/media/movies',
       { recursive: true },
-      expect.any(Function)
+      expect.any(Function),
     );
 
     handle.stop();
   });
 
-  it("does not watch disabled data sources", async () => {
+  it('does not watch disabled data sources', async () => {
     await db.insert(libraries).values({
-      id: "lib-4",
-      name: "Lib",
+      id: 'lib-4',
+      name: 'Lib',
       createdAt: new Date(),
       updatedAt: new Date(),
     });
     await db.insert(dataSources).values({
-      id: "src-2",
-      libraryId: "lib-4",
-      type: "local",
-      path: "/media/music",
+      id: 'src-2',
+      libraryId: 'lib-4',
+      type: 'local',
+      path: '/media/music',
       recursive: false,
       enabled: false,
       createdAt: new Date(),
@@ -150,18 +152,18 @@ describe("startScheduler", () => {
     handle.stop();
   });
 
-  it("does not watch network data sources", async () => {
+  it('does not watch network data sources', async () => {
     await db.insert(libraries).values({
-      id: "lib-5",
-      name: "Lib",
+      id: 'lib-5',
+      name: 'Lib',
       createdAt: new Date(),
       updatedAt: new Date(),
     });
     await db.insert(dataSources).values({
-      id: "src-3",
-      libraryId: "lib-5",
-      type: "network",
-      path: "//server/share",
+      id: 'src-3',
+      libraryId: 'lib-5',
+      type: 'network',
+      path: '//server/share',
       recursive: false,
       enabled: true,
       createdAt: new Date(),
@@ -175,18 +177,18 @@ describe("startScheduler", () => {
     handle.stop();
   });
 
-  it("debounces fs.watch events — triggers scan 2s after last change", async () => {
+  it('debounces fs.watch events — triggers scan 2s after last change', async () => {
     await db.insert(libraries).values({
-      id: "lib-6",
-      name: "Debounce Lib",
+      id: 'lib-6',
+      name: 'Debounce Lib',
       createdAt: new Date(),
       updatedAt: new Date(),
     });
     await db.insert(dataSources).values({
-      id: "src-4",
-      libraryId: "lib-6",
-      type: "local",
-      path: "/media/videos",
+      id: 'src-4',
+      libraryId: 'lib-6',
+      type: 'local',
+      path: '/media/videos',
       recursive: false,
       enabled: true,
       createdAt: new Date(),
@@ -214,27 +216,29 @@ describe("startScheduler", () => {
 
     await vi.advanceTimersByTimeAsync(1500);
     expect(trigger).toHaveBeenCalledTimes(1);
-    expect(trigger).toHaveBeenCalledWith(db, "lib-6");
+    expect(trigger).toHaveBeenCalledWith(db, 'lib-6');
 
     handle.stop();
   });
 
-  it("stop() clears interval timers and watchers", async () => {
+  it('stop() clears interval timers and watchers', async () => {
     const closeFn = vi.fn();
-    mockWatch.mockReturnValue({ close: closeFn } as unknown as ReturnType<typeof watch>);
+    mockWatch.mockReturnValue({ close: closeFn } as unknown as ReturnType<
+      typeof watch
+    >);
 
     await db.insert(libraries).values({
-      id: "lib-7",
-      name: "Stop Test Lib",
-      scanSchedule: "*/30 * * * *",
+      id: 'lib-7',
+      name: 'Stop Test Lib',
+      scanSchedule: '*/30 * * * *',
       createdAt: new Date(),
       updatedAt: new Date(),
     });
     await db.insert(dataSources).values({
-      id: "src-5",
-      libraryId: "lib-7",
-      type: "local",
-      path: "/media/photos",
+      id: 'src-5',
+      libraryId: 'lib-7',
+      type: 'local',
+      path: '/media/photos',
       recursive: false,
       enabled: true,
       createdAt: new Date(),

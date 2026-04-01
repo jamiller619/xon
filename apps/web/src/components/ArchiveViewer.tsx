@@ -1,6 +1,6 @@
-import { useEffect, useRef, useState } from "react";
-import { apiFetch } from "../apiFetch.js";
-import styles from "./ArchiveViewer.module.css";
+import { useEffect, useRef, useState } from 'react';
+import { apiFetch } from '../apiFetch.js';
+import styles from './ArchiveViewer.module.css';
 
 interface Props {
   mediaId: string;
@@ -23,19 +23,27 @@ interface TreeNode {
 }
 
 function buildTree(entries: ArchiveEntry[]): TreeNode[] {
-  const root: TreeNode = { name: "", fullPath: "", isDirectory: true, size: 0, children: [] };
+  const root: TreeNode = {
+    name: '',
+    fullPath: '',
+    isDirectory: true,
+    size: 0,
+    children: [],
+  };
 
   for (const entry of entries) {
-    const cleanPath = entry.path.endsWith("/") ? entry.path.slice(0, -1) : entry.path;
-    const parts = cleanPath.split("/").filter((p) => p.length > 0);
+    const cleanPath = entry.path.endsWith('/')
+      ? entry.path.slice(0, -1)
+      : entry.path;
+    const parts = cleanPath.split('/').filter((p) => p.length > 0);
     if (parts.length === 0) continue;
 
     let node = root;
     for (let i = 0; i < parts.length; i++) {
-      const part = parts[i] ?? "";
+      const part = parts[i] ?? '';
       if (!part) continue;
       const isLast = i === parts.length - 1;
-      const fullPath = parts.slice(0, i + 1).join("/");
+      const fullPath = parts.slice(0, i + 1).join('/');
 
       let child = node.children.find((c) => c.name === part);
       if (!child) {
@@ -69,53 +77,93 @@ function buildTree(entries: ArchiveEntry[]): TreeNode[] {
 }
 
 function formatBytes(bytes: number): string {
-  if (bytes === 0) return "—";
+  if (bytes === 0) return '—';
   if (bytes < 1024) return `${bytes} B`;
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  if (bytes < 1024 * 1024 * 1024) return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (bytes < 1024 * 1024 * 1024)
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
 }
 
-const IMAGE_EXTS = new Set([".jpg", ".jpeg", ".png", ".gif", ".webp", ".svg", ".bmp", ".ico"]);
-const VIDEO_EXTS = new Set([".mp4", ".mkv", ".avi", ".mov", ".webm", ".m4v", ".wmv", ".flv"]);
-const AUDIO_EXTS = new Set([".mp3", ".flac", ".aac", ".ogg", ".wav", ".m4a", ".opus"]);
-const DOC_EXTS = new Set([".pdf", ".epub", ".doc", ".docx", ".txt", ".md", ".csv", ".xlsx"]);
+const IMAGE_EXTS = new Set([
+  '.jpg',
+  '.jpeg',
+  '.png',
+  '.gif',
+  '.webp',
+  '.svg',
+  '.bmp',
+  '.ico',
+]);
+const VIDEO_EXTS = new Set([
+  '.mp4',
+  '.mkv',
+  '.avi',
+  '.mov',
+  '.webm',
+  '.m4v',
+  '.wmv',
+  '.flv',
+]);
+const AUDIO_EXTS = new Set([
+  '.mp3',
+  '.flac',
+  '.aac',
+  '.ogg',
+  '.wav',
+  '.m4a',
+  '.opus',
+]);
+const DOC_EXTS = new Set([
+  '.pdf',
+  '.epub',
+  '.doc',
+  '.docx',
+  '.txt',
+  '.md',
+  '.csv',
+  '.xlsx',
+]);
 const CODE_EXTS = new Set([
-  ".ts",
-  ".tsx",
-  ".js",
-  ".jsx",
-  ".py",
-  ".rs",
-  ".go",
-  ".java",
-  ".c",
-  ".cpp",
-  ".h",
-  ".css",
-  ".html",
-  ".json",
-  ".yaml",
-  ".yml",
+  '.ts',
+  '.tsx',
+  '.js',
+  '.jsx',
+  '.py',
+  '.rs',
+  '.go',
+  '.java',
+  '.c',
+  '.cpp',
+  '.h',
+  '.css',
+  '.html',
+  '.json',
+  '.yaml',
+  '.yml',
 ]);
 
 function getFileIcon(name: string, isDirectory: boolean): string {
-  if (isDirectory) return "📁";
-  const ext = name.includes(".") ? `.${name.split(".").pop()?.toLowerCase() ?? ""}` : "";
-  if (IMAGE_EXTS.has(ext)) return "🖼";
-  if (VIDEO_EXTS.has(ext)) return "🎬";
-  if (AUDIO_EXTS.has(ext)) return "🎵";
-  if (DOC_EXTS.has(ext)) return "📄";
-  if (CODE_EXTS.has(ext)) return "📝";
-  return "📋";
+  if (isDirectory) return '📁';
+  const ext = name.includes('.')
+    ? `.${name.split('.').pop()?.toLowerCase() ?? ''}`
+    : '';
+  if (IMAGE_EXTS.has(ext)) return '🖼';
+  if (VIDEO_EXTS.has(ext)) return '🎬';
+  if (AUDIO_EXTS.has(ext)) return '🎵';
+  if (DOC_EXTS.has(ext)) return '📄';
+  if (CODE_EXTS.has(ext)) return '📝';
+  return '📋';
 }
 
 function getMediaType(name: string): string | null {
-  const ext = name.includes(".") ? `.${name.split(".").pop()?.toLowerCase() ?? ""}` : "";
-  if (IMAGE_EXTS.has(ext)) return "Image";
-  if (VIDEO_EXTS.has(ext)) return "Video";
-  if (AUDIO_EXTS.has(ext)) return "Audio";
-  if (DOC_EXTS.has(ext)) return "Document";
+  const ext = name.includes('.')
+    ? `.${name.split('.').pop()?.toLowerCase() ?? ''}`
+    : '';
+  if (IMAGE_EXTS.has(ext)) return 'Image';
+  if (VIDEO_EXTS.has(ext)) return 'Video';
+  if (AUDIO_EXTS.has(ext)) return 'Audio';
+  if (DOC_EXTS.has(ext)) return 'Document';
   return null;
 }
 
@@ -128,7 +176,14 @@ interface TreeRowProps {
   selected: string | null;
 }
 
-function TreeRow({ node, depth, expanded, onToggle, onSelect, selected }: TreeRowProps) {
+function TreeRow({
+  node,
+  depth,
+  expanded,
+  onToggle,
+  onSelect,
+  selected,
+}: TreeRowProps) {
   const isExpanded = expanded.has(node.fullPath);
   const isSelected = selected === node.fullPath;
 
@@ -144,21 +199,29 @@ function TreeRow({ node, depth, expanded, onToggle, onSelect, selected }: TreeRo
     <>
       <button
         type="button"
-        className={`${styles.treeRow ?? ""} ${isSelected ? (styles.treeRowSelected ?? "") : ""}`}
+        className={`${styles.treeRow ?? ''} ${isSelected ? (styles.treeRowSelected ?? '') : ''}`}
         style={{ paddingLeft: `${16 + depth * 20}px` }}
-        aria-expanded={node.isDirectory ? expanded.has(node.fullPath) : undefined}
+        aria-expanded={
+          node.isDirectory ? expanded.has(node.fullPath) : undefined
+        }
         onClick={handleClick}
       >
-        <span className={styles.treeToggle ?? ""}>
-          {node.isDirectory ? (isExpanded ? "▾" : "▸") : " "}
+        <span className={styles.treeToggle ?? ''}>
+          {node.isDirectory ? (isExpanded ? '▾' : '▸') : ' '}
         </span>
-        <span className={styles.treeIcon ?? ""}>{getFileIcon(node.name, node.isDirectory)}</span>
-        <span className={styles.treeName ?? ""}>{node.name}</span>
+        <span className={styles.treeIcon ?? ''}>
+          {getFileIcon(node.name, node.isDirectory)}
+        </span>
+        <span className={styles.treeName ?? ''}>{node.name}</span>
         {!node.isDirectory && (
-          <span className={styles.treeSize ?? ""}>{formatBytes(node.size)}</span>
+          <span className={styles.treeSize ?? ''}>
+            {formatBytes(node.size)}
+          </span>
         )}
         {!node.isDirectory && getMediaType(node.name) && (
-          <span className={styles.treeBadge ?? ""}>{getMediaType(node.name)}</span>
+          <span className={styles.treeBadge ?? ''}>
+            {getMediaType(node.name)}
+          </span>
         )}
       </button>
       {node.isDirectory && isExpanded && (
@@ -176,7 +239,7 @@ function TreeRow({ node, depth, expanded, onToggle, onSelect, selected }: TreeRo
           ))}
           {node.children.length === 0 && (
             <div
-              className={styles.emptyDir ?? ""}
+              className={styles.emptyDir ?? ''}
               style={{ paddingLeft: `${16 + (depth + 1) * 20}px` }}
             >
               (empty)
@@ -201,7 +264,7 @@ export default function ArchiveViewer({ mediaId, title, onClose }: Props) {
     setError(null);
     apiFetch(`/api/v1/media/${mediaId}/archive-contents`)
       .then((r) => {
-        if (!r.ok) throw new Error("Failed to load archive contents");
+        if (!r.ok) throw new Error('Failed to load archive contents');
         return r.json();
       })
       .then((data: unknown) => {
@@ -210,17 +273,17 @@ export default function ArchiveViewer({ mediaId, title, onClose }: Props) {
         setLoading(false);
       })
       .catch((err: unknown) => {
-        setError((err as Error).message ?? "Failed to load");
+        setError((err as Error).message ?? 'Failed to load');
         setLoading(false);
       });
   }, [mediaId]);
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === "Escape") onClose();
+      if (e.key === 'Escape') onClose();
     }
-    window.addEventListener("keydown", handleKeyDown);
-    return () => window.removeEventListener("keydown", handleKeyDown);
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
   function toggleDir(path: string) {
@@ -241,33 +304,50 @@ export default function ArchiveViewer({ mediaId, title, onClose }: Props) {
 
   const tree = buildTree(entries);
   const fileCount = entries.filter((e) => !e.isDirectory).length;
-  const totalSize = entries.reduce((sum, e) => sum + (e.isDirectory ? 0 : e.size), 0);
+  const totalSize = entries.reduce(
+    (sum, e) => sum + (e.isDirectory ? 0 : e.size),
+    0,
+  );
 
   const selectedEntry = selected
     ? entries.find((e) => e.path === selected || e.path === `${selected}/`)
     : null;
 
   return (
-    <dialog open ref={dialogRef} className={styles.dialog ?? ""}>
-      <div className={styles.toolbar ?? ""}>
-        <button type="button" className={styles.closeBtn ?? ""} onClick={onClose} title="Close">
+    <dialog open ref={dialogRef} className={styles.dialog ?? ''}>
+      <div className={styles.toolbar ?? ''}>
+        <button
+          type="button"
+          className={styles.closeBtn ?? ''}
+          onClick={onClose}
+          title="Close"
+        >
           ✕
         </button>
-        <span className={styles.titleText ?? ""}>{title}</span>
-        <span className={styles.statsText ?? ""}>
-          {fileCount} file{fileCount !== 1 ? "s" : ""} · {formatBytes(totalSize)}
+        <span className={styles.titleText ?? ''}>{title}</span>
+        <span className={styles.statsText ?? ''}>
+          {fileCount} file{fileCount !== 1 ? 's' : ''} ·{' '}
+          {formatBytes(totalSize)}
         </span>
       </div>
 
-      <div className={styles.body ?? ""}>
+      <div className={styles.body ?? ''}>
         {/* File tree */}
-        <div className={styles.treePane ?? ""} role="tree" aria-label="Archive contents">
-          {loading && <div className={styles.stateBox ?? ""}>Loading…</div>}
+        <div
+          className={styles.treePane ?? ''}
+          role="tree"
+          aria-label="Archive contents"
+        >
+          {loading && <div className={styles.stateBox ?? ''}>Loading…</div>}
           {error && (
-            <div className={`${styles.stateBox ?? ""} ${styles.errorBox ?? ""}`}>{error}</div>
+            <div
+              className={`${styles.stateBox ?? ''} ${styles.errorBox ?? ''}`}
+            >
+              {error}
+            </div>
           )}
           {!loading && !error && entries.length === 0 && (
-            <div className={styles.stateBox ?? ""}>Archive is empty</div>
+            <div className={styles.stateBox ?? ''}>Archive is empty</div>
           )}
           {!loading &&
             !error &&
@@ -285,26 +365,26 @@ export default function ArchiveViewer({ mediaId, title, onClose }: Props) {
         </div>
 
         {/* Detail panel */}
-        <div className={styles.detailPane ?? ""}>
+        <div className={styles.detailPane ?? ''}>
           {selected && selectedEntry ? (
-            <div className={styles.detailContent ?? ""}>
-              <div className={styles.detailIcon ?? ""}>
+            <div className={styles.detailContent ?? ''}>
+              <div className={styles.detailIcon ?? ''}>
                 {getFileIcon(
-                  selectedEntry.path.replace(/\/$/, "").split("/").pop() ?? "",
-                  selectedEntry.isDirectory
+                  selectedEntry.path.replace(/\/$/, '').split('/').pop() ?? '',
+                  selectedEntry.isDirectory,
                 )}
               </div>
-              <h3 className={styles.detailName ?? ""}>
-                {selectedEntry.path.replace(/\/$/, "").split("/").pop()}
+              <h3 className={styles.detailName ?? ''}>
+                {selectedEntry.path.replace(/\/$/, '').split('/').pop()}
               </h3>
-              <dl className={styles.detailMeta ?? ""}>
+              <dl className={styles.detailMeta ?? ''}>
                 <dt>Path</dt>
                 <dd>{selectedEntry.path}</dd>
                 <dt>Type</dt>
                 <dd>
                   {selectedEntry.isDirectory
-                    ? "Directory"
-                    : (getMediaType(selectedEntry.path) ?? "File")}
+                    ? 'Directory'
+                    : (getMediaType(selectedEntry.path) ?? 'File')}
                 </dd>
                 {!selectedEntry.isDirectory && (
                   <>
@@ -315,7 +395,7 @@ export default function ArchiveViewer({ mediaId, title, onClose }: Props) {
               </dl>
             </div>
           ) : (
-            <div className={styles.detailEmpty ?? ""}>
+            <div className={styles.detailEmpty ?? ''}>
               <p>Select a file to view details</p>
             </div>
           )}

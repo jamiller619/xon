@@ -1,38 +1,38 @@
-import { useCallback, useEffect, useState } from "react";
-import { apiFetch } from "../apiFetch.js";
-import styles from "./AdminLibraries.module.css";
+import { useCallback, useEffect, useState } from 'react';
+import { apiFetch } from '../apiFetch.js';
+import styles from './AdminLibraries.module.css';
 
 const ALL_MEDIA_TYPES = [
-  "Movies",
-  "TV Shows",
-  "Clips",
-  "Music",
-  "Audiobooks",
-  "Audio Clips",
-  "Podcasts",
-  "Pictures",
-  "Images",
-  "Textures",
-  "Home Videos",
-  "Games",
-  "Interactive Media",
-  "Documents",
-  "Web Media",
-  "Design Files",
-  "3D Models",
-  "Archives",
-  "Fonts",
-  "Icons",
+  'Movies',
+  'TV Shows',
+  'Clips',
+  'Music',
+  'Audiobooks',
+  'Audio Clips',
+  'Podcasts',
+  'Pictures',
+  'Images',
+  'Textures',
+  'Home Videos',
+  'Games',
+  'Interactive Media',
+  'Documents',
+  'Web Media',
+  'Design Files',
+  '3D Models',
+  'Archives',
+  'Fonts',
+  'Icons',
 ];
 
 const SCHEDULE_PRESETS = [
-  { label: "Disabled", value: null },
-  { label: "Every 15 minutes", value: "*/15 * * * *" },
-  { label: "Every 30 minutes", value: "*/30 * * * *" },
-  { label: "Hourly", value: "0 */1 * * *" },
-  { label: "Every 6 hours", value: "0 */6 * * *" },
-  { label: "Every 12 hours", value: "0 */12 * * *" },
-  { label: "Daily", value: "0 */24 * * *" },
+  { label: 'Disabled', value: null },
+  { label: 'Every 15 minutes', value: '*/15 * * * *' },
+  { label: 'Every 30 minutes', value: '*/30 * * * *' },
+  { label: 'Hourly', value: '0 */1 * * *' },
+  { label: 'Every 6 hours', value: '0 */6 * * *' },
+  { label: 'Every 12 hours', value: '0 */12 * * *' },
+  { label: 'Daily', value: '0 */24 * * *' },
 ];
 
 function getNextScanTime(schedule: string | null): string | null {
@@ -41,10 +41,10 @@ function getNextScanTime(schedule: string | null): string | null {
   if (parts.length !== 5) return null;
   const [min, hour] = parts;
   let intervalMs: number | null = null;
-  if (min && /^\*\/\d+$/.test(min) && hour === "*") {
+  if (min && /^\*\/\d+$/.test(min) && hour === '*') {
     const n = Number(min.slice(2));
     if (n >= 1 && n <= 59) intervalMs = n * 60 * 1000;
-  } else if (min === "0" && hour && /^\*\/\d+$/.test(hour)) {
+  } else if (min === '0' && hour && /^\*\/\d+$/.test(hour)) {
     const n = Number(hour.slice(2));
     if (n >= 1 && n <= 23) intervalMs = n * 60 * 60 * 1000;
   }
@@ -55,7 +55,7 @@ function getNextScanTime(schedule: string | null): string | null {
 }
 
 function formatDuration(ms: number | null): string {
-  if (ms === null || ms === undefined) return "—";
+  if (ms === null || ms === undefined) return '—';
   if (ms < 1000) return `${ms}ms`;
   if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
   const mins = Math.floor(ms / 60000);
@@ -66,7 +66,7 @@ function formatDuration(ms: number | null): string {
 interface DataSource {
   id: string;
   libraryId: string;
-  type: "local" | "network" | "plugin";
+  type: 'local' | 'network' | 'plugin';
   path: string;
   pluginId: string | null;
   recursive: boolean;
@@ -105,28 +105,31 @@ function parseAllowedMediaTypes(raw: string): string[] {
 export default function AdminLibraries() {
   const [libraries, setLibraries] = useState<Library[]>([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+  const [error, setError] = useState('');
 
   // Create/edit form state
   const [showCreateForm, setShowCreateForm] = useState(false);
-  const [editingLibrary, setEditingLibrary] = useState<LibraryWithSources | null>(null);
-  const [formName, setFormName] = useState("");
-  const [formDescription, setFormDescription] = useState("");
+  const [editingLibrary, setEditingLibrary] =
+    useState<LibraryWithSources | null>(null);
+  const [formName, setFormName] = useState('');
+  const [formDescription, setFormDescription] = useState('');
   const [formMediaTypes, setFormMediaTypes] = useState<string[]>([]);
   const [formSaving, setFormSaving] = useState(false);
-  const [formError, setFormError] = useState("");
+  const [formError, setFormError] = useState('');
 
   // Data source form state (for edit modal)
-  const [newSourcePath, setNewSourcePath] = useState("");
-  const [newSourceType, setNewSourceType] = useState<"local" | "network">("local");
+  const [newSourcePath, setNewSourcePath] = useState('');
+  const [newSourceType, setNewSourceType] = useState<'local' | 'network'>(
+    'local',
+  );
   const [newSourceRecursive, setNewSourceRecursive] = useState(true);
   const [addingSource, setAddingSource] = useState(false);
-  const [sourceError, setSourceError] = useState("");
+  const [sourceError, setSourceError] = useState('');
 
   // Schedule state
   const [scheduleValue, setScheduleValue] = useState<string | null>(null);
   const [watchEnabled, setWatchEnabled] = useState(true);
-  const [scheduleError, setScheduleError] = useState("");
+  const [scheduleError, setScheduleError] = useState('');
   const [scheduleSaving, setScheduleSaving] = useState(false);
 
   // Delete confirmation state
@@ -139,11 +142,11 @@ export default function AdminLibraries() {
   const fetchLibraries = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await apiFetch("/api/v1/libraries");
+      const res = await apiFetch('/api/v1/libraries');
       const data = (await res.json()) as Library[];
       setLibraries(data);
     } catch {
-      setError("Failed to load libraries");
+      setError('Failed to load libraries');
     } finally {
       setLoading(false);
     }
@@ -154,20 +157,20 @@ export default function AdminLibraries() {
   }, [fetchLibraries]);
 
   function openCreateForm() {
-    setFormName("");
-    setFormDescription("");
+    setFormName('');
+    setFormDescription('');
     setFormMediaTypes([]);
-    setFormError("");
+    setFormError('');
     setShowCreateForm(true);
     setEditingLibrary(null);
   }
 
   async function openEditForm(lib: Library) {
-    setFormError("");
-    setSourceError("");
-    setScheduleError("");
-    setNewSourcePath("");
-    setNewSourceType("local");
+    setFormError('');
+    setSourceError('');
+    setScheduleError('');
+    setNewSourcePath('');
+    setNewSourceType('local');
     setNewSourceRecursive(true);
     // Fetch data sources
     try {
@@ -175,30 +178,30 @@ export default function AdminLibraries() {
       const data = (await res.json()) as LibraryWithSources;
       setEditingLibrary(data);
       setFormName(data.name);
-      setFormDescription(data.description ?? "");
+      setFormDescription(data.description ?? '');
       setFormMediaTypes(parseAllowedMediaTypes(data.allowedMediaTypes));
       setScheduleValue(data.scanSchedule);
       setWatchEnabled(data.watchEnabled);
       setShowCreateForm(false);
     } catch {
-      setError("Failed to load library details");
+      setError('Failed to load library details');
     }
   }
 
   function toggleMediaType(type: string) {
     setFormMediaTypes((prev) =>
-      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type]
+      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type],
     );
   }
 
   async function handleCreate(e: React.FormEvent) {
     e.preventDefault();
     setFormSaving(true);
-    setFormError("");
+    setFormError('');
     try {
-      const res = await apiFetch("/api/v1/libraries", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+      const res = await apiFetch('/api/v1/libraries', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: formName,
           description: formDescription || undefined,
@@ -206,13 +209,13 @@ export default function AdminLibraries() {
         }),
       });
       if (!res.ok) {
-        setFormError("Failed to create library");
+        setFormError('Failed to create library');
       } else {
         setShowCreateForm(false);
         await fetchLibraries();
       }
     } catch {
-      setFormError("Failed to create library");
+      setFormError('Failed to create library');
     } finally {
       setFormSaving(false);
     }
@@ -222,11 +225,11 @@ export default function AdminLibraries() {
     e.preventDefault();
     if (!editingLibrary) return;
     setFormSaving(true);
-    setFormError("");
+    setFormError('');
     try {
       const res = await apiFetch(`/api/v1/libraries/${editingLibrary.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: formName,
           description: formDescription || undefined,
@@ -234,16 +237,16 @@ export default function AdminLibraries() {
         }),
       });
       if (!res.ok) {
-        setFormError("Failed to update library");
+        setFormError('Failed to update library');
       } else {
         // Refresh editing library with updated data sources
         const updated = (await res.json()) as Library;
         setEditingLibrary({ ...editingLibrary, ...updated });
         await fetchLibraries();
-        setFormError("");
+        setFormError('');
       }
     } catch {
-      setFormError("Failed to update library");
+      setFormError('Failed to update library');
     } finally {
       setFormSaving(false);
     }
@@ -251,12 +254,12 @@ export default function AdminLibraries() {
 
   async function handleDelete(id: string) {
     try {
-      await apiFetch(`/api/v1/libraries/${id}`, { method: "DELETE" });
+      await apiFetch(`/api/v1/libraries/${id}`, { method: 'DELETE' });
       setDeleteConfirmId(null);
       if (editingLibrary?.id === id) setEditingLibrary(null);
       await fetchLibraries();
     } catch {
-      setError("Failed to delete library");
+      setError('Failed to delete library');
     }
   }
 
@@ -264,33 +267,36 @@ export default function AdminLibraries() {
     e.preventDefault();
     if (!editingLibrary) return;
     setAddingSource(true);
-    setSourceError("");
+    setSourceError('');
     try {
-      const res = await apiFetch(`/api/v1/libraries/${editingLibrary.id}/sources`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          type: newSourceType,
-          path: newSourcePath,
-          recursive: newSourceRecursive,
-          enabled: true,
-        }),
-      });
+      const res = await apiFetch(
+        `/api/v1/libraries/${editingLibrary.id}/sources`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: newSourceType,
+            path: newSourcePath,
+            recursive: newSourceRecursive,
+            enabled: true,
+          }),
+        },
+      );
       if (!res.ok) {
         const body = (await res.json()) as { error?: string };
-        setSourceError(body.error ?? "Failed to add data source");
+        setSourceError(body.error ?? 'Failed to add data source');
       } else {
         const newSource = (await res.json()) as DataSource;
         setEditingLibrary({
           ...editingLibrary,
           dataSources: [...editingLibrary.dataSources, newSource],
         });
-        setNewSourcePath("");
-        setNewSourceType("local");
+        setNewSourcePath('');
+        setNewSourceType('local');
         setNewSourceRecursive(true);
       }
     } catch {
-      setSourceError("Failed to add data source");
+      setSourceError('Failed to add data source');
     } finally {
       setAddingSource(false);
     }
@@ -299,16 +305,21 @@ export default function AdminLibraries() {
   async function handleToggleSource(source: DataSource) {
     if (!editingLibrary) return;
     try {
-      const res = await apiFetch(`/api/v1/libraries/${editingLibrary.id}/sources/${source.id}`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enabled: !source.enabled }),
-      });
+      const res = await apiFetch(
+        `/api/v1/libraries/${editingLibrary.id}/sources/${source.id}`,
+        {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ enabled: !source.enabled }),
+        },
+      );
       if (res.ok) {
         const updated = (await res.json()) as DataSource;
         setEditingLibrary({
           ...editingLibrary,
-          dataSources: editingLibrary.dataSources.map((s) => (s.id === source.id ? updated : s)),
+          dataSources: editingLibrary.dataSources.map((s) =>
+            s.id === source.id ? updated : s,
+          ),
         });
       }
     } catch {
@@ -319,15 +330,20 @@ export default function AdminLibraries() {
   async function handleDeleteSource(sourceId: string) {
     if (!editingLibrary) return;
     try {
-      await apiFetch(`/api/v1/libraries/${editingLibrary.id}/sources/${sourceId}`, {
-        method: "DELETE",
-      });
+      await apiFetch(
+        `/api/v1/libraries/${editingLibrary.id}/sources/${sourceId}`,
+        {
+          method: 'DELETE',
+        },
+      );
       setEditingLibrary({
         ...editingLibrary,
-        dataSources: editingLibrary.dataSources.filter((s) => s.id !== sourceId),
+        dataSources: editingLibrary.dataSources.filter(
+          (s) => s.id !== sourceId,
+        ),
       });
     } catch {
-      setSourceError("Failed to remove data source");
+      setSourceError('Failed to remove data source');
     }
   }
 
@@ -335,29 +351,29 @@ export default function AdminLibraries() {
     e.preventDefault();
     if (!editingLibrary) return;
     setScheduleSaving(true);
-    setScheduleError("");
+    setScheduleError('');
     try {
       const [schedRes, watchRes] = await Promise.all([
         apiFetch(`/api/v1/libraries/${editingLibrary.id}/scan/schedule`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ scanSchedule: scheduleValue }),
         }),
         apiFetch(`/api/v1/libraries/${editingLibrary.id}/scan/watch`, {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ watchEnabled }),
         }),
       ]);
       if (!schedRes.ok || !watchRes.ok) {
-        setScheduleError("Failed to save schedule settings");
+        setScheduleError('Failed to save schedule settings');
       } else {
         const updated = (await watchRes.json()) as Library;
         setEditingLibrary({ ...editingLibrary, ...updated });
         await fetchLibraries();
       }
     } catch {
-      setScheduleError("Failed to save schedule settings");
+      setScheduleError('Failed to save schedule settings');
     } finally {
       setScheduleSaving(false);
     }
@@ -365,21 +381,32 @@ export default function AdminLibraries() {
 
   async function handleScan(libraryId: string) {
     setScanningIds((prev) => new Set([...prev, libraryId]));
-    setScanMessages((prev) => ({ ...prev, [libraryId]: "" }));
+    setScanMessages((prev) => ({ ...prev, [libraryId]: '' }));
     try {
-      const res = await apiFetch(`/api/v1/libraries/${libraryId}/scan`, { method: "POST" });
+      const res = await apiFetch(`/api/v1/libraries/${libraryId}/scan`, {
+        method: 'POST',
+      });
       if (res.status === 409) {
-        setScanMessages((prev) => ({ ...prev, [libraryId]: "Scan already running" }));
+        setScanMessages((prev) => ({
+          ...prev,
+          [libraryId]: 'Scan already running',
+        }));
       } else if (res.ok) {
-        setScanMessages((prev) => ({ ...prev, [libraryId]: "Scan started" }));
+        setScanMessages((prev) => ({ ...prev, [libraryId]: 'Scan started' }));
         setTimeout(() => {
-          setScanMessages((prev) => ({ ...prev, [libraryId]: "" }));
+          setScanMessages((prev) => ({ ...prev, [libraryId]: '' }));
         }, 3000);
       } else {
-        setScanMessages((prev) => ({ ...prev, [libraryId]: "Failed to start scan" }));
+        setScanMessages((prev) => ({
+          ...prev,
+          [libraryId]: 'Failed to start scan',
+        }));
       }
     } catch {
-      setScanMessages((prev) => ({ ...prev, [libraryId]: "Failed to start scan" }));
+      setScanMessages((prev) => ({
+        ...prev,
+        [libraryId]: 'Failed to start scan',
+      }));
     } finally {
       setScanningIds((prev) => {
         const next = new Set(prev);
@@ -391,27 +418,31 @@ export default function AdminLibraries() {
 
   if (loading) {
     return (
-      <div className={styles.page ?? ""}>
-        <p className={styles.loading ?? ""}>Loading...</p>
+      <div className={styles.page ?? ''}>
+        <p className={styles.loading ?? ''}>Loading...</p>
       </div>
     );
   }
 
   return (
-    <div className={styles.page ?? ""}>
-      <div className={styles.header ?? ""}>
-        <h1 className={styles.heading ?? ""}>Libraries</h1>
-        <button type="button" className={styles.createBtn ?? ""} onClick={openCreateForm}>
+    <div className={styles.page ?? ''}>
+      <div className={styles.header ?? ''}>
+        <h1 className={styles.heading ?? ''}>Libraries</h1>
+        <button
+          type="button"
+          className={styles.createBtn ?? ''}
+          onClick={openCreateForm}
+        >
           + New Library
         </button>
       </div>
 
-      {error && <p className={styles.error ?? ""}>{error}</p>}
+      {error && <p className={styles.error ?? ''}>{error}</p>}
 
       {/* Create form */}
       {showCreateForm && (
-        <div className={styles.formCard ?? ""}>
-          <h2 className={styles.formHeading ?? ""}>Create Library</h2>
+        <div className={styles.formCard ?? ''}>
+          <h2 className={styles.formHeading ?? ''}>Create Library</h2>
           <form onSubmit={handleCreate}>
             <LibraryFormFields
               name={formName}
@@ -421,17 +452,21 @@ export default function AdminLibraries() {
               onDescriptionChange={setFormDescription}
               onToggleMediaType={toggleMediaType}
             />
-            {formError && <p className={styles.error ?? ""}>{formError}</p>}
-            <div className={styles.formActions ?? ""}>
+            {formError && <p className={styles.error ?? ''}>{formError}</p>}
+            <div className={styles.formActions ?? ''}>
               <button
                 type="button"
-                className={styles.cancelBtn ?? ""}
+                className={styles.cancelBtn ?? ''}
                 onClick={() => setShowCreateForm(false)}
               >
                 Cancel
               </button>
-              <button type="submit" className={styles.saveBtn ?? ""} disabled={formSaving}>
-                {formSaving ? "Creating..." : "Create Library"}
+              <button
+                type="submit"
+                className={styles.saveBtn ?? ''}
+                disabled={formSaving}
+              >
+                {formSaving ? 'Creating...' : 'Create Library'}
               </button>
             </div>
           </form>
@@ -440,12 +475,12 @@ export default function AdminLibraries() {
 
       {/* Edit panel */}
       {editingLibrary && (
-        <div className={styles.editPanel ?? ""}>
-          <div className={styles.editPanelHeader ?? ""}>
-            <h2 className={styles.formHeading ?? ""}>Edit Library</h2>
+        <div className={styles.editPanel ?? ''}>
+          <div className={styles.editPanelHeader ?? ''}>
+            <h2 className={styles.formHeading ?? ''}>Edit Library</h2>
             <button
               type="button"
-              className={styles.closeBtn ?? ""}
+              className={styles.closeBtn ?? ''}
               onClick={() => setEditingLibrary(null)}
             >
               Close
@@ -461,50 +496,63 @@ export default function AdminLibraries() {
               onDescriptionChange={setFormDescription}
               onToggleMediaType={toggleMediaType}
             />
-            {formError && <p className={styles.error ?? ""}>{formError}</p>}
-            <div className={styles.formActions ?? ""}>
-              <button type="submit" className={styles.saveBtn ?? ""} disabled={formSaving}>
-                {formSaving ? "Saving..." : "Save Changes"}
+            {formError && <p className={styles.error ?? ''}>{formError}</p>}
+            <div className={styles.formActions ?? ''}>
+              <button
+                type="submit"
+                className={styles.saveBtn ?? ''}
+                disabled={formSaving}
+              >
+                {formSaving ? 'Saving...' : 'Save Changes'}
               </button>
             </div>
           </form>
 
           {/* Scan schedule section */}
-          <div className={styles.sourcesSection ?? ""}>
-            <h3 className={styles.sourcesSectionHeading ?? ""}>Scan Schedule</h3>
+          <div className={styles.sourcesSection ?? ''}>
+            <h3 className={styles.sourcesSectionHeading ?? ''}>
+              Scan Schedule
+            </h3>
 
             {/* Last scan info */}
-            <div className={styles.scanInfoRow ?? ""}>
-              <span className={styles.scanInfoLabel ?? ""}>Last scan:</span>
+            <div className={styles.scanInfoRow ?? ''}>
+              <span className={styles.scanInfoLabel ?? ''}>Last scan:</span>
               <span
-                className={`${styles.scanInfoValue ?? ""} ${
-                  editingLibrary.lastScanResult === "failed" ? (styles.scanResultFailed ?? "") : ""
+                className={`${styles.scanInfoValue ?? ''} ${
+                  editingLibrary.lastScanResult === 'failed'
+                    ? (styles.scanResultFailed ?? '')
+                    : ''
                 }`}
               >
-                {editingLibrary.lastScanResult ?? "Never"}
+                {editingLibrary.lastScanResult ?? 'Never'}
                 {editingLibrary.lastScanDuration !== null &&
                   editingLibrary.lastScanDuration !== undefined &&
                   ` (${formatDuration(editingLibrary.lastScanDuration)})`}
               </span>
             </div>
 
-            <form onSubmit={handleSaveSchedule} className={styles.scheduleForm ?? ""}>
-              <div className={styles.scheduleRow ?? ""}>
-                <label className={styles.scheduleLabel ?? ""}>
+            <form
+              onSubmit={handleSaveSchedule}
+              className={styles.scheduleForm ?? ''}
+            >
+              <div className={styles.scheduleRow ?? ''}>
+                <label className={styles.scheduleLabel ?? ''}>
                   Schedule
                   <select
-                    className={styles.select ?? ""}
-                    value={scheduleValue ?? ""}
+                    className={styles.select ?? ''}
+                    value={scheduleValue ?? ''}
                     onChange={(e) => setScheduleValue(e.target.value || null)}
                   >
                     {SCHEDULE_PRESETS.map((p) => (
-                      <option key={p.label} value={p.value ?? ""}>
+                      <option key={p.label} value={p.value ?? ''}>
                         {p.label}
                       </option>
                     ))}
                   </select>
                 </label>
-                <label className={`${styles.checkboxLabel ?? ""} ${styles.watchLabel ?? ""}`}>
+                <label
+                  className={`${styles.checkboxLabel ?? ''} ${styles.watchLabel ?? ''}`}
+                >
                   <input
                     type="checkbox"
                     checked={watchEnabled}
@@ -515,47 +563,59 @@ export default function AdminLibraries() {
               </div>
 
               {scheduleValue && (
-                <p className={styles.nextScanInfo ?? ""}>
-                  Next scan: {getNextScanTime(scheduleValue) ?? "—"}
+                <p className={styles.nextScanInfo ?? ''}>
+                  Next scan: {getNextScanTime(scheduleValue) ?? '—'}
                 </p>
               )}
 
-              {scheduleError && <p className={styles.error ?? ""}>{scheduleError}</p>}
+              {scheduleError && (
+                <p className={styles.error ?? ''}>{scheduleError}</p>
+              )}
 
-              <div className={styles.formActions ?? ""}>
-                <button type="submit" className={styles.saveBtn ?? ""} disabled={scheduleSaving}>
-                  {scheduleSaving ? "Saving..." : "Save Schedule"}
+              <div className={styles.formActions ?? ''}>
+                <button
+                  type="submit"
+                  className={styles.saveBtn ?? ''}
+                  disabled={scheduleSaving}
+                >
+                  {scheduleSaving ? 'Saving...' : 'Save Schedule'}
                 </button>
               </div>
             </form>
           </div>
 
           {/* Data sources section */}
-          <div className={styles.sourcesSection ?? ""}>
-            <h3 className={styles.sourcesSectionHeading ?? ""}>Data Sources</h3>
+          <div className={styles.sourcesSection ?? ''}>
+            <h3 className={styles.sourcesSectionHeading ?? ''}>Data Sources</h3>
             {editingLibrary.dataSources.length === 0 && (
-              <p className={styles.emptyMsg ?? ""}>No data sources added yet.</p>
+              <p className={styles.emptyMsg ?? ''}>
+                No data sources added yet.
+              </p>
             )}
             {editingLibrary.dataSources.map((source) => (
-              <div key={source.id} className={styles.sourceRow ?? ""}>
-                <div className={styles.sourceInfo ?? ""}>
-                  <span className={styles.sourceType ?? ""}>{source.type}</span>
-                  <span className={styles.sourcePath ?? ""}>{source.path}</span>
-                  <span className={styles.sourceMeta ?? ""}>
-                    {source.recursive ? "recursive" : "non-recursive"}
+              <div key={source.id} className={styles.sourceRow ?? ''}>
+                <div className={styles.sourceInfo ?? ''}>
+                  <span className={styles.sourceType ?? ''}>{source.type}</span>
+                  <span className={styles.sourcePath ?? ''}>{source.path}</span>
+                  <span className={styles.sourceMeta ?? ''}>
+                    {source.recursive ? 'recursive' : 'non-recursive'}
                   </span>
                 </div>
-                <div className={styles.sourceActions ?? ""}>
+                <div className={styles.sourceActions ?? ''}>
                   <button
                     type="button"
-                    className={source.enabled ? styles.disableBtn : (styles.enableBtn ?? "")}
+                    className={
+                      source.enabled
+                        ? styles.disableBtn
+                        : (styles.enableBtn ?? '')
+                    }
                     onClick={() => handleToggleSource(source)}
                   >
-                    {source.enabled ? "Disable" : "Enable"}
+                    {source.enabled ? 'Disable' : 'Enable'}
                   </button>
                   <button
                     type="button"
-                    className={styles.deleteSourceBtn ?? ""}
+                    className={styles.deleteSourceBtn ?? ''}
                     onClick={() => handleDeleteSource(source.id)}
                   >
                     Remove
@@ -564,26 +624,31 @@ export default function AdminLibraries() {
               </div>
             ))}
 
-            <form onSubmit={handleAddSource} className={styles.addSourceForm ?? ""}>
-              <h4 className={styles.addSourceHeading ?? ""}>Add Data Source</h4>
-              <div className={styles.addSourceRow ?? ""}>
+            <form
+              onSubmit={handleAddSource}
+              className={styles.addSourceForm ?? ''}
+            >
+              <h4 className={styles.addSourceHeading ?? ''}>Add Data Source</h4>
+              <div className={styles.addSourceRow ?? ''}>
                 <select
-                  className={styles.select ?? ""}
+                  className={styles.select ?? ''}
                   value={newSourceType}
-                  onChange={(e) => setNewSourceType(e.target.value as "local" | "network")}
+                  onChange={(e) =>
+                    setNewSourceType(e.target.value as 'local' | 'network')
+                  }
                 >
                   <option value="local">Local</option>
                   <option value="network">Network</option>
                 </select>
                 <input
                   type="text"
-                  className={styles.input ?? ""}
+                  className={styles.input ?? ''}
                   placeholder="/path/to/media"
                   value={newSourcePath}
                   onChange={(e) => setNewSourcePath(e.target.value)}
                   required
                 />
-                <label className={styles.checkboxLabel ?? ""}>
+                <label className={styles.checkboxLabel ?? ''}>
                   <input
                     type="checkbox"
                     checked={newSourceRecursive}
@@ -591,11 +656,17 @@ export default function AdminLibraries() {
                   />
                   Recursive
                 </label>
-                <button type="submit" className={styles.addBtn ?? ""} disabled={addingSource}>
-                  {addingSource ? "Adding..." : "Add"}
+                <button
+                  type="submit"
+                  className={styles.addBtn ?? ''}
+                  disabled={addingSource}
+                >
+                  {addingSource ? 'Adding...' : 'Add'}
                 </button>
               </div>
-              {sourceError && <p className={styles.error ?? ""}>{sourceError}</p>}
+              {sourceError && (
+                <p className={styles.error ?? ''}>{sourceError}</p>
+              )}
             </form>
           </div>
         </div>
@@ -603,34 +674,42 @@ export default function AdminLibraries() {
 
       {/* Library list */}
       {libraries.length === 0 && !showCreateForm && (
-        <div className={styles.empty ?? ""}>
+        <div className={styles.empty ?? ''}>
           <p>No libraries yet. Create one to get started.</p>
         </div>
       )}
-      <div className={styles.libraryList ?? ""}>
+      <div className={styles.libraryList ?? ''}>
         {libraries.map((lib) => (
-          <div key={lib.id} className={styles.libraryCard ?? ""}>
-            <div className={styles.libraryCardMain ?? ""}>
+          <div key={lib.id} className={styles.libraryCard ?? ''}>
+            <div className={styles.libraryCardMain ?? ''}>
               <div>
-                <p className={styles.libraryName ?? ""}>{lib.name}</p>
+                <p className={styles.libraryName ?? ''}>{lib.name}</p>
                 {lib.description && (
-                  <p className={styles.libraryDescription ?? ""}>{lib.description}</p>
+                  <p className={styles.libraryDescription ?? ''}>
+                    {lib.description}
+                  </p>
                 )}
-                <p className={styles.libraryMeta ?? ""}>
-                  {parseAllowedMediaTypes(lib.allowedMediaTypes).join(", ") || "All media types"}
+                <p className={styles.libraryMeta ?? ''}>
+                  {parseAllowedMediaTypes(lib.allowedMediaTypes).join(', ') ||
+                    'All media types'}
                 </p>
-                <div className={styles.libraryScanMeta ?? ""}>
+                <div className={styles.libraryScanMeta ?? ''}>
                   {lib.scanSchedule && (
-                    <span className={styles.scheduleTag ?? ""}>
-                      {SCHEDULE_PRESETS.find((p) => p.value === lib.scanSchedule)?.label ??
-                        lib.scanSchedule}
+                    <span className={styles.scheduleTag ?? ''}>
+                      {SCHEDULE_PRESETS.find(
+                        (p) => p.value === lib.scanSchedule,
+                      )?.label ?? lib.scanSchedule}
                     </span>
                   )}
-                  {lib.watchEnabled && <span className={styles.watchTag ?? ""}>Watching</span>}
+                  {lib.watchEnabled && (
+                    <span className={styles.watchTag ?? ''}>Watching</span>
+                  )}
                   {lib.lastScanResult && (
                     <span
-                      className={`${styles.lastScanTag ?? ""} ${
-                        lib.lastScanResult === "failed" ? (styles.scanResultFailed ?? "") : ""
+                      className={`${styles.lastScanTag ?? ''} ${
+                        lib.lastScanResult === 'failed'
+                          ? (styles.scanResultFailed ?? '')
+                          : ''
                       }`}
                     >
                       Last: {lib.lastScanResult}
@@ -641,38 +720,40 @@ export default function AdminLibraries() {
                   )}
                 </div>
               </div>
-              <div className={styles.libraryCardActions ?? ""}>
+              <div className={styles.libraryCardActions ?? ''}>
                 {scanMessages[lib.id] && (
-                  <span className={styles.scanMsg ?? ""}>{scanMessages[lib.id]}</span>
+                  <span className={styles.scanMsg ?? ''}>
+                    {scanMessages[lib.id]}
+                  </span>
                 )}
                 <button
                   type="button"
-                  className={styles.scanBtn ?? ""}
+                  className={styles.scanBtn ?? ''}
                   onClick={() => handleScan(lib.id)}
                   disabled={scanningIds.has(lib.id)}
                 >
-                  {scanningIds.has(lib.id) ? "Starting..." : "Scan"}
+                  {scanningIds.has(lib.id) ? 'Starting...' : 'Scan'}
                 </button>
                 <button
                   type="button"
-                  className={styles.editBtn ?? ""}
+                  className={styles.editBtn ?? ''}
                   onClick={() => openEditForm(lib)}
                 >
                   Edit
                 </button>
                 {deleteConfirmId === lib.id ? (
-                  <span className={styles.deleteConfirm ?? ""}>
+                  <span className={styles.deleteConfirm ?? ''}>
                     <span>Delete?</span>
                     <button
                       type="button"
-                      className={styles.confirmDeleteBtn ?? ""}
+                      className={styles.confirmDeleteBtn ?? ''}
                       onClick={() => handleDelete(lib.id)}
                     >
                       Yes
                     </button>
                     <button
                       type="button"
-                      className={styles.cancelDeleteBtn ?? ""}
+                      className={styles.cancelDeleteBtn ?? ''}
                       onClick={() => setDeleteConfirmId(null)}
                     >
                       No
@@ -681,7 +762,7 @@ export default function AdminLibraries() {
                 ) : (
                   <button
                     type="button"
-                    className={styles.deleteBtn ?? ""}
+                    className={styles.deleteBtn ?? ''}
                     onClick={() => setDeleteConfirmId(lib.id)}
                   >
                     Delete
@@ -714,33 +795,35 @@ function LibraryFormFields({
   onToggleMediaType,
 }: LibraryFormFieldsProps) {
   return (
-    <div className={styles.formFields ?? ""}>
-      <label className={styles.fieldLabel ?? ""}>
+    <div className={styles.formFields ?? ''}>
+      <label className={styles.fieldLabel ?? ''}>
         Name
         <input
           type="text"
-          className={styles.input ?? ""}
+          className={styles.input ?? ''}
           value={name}
           onChange={(e) => onNameChange(e.target.value)}
           required
           placeholder="My Movies"
         />
       </label>
-      <label className={styles.fieldLabel ?? ""}>
+      <label className={styles.fieldLabel ?? ''}>
         Description
         <input
           type="text"
-          className={styles.input ?? ""}
+          className={styles.input ?? ''}
           value={description}
           onChange={(e) => onDescriptionChange(e.target.value)}
           placeholder="Optional description"
         />
       </label>
       <div>
-        <p className={styles.fieldLabel ?? ""}>Allowed Media Types (leave empty for all)</p>
-        <div className={styles.mediaTypeGrid ?? ""}>
+        <p className={styles.fieldLabel ?? ''}>
+          Allowed Media Types (leave empty for all)
+        </p>
+        <div className={styles.mediaTypeGrid ?? ''}>
           {ALL_MEDIA_TYPES.map((type) => (
-            <label key={type} className={styles.mediaTypeCheckbox ?? ""}>
+            <label key={type} className={styles.mediaTypeCheckbox ?? ''}>
               <input
                 type="checkbox"
                 checked={mediaTypes.includes(type)}
