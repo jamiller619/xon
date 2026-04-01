@@ -211,6 +211,13 @@
       "when": 1774801800000,
       "tag": "0029_scan_schedule_settings",
       "breakpoints": true
+    },
+    {
+      "idx": 30,
+      "version": "6",
+      "when": 1775013691641,
+      "tag": "0030_lying_violations",
+      "breakpoints": true
     }
   ]
 }

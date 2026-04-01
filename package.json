@@ -4,6 +4,7 @@
   "private": true,
   "workspaces": ["apps/*", "packages/*", "plugins/*"],
   "scripts": {
+    "dev": "WEB_CLIENT_DIR=$(pwd)/apps/web/dist/client DATA_DIR=$(pwd)/data yarn workspace @xon/headless start",
     "typecheck": "tsc --build",
     "lint": "biome lint .",
     "format": "biome format .",
