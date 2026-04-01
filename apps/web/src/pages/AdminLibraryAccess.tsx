@@ -1,69 +1,69 @@
-import { useEffect, useState } from 'react';
-import { apiFetch } from '../apiFetch.js';
-import styles from './AdminUsers.module.css';
+import { useEffect, useState } from 'react'
+import { apiFetch } from '../apiFetch.js'
+import styles from './AdminUsers.module.css'
 
 interface Library {
-  id: string;
-  name: string;
-  hideDrmItems: boolean;
+  id: string
+  name: string
+  hideDrmItems: boolean
 }
 
 interface UserInfo {
-  id: string;
-  username: string;
-  displayName: string;
-  role: string;
+  id: string
+  username: string
+  displayName: string
+  role: string
 }
 
 interface AccessEntry {
-  userId: string;
-  libraryId: string;
-  username: string;
-  displayName: string;
-  role: string;
+  userId: string
+  libraryId: string
+  username: string
+  displayName: string
+  role: string
 }
 
 export default function AdminLibraryAccess() {
-  const [libraries, setLibraries] = useState<Library[]>([]);
-  const [users, setUsers] = useState<UserInfo[]>([]);
-  const [selectedLibraryId, setSelectedLibraryId] = useState<string>('');
-  const [accessList, setAccessList] = useState<AccessEntry[]>([]);
-  const [loadingAccess, setLoadingAccess] = useState(false);
-  const [grantUserId, setGrantUserId] = useState('');
-  const [granting, setGranting] = useState(false);
-  const [grantError, setGrantError] = useState('');
-  const [confirmRevokeId, setConfirmRevokeId] = useState<string | null>(null);
-  const [revoking, setRevoking] = useState(false);
-  const [savingLibSettings, setSavingLibSettings] = useState(false);
+  const [libraries, setLibraries] = useState<Library[]>([])
+  const [users, setUsers] = useState<UserInfo[]>([])
+  const [selectedLibraryId, setSelectedLibraryId] = useState<string>('')
+  const [accessList, setAccessList] = useState<AccessEntry[]>([])
+  const [loadingAccess, setLoadingAccess] = useState(false)
+  const [grantUserId, setGrantUserId] = useState('')
+  const [granting, setGranting] = useState(false)
+  const [grantError, setGrantError] = useState('')
+  const [confirmRevokeId, setConfirmRevokeId] = useState<string | null>(null)
+  const [revoking, setRevoking] = useState(false)
+  const [savingLibSettings, setSavingLibSettings] = useState(false)
 
   useEffect(() => {
     apiFetch('/api/v1/libraries')
       .then((r) => r.json())
       .then((data: Library[]) => setLibraries(data))
-      .catch(() => {});
+      .catch(() => {})
     apiFetch('/api/v1/admin/users')
       .then((r) => r.json())
       .then((data: UserInfo[]) => setUsers(data))
-      .catch(() => {});
-  }, []);
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     if (!selectedLibraryId) {
-      setAccessList([]);
-      return;
+      setAccessList([])
+      return
     }
-    setLoadingAccess(true);
+    setLoadingAccess(true)
     apiFetch(`/api/v1/admin/libraries/${selectedLibraryId}/access`)
       .then((r) => r.json())
       .then((data: AccessEntry[]) => setAccessList(data))
       .catch(() => setAccessList([]))
-      .finally(() => setLoadingAccess(false));
-  }, [selectedLibraryId]);
+      .finally(() => setLoadingAccess(false))
+  }, [selectedLibraryId])
 
   async function handleGrant() {
-    if (!selectedLibraryId || !grantUserId) return;
-    setGranting(true);
-    setGrantError('');
+    if (!selectedLibraryId || !grantUserId) return
+    setGranting(true)
+    setGrantError('')
     try {
       const res = await apiFetch(
         `/api/v1/admin/libraries/${selectedLibraryId}/access`,
@@ -72,64 +72,64 @@ export default function AdminLibraryAccess() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ userId: grantUserId }),
         },
-      );
+      )
       if (!res.ok) {
-        const body = await res.json();
+        const body = await res.json()
         setGrantError(
           (body as { error?: string }).error ?? 'Failed to grant access',
-        );
-        return;
+        )
+        return
       }
-      setGrantUserId('');
+      setGrantUserId('')
       // Refresh access list
       const updated = await apiFetch(
         `/api/v1/admin/libraries/${selectedLibraryId}/access`,
-      ).then((r) => r.json());
-      setAccessList(updated as AccessEntry[]);
+      ).then((r) => r.json())
+      setAccessList(updated as AccessEntry[])
     } finally {
-      setGranting(false);
+      setGranting(false)
     }
   }
 
   async function handleToggleHideDrm(value: boolean) {
-    if (!selectedLibraryId) return;
-    setSavingLibSettings(true);
+    if (!selectedLibraryId) return
+    setSavingLibSettings(true)
     try {
       await apiFetch(`/api/v1/libraries/${selectedLibraryId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hideDrmItems: value }),
-      });
+      })
       setLibraries((prev) =>
         prev.map((lib) =>
           lib.id === selectedLibraryId ? { ...lib, hideDrmItems: value } : lib,
         ),
-      );
+      )
     } finally {
-      setSavingLibSettings(false);
+      setSavingLibSettings(false)
     }
   }
 
   async function handleRevoke(userId: string) {
-    if (!selectedLibraryId) return;
-    setRevoking(true);
+    if (!selectedLibraryId) return
+    setRevoking(true)
     try {
       await apiFetch(
         `/api/v1/admin/libraries/${selectedLibraryId}/access/${userId}`,
         {
           method: 'DELETE',
         },
-      );
-      setAccessList((prev) => prev.filter((e) => e.userId !== userId));
-      setConfirmRevokeId(null);
+      )
+      setAccessList((prev) => prev.filter((e) => e.userId !== userId))
+      setConfirmRevokeId(null)
     } finally {
-      setRevoking(false);
+      setRevoking(false)
     }
   }
 
   const grantableUsers = users.filter(
     (u) => !accessList.some((a) => a.userId === u.id),
-  );
+  )
 
   return (
     <div className={styles.page}>
@@ -275,5 +275,5 @@ export default function AdminLibraryAccess() {
         </>
       )}
     </div>
-  );
+  )
 }

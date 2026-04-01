@@ -1,4 +1,4 @@
-import type { MediaCategory } from '@xon/shared';
+import type { MediaCategory } from '@xon/shared'
 
 // Plugin category types
 export type PluginCategory =
@@ -8,36 +8,36 @@ export type PluginCategory =
   | 'Processor'
   | 'Theme'
   | 'UIExtension'
-  | 'BackupTarget';
+  | 'BackupTarget'
 
 // Plugin manifest matching the package.json xon field schema
 export interface PluginManifest {
-  id: string;
-  name: string;
-  version: string;
-  description: string;
-  author: string;
-  category: PluginCategory;
+  id: string
+  name: string
+  version: string
+  description: string
+  author: string
+  category: PluginCategory
   /** Media categories this plugin handles (for MediaProvider/FormatHandler) */
-  mediaCategories?: MediaCategory[];
+  mediaCategories?: MediaCategory[]
   /** Minimum Xon server version required */
-  minServerVersion?: string;
+  minServerVersion?: string
   /** Entry point relative to plugin root (default: index.js) */
-  main?: string;
+  main?: string
   /** Theme asset files (for Theme category plugins) */
   themeAssets?: {
     /** CSS file path relative to plugin assets directory */
-    cssFile?: string;
+    cssFile?: string
     /** Optional JavaScript file path relative to plugin assets directory */
-    jsFile?: string;
-  };
+    jsFile?: string
+  }
   /** Declared sandbox permissions for this plugin */
   permissions?: {
     /** Filesystem paths the plugin may read/write (in addition to its own directory) */
-    filesystem?: string[];
+    filesystem?: string[]
     /** Network domains the plugin may connect to (e.g. "api.example.com") */
-    network?: string[];
-  };
+    network?: string[]
+  }
 }
 
 // Event types for plugin event hooks
@@ -48,44 +48,44 @@ export type PluginEvent =
   | 'media:updated'
   | 'media:deleted'
   | 'server:boot'
-  | 'server:shutdown';
+  | 'server:shutdown'
 
 export interface PluginEventPayloads {
-  'scan:start': { libraryId: string };
-  'scan:complete': { libraryId: string; itemsFound: number };
-  'media:created': { mediaId: string; filePath: string };
-  'media:updated': { mediaId: string; filePath: string };
-  'media:deleted': { mediaId: string; filePath: string };
-  'server:boot': Record<string, never>;
-  'server:shutdown': Record<string, never>;
+  'scan:start': { libraryId: string }
+  'scan:complete': { libraryId: string; itemsFound: number }
+  'media:created': { mediaId: string; filePath: string }
+  'media:updated': { mediaId: string; filePath: string }
+  'media:deleted': { mediaId: string; filePath: string }
+  'server:boot': Record<string, never>
+  'server:shutdown': Record<string, never>
 }
 
 // Minimal Hono-compatible route handler context (avoids DOM type dependency)
 export interface PluginRouteContext {
   req: {
-    param: (key: string) => string;
-    query: (key: string) => string | undefined;
-    json: <T = unknown>() => Promise<T>;
-    header: (key: string) => string | undefined;
-  };
-  json: (data: unknown, status?: number) => PluginRouteResponse;
-  text: (text: string, status?: number) => PluginRouteResponse;
+    param: (key: string) => string
+    query: (key: string) => string | undefined
+    json: <T = unknown>() => Promise<T>
+    header: (key: string) => string | undefined
+  }
+  json: (data: unknown, status?: number) => PluginRouteResponse
+  text: (text: string, status?: number) => PluginRouteResponse
 }
 
 export interface PluginRouteResponse {
-  readonly status: number;
-  readonly headers: Record<string, string>;
+  readonly status: number
+  readonly headers: Record<string, string>
 }
 
 // Route handler type (Hono-compatible)
 export type RouteHandler = (
   c: PluginRouteContext,
-) => PluginRouteResponse | Promise<PluginRouteResponse>;
+) => PluginRouteResponse | Promise<PluginRouteResponse>
 
 export interface RouteDefinition {
-  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
-  path: string;
-  handler: RouteHandler;
+  method: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
+  path: string
+  handler: RouteHandler
 }
 
 // UI injection point types
@@ -98,26 +98,26 @@ export type UIInjectionPoint =
   | 'sidebar:bottom'
   | 'mediaDetail:actions'
   | 'library:toolbar'
-  | 'settings:page';
+  | 'settings:page'
 
 export interface UIComponent {
-  id: string;
-  injectionPoint: UIInjectionPoint;
+  id: string
+  injectionPoint: UIInjectionPoint
   /** Client-side JS bundle URL served by the plugin */
-  bundleUrl: string;
+  bundleUrl: string
   /** Display label shown in nav or admin contexts */
-  label?: string;
+  label?: string
 }
 
 /** Props passed to plugin UI components at render time */
 export interface PluginComponentProps {
   mediaItem?: {
-    id: string;
-    title: string | null;
-    mediaCategory: string | null;
-    libraryId: string | null;
-  };
-  libraryId?: string;
+    id: string
+    title: string | null
+    mediaCategory: string | null
+    libraryId: string | null
+  }
+  libraryId?: string
 }
 
 // ---------------------------------------------------------------------------
@@ -127,32 +127,32 @@ export interface PluginComponentProps {
 /** A single configuration field for a BackupTarget plugin's admin UI form */
 export interface BackupTargetConfigField {
   /** Key used in the plugin config JSON */
-  key: string;
+  key: string
   /** Human-readable label shown in the admin UI */
-  label: string;
+  label: string
   /** Input type for the admin UI */
-  type: 'string' | 'password' | 'number' | 'boolean';
+  type: 'string' | 'password' | 'number' | 'boolean'
   /** Whether this field must be filled before saving */
-  required?: boolean;
+  required?: boolean
   /** Default value pre-populated in the admin UI */
-  default?: string | number | boolean;
+  default?: string | number | boolean
   /** Optional help text shown below the field */
-  description?: string;
+  description?: string
 }
 
 /** Schema describing all configuration fields for a BackupTarget plugin */
 export interface BackupTargetConfigSchema {
-  fields: BackupTargetConfigField[];
+  fields: BackupTargetConfigField[]
 }
 
 /** Result returned by BackupTargetPlugin.verify() */
 export interface BackupVerifyResult {
   /** Whether the file exists in remote storage */
-  exists: boolean;
+  exists: boolean
   /** SHA-256 checksum of the remote file, if available */
-  checksum?: string;
+  checksum?: string
   /** Size of the remote file in bytes, if available */
-  size?: number;
+  size?: number
 }
 
 // ---------------------------------------------------------------------------
@@ -162,86 +162,86 @@ export interface BackupVerifyResult {
 /** A file entry returned by a MediaProvider plugin's listFiles() method */
 export interface MediaProviderFile {
   /** Unique identifier for the file in the remote storage */
-  id: string;
+  id: string
   /** Display name of the file */
-  name: string;
+  name: string
   /** Full path or virtual path of the file in the remote storage */
-  path: string;
+  path: string
   /** File size in bytes */
-  size: number;
+  size: number
   /** MIME type of the file, if known */
-  mimeType?: string;
+  mimeType?: string
   /** Last modified timestamp */
-  modifiedAt?: Date;
+  modifiedAt?: Date
 }
 
 /** Callback invoked by MediaProviderPlugin.watch() when files change */
 export type WatchCallback = (event: {
-  type: 'created' | 'updated' | 'deleted';
-  file: MediaProviderFile;
-}) => void;
+  type: 'created' | 'updated' | 'deleted'
+  file: MediaProviderFile
+}) => void
 
 /** A single configuration field for a MediaProvider plugin's data source setup form */
 export interface MediaProviderConfigField {
   /** Key used in the plugin config JSON */
-  key: string;
+  key: string
   /** Human-readable label shown in the admin UI */
-  label: string;
+  label: string
   /** Input type for the admin UI */
-  type: 'string' | 'password' | 'number' | 'boolean';
+  type: 'string' | 'password' | 'number' | 'boolean'
   /** Whether this field must be filled before saving */
-  required?: boolean;
+  required?: boolean
   /** Default value pre-populated in the admin UI */
-  default?: string | number | boolean;
+  default?: string | number | boolean
   /** Optional help text shown below the field */
-  description?: string;
+  description?: string
 }
 
 /** Schema describing all configuration fields for a MediaProvider plugin */
 export interface MediaProviderConfigSchema {
-  fields: MediaProviderConfigField[];
+  fields: MediaProviderConfigField[]
 }
 
 // Database access interface exposed to plugins
 export interface PluginDatabaseAccess {
   /** Execute a raw SQL query (read-only) */
-  query: (sql: string, params?: unknown[]) => Promise<unknown[]>;
+  query: (sql: string, params?: unknown[]) => Promise<unknown[]>
 }
 
 // Plugin context provided to lifecycle methods
 export interface PluginContext {
   /** Plugin's own manifest */
-  manifest: PluginManifest;
+  manifest: PluginManifest
   /** Scoped database access */
-  db: PluginDatabaseAccess;
+  db: PluginDatabaseAccess
   /** Register an event hook */
   on: <E extends PluginEvent>(
     event: E,
     handler: (payload: PluginEventPayloads[E]) => void | Promise<void>,
-  ) => void;
+  ) => void
   /** Register an API route under /api/v1/plugins/:pluginId/ */
-  registerRoute: (route: RouteDefinition) => void;
+  registerRoute: (route: RouteDefinition) => void
   /** Register a UI component injection */
-  registerUI: (component: UIComponent) => void;
+  registerUI: (component: UIComponent) => void
   /** Logger scoped to this plugin */
   logger: {
-    info: (message: string) => void;
-    warn: (message: string) => void;
-    error: (message: string) => void;
-  };
+    info: (message: string) => void
+    warn: (message: string) => void
+    error: (message: string) => void
+  }
   /** Sandboxed filesystem access (node:fs/promises subset) */
   fs: {
-    readFile: (path: string) => Promise<Buffer>;
-    writeFile: (path: string, data: string | Buffer) => Promise<void>;
-    readdir: (path: string) => Promise<string[]>;
+    readFile: (path: string) => Promise<Buffer>
+    writeFile: (path: string, data: string | Buffer) => Promise<void>
+    readdir: (path: string) => Promise<string[]>
     stat: (path: string) => Promise<{
-      size: number;
-      isFile: () => boolean;
-      isDirectory: () => boolean;
-    }>;
-    mkdir: (path: string, options?: { recursive?: boolean }) => Promise<void>;
-    unlink: (path: string) => Promise<void>;
-  };
+      size: number
+      isFile: () => boolean
+      isDirectory: () => boolean
+    }>
+    mkdir: (path: string, options?: { recursive?: boolean }) => Promise<void>
+    unlink: (path: string) => Promise<void>
+  }
   /** Sandboxed fetch — only allows declared network domains */
-  fetch: (url: string, init?: RequestInit) => Promise<Response>;
+  fetch: (url: string, init?: RequestInit) => Promise<Response>
 }

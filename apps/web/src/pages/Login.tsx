@@ -1,15 +1,15 @@
-import { type FormEvent, useEffect, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/index.js';
-import styles from './Login.module.css';
+import { type FormEvent, useEffect, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuthStore } from '../store/index.js'
+import styles from './Login.module.css'
 
 export default function Login() {
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [error, setError] = useState<string | null>(null);
-  const [loading, setLoading] = useState(false);
-  const setAuth = useAuthStore((s) => s.setAuth);
-  const navigate = useNavigate();
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [error, setError] = useState<string | null>(null)
+  const [loading, setLoading] = useState(false)
+  const setAuth = useAuthStore((s) => s.setAuth)
+  const navigate = useNavigate()
 
   // Redirect to setup wizard if no users have been created yet
   useEffect(() => {
@@ -17,43 +17,43 @@ export default function Login() {
       .then((r) => r.json())
       .then((data: { setupComplete: boolean }) => {
         if (!data.setupComplete) {
-          navigate('/setup', { replace: true });
+          navigate('/setup', { replace: true })
         }
       })
-      .catch(() => {});
-  }, [navigate]);
+      .catch(() => {})
+  }, [navigate])
 
   async function handleSubmit(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
 
     try {
       const res = await fetch('/api/v1/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password }),
-      });
+      })
 
       if (!res.ok) {
-        const body = (await res.json()) as { error?: string };
-        setError(body.error ?? 'Login failed');
-        return;
+        const body = (await res.json()) as { error?: string }
+        setError(body.error ?? 'Login failed')
+        return
       }
 
-      const body = (await res.json()) as { accessToken: string };
+      const body = (await res.json()) as { accessToken: string }
       // Decode username and role from the JWT payload (no library needed — just base64)
-      const [, payloadB64] = body.accessToken.split('.');
+      const [, payloadB64] = body.accessToken.split('.')
       const payload = JSON.parse(atob(payloadB64 ?? '')) as {
-        username: string;
-        role: string;
-      };
-      setAuth(body.accessToken, payload.username, payload.role);
-      navigate('/', { replace: true });
+        username: string
+        role: string
+      }
+      setAuth(body.accessToken, payload.username, payload.role)
+      navigate('/', { replace: true })
     } catch {
-      setError('Network error — please try again');
+      setError('Network error — please try again')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
@@ -104,5 +104,5 @@ export default function Login() {
         </form>
       </div>
     </div>
-  );
+  )
 }

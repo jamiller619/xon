@@ -1,37 +1,37 @@
-import { Suspense, lazy } from 'react';
-import { Route, Routes } from 'react-router-dom';
-import ErrorBoundary from './components/ErrorBoundary';
-import Layout from './components/Layout';
-import RequireAuth from './components/RequireAuth';
-import ThemeLoader from './components/ThemeLoader';
+import { Suspense, lazy } from 'react'
+import { Route, Routes } from 'react-router-dom'
+import ErrorBoundary from './components/ErrorBoundary'
+import Layout from './components/Layout'
+import RequireAuth from './components/RequireAuth'
+import ThemeLoader from './components/ThemeLoader'
 
 // Route-level code splitting — each page is a separate JS chunk
-const AdminAiSettings = lazy(() => import('./pages/AdminAiSettings'));
-const AdminBackup = lazy(() => import('./pages/AdminBackup'));
-const AdminDuplicates = lazy(() => import('./pages/AdminDuplicates'));
-const AdminHealth = lazy(() => import('./pages/AdminHealth'));
-const AdminLibraries = lazy(() => import('./pages/AdminLibraries'));
-const AdminLibraryAccess = lazy(() => import('./pages/AdminLibraryAccess'));
-const AdminNetworkSettings = lazy(() => import('./pages/AdminNetworkSettings'));
-const AdminPlugins = lazy(() => import('./pages/AdminPlugins'));
-const AdminSettings = lazy(() => import('./pages/AdminSettings'));
-const AdminUsers = lazy(() => import('./pages/AdminUsers'));
-const Dashboard = lazy(() => import('./pages/Dashboard'));
-const GroupDetail = lazy(() => import('./pages/GroupDetail'));
-const LibraryBrowser = lazy(() => import('./pages/LibraryBrowser'));
-const Login = lazy(() => import('./pages/Login'));
-const MediaDetail = lazy(() => import('./pages/MediaDetail'));
-const NotFound = lazy(() => import('./pages/NotFound'));
-const Search = lazy(() => import('./pages/Search'));
-const Settings = lazy(() => import('./pages/Settings'));
-const Setup = lazy(() => import('./pages/Setup'));
+const AdminAiSettings = lazy(() => import('./pages/AdminAiSettings'))
+const AdminBackup = lazy(() => import('./pages/AdminBackup'))
+const AdminDuplicates = lazy(() => import('./pages/AdminDuplicates'))
+const AdminHealth = lazy(() => import('./pages/AdminHealth'))
+const AdminLibraries = lazy(() => import('./pages/AdminLibraries'))
+const AdminLibraryAccess = lazy(() => import('./pages/AdminLibraryAccess'))
+const AdminNetworkSettings = lazy(() => import('./pages/AdminNetworkSettings'))
+const AdminPlugins = lazy(() => import('./pages/AdminPlugins'))
+const AdminSettings = lazy(() => import('./pages/AdminSettings'))
+const AdminUsers = lazy(() => import('./pages/AdminUsers'))
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const GroupDetail = lazy(() => import('./pages/GroupDetail'))
+const LibraryBrowser = lazy(() => import('./pages/LibraryBrowser'))
+const Login = lazy(() => import('./pages/Login'))
+const MediaDetail = lazy(() => import('./pages/MediaDetail'))
+const NotFound = lazy(() => import('./pages/NotFound'))
+const Search = lazy(() => import('./pages/Search'))
+const Settings = lazy(() => import('./pages/Settings'))
+const Setup = lazy(() => import('./pages/Setup'))
 
 function PageLoader() {
   return (
     <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
       Loading…
     </div>
-  );
+  )
 }
 
 export default function App() {
@@ -73,5 +73,5 @@ export default function App() {
         </Routes>
       </Suspense>
     </ErrorBoundary>
-  );
+  )
 }

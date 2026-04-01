@@ -1,5 +1,5 @@
-import { useEffect, useRef, useState } from 'react';
-import { apiFetch } from '../apiFetch.js';
+import { useEffect, useRef, useState } from 'react'
+import { apiFetch } from '../apiFetch.js'
 
 export type UIInjectionPoint =
   | 'dashboard-widget'
@@ -10,95 +10,95 @@ export type UIInjectionPoint =
   | 'sidebar:bottom'
   | 'mediaDetail:actions'
   | 'library:toolbar'
-  | 'settings:page';
+  | 'settings:page'
 
 interface PluginUIComponent {
-  pluginId: string;
-  id: string;
-  injectionPoint: string;
-  bundleUrl: string;
-  label?: string;
+  pluginId: string
+  id: string
+  injectionPoint: string
+  bundleUrl: string
+  label?: string
 }
 
 export interface PluginComponentProps {
   mediaItem?: {
-    id: string;
-    title: string | null;
-    mediaCategory: string | null;
-    libraryId: string | null;
-  };
-  libraryId?: string;
+    id: string
+    title: string | null
+    mediaCategory: string | null
+    libraryId: string | null
+  }
+  libraryId?: string
 }
 
 type PluginRenderFn = (
   container: HTMLElement,
   props: PluginComponentProps,
-) => () => void;
+) => () => void
 
 // Module-level cache so all PluginSlot instances share one fetch
-let componentsCache: PluginUIComponent[] | null = null;
-let fetchPromise: Promise<PluginUIComponent[]> | null = null;
+let componentsCache: PluginUIComponent[] | null = null
+let fetchPromise: Promise<PluginUIComponent[]> | null = null
 
 async function fetchPluginComponents(): Promise<PluginUIComponent[]> {
-  if (componentsCache !== null) return componentsCache;
+  if (componentsCache !== null) return componentsCache
   if (!fetchPromise) {
     fetchPromise = apiFetch('/api/v1/plugins/ui-components')
       .then((r) => r.json() as Promise<PluginUIComponent[]>)
       .then((data) => {
-        componentsCache = data;
-        return data;
+        componentsCache = data
+        return data
       })
       .catch(() => {
-        fetchPromise = null;
-        return [];
-      });
+        fetchPromise = null
+        return []
+      })
   }
-  return fetchPromise;
+  return fetchPromise
 }
 
 /** Invalidate the cache (called when plugins change) */
 export function invalidatePluginComponentCache(): void {
-  componentsCache = null;
-  fetchPromise = null;
+  componentsCache = null
+  fetchPromise = null
 }
 
 interface PluginComponentMountProps {
-  component: PluginUIComponent;
-  slotProps: PluginComponentProps;
+  component: PluginUIComponent
+  slotProps: PluginComponentProps
 }
 
 function PluginComponentMount({
   component,
   slotProps,
 }: PluginComponentMountProps) {
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
-    const container = containerRef.current;
-    if (!container) return;
+    const container = containerRef.current
+    if (!container) return
 
-    let cleanup: (() => void) | undefined;
-    let cancelled = false;
+    let cleanup: (() => void) | undefined
+    let cancelled = false
 
     import(/* @vite-ignore */ component.bundleUrl)
       .then((mod: { default?: PluginRenderFn; render?: PluginRenderFn }) => {
-        if (cancelled) return;
-        const renderFn = mod.default ?? mod.render;
+        if (cancelled) return
+        const renderFn = mod.default ?? mod.render
         if (typeof renderFn === 'function') {
-          cleanup = renderFn(container, slotProps);
+          cleanup = renderFn(container, slotProps)
         }
       })
       .catch(() => {
         if (!cancelled) {
-          container.textContent = `[Plugin ${component.pluginId} failed to load]`;
+          container.textContent = `[Plugin ${component.pluginId} failed to load]`
         }
-      });
+      })
 
     return () => {
-      cancelled = true;
-      if (cleanup) cleanup();
-    };
-  }, [component.bundleUrl, component.pluginId, slotProps]);
+      cancelled = true
+      if (cleanup) cleanup()
+    }
+  }, [component.bundleUrl, component.pluginId, slotProps])
 
   return (
     <div
@@ -106,27 +106,27 @@ function PluginComponentMount({
       data-component-id={component.id}
       ref={containerRef}
     />
-  );
+  )
 }
 
 interface PluginSlotProps {
-  injectionPoint: UIInjectionPoint;
-  props?: PluginComponentProps;
+  injectionPoint: UIInjectionPoint
+  props?: PluginComponentProps
 }
 
 export default function PluginSlot({
   injectionPoint,
   props = {},
 }: PluginSlotProps) {
-  const [components, setComponents] = useState<PluginUIComponent[]>([]);
+  const [components, setComponents] = useState<PluginUIComponent[]>([])
 
   useEffect(() => {
     fetchPluginComponents().then((all) => {
-      setComponents(all.filter((c) => c.injectionPoint === injectionPoint));
-    });
-  }, [injectionPoint]);
+      setComponents(all.filter((c) => c.injectionPoint === injectionPoint))
+    })
+  }, [injectionPoint])
 
-  if (components.length === 0) return null;
+  if (components.length === 0) return null
 
   return (
     <>
@@ -134,5 +134,5 @@ export default function PluginSlot({
         <PluginComponentMount key={c.id} component={c} slotProps={props} />
       ))}
     </>
-  );
+  )
 }

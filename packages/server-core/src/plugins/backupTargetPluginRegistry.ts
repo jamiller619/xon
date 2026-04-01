@@ -1,7 +1,7 @@
-import type { BackupTargetPlugin } from '@xon/plugin-sdk';
+import type { BackupTargetPlugin } from '@xon/plugin-sdk'
 
 /** Registry mapping pluginId → BackupTargetPlugin instance */
-const registry = new Map<string, BackupTargetPlugin>();
+const registry = new Map<string, BackupTargetPlugin>()
 
 /**
  * Register a BackupTargetPlugin instance under the given pluginId.
@@ -11,7 +11,7 @@ export function registerBackupTargetPlugin(
   pluginId: string,
   plugin: BackupTargetPlugin,
 ): void {
-  registry.set(pluginId, plugin);
+  registry.set(pluginId, plugin)
 }
 
 /**
@@ -21,15 +21,15 @@ export function registerBackupTargetPlugin(
 export function getBackupTargetPlugin(
   pluginId: string,
 ): BackupTargetPlugin | undefined {
-  return registry.get(pluginId);
+  return registry.get(pluginId)
 }
 
 /** Unregister a BackupTargetPlugin — called when the plugin is deactivated. */
 export function unregisterBackupTargetPlugin(pluginId: string): void {
-  registry.delete(pluginId);
+  registry.delete(pluginId)
 }
 
 /** Reset the registry — use only in tests. */
 export function _resetBackupTargetPluginRegistry(): void {
-  registry.clear();
+  registry.clear()
 }

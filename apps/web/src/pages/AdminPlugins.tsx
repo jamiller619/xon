@@ -1,32 +1,32 @@
-import { useEffect, useState } from 'react';
-import { apiFetch } from '../apiFetch.js';
-import PluginSlot from '../components/PluginSlot.js';
-import styles from './AdminPlugins.module.css';
+import { useEffect, useState } from 'react'
+import { apiFetch } from '../apiFetch.js'
+import PluginSlot from '../components/PluginSlot.js'
+import styles from './AdminPlugins.module.css'
 
 interface PluginInfo {
-  id: string;
-  name: string;
-  version: string;
-  type: string;
-  status: 'active' | 'inactive' | 'loaded' | 'error';
-  error?: string;
+  id: string
+  name: string
+  version: string
+  type: string
+  status: 'active' | 'inactive' | 'loaded' | 'error'
+  error?: string
 }
 
 export default function AdminPlugins() {
-  const [plugins, setPlugins] = useState<PluginInfo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [toggling, setToggling] = useState<Set<string>>(new Set());
+  const [plugins, setPlugins] = useState<PluginInfo[]>([])
+  const [loading, setLoading] = useState(true)
+  const [toggling, setToggling] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     apiFetch('/api/v1/admin/plugins')
       .then((r) => r.json() as Promise<PluginInfo[]>)
       .then(setPlugins)
       .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+      .finally(() => setLoading(false))
+  }, [])
 
   function toggle(id: string) {
-    setToggling((prev) => new Set([...prev, id]));
+    setToggling((prev) => new Set([...prev, id]))
     apiFetch(`/api/v1/admin/plugins/${id}/toggle`, { method: 'PUT' })
       .then((r) => r.json() as Promise<{ id: string; status: string }>)
       .then((updated) => {
@@ -36,19 +36,19 @@ export default function AdminPlugins() {
               ? { ...p, status: updated.status as PluginInfo['status'] }
               : p,
           ),
-        );
+        )
       })
       .catch(() => {})
       .finally(() => {
         setToggling((prev) => {
-          const next = new Set(prev);
-          next.delete(id);
-          return next;
-        });
-      });
+          const next = new Set(prev)
+          next.delete(id)
+          return next
+        })
+      })
   }
 
-  const errorPlugins = plugins.filter((p) => p.status === 'error' && p.error);
+  const errorPlugins = plugins.filter((p) => p.status === 'error' && p.error)
 
   return (
     <div className={styles.page ?? ''}>
@@ -116,5 +116,5 @@ export default function AdminPlugins() {
 
       <PluginSlot injectionPoint="admin-page" />
     </div>
-  );
+  )
 }

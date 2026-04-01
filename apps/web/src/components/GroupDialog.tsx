@@ -1,19 +1,19 @@
-import { useEffect, useRef, useState } from 'react';
-import { apiFetch } from '../apiFetch.js';
-import styles from './GroupDialog.module.css';
+import { useEffect, useRef, useState } from 'react'
+import { apiFetch } from '../apiFetch.js'
+import styles from './GroupDialog.module.css'
 
 export type ManualGroupType =
   | 'collection'
   | 'playlist'
   | 'album'
   | 'shelf'
-  | 'folder';
+  | 'folder'
 
 /** Map a media category to the preferred manual group type */
 function inferGroupType(mediaCategories: string[]): ManualGroupType {
-  const VIDEO_CATS = ['Movies', 'TV Shows', 'Clips', 'Home Videos'];
-  const MUSIC_CATS = ['Music', 'Audiobooks', 'Audio Clips', 'Podcasts'];
-  const PHOTO_CATS = ['Pictures', 'Images'];
+  const VIDEO_CATS = ['Movies', 'TV Shows', 'Clips', 'Home Videos']
+  const MUSIC_CATS = ['Music', 'Audiobooks', 'Audio Clips', 'Podcasts']
+  const PHOTO_CATS = ['Pictures', 'Images']
   const DOC_CATS = [
     'Documents',
     'Web Media',
@@ -21,13 +21,13 @@ function inferGroupType(mediaCategories: string[]): ManualGroupType {
     'Fonts',
     'Icons',
     '3D Models',
-  ];
+  ]
 
-  if (mediaCategories.some((c) => VIDEO_CATS.includes(c))) return 'collection';
-  if (mediaCategories.some((c) => MUSIC_CATS.includes(c))) return 'playlist';
-  if (mediaCategories.some((c) => PHOTO_CATS.includes(c))) return 'album';
-  if (mediaCategories.some((c) => DOC_CATS.includes(c))) return 'folder';
-  return 'shelf';
+  if (mediaCategories.some((c) => VIDEO_CATS.includes(c))) return 'collection'
+  if (mediaCategories.some((c) => MUSIC_CATS.includes(c))) return 'playlist'
+  if (mediaCategories.some((c) => PHOTO_CATS.includes(c))) return 'album'
+  if (mediaCategories.some((c) => DOC_CATS.includes(c))) return 'folder'
+  return 'shelf'
 }
 
 const TYPE_LABELS: Record<ManualGroupType, string> = {
@@ -36,7 +36,7 @@ const TYPE_LABELS: Record<ManualGroupType, string> = {
   album: 'Album',
   folder: 'Folder',
   shelf: 'Shelf',
-};
+}
 
 const ALL_TYPES: ManualGroupType[] = [
   'collection',
@@ -44,14 +44,14 @@ const ALL_TYPES: ManualGroupType[] = [
   'album',
   'folder',
   'shelf',
-];
+]
 
 interface GroupDialogProps {
-  libraryId: string;
+  libraryId: string
   /** Hint for which group type to suggest */
-  mediaCategories?: string[];
-  onCreated: (group: { id: string; title: string; type: string }) => void;
-  onClose: () => void;
+  mediaCategories?: string[]
+  onCreated: (group: { id: string; title: string; type: string }) => void
+  onClose: () => void
 }
 
 export default function GroupDialog({
@@ -60,31 +60,31 @@ export default function GroupDialog({
   onCreated,
   onClose,
 }: GroupDialogProps) {
-  const suggestedType = inferGroupType(mediaCategories);
-  const [groupType, setGroupType] = useState<ManualGroupType>(suggestedType);
-  const [title, setTitle] = useState('');
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const inputRef = useRef<HTMLInputElement>(null);
+  const suggestedType = inferGroupType(mediaCategories)
+  const [groupType, setGroupType] = useState<ManualGroupType>(suggestedType)
+  const [title, setTitle] = useState('')
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const inputRef = useRef<HTMLInputElement>(null)
 
   useEffect(() => {
-    inputRef.current?.focus();
-  }, []);
+    inputRef.current?.focus()
+  }, [])
 
   // Close on Escape
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') onClose()
     }
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault();
-    if (!title.trim()) return;
-    setSubmitting(true);
-    setError(null);
+    e.preventDefault()
+    if (!title.trim()) return
+    setSubmitting(true)
+    setError(null)
     try {
       const res = await apiFetch('/api/v1/groups', {
         method: 'POST',
@@ -94,22 +94,22 @@ export default function GroupDialog({
           type: groupType,
           title: title.trim(),
         }),
-      });
+      })
       if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
-        setError(data.error ?? 'Failed to create group');
-        return;
+        const data = (await res.json()) as { error?: string }
+        setError(data.error ?? 'Failed to create group')
+        return
       }
       const group = (await res.json()) as {
-        id: string;
-        title: string;
-        type: string;
-      };
-      onCreated(group);
+        id: string
+        title: string
+        type: string
+      }
+      onCreated(group)
     } catch {
-      setError('Network error');
+      setError('Network error')
     } finally {
-      setSubmitting(false);
+      setSubmitting(false)
     }
   }
 
@@ -178,5 +178,5 @@ export default function GroupDialog({
         </form>
       </div>
     </div>
-  );
+  )
 }

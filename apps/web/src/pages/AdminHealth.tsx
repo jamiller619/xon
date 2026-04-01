@@ -1,101 +1,101 @@
-import { useCallback, useEffect, useState } from 'react';
-import { apiFetch } from '../apiFetch.js';
-import styles from './AdminHealth.module.css';
+import { useCallback, useEffect, useState } from 'react'
+import { apiFetch } from '../apiFetch.js'
+import styles from './AdminHealth.module.css'
 
 interface ScanProgress {
-  dataSourceId: string;
-  totalFiles: number;
-  processedFiles: number;
-  currentFile: string | null;
+  dataSourceId: string
+  totalFiles: number
+  processedFiles: number
+  currentFile: string | null
 }
 
 interface ActiveScan {
-  libraryId: string;
-  startedAt: string;
-  progress: ScanProgress | null;
+  libraryId: string
+  startedAt: string
+  progress: ScanProgress | null
 }
 
 interface LibraryStat {
-  id: string;
-  name: string;
-  totalItems: number;
-  lastScanAt: string | null;
+  id: string
+  name: string
+  totalItems: number
+  lastScanAt: string | null
 }
 
 interface HealthData {
-  uptime: number;
+  uptime: number
   memory: {
-    heapUsed: number;
-    heapTotal: number;
-    rss: number;
-    total: number;
-    free: number;
-  };
+    heapUsed: number
+    heapTotal: number
+    rss: number
+    total: number
+    free: number
+  }
   cpu: {
-    loadAvg1m: number;
-    loadAvg5m: number;
-    loadAvg15m: number;
-  };
+    loadAvg1m: number
+    loadAvg5m: number
+    loadAvg15m: number
+  }
   storage: {
-    total: number;
-    free: number;
-    used: number;
-  };
-  activeScans: ActiveScan[];
-  libraries: LibraryStat[];
+    total: number
+    free: number
+    used: number
+  }
+  activeScans: ActiveScan[]
+  libraries: LibraryStat[]
 }
 
 function formatBytes(bytes: number): string {
-  if (bytes === 0) return '0 B';
-  const units = ['B', 'KB', 'MB', 'GB', 'TB'];
-  const i = Math.floor(Math.log(bytes) / Math.log(1024));
-  const unit = units[i] ?? 'B';
-  return `${(bytes / 1024 ** i).toFixed(1)} ${unit}`;
+  if (bytes === 0) return '0 B'
+  const units = ['B', 'KB', 'MB', 'GB', 'TB']
+  const i = Math.floor(Math.log(bytes) / Math.log(1024))
+  const unit = units[i] ?? 'B'
+  return `${(bytes / 1024 ** i).toFixed(1)} ${unit}`
 }
 
 function formatUptime(seconds: number): string {
-  const d = Math.floor(seconds / 86400);
-  const h = Math.floor((seconds % 86400) / 3600);
-  const m = Math.floor((seconds % 3600) / 60);
-  const s = Math.floor(seconds % 60);
-  if (d > 0) return `${d}d ${h}h ${m}m`;
-  if (h > 0) return `${h}h ${m}m ${s}s`;
-  if (m > 0) return `${m}m ${s}s`;
-  return `${s}s`;
+  const d = Math.floor(seconds / 86400)
+  const h = Math.floor((seconds % 86400) / 3600)
+  const m = Math.floor((seconds % 3600) / 60)
+  const s = Math.floor(seconds % 60)
+  if (d > 0) return `${d}d ${h}h ${m}m`
+  if (h > 0) return `${h}h ${m}m ${s}s`
+  if (m > 0) return `${m}m ${s}s`
+  return `${s}s`
 }
 
 function formatDate(iso: string): string {
-  return new Date(iso).toLocaleString();
+  return new Date(iso).toLocaleString()
 }
 
 export default function AdminHealth() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
-  const [data, setData] = useState<HealthData | null>(null);
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
+  const [data, setData] = useState<HealthData | null>(null)
 
   const fetchHealth = useCallback(() => {
     apiFetch('/api/v1/admin/health')
       .then((r) => r.json() as Promise<HealthData>)
       .then((d) => {
-        setData(d);
-        setError('');
+        setData(d)
+        setError('')
       })
       .catch(() => setError('Failed to load health data'))
-      .finally(() => setLoading(false));
-  }, []);
+      .finally(() => setLoading(false))
+  }, [])
 
   useEffect(() => {
-    fetchHealth();
-    const interval = setInterval(fetchHealth, 10000);
-    return () => clearInterval(interval);
-  }, [fetchHealth]);
+    fetchHealth()
+    const interval = setInterval(fetchHealth, 10000)
+    return () => clearInterval(interval)
+  }, [fetchHealth])
 
   if (loading) {
     return (
       <div className={styles.page ?? ''}>
         <p className={styles.loading ?? ''}>Loading...</p>
       </div>
-    );
+    )
   }
 
   if (error || !data) {
@@ -103,7 +103,7 @@ export default function AdminHealth() {
       <div className={styles.page ?? ''}>
         <p className={styles.error ?? ''}>{error || 'No data'}</p>
       </div>
-    );
+    )
   }
 
   const memUsedPct =
@@ -111,11 +111,11 @@ export default function AdminHealth() {
       ? Math.round(
           ((data.memory.total - data.memory.free) / data.memory.total) * 100,
         )
-      : 0;
+      : 0
   const diskUsedPct =
     data.storage.total > 0
       ? Math.round((data.storage.used / data.storage.total) * 100)
-      : 0;
+      : 0
 
   return (
     <div className={styles.page ?? ''}>
@@ -229,7 +229,7 @@ export default function AdminHealth() {
                         scan.progress.totalFiles) *
                         100,
                     )
-                  : 0;
+                  : 0
               return (
                 <div key={scan.libraryId} className={styles.scanItem ?? ''}>
                   <div className={styles.scanHeader ?? ''}>
@@ -257,7 +257,7 @@ export default function AdminHealth() {
                     </>
                   )}
                 </div>
-              );
+              )
             })}
           </div>
         )}
@@ -294,5 +294,5 @@ export default function AdminHealth() {
         )}
       </section>
     </div>
-  );
+  )
 }

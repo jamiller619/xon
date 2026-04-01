@@ -1,4 +1,4 @@
-import { Hono } from 'hono';
+import { Hono } from 'hono'
 
 const OPENAPI_SPEC = {
   openapi: '3.1.0',
@@ -1771,7 +1771,7 @@ const OPENAPI_SPEC = {
     },
     { name: 'Admin — Plugins', description: 'Admin: plugin management' },
   ],
-};
+}
 
 /** Swagger UI HTML using CDN-hosted assets. */
 function makeSwaggerHtml(specUrl: string): string {
@@ -1801,22 +1801,22 @@ function makeSwaggerHtml(specUrl: string): string {
     });
   </script>
 </body>
-</html>`;
+</html>`
 }
 
 export function makeDocsRouter(): Hono {
-  const router = new Hono();
+  const router = new Hono()
 
   // Swagger UI interactive explorer
   router.get('/', (c) => {
-    const specUrl = c.req.url.replace(/\/?$/, '/openapi.json');
-    return c.html(makeSwaggerHtml(specUrl));
-  });
+    const specUrl = c.req.url.replace(/\/?$/, '/openapi.json')
+    return c.html(makeSwaggerHtml(specUrl))
+  })
 
   // OpenAPI 3.1 spec
   router.get('/openapi.json', (c) => {
-    return c.json(OPENAPI_SPEC);
-  });
+    return c.json(OPENAPI_SPEC)
+  })
 
-  return router;
+  return router
 }

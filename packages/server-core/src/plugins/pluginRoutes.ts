@@ -1,6 +1,6 @@
-import type { PluginRouteContext, PluginRouteResponse } from '@xon/plugin-sdk';
-import type { Context } from 'hono';
-import { registry } from './pluginManager.js';
+import type { PluginRouteContext, PluginRouteResponse } from '@xon/plugin-sdk'
+import type { Context } from 'hono'
+import { registry } from './pluginManager.js'
 
 /**
  * Match a route pattern against a path segment, extracting named params.
@@ -12,22 +12,22 @@ function matchPath(
   pattern: string,
   path: string,
 ): Record<string, string> | null {
-  const patternParts = pattern.split('/').filter(Boolean);
-  const pathParts = path.split('/').filter(Boolean);
-  if (patternParts.length !== pathParts.length) return null;
+  const patternParts = pattern.split('/').filter(Boolean)
+  const pathParts = path.split('/').filter(Boolean)
+  if (patternParts.length !== pathParts.length) return null
 
-  const params: Record<string, string> = {};
+  const params: Record<string, string> = {}
   for (let i = 0; i < patternParts.length; i++) {
-    const pp = patternParts[i];
-    const vp = pathParts[i];
-    if (pp === undefined || vp === undefined) return null;
+    const pp = patternParts[i]
+    const vp = pathParts[i]
+    if (pp === undefined || vp === undefined) return null
     if (pp.startsWith(':')) {
-      params[pp.slice(1)] = vp;
+      params[pp.slice(1)] = vp
     } else if (pp !== vp) {
-      return null;
+      return null
     }
   }
-  return params;
+  return params
 }
 
 /**
@@ -36,29 +36,29 @@ function matchPath(
  * Routes are removed automatically when a plugin is deactivated (entry.routes cleared).
  */
 export async function pluginRouteDispatcher(c: Context): Promise<Response> {
-  const pluginId = c.req.param('pluginId') as string | undefined;
+  const pluginId = c.req.param('pluginId') as string | undefined
   if (!pluginId) {
-    return c.json({ error: 'Plugin not found or not active' }, 404) as Response;
+    return c.json({ error: 'Plugin not found or not active' }, 404) as Response
   }
-  const entry = registry.get(pluginId);
+  const entry = registry.get(pluginId)
 
   if (!entry || entry.status !== 'active') {
-    return c.json({ error: 'Plugin not found or not active' }, 404) as Response;
+    return c.json({ error: 'Plugin not found or not active' }, 404) as Response
   }
 
   // Extract plugin-relative path by stripping the /plugins/:pluginId prefix
-  const fullPath = c.req.path;
-  const marker = `/plugins/${pluginId}`;
-  const markerIndex = fullPath.indexOf(marker);
+  const fullPath = c.req.path
+  const marker = `/plugins/${pluginId}`
+  const markerIndex = fullPath.indexOf(marker)
   const pluginPath =
-    markerIndex >= 0 ? fullPath.slice(markerIndex + marker.length) || '/' : '/';
+    markerIndex >= 0 ? fullPath.slice(markerIndex + marker.length) || '/' : '/'
 
-  const method = c.req.method as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE';
+  const method = c.req.method as 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
 
   for (const route of entry.routes) {
-    if (route.method !== method) continue;
-    const params = matchPath(route.path, pluginPath);
-    if (params === null) continue;
+    if (route.method !== method) continue
+    const params = matchPath(route.path, pluginPath)
+    if (params === null) continue
 
     const pluginContext: PluginRouteContext = {
       req: {
@@ -77,11 +77,11 @@ export async function pluginRouteDispatcher(c: Context): Promise<Response> {
           text,
           status as Parameters<typeof c.text>[1],
         ) as unknown as PluginRouteResponse,
-    };
+    }
 
-    const result = await route.handler(pluginContext);
-    return result as unknown as Response;
+    const result = await route.handler(pluginContext)
+    return result as unknown as Response
   }
 
-  return c.json({ error: 'Route not found' }, 404) as Response;
+  return c.json({ error: 'Route not found' }, 404) as Response
 }

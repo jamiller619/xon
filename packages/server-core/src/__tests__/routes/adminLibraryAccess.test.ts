@@ -1,25 +1,25 @@
-import type { Client } from '@libsql/client';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createApp } from '../../app.js';
-import { hashPassword } from '../../auth/password.js';
-import { openDatabase } from '../../db/db.js';
-import { migrateDatabase } from '../../db/migrate.js';
-import { libraries, libraryAccess, users } from '../../db/schema.js';
-import { signAccessToken } from '../../routes/auth.js';
+import type { Client } from '@libsql/client'
+import type { LibSQLDatabase } from 'drizzle-orm/libsql'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { createApp } from '../../app.js'
+import { hashPassword } from '../../auth/password.js'
+import { openDatabase } from '../../db/db.js'
+import { migrateDatabase } from '../../db/migrate.js'
+import { libraries, libraryAccess, users } from '../../db/schema.js'
+import { signAccessToken } from '../../routes/auth.js'
 
-const ADMIN_AUTH = `Bearer ${await signAccessToken('admin-1', 'admin', 'admin')}`;
-const USER_AUTH = `Bearer ${await signAccessToken('user-1', 'regularuser', 'user')}`;
+const ADMIN_AUTH = `Bearer ${await signAccessToken('admin-1', 'admin', 'admin')}`
+const USER_AUTH = `Bearer ${await signAccessToken('user-1', 'regularuser', 'user')}`
 
 describe('Admin Library Access API', () => {
-  let client: Client;
-  let db: LibSQLDatabase;
-  let app: ReturnType<typeof createApp>;
+  let client: Client
+  let db: LibSQLDatabase
+  let app: ReturnType<typeof createApp>
 
   beforeEach(async () => {
-    ({ client, db } = await openDatabase(':memory:'));
-    await migrateDatabase(db);
-    app = createApp(db);
+    ;({ client, db } = await openDatabase(':memory:'))
+    await migrateDatabase(db)
+    app = createApp(db)
 
     await db.insert(users).values({
       id: 'admin-1',
@@ -28,7 +28,7 @@ describe('Admin Library Access API', () => {
       displayName: 'Admin User',
       passwordHash: await hashPassword('admin123'),
       role: 'admin',
-    });
+    })
 
     await db.insert(users).values({
       id: 'user-1',
@@ -37,24 +37,24 @@ describe('Admin Library Access API', () => {
       displayName: 'Regular User',
       passwordHash: await hashPassword('user123'),
       role: 'user',
-    });
+    })
 
     await db.insert(libraries).values({
       id: 'lib-1',
       name: 'Movies',
       allowedMediaTypes: '[]',
-    });
+    })
 
     await db.insert(libraries).values({
       id: 'lib-2',
       name: 'Music',
       allowedMediaTypes: '[]',
-    });
-  });
+    })
+  })
 
   afterEach(() => {
-    client.close();
-  });
+    client.close()
+  })
 
   // ─── GET /admin/libraries/:libraryId/access ─────────────────────────────────
 
@@ -62,11 +62,11 @@ describe('Admin Library Access API', () => {
     it('returns 200 with empty list when no grants', async () => {
       const res = await app.request('/api/v1/admin/libraries/lib-1/access', {
         headers: { Authorization: ADMIN_AUTH },
-      });
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body).toEqual([]);
-    });
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body).toEqual([])
+    })
 
     it('returns users with access after grant', async () => {
       await db.insert(libraryAccess).values({
@@ -74,20 +74,20 @@ describe('Admin Library Access API', () => {
         libraryId: 'lib-1',
         grantedAt: new Date(),
         grantedBy: 'admin-1',
-      });
+      })
 
       const res = await app.request('/api/v1/admin/libraries/lib-1/access', {
         headers: { Authorization: ADMIN_AUTH },
-      });
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body).toHaveLength(1);
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body).toHaveLength(1)
       expect(body[0]).toMatchObject({
         userId: 'user-1',
         libraryId: 'lib-1',
         username: 'regularuser',
-      });
-    });
+      })
+    })
 
     it('returns 404 for unknown library', async () => {
       const res = await app.request(
@@ -95,17 +95,17 @@ describe('Admin Library Access API', () => {
         {
           headers: { Authorization: ADMIN_AUTH },
         },
-      );
-      expect(res.status).toBe(404);
-    });
+      )
+      expect(res.status).toBe(404)
+    })
 
     it('returns 403 for non-admin', async () => {
       const res = await app.request('/api/v1/admin/libraries/lib-1/access', {
         headers: { Authorization: USER_AUTH },
-      });
-      expect(res.status).toBe(403);
-    });
-  });
+      })
+      expect(res.status).toBe(403)
+    })
+  })
 
   // ─── POST /admin/libraries/:libraryId/access ────────────────────────────────
 
@@ -118,20 +118,20 @@ describe('Admin Library Access API', () => {
           Authorization: ADMIN_AUTH,
         },
         body: JSON.stringify({ userId: 'user-1' }),
-      });
-      expect(res.status).toBe(201);
-      const body = await res.json();
-      expect(body).toMatchObject({ userId: 'user-1', libraryId: 'lib-1' });
+      })
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body).toMatchObject({ userId: 'user-1', libraryId: 'lib-1' })
 
       // verify in DB
-      const rows = await db.select().from(libraryAccess);
-      expect(rows).toHaveLength(1);
+      const rows = await db.select().from(libraryAccess)
+      expect(rows).toHaveLength(1)
       expect(rows[0]).toMatchObject({
         userId: 'user-1',
         libraryId: 'lib-1',
         grantedBy: 'admin-1',
-      });
-    });
+      })
+    })
 
     it('is idempotent — duplicate grant does not error', async () => {
       await app.request('/api/v1/admin/libraries/lib-1/access', {
@@ -141,7 +141,7 @@ describe('Admin Library Access API', () => {
           Authorization: ADMIN_AUTH,
         },
         body: JSON.stringify({ userId: 'user-1' }),
-      });
+      })
 
       const res = await app.request('/api/v1/admin/libraries/lib-1/access', {
         method: 'POST',
@@ -150,11 +150,11 @@ describe('Admin Library Access API', () => {
           Authorization: ADMIN_AUTH,
         },
         body: JSON.stringify({ userId: 'user-1' }),
-      });
-      expect(res.status).toBe(201);
-      const rows = await db.select().from(libraryAccess);
-      expect(rows).toHaveLength(1);
-    });
+      })
+      expect(res.status).toBe(201)
+      const rows = await db.select().from(libraryAccess)
+      expect(rows).toHaveLength(1)
+    })
 
     it('returns 404 for unknown library', async () => {
       const res = await app.request(
@@ -167,9 +167,9 @@ describe('Admin Library Access API', () => {
           },
           body: JSON.stringify({ userId: 'user-1' }),
         },
-      );
-      expect(res.status).toBe(404);
-    });
+      )
+      expect(res.status).toBe(404)
+    })
 
     it('returns 404 for unknown user', async () => {
       const res = await app.request('/api/v1/admin/libraries/lib-1/access', {
@@ -179,9 +179,9 @@ describe('Admin Library Access API', () => {
           Authorization: ADMIN_AUTH,
         },
         body: JSON.stringify({ userId: 'nonexistent' }),
-      });
-      expect(res.status).toBe(404);
-    });
+      })
+      expect(res.status).toBe(404)
+    })
 
     it('returns 403 for non-admin', async () => {
       const res = await app.request('/api/v1/admin/libraries/lib-1/access', {
@@ -191,10 +191,10 @@ describe('Admin Library Access API', () => {
           Authorization: USER_AUTH,
         },
         body: JSON.stringify({ userId: 'user-1' }),
-      });
-      expect(res.status).toBe(403);
-    });
-  });
+      })
+      expect(res.status).toBe(403)
+    })
+  })
 
   // ─── DELETE /admin/libraries/:libraryId/access/:userId ─────────────────────
 
@@ -205,8 +205,8 @@ describe('Admin Library Access API', () => {
         libraryId: 'lib-1',
         grantedAt: new Date(),
         grantedBy: 'admin-1',
-      });
-    });
+      })
+    })
 
     it('revokes access and returns success', async () => {
       const res = await app.request(
@@ -215,14 +215,14 @@ describe('Admin Library Access API', () => {
           method: 'DELETE',
           headers: { Authorization: ADMIN_AUTH },
         },
-      );
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body).toMatchObject({ success: true });
+      )
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body).toMatchObject({ success: true })
 
-      const rows = await db.select().from(libraryAccess);
-      expect(rows).toHaveLength(0);
-    });
+      const rows = await db.select().from(libraryAccess)
+      expect(rows).toHaveLength(0)
+    })
 
     it('returns 404 for unknown library', async () => {
       const res = await app.request(
@@ -231,9 +231,9 @@ describe('Admin Library Access API', () => {
           method: 'DELETE',
           headers: { Authorization: ADMIN_AUTH },
         },
-      );
-      expect(res.status).toBe(404);
-    });
+      )
+      expect(res.status).toBe(404)
+    })
 
     it('returns 403 for non-admin', async () => {
       const res = await app.request(
@@ -242,9 +242,9 @@ describe('Admin Library Access API', () => {
           method: 'DELETE',
           headers: { Authorization: USER_AUTH },
         },
-      );
-      expect(res.status).toBe(403);
-    });
+      )
+      expect(res.status).toBe(403)
+    })
 
     it('only removes the specific library grant, not others', async () => {
       await db.insert(libraryAccess).values({
@@ -252,7 +252,7 @@ describe('Admin Library Access API', () => {
         libraryId: 'lib-2',
         grantedAt: new Date(),
         grantedBy: 'admin-1',
-      });
+      })
 
       const res = await app.request(
         '/api/v1/admin/libraries/lib-1/access/user-1',
@@ -260,12 +260,12 @@ describe('Admin Library Access API', () => {
           method: 'DELETE',
           headers: { Authorization: ADMIN_AUTH },
         },
-      );
-      expect(res.status).toBe(200);
+      )
+      expect(res.status).toBe(200)
 
-      const rows = await db.select().from(libraryAccess);
-      expect(rows).toHaveLength(1);
-      expect(rows[0]).toMatchObject({ libraryId: 'lib-2' });
-    });
-  });
-});
+      const rows = await db.select().from(libraryAccess)
+      expect(rows).toHaveLength(1)
+      expect(rows[0]).toMatchObject({ libraryId: 'lib-2' })
+    })
+  })
+})

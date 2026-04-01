@@ -1,6 +1,6 @@
-import { useCallback, useEffect, useState } from 'react';
-import { apiFetch } from '../apiFetch.js';
-import styles from './AdminLibraries.module.css';
+import { useCallback, useEffect, useState } from 'react'
+import { apiFetch } from '../apiFetch.js'
+import styles from './AdminLibraries.module.css'
 
 const ALL_MEDIA_TYPES = [
   'Movies',
@@ -23,7 +23,7 @@ const ALL_MEDIA_TYPES = [
   'Archives',
   'Fonts',
   'Icons',
-];
+]
 
 const SCHEDULE_PRESETS = [
   { label: 'Disabled', value: null },
@@ -33,171 +33,171 @@ const SCHEDULE_PRESETS = [
   { label: 'Every 6 hours', value: '0 */6 * * *' },
   { label: 'Every 12 hours', value: '0 */12 * * *' },
   { label: 'Daily', value: '0 */24 * * *' },
-];
+]
 
 function getNextScanTime(schedule: string | null): string | null {
-  if (!schedule) return null;
-  const parts = schedule.trim().split(/\s+/);
-  if (parts.length !== 5) return null;
-  const [min, hour] = parts;
-  let intervalMs: number | null = null;
+  if (!schedule) return null
+  const parts = schedule.trim().split(/\s+/)
+  if (parts.length !== 5) return null
+  const [min, hour] = parts
+  let intervalMs: number | null = null
   if (min && /^\*\/\d+$/.test(min) && hour === '*') {
-    const n = Number(min.slice(2));
-    if (n >= 1 && n <= 59) intervalMs = n * 60 * 1000;
+    const n = Number(min.slice(2))
+    if (n >= 1 && n <= 59) intervalMs = n * 60 * 1000
   } else if (min === '0' && hour && /^\*\/\d+$/.test(hour)) {
-    const n = Number(hour.slice(2));
-    if (n >= 1 && n <= 23) intervalMs = n * 60 * 60 * 1000;
+    const n = Number(hour.slice(2))
+    if (n >= 1 && n <= 23) intervalMs = n * 60 * 60 * 1000
   }
-  if (!intervalMs) return null;
-  const now = Date.now();
-  const next = new Date(Math.ceil(now / intervalMs) * intervalMs);
-  return next.toLocaleString();
+  if (!intervalMs) return null
+  const now = Date.now()
+  const next = new Date(Math.ceil(now / intervalMs) * intervalMs)
+  return next.toLocaleString()
 }
 
 function formatDuration(ms: number | null): string {
-  if (ms === null || ms === undefined) return '—';
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-  const mins = Math.floor(ms / 60000);
-  const secs = Math.round((ms % 60000) / 1000);
-  return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`;
+  if (ms === null || ms === undefined) return '—'
+  if (ms < 1000) return `${ms}ms`
+  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
+  const mins = Math.floor(ms / 60000)
+  const secs = Math.round((ms % 60000) / 1000)
+  return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`
 }
 
 interface DataSource {
-  id: string;
-  libraryId: string;
-  type: 'local' | 'network' | 'plugin';
-  path: string;
-  pluginId: string | null;
-  recursive: boolean;
-  enabled: boolean;
+  id: string
+  libraryId: string
+  type: 'local' | 'network' | 'plugin'
+  path: string
+  pluginId: string | null
+  recursive: boolean
+  enabled: boolean
 }
 
 interface Library {
-  id: string;
-  name: string;
-  description: string | null;
-  allowedMediaTypes: string;
-  scanSchedule: string | null;
-  watchEnabled: boolean;
-  lastScanResult: string | null;
-  lastScanDuration: number | null;
-  hideDrmItems: boolean;
-  createdAt: number;
-  updatedAt: number;
-  dataSources?: DataSource[];
+  id: string
+  name: string
+  description: string | null
+  allowedMediaTypes: string
+  scanSchedule: string | null
+  watchEnabled: boolean
+  lastScanResult: string | null
+  lastScanDuration: number | null
+  hideDrmItems: boolean
+  createdAt: number
+  updatedAt: number
+  dataSources?: DataSource[]
 }
 
 interface LibraryWithSources extends Library {
-  dataSources: DataSource[];
+  dataSources: DataSource[]
 }
 
 function parseAllowedMediaTypes(raw: string): string[] {
   try {
-    const parsed = JSON.parse(raw);
-    if (Array.isArray(parsed)) return parsed as string[];
+    const parsed = JSON.parse(raw)
+    if (Array.isArray(parsed)) return parsed as string[]
   } catch {
     // ignore
   }
-  return [];
+  return []
 }
 
 export default function AdminLibraries() {
-  const [libraries, setLibraries] = useState<Library[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState('');
+  const [libraries, setLibraries] = useState<Library[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState('')
 
   // Create/edit form state
-  const [showCreateForm, setShowCreateForm] = useState(false);
+  const [showCreateForm, setShowCreateForm] = useState(false)
   const [editingLibrary, setEditingLibrary] =
-    useState<LibraryWithSources | null>(null);
-  const [formName, setFormName] = useState('');
-  const [formDescription, setFormDescription] = useState('');
-  const [formMediaTypes, setFormMediaTypes] = useState<string[]>([]);
-  const [formSaving, setFormSaving] = useState(false);
-  const [formError, setFormError] = useState('');
+    useState<LibraryWithSources | null>(null)
+  const [formName, setFormName] = useState('')
+  const [formDescription, setFormDescription] = useState('')
+  const [formMediaTypes, setFormMediaTypes] = useState<string[]>([])
+  const [formSaving, setFormSaving] = useState(false)
+  const [formError, setFormError] = useState('')
 
   // Data source form state (for edit modal)
-  const [newSourcePath, setNewSourcePath] = useState('');
+  const [newSourcePath, setNewSourcePath] = useState('')
   const [newSourceType, setNewSourceType] = useState<'local' | 'network'>(
     'local',
-  );
-  const [newSourceRecursive, setNewSourceRecursive] = useState(true);
-  const [addingSource, setAddingSource] = useState(false);
-  const [sourceError, setSourceError] = useState('');
+  )
+  const [newSourceRecursive, setNewSourceRecursive] = useState(true)
+  const [addingSource, setAddingSource] = useState(false)
+  const [sourceError, setSourceError] = useState('')
 
   // Schedule state
-  const [scheduleValue, setScheduleValue] = useState<string | null>(null);
-  const [watchEnabled, setWatchEnabled] = useState(true);
-  const [scheduleError, setScheduleError] = useState('');
-  const [scheduleSaving, setScheduleSaving] = useState(false);
+  const [scheduleValue, setScheduleValue] = useState<string | null>(null)
+  const [watchEnabled, setWatchEnabled] = useState(true)
+  const [scheduleError, setScheduleError] = useState('')
+  const [scheduleSaving, setScheduleSaving] = useState(false)
 
   // Delete confirmation state
-  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null)
 
   // Scan status
-  const [scanningIds, setScanningIds] = useState<Set<string>>(new Set());
-  const [scanMessages, setScanMessages] = useState<Record<string, string>>({});
+  const [scanningIds, setScanningIds] = useState<Set<string>>(new Set())
+  const [scanMessages, setScanMessages] = useState<Record<string, string>>({})
 
   const fetchLibraries = useCallback(async () => {
-    setLoading(true);
+    setLoading(true)
     try {
-      const res = await apiFetch('/api/v1/libraries');
-      const data = (await res.json()) as Library[];
-      setLibraries(data);
+      const res = await apiFetch('/api/v1/libraries')
+      const data = (await res.json()) as Library[]
+      setLibraries(data)
     } catch {
-      setError('Failed to load libraries');
+      setError('Failed to load libraries')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, []);
+  }, [])
 
   useEffect(() => {
-    void fetchLibraries();
-  }, [fetchLibraries]);
+    void fetchLibraries()
+  }, [fetchLibraries])
 
   function openCreateForm() {
-    setFormName('');
-    setFormDescription('');
-    setFormMediaTypes([]);
-    setFormError('');
-    setShowCreateForm(true);
-    setEditingLibrary(null);
+    setFormName('')
+    setFormDescription('')
+    setFormMediaTypes([])
+    setFormError('')
+    setShowCreateForm(true)
+    setEditingLibrary(null)
   }
 
   async function openEditForm(lib: Library) {
-    setFormError('');
-    setSourceError('');
-    setScheduleError('');
-    setNewSourcePath('');
-    setNewSourceType('local');
-    setNewSourceRecursive(true);
+    setFormError('')
+    setSourceError('')
+    setScheduleError('')
+    setNewSourcePath('')
+    setNewSourceType('local')
+    setNewSourceRecursive(true)
     // Fetch data sources
     try {
-      const res = await apiFetch(`/api/v1/libraries/${lib.id}`);
-      const data = (await res.json()) as LibraryWithSources;
-      setEditingLibrary(data);
-      setFormName(data.name);
-      setFormDescription(data.description ?? '');
-      setFormMediaTypes(parseAllowedMediaTypes(data.allowedMediaTypes));
-      setScheduleValue(data.scanSchedule);
-      setWatchEnabled(data.watchEnabled);
-      setShowCreateForm(false);
+      const res = await apiFetch(`/api/v1/libraries/${lib.id}`)
+      const data = (await res.json()) as LibraryWithSources
+      setEditingLibrary(data)
+      setFormName(data.name)
+      setFormDescription(data.description ?? '')
+      setFormMediaTypes(parseAllowedMediaTypes(data.allowedMediaTypes))
+      setScheduleValue(data.scanSchedule)
+      setWatchEnabled(data.watchEnabled)
+      setShowCreateForm(false)
     } catch {
-      setError('Failed to load library details');
+      setError('Failed to load library details')
     }
   }
 
   function toggleMediaType(type: string) {
     setFormMediaTypes((prev) =>
       prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type],
-    );
+    )
   }
 
   async function handleCreate(e: React.FormEvent) {
-    e.preventDefault();
-    setFormSaving(true);
-    setFormError('');
+    e.preventDefault()
+    setFormSaving(true)
+    setFormError('')
     try {
       const res = await apiFetch('/api/v1/libraries', {
         method: 'POST',
@@ -207,25 +207,25 @@ export default function AdminLibraries() {
           description: formDescription || undefined,
           allowedMediaTypes: formMediaTypes,
         }),
-      });
+      })
       if (!res.ok) {
-        setFormError('Failed to create library');
+        setFormError('Failed to create library')
       } else {
-        setShowCreateForm(false);
-        await fetchLibraries();
+        setShowCreateForm(false)
+        await fetchLibraries()
       }
     } catch {
-      setFormError('Failed to create library');
+      setFormError('Failed to create library')
     } finally {
-      setFormSaving(false);
+      setFormSaving(false)
     }
   }
 
   async function handleUpdate(e: React.FormEvent) {
-    e.preventDefault();
-    if (!editingLibrary) return;
-    setFormSaving(true);
-    setFormError('');
+    e.preventDefault()
+    if (!editingLibrary) return
+    setFormSaving(true)
+    setFormError('')
     try {
       const res = await apiFetch(`/api/v1/libraries/${editingLibrary.id}`, {
         method: 'PUT',
@@ -235,39 +235,39 @@ export default function AdminLibraries() {
           description: formDescription || undefined,
           allowedMediaTypes: formMediaTypes,
         }),
-      });
+      })
       if (!res.ok) {
-        setFormError('Failed to update library');
+        setFormError('Failed to update library')
       } else {
         // Refresh editing library with updated data sources
-        const updated = (await res.json()) as Library;
-        setEditingLibrary({ ...editingLibrary, ...updated });
-        await fetchLibraries();
-        setFormError('');
+        const updated = (await res.json()) as Library
+        setEditingLibrary({ ...editingLibrary, ...updated })
+        await fetchLibraries()
+        setFormError('')
       }
     } catch {
-      setFormError('Failed to update library');
+      setFormError('Failed to update library')
     } finally {
-      setFormSaving(false);
+      setFormSaving(false)
     }
   }
 
   async function handleDelete(id: string) {
     try {
-      await apiFetch(`/api/v1/libraries/${id}`, { method: 'DELETE' });
-      setDeleteConfirmId(null);
-      if (editingLibrary?.id === id) setEditingLibrary(null);
-      await fetchLibraries();
+      await apiFetch(`/api/v1/libraries/${id}`, { method: 'DELETE' })
+      setDeleteConfirmId(null)
+      if (editingLibrary?.id === id) setEditingLibrary(null)
+      await fetchLibraries()
     } catch {
-      setError('Failed to delete library');
+      setError('Failed to delete library')
     }
   }
 
   async function handleAddSource(e: React.FormEvent) {
-    e.preventDefault();
-    if (!editingLibrary) return;
-    setAddingSource(true);
-    setSourceError('');
+    e.preventDefault()
+    if (!editingLibrary) return
+    setAddingSource(true)
+    setSourceError('')
     try {
       const res = await apiFetch(
         `/api/v1/libraries/${editingLibrary.id}/sources`,
@@ -281,29 +281,29 @@ export default function AdminLibraries() {
             enabled: true,
           }),
         },
-      );
+      )
       if (!res.ok) {
-        const body = (await res.json()) as { error?: string };
-        setSourceError(body.error ?? 'Failed to add data source');
+        const body = (await res.json()) as { error?: string }
+        setSourceError(body.error ?? 'Failed to add data source')
       } else {
-        const newSource = (await res.json()) as DataSource;
+        const newSource = (await res.json()) as DataSource
         setEditingLibrary({
           ...editingLibrary,
           dataSources: [...editingLibrary.dataSources, newSource],
-        });
-        setNewSourcePath('');
-        setNewSourceType('local');
-        setNewSourceRecursive(true);
+        })
+        setNewSourcePath('')
+        setNewSourceType('local')
+        setNewSourceRecursive(true)
       }
     } catch {
-      setSourceError('Failed to add data source');
+      setSourceError('Failed to add data source')
     } finally {
-      setAddingSource(false);
+      setAddingSource(false)
     }
   }
 
   async function handleToggleSource(source: DataSource) {
-    if (!editingLibrary) return;
+    if (!editingLibrary) return
     try {
       const res = await apiFetch(
         `/api/v1/libraries/${editingLibrary.id}/sources/${source.id}`,
@@ -312,15 +312,15 @@ export default function AdminLibraries() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ enabled: !source.enabled }),
         },
-      );
+      )
       if (res.ok) {
-        const updated = (await res.json()) as DataSource;
+        const updated = (await res.json()) as DataSource
         setEditingLibrary({
           ...editingLibrary,
           dataSources: editingLibrary.dataSources.map((s) =>
             s.id === source.id ? updated : s,
           ),
-        });
+        })
       }
     } catch {
       // ignore
@@ -328,30 +328,30 @@ export default function AdminLibraries() {
   }
 
   async function handleDeleteSource(sourceId: string) {
-    if (!editingLibrary) return;
+    if (!editingLibrary) return
     try {
       await apiFetch(
         `/api/v1/libraries/${editingLibrary.id}/sources/${sourceId}`,
         {
           method: 'DELETE',
         },
-      );
+      )
       setEditingLibrary({
         ...editingLibrary,
         dataSources: editingLibrary.dataSources.filter(
           (s) => s.id !== sourceId,
         ),
-      });
+      })
     } catch {
-      setSourceError('Failed to remove data source');
+      setSourceError('Failed to remove data source')
     }
   }
 
   async function handleSaveSchedule(e: React.FormEvent) {
-    e.preventDefault();
-    if (!editingLibrary) return;
-    setScheduleSaving(true);
-    setScheduleError('');
+    e.preventDefault()
+    if (!editingLibrary) return
+    setScheduleSaving(true)
+    setScheduleError('')
     try {
       const [schedRes, watchRes] = await Promise.all([
         apiFetch(`/api/v1/libraries/${editingLibrary.id}/scan/schedule`, {
@@ -364,55 +364,55 @@ export default function AdminLibraries() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ watchEnabled }),
         }),
-      ]);
+      ])
       if (!schedRes.ok || !watchRes.ok) {
-        setScheduleError('Failed to save schedule settings');
+        setScheduleError('Failed to save schedule settings')
       } else {
-        const updated = (await watchRes.json()) as Library;
-        setEditingLibrary({ ...editingLibrary, ...updated });
-        await fetchLibraries();
+        const updated = (await watchRes.json()) as Library
+        setEditingLibrary({ ...editingLibrary, ...updated })
+        await fetchLibraries()
       }
     } catch {
-      setScheduleError('Failed to save schedule settings');
+      setScheduleError('Failed to save schedule settings')
     } finally {
-      setScheduleSaving(false);
+      setScheduleSaving(false)
     }
   }
 
   async function handleScan(libraryId: string) {
-    setScanningIds((prev) => new Set([...prev, libraryId]));
-    setScanMessages((prev) => ({ ...prev, [libraryId]: '' }));
+    setScanningIds((prev) => new Set([...prev, libraryId]))
+    setScanMessages((prev) => ({ ...prev, [libraryId]: '' }))
     try {
       const res = await apiFetch(`/api/v1/libraries/${libraryId}/scan`, {
         method: 'POST',
-      });
+      })
       if (res.status === 409) {
         setScanMessages((prev) => ({
           ...prev,
           [libraryId]: 'Scan already running',
-        }));
+        }))
       } else if (res.ok) {
-        setScanMessages((prev) => ({ ...prev, [libraryId]: 'Scan started' }));
+        setScanMessages((prev) => ({ ...prev, [libraryId]: 'Scan started' }))
         setTimeout(() => {
-          setScanMessages((prev) => ({ ...prev, [libraryId]: '' }));
-        }, 3000);
+          setScanMessages((prev) => ({ ...prev, [libraryId]: '' }))
+        }, 3000)
       } else {
         setScanMessages((prev) => ({
           ...prev,
           [libraryId]: 'Failed to start scan',
-        }));
+        }))
       }
     } catch {
       setScanMessages((prev) => ({
         ...prev,
         [libraryId]: 'Failed to start scan',
-      }));
+      }))
     } finally {
       setScanningIds((prev) => {
-        const next = new Set(prev);
-        next.delete(libraryId);
-        return next;
-      });
+        const next = new Set(prev)
+        next.delete(libraryId)
+        return next
+      })
     }
   }
 
@@ -421,7 +421,7 @@ export default function AdminLibraries() {
       <div className={styles.page ?? ''}>
         <p className={styles.loading ?? ''}>Loading...</p>
       </div>
-    );
+    )
   }
 
   return (
@@ -774,16 +774,16 @@ export default function AdminLibraries() {
         ))}
       </div>
     </div>
-  );
+  )
 }
 
 interface LibraryFormFieldsProps {
-  name: string;
-  description: string;
-  mediaTypes: string[];
-  onNameChange: (v: string) => void;
-  onDescriptionChange: (v: string) => void;
-  onToggleMediaType: (t: string) => void;
+  name: string
+  description: string
+  mediaTypes: string[]
+  onNameChange: (v: string) => void
+  onDescriptionChange: (v: string) => void
+  onToggleMediaType: (t: string) => void
 }
 
 function LibraryFormFields({
@@ -835,5 +835,5 @@ function LibraryFormFields({
         </div>
       </div>
     </div>
-  );
+  )
 }

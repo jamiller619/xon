@@ -1,27 +1,27 @@
-import { Component, type ErrorInfo, type ReactNode } from 'react';
-import styles from './ErrorBoundary.module.css';
+import { Component, type ErrorInfo, type ReactNode } from 'react'
+import styles from './ErrorBoundary.module.css'
 
 interface Props {
-  children: ReactNode;
+  children: ReactNode
 }
 
 interface State {
-  hasError: boolean;
-  error: Error | null;
+  hasError: boolean
+  error: Error | null
 }
 
 export default class ErrorBoundary extends Component<Props, State> {
   constructor(props: Props) {
-    super(props);
-    this.state = { hasError: false, error: null };
+    super(props)
+    this.state = { hasError: false, error: null }
   }
 
   static getDerivedStateFromError(error: Error): State {
-    return { hasError: true, error };
+    return { hasError: true, error }
   }
 
   componentDidCatch(error: Error, info: ErrorInfo) {
-    console.error('React error boundary caught:', error, info.componentStack);
+    console.error('React error boundary caught:', error, info.componentStack)
   }
 
   render() {
@@ -36,17 +36,17 @@ export default class ErrorBoundary extends Component<Props, State> {
               type="button"
               className={styles.button ?? ''}
               onClick={() => {
-                this.setState({ hasError: false, error: null });
-                window.location.reload();
+                this.setState({ hasError: false, error: null })
+                window.location.reload()
               }}
             >
               Retry
             </button>
           </div>
         </div>
-      );
+      )
     }
 
-    return this.props.children;
+    return this.props.children
   }
 }

@@ -1,7 +1,7 @@
-import { join } from 'node:path';
-import { defineConfig } from 'drizzle-kit';
+import { join } from 'node:path'
+import { defineConfig } from 'drizzle-kit'
 
-const dataDir = process.env.DATA_DIR ?? './data';
+const dataDir = process.env.DATA_DIR ?? './data'
 
 export default defineConfig({
   schema: './src/schema.ts',
@@ -10,4 +10,4 @@ export default defineConfig({
   dbCredentials: {
     url: `file:${join(dataDir, 'xon.db')}`,
   },
-});
+})

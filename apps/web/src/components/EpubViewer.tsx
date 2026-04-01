@@ -1,29 +1,29 @@
-import ePub from 'epubjs';
-import type { Book } from 'epubjs';
-import type { Location, Rendition } from 'epubjs';
-import type { NavItem } from 'epubjs';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { apiFetch } from '../apiFetch.js';
-import styles from './EpubViewer.module.css';
+import ePub from 'epubjs'
+import type { Book } from 'epubjs'
+import type { Location, Rendition } from 'epubjs'
+import type { NavItem } from 'epubjs'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { apiFetch } from '../apiFetch.js'
+import styles from './EpubViewer.module.css'
 
 interface Props {
-  mediaId: string;
-  title: string;
-  onClose: () => void;
+  mediaId: string
+  title: string
+  onClose: () => void
 }
 
-type Theme = 'light' | 'dark' | 'sepia';
+type Theme = 'light' | 'dark' | 'sepia'
 
-const FONT_SIZES = [12, 14, 16, 18, 20, 24, 28];
-const DEFAULT_FONT_IDX = 2; // 16px
-const LINE_HEIGHTS = [1.3, 1.5, 1.7, 2.0];
-const DEFAULT_LINE_IDX = 1; // 1.5
+const FONT_SIZES = [12, 14, 16, 18, 20, 24, 28]
+const DEFAULT_FONT_IDX = 2 // 16px
+const LINE_HEIGHTS = [1.3, 1.5, 1.7, 2.0]
+const DEFAULT_LINE_IDX = 1 // 1.5
 
 const THEME_STYLES: Record<Theme, Record<string, string>> = {
   light: { background: '#ffffff', color: '#1a1a1a' },
   dark: { background: '#1a1a2e', color: '#e0e0e0' },
   sepia: { background: '#f4ecd8', color: '#3b2e1e' },
-};
+}
 
 function savePosition(mediaId: string, cfi: string, chapterTitle?: string) {
   apiFetch(`/api/v1/media/${mediaId}/reading-position`, {
@@ -32,32 +32,32 @@ function savePosition(mediaId: string, cfi: string, chapterTitle?: string) {
     body: JSON.stringify({ cfi, ...(chapterTitle ? { chapterTitle } : {}) }),
   }).catch(() => {
     // best-effort save
-  });
+  })
 }
 
 export default function EpubViewer({ mediaId, title, onClose }: Props) {
-  const viewerRef = useRef<HTMLDivElement>(null);
-  const bookRef = useRef<Book | null>(null);
-  const renditionRef = useRef<Rendition | null>(null);
+  const viewerRef = useRef<HTMLDivElement>(null)
+  const bookRef = useRef<Book | null>(null)
+  const renditionRef = useRef<Rendition | null>(null)
 
-  const [toc, setToc] = useState<NavItem[]>([]);
-  const [currentCfi, setCurrentCfi] = useState<string>('');
-  const [currentChapter, setCurrentChapter] = useState<string>('');
-  const [atStart, setAtStart] = useState(true);
-  const [atEnd, setAtEnd] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [toc, setToc] = useState<NavItem[]>([])
+  const [currentCfi, setCurrentCfi] = useState<string>('')
+  const [currentChapter, setCurrentChapter] = useState<string>('')
+  const [atStart, setAtStart] = useState(true)
+  const [atEnd, setAtEnd] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const [fontIdx, setFontIdx] = useState(DEFAULT_FONT_IDX);
-  const [lineIdx, setLineIdx] = useState(DEFAULT_LINE_IDX);
-  const [theme, setTheme] = useState<Theme>('light');
-  const [showToc, setShowToc] = useState(true);
+  const [fontIdx, setFontIdx] = useState(DEFAULT_FONT_IDX)
+  const [lineIdx, setLineIdx] = useState(DEFAULT_LINE_IDX)
+  const [theme, setTheme] = useState<Theme>('light')
+  const [showToc, setShowToc] = useState(true)
 
   const applyTheme = useCallback(
     (rendition: Rendition, t: Theme, fIdx: number, lIdx: number) => {
-      const ts = THEME_STYLES[t];
-      const fontSize = FONT_SIZES[fIdx] ?? 16;
-      const lineHeight = LINE_HEIGHTS[lIdx] ?? 1.5;
+      const ts = THEME_STYLES[t]
+      const fontSize = FONT_SIZES[fIdx] ?? 16
+      const lineHeight = LINE_HEIGHTS[lIdx] ?? 1.5
       rendition.themes.register('xon', {
         body: {
           background: ts.background ?? '#ffffff',
@@ -69,31 +69,31 @@ export default function EpubViewer({ mediaId, title, onClose }: Props) {
         '*, *::before, *::after': {
           'box-sizing': 'border-box',
         },
-      });
-      rendition.themes.select('xon');
+      })
+      rendition.themes.select('xon')
     },
     [],
-  );
+  )
 
   // Init book — only re-run when mediaId changes; theme/fontIdx/lineIdx changes handled by separate effect
   // biome-ignore lint/correctness/useExhaustiveDependencies: intentional — book init must only run on mediaId change
   useEffect(() => {
-    if (!viewerRef.current) return;
+    if (!viewerRef.current) return
 
-    setLoading(true);
-    setError(null);
+    setLoading(true)
+    setError(null)
 
-    const book = ePub(`/api/v1/media/${mediaId}/epub`);
-    bookRef.current = book;
+    const book = ePub(`/api/v1/media/${mediaId}/epub`)
+    bookRef.current = book
 
     const rendition = book.renderTo(viewerRef.current, {
       width: '100%',
       height: '100%',
       flow: 'scrolled-doc',
-    });
-    renditionRef.current = rendition;
+    })
+    renditionRef.current = rendition
 
-    applyTheme(rendition, theme, fontIdx, lineIdx);
+    applyTheme(rendition, theme, fontIdx, lineIdx)
 
     // Load saved position then display
     apiFetch(`/api/v1/media/${mediaId}/reading-position`)
@@ -102,96 +102,96 @@ export default function EpubViewer({ mediaId, title, onClose }: Props) {
         const savedCfi =
           pos && typeof pos === 'object' && 'cfi' in pos
             ? (pos as { cfi: string }).cfi
-            : undefined;
-        return rendition.display(savedCfi);
+            : undefined
+        return rendition.display(savedCfi)
       })
       .catch(() => rendition.display())
       .then(() => setLoading(false))
       .catch(() => {
-        setError('Failed to load EPUB.');
-        setLoading(false);
-      });
+        setError('Failed to load EPUB.')
+        setLoading(false)
+      })
 
     // Load TOC
     book.loaded.navigation
       .then((nav) => {
-        setToc(nav.toc);
+        setToc(nav.toc)
       })
       .catch(() => {
         // TOC unavailable
-      });
+      })
 
     // Track location changes
     rendition.on('relocated', (location: Location) => {
-      const cfi = location.start.cfi;
-      setCurrentCfi(cfi);
-      setAtStart(location.atStart ?? false);
-      setAtEnd(location.atEnd ?? false);
+      const cfi = location.start.cfi
+      setCurrentCfi(cfi)
+      setAtStart(location.atStart ?? false)
+      setAtEnd(location.atEnd ?? false)
 
       // Resolve chapter title from TOC
       book.loaded.navigation
         .then((nav) => {
-          const spineItem = book.spine.get(cfi);
+          const spineItem = book.spine.get(cfi)
           if (spineItem) {
             const chapter = nav.toc.find((item) =>
               item.href.includes(spineItem.href ?? ''),
-            );
-            const chapterTitle = chapter?.label ?? '';
-            setCurrentChapter(chapterTitle);
-            savePosition(mediaId, cfi, chapterTitle || undefined);
+            )
+            const chapterTitle = chapter?.label ?? ''
+            setCurrentChapter(chapterTitle)
+            savePosition(mediaId, cfi, chapterTitle || undefined)
           } else {
-            savePosition(mediaId, cfi);
+            savePosition(mediaId, cfi)
           }
         })
         .catch(() => {
-          savePosition(mediaId, cfi);
-        });
-    });
+          savePosition(mediaId, cfi)
+        })
+    })
 
     book.on('openFailed', () => {
-      setError('Failed to open EPUB file.');
-      setLoading(false);
-    });
+      setError('Failed to open EPUB file.')
+      setLoading(false)
+    })
 
     return () => {
-      renditionRef.current = null;
-      bookRef.current = null;
-      book.destroy();
-    };
+      renditionRef.current = null
+      bookRef.current = null
+      book.destroy()
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [mediaId]);
+  }, [mediaId])
 
   // Re-apply theme/font when settings change (after initial load)
   useEffect(() => {
-    const rendition = renditionRef.current;
-    if (!rendition) return;
-    applyTheme(rendition, theme, fontIdx, lineIdx);
-  }, [theme, fontIdx, lineIdx, applyTheme]);
+    const rendition = renditionRef.current
+    if (!rendition) return
+    applyTheme(rendition, theme, fontIdx, lineIdx)
+  }, [theme, fontIdx, lineIdx, applyTheme])
 
   const goNext = useCallback(() => {
-    renditionRef.current?.next();
-  }, []);
+    renditionRef.current?.next()
+  }, [])
 
   const goPrev = useCallback(() => {
-    renditionRef.current?.prev();
-  }, []);
+    renditionRef.current?.prev()
+  }, [])
 
   // Keyboard shortcuts
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
-        onClose();
+        onClose()
       } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-        goNext();
+        goNext()
       } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-        goPrev();
+        goPrev()
       }
     }
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [onClose, goNext, goPrev]);
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [onClose, goNext, goPrev])
 
-  const themeStyle = THEME_STYLES[theme];
+  const themeStyle = THEME_STYLES[theme]
 
   return (
     <dialog
@@ -349,5 +349,5 @@ export default function EpubViewer({ mediaId, title, onClose }: Props) {
         </div>
       </div>
     </dialog>
-  );
+  )
 }

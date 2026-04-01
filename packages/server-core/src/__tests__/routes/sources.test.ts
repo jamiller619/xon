@@ -1,51 +1,51 @@
-import { tmpdir } from 'node:os';
-import type { Client } from '@libsql/client';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createApp } from '../../app.js';
-import { openDatabase } from '../../db/db.js';
-import { migrateDatabase } from '../../db/migrate.js';
-import { signAccessToken } from '../../routes/auth.js';
+import { tmpdir } from 'node:os'
+import type { Client } from '@libsql/client'
+import type { LibSQLDatabase } from 'drizzle-orm/libsql'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { createApp } from '../../app.js'
+import { openDatabase } from '../../db/db.js'
+import { migrateDatabase } from '../../db/migrate.js'
+import { signAccessToken } from '../../routes/auth.js'
 
-const AUTH = `Bearer ${await signAccessToken('test-id', 'testuser', 'admin')}`;
+const AUTH = `Bearer ${await signAccessToken('test-id', 'testuser', 'admin')}`
 
 describe('Data Sources CRUD API', () => {
-  let client: Client;
-  let db: LibSQLDatabase;
-  let app: ReturnType<typeof createApp>;
-  let libraryId: string;
+  let client: Client
+  let db: LibSQLDatabase
+  let app: ReturnType<typeof createApp>
+  let libraryId: string
 
   beforeEach(async () => {
-    ({ client, db } = await openDatabase(':memory:'));
-    await migrateDatabase(db);
-    app = createApp(db);
+    ;({ client, db } = await openDatabase(':memory:'))
+    await migrateDatabase(db)
+    app = createApp(db)
 
     // Create a library to use in tests
     const res = await app.request('/api/v1/libraries', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: AUTH },
       body: JSON.stringify({ name: 'Test Library' }),
-    });
-    const lib = await res.json();
-    libraryId = lib.id;
-  });
+    })
+    const lib = await res.json()
+    libraryId = lib.id
+  })
 
   afterEach(() => {
-    client.close();
-  });
+    client.close()
+  })
 
-  const tmpDir = tmpdir();
+  const tmpDir = tmpdir()
 
   function sourcesUrl(libId = libraryId) {
-    return `/api/v1/libraries/${libId}/sources`;
+    return `/api/v1/libraries/${libId}/sources`
   }
 
   async function createSource(
     data: {
-      type: string;
-      path: string;
-      recursive?: boolean;
-      enabled?: boolean;
+      type: string
+      path: string
+      recursive?: boolean
+      enabled?: boolean
     },
     libId = libraryId,
   ) {
@@ -53,66 +53,66 @@ describe('Data Sources CRUD API', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: AUTH },
       body: JSON.stringify(data),
-    });
+    })
   }
 
   describe('POST /api/v1/libraries/:libraryId/sources', () => {
     it('creates a network source and returns 201', async () => {
-      const res = await createSource({ type: 'network', path: '//nas/media' });
-      expect(res.status).toBe(201);
-      const body = await res.json();
+      const res = await createSource({ type: 'network', path: '//nas/media' })
+      expect(res.status).toBe(201)
+      const body = await res.json()
       expect(body).toMatchObject({
         libraryId,
         type: 'network',
         path: '//nas/media',
         recursive: true,
         enabled: true,
-      });
-      expect(body).toHaveProperty('id');
-      expect(body).toHaveProperty('createdAt');
-    });
+      })
+      expect(body).toHaveProperty('id')
+      expect(body).toHaveProperty('createdAt')
+    })
 
     it('creates a local source with a valid path', async () => {
-      const res = await createSource({ type: 'local', path: tmpDir });
-      expect(res.status).toBe(201);
-      const body = await res.json();
-      expect(body.type).toBe('local');
-      expect(body.path).toBe(tmpDir);
-    });
+      const res = await createSource({ type: 'local', path: tmpDir })
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body.type).toBe('local')
+      expect(body.path).toBe(tmpDir)
+    })
 
     it('returns 400 for local source with non-existent path', async () => {
       const res = await createSource({
         type: 'local',
         path: '/this/path/does/not/exist/ever',
-      });
-      expect(res.status).toBe(400);
-    });
+      })
+      expect(res.status).toBe(400)
+    })
 
     it('returns 400 for missing type', async () => {
       const res = await app.request(sourcesUrl(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: AUTH },
         body: JSON.stringify({ path: '/some/path' }),
-      });
-      expect(res.status).toBe(400);
-    });
+      })
+      expect(res.status).toBe(400)
+    })
 
     it('returns 400 for invalid type', async () => {
       const res = await app.request(sourcesUrl(), {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: AUTH },
         body: JSON.stringify({ type: 'ftp', path: '/some/path' }),
-      });
-      expect(res.status).toBe(400);
-    });
+      })
+      expect(res.status).toBe(400)
+    })
 
     it('returns 404 for non-existent library', async () => {
       const res = await createSource(
         { type: 'network', path: '//nas/media' },
         'nonexistent',
-      );
-      expect(res.status).toBe(404);
-    });
+      )
+      expect(res.status).toBe(404)
+    })
 
     it('respects recursive and enabled flags', async () => {
       const res = await createSource({
@@ -120,129 +120,129 @@ describe('Data Sources CRUD API', () => {
         path: '//nas/music',
         recursive: false,
         enabled: false,
-      });
-      expect(res.status).toBe(201);
-      const body = await res.json();
-      expect(body.recursive).toBe(false);
-      expect(body.enabled).toBe(false);
-    });
-  });
+      })
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body.recursive).toBe(false)
+      expect(body.enabled).toBe(false)
+    })
+  })
 
   describe('GET /api/v1/libraries/:libraryId/sources', () => {
     it('returns empty array when no sources', async () => {
       const res = await app.request(sourcesUrl(), {
         headers: { Authorization: AUTH },
-      });
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body).toEqual([]);
-    });
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body).toEqual([])
+    })
 
     it('lists all sources for the library', async () => {
-      await createSource({ type: 'network', path: '//nas/movies' });
-      await createSource({ type: 'network', path: '//nas/tv' });
+      await createSource({ type: 'network', path: '//nas/movies' })
+      await createSource({ type: 'network', path: '//nas/tv' })
       const res = await app.request(sourcesUrl(), {
         headers: { Authorization: AUTH },
-      });
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body).toHaveLength(2);
-    });
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body).toHaveLength(2)
+    })
 
     it('returns 404 for non-existent library', async () => {
       const res = await app.request(sourcesUrl('nonexistent'), {
         headers: { Authorization: AUTH },
-      });
-      expect(res.status).toBe(404);
-    });
-  });
+      })
+      expect(res.status).toBe(404)
+    })
+  })
 
   describe('PUT /api/v1/libraries/:libraryId/sources/:id', () => {
     it('updates source path', async () => {
       const created = await (
         await createSource({ type: 'network', path: '//nas/old' })
-      ).json();
+      ).json()
       const res = await app.request(`${sourcesUrl()}/${created.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: AUTH },
         body: JSON.stringify({ path: '//nas/new' }),
-      });
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body.path).toBe('//nas/new');
-    });
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.path).toBe('//nas/new')
+    })
 
     it('updates enabled flag', async () => {
       const created = await (
         await createSource({ type: 'network', path: '//nas/media' })
-      ).json();
+      ).json()
       const res = await app.request(`${sourcesUrl()}/${created.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: AUTH },
         body: JSON.stringify({ enabled: false }),
-      });
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body.enabled).toBe(false);
-    });
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.enabled).toBe(false)
+    })
 
     it('returns 400 when updating local source path to non-existent path', async () => {
       const created = await (
         await createSource({ type: 'local', path: tmpDir })
-      ).json();
+      ).json()
       const res = await app.request(`${sourcesUrl()}/${created.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: AUTH },
         body: JSON.stringify({ path: '/no/such/path/ever' }),
-      });
-      expect(res.status).toBe(400);
-    });
+      })
+      expect(res.status).toBe(400)
+    })
 
     it('returns 404 for non-existent source', async () => {
       const res = await app.request(`${sourcesUrl()}/nonexistent`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: AUTH },
         body: JSON.stringify({ path: '//nas/new' }),
-      });
-      expect(res.status).toBe(404);
-    });
-  });
+      })
+      expect(res.status).toBe(404)
+    })
+  })
 
   describe('DELETE /api/v1/libraries/:libraryId/sources/:id', () => {
     it('deletes a source and returns success', async () => {
       const created = await (
         await createSource({ type: 'network', path: '//nas/media' })
-      ).json();
+      ).json()
       const res = await app.request(`${sourcesUrl()}/${created.id}`, {
         method: 'DELETE',
         headers: { Authorization: AUTH },
-      });
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body.success).toBe(true);
-    });
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.success).toBe(true)
+    })
 
     it('deleted source no longer appears in list', async () => {
       const created = await (
         await createSource({ type: 'network', path: '//nas/media' })
-      ).json();
+      ).json()
       await app.request(`${sourcesUrl()}/${created.id}`, {
         method: 'DELETE',
         headers: { Authorization: AUTH },
-      });
+      })
       const res = await app.request(sourcesUrl(), {
         headers: { Authorization: AUTH },
-      });
-      const body = await res.json();
-      expect(body).toHaveLength(0);
-    });
+      })
+      const body = await res.json()
+      expect(body).toHaveLength(0)
+    })
 
     it('returns 404 for non-existent source', async () => {
       const res = await app.request(`${sourcesUrl()}/nonexistent`, {
         method: 'DELETE',
         headers: { Authorization: AUTH },
-      });
-      expect(res.status).toBe(404);
-    });
-  });
-});
+      })
+      expect(res.status).toBe(404)
+    })
+  })
+})

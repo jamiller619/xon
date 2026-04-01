@@ -1,4 +1,4 @@
-export const DEFAULT_PORT = 32400;
+export const DEFAULT_PORT = 32400
 
 export enum MediaCategory {
   Movies = 'Movies',

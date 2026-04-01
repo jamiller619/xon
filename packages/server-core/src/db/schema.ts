@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm';
+import { sql } from 'drizzle-orm'
 import {
   index,
   integer,
@@ -6,7 +6,7 @@ import {
   sqliteTable,
   text,
   uniqueIndex,
-} from 'drizzle-orm/sqlite-core';
+} from 'drizzle-orm/sqlite-core'
 
 export const libraries = sqliteTable('libraries', {
   id: text('id').primaryKey(),
@@ -28,7 +28,7 @@ export const libraries = sqliteTable('libraries', {
   updatedAt: integer('updated_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),
-});
+})
 
 export const dataSources = sqliteTable('data_sources', {
   id: text('id').primaryKey(),
@@ -46,7 +46,7 @@ export const dataSources = sqliteTable('data_sources', {
   updatedAt: integer('updated_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),
-});
+})
 
 export const CONTENT_RATINGS = [
   'G',
@@ -55,16 +55,16 @@ export const CONTENT_RATINGS = [
   'R',
   'unrated',
   'none',
-] as const;
-export type ContentRatingMax = (typeof CONTENT_RATINGS)[number];
+] as const
+export type ContentRatingMax = (typeof CONTENT_RATINGS)[number]
 export const MEDIA_CONTENT_RATINGS = [
   'G',
   'PG',
   'PG-13',
   'R',
   'unrated',
-] as const;
-export type MediaContentRating = (typeof MEDIA_CONTENT_RATINGS)[number];
+] as const
+export type MediaContentRating = (typeof MEDIA_CONTENT_RATINGS)[number]
 
 // Rating order index: G=0, PG=1, PG-13=2, R=3, unrated=4. "none" = no restriction.
 export const RATING_ORDER: MediaContentRating[] = [
@@ -73,7 +73,7 @@ export const RATING_ORDER: MediaContentRating[] = [
   'PG-13',
   'R',
   'unrated',
-];
+]
 
 /**
  * Returns an array of allowed content ratings for the given maxContentRating,
@@ -82,10 +82,10 @@ export const RATING_ORDER: MediaContentRating[] = [
 export function getAllowedRatings(
   maxContentRating: ContentRatingMax,
 ): MediaContentRating[] | null {
-  if (maxContentRating === 'none') return null;
-  const idx = RATING_ORDER.indexOf(maxContentRating as MediaContentRating);
-  if (idx === -1) return null;
-  return RATING_ORDER.slice(0, idx + 1);
+  if (maxContentRating === 'none') return null
+  const idx = RATING_ORDER.indexOf(maxContentRating as MediaContentRating)
+  if (idx === -1) return null
+  return RATING_ORDER.slice(0, idx + 1)
 }
 
 export const mediaItems = sqliteTable(
@@ -126,7 +126,7 @@ export const mediaItems = sqliteTable(
     index('media_items_media_category_idx').on(table.mediaCategory),
     index('media_items_file_path_idx').on(table.filePath),
   ],
-);
+)
 
 export const readingPositions = sqliteTable('reading_positions', {
   id: text('id').primaryKey(),
@@ -139,7 +139,7 @@ export const readingPositions = sqliteTable('reading_positions', {
   updatedAt: integer('updated_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),
-});
+})
 
 export const users = sqliteTable('users', {
   id: text('id').primaryKey(),
@@ -165,18 +165,18 @@ export const users = sqliteTable('users', {
   updatedAt: integer('updated_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),
-});
+})
 
-export type Library = typeof libraries.$inferSelect;
-export type NewLibrary = typeof libraries.$inferInsert;
-export type DataSource = typeof dataSources.$inferSelect;
-export type NewDataSource = typeof dataSources.$inferInsert;
-export type MediaItem = typeof mediaItems.$inferSelect;
-export type NewMediaItem = typeof mediaItems.$inferInsert;
-export type ReadingPosition = typeof readingPositions.$inferSelect;
-export type NewReadingPosition = typeof readingPositions.$inferInsert;
-export type User = typeof users.$inferSelect;
-export type NewUser = typeof users.$inferInsert;
+export type Library = typeof libraries.$inferSelect
+export type NewLibrary = typeof libraries.$inferInsert
+export type DataSource = typeof dataSources.$inferSelect
+export type NewDataSource = typeof dataSources.$inferInsert
+export type MediaItem = typeof mediaItems.$inferSelect
+export type NewMediaItem = typeof mediaItems.$inferInsert
+export type ReadingPosition = typeof readingPositions.$inferSelect
+export type NewReadingPosition = typeof readingPositions.$inferInsert
+export type User = typeof users.$inferSelect
+export type NewUser = typeof users.$inferInsert
 
 export const refreshTokens = sqliteTable('refresh_tokens', {
   id: text('id').primaryKey(),
@@ -187,10 +187,10 @@ export const refreshTokens = sqliteTable('refresh_tokens', {
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),
-});
+})
 
-export type RefreshToken = typeof refreshTokens.$inferSelect;
-export type NewRefreshToken = typeof refreshTokens.$inferInsert;
+export type RefreshToken = typeof refreshTokens.$inferSelect
+export type NewRefreshToken = typeof refreshTokens.$inferInsert
 
 export const libraryAccess = sqliteTable(
   'library_access',
@@ -209,10 +209,10 @@ export const libraryAccess = sqliteTable(
       .references(() => users.id, { onDelete: 'cascade' }),
   },
   (table) => [primaryKey({ columns: [table.userId, table.libraryId] })],
-);
+)
 
-export type LibraryAccess = typeof libraryAccess.$inferSelect;
-export type NewLibraryAccess = typeof libraryAccess.$inferInsert;
+export type LibraryAccess = typeof libraryAccess.$inferSelect
+export type NewLibraryAccess = typeof libraryAccess.$inferInsert
 
 export const mediaProgress = sqliteTable(
   'media_progress',
@@ -233,10 +233,10 @@ export const mediaProgress = sqliteTable(
       .default(sql`(unixepoch())`),
   },
   (table) => [primaryKey({ columns: [table.userId, table.mediaItemId] })],
-);
+)
 
-export type MediaProgress = typeof mediaProgress.$inferSelect;
-export type NewMediaProgress = typeof mediaProgress.$inferInsert;
+export type MediaProgress = typeof mediaProgress.$inferSelect
+export type NewMediaProgress = typeof mediaProgress.$inferInsert
 
 export const favorites = sqliteTable(
   'favorites',
@@ -252,7 +252,7 @@ export const favorites = sqliteTable(
       .default(sql`(unixepoch())`),
   },
   (table) => [primaryKey({ columns: [table.userId, table.mediaItemId] })],
-);
+)
 
 export const watchlist = sqliteTable(
   'watchlist',
@@ -268,12 +268,12 @@ export const watchlist = sqliteTable(
       .default(sql`(unixepoch())`),
   },
   (table) => [primaryKey({ columns: [table.userId, table.mediaItemId] })],
-);
+)
 
-export type Favorite = typeof favorites.$inferSelect;
-export type NewFavorite = typeof favorites.$inferInsert;
-export type Watchlist = typeof watchlist.$inferSelect;
-export type NewWatchlist = typeof watchlist.$inferInsert;
+export type Favorite = typeof favorites.$inferSelect
+export type NewFavorite = typeof favorites.$inferInsert
+export type Watchlist = typeof watchlist.$inferSelect
+export type NewWatchlist = typeof watchlist.$inferInsert
 
 export const apiTokens = sqliteTable('api_tokens', {
   id: text('id').primaryKey(),
@@ -287,10 +287,10 @@ export const apiTokens = sqliteTable('api_tokens', {
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),
-});
+})
 
-export type ApiToken = typeof apiTokens.$inferSelect;
-export type NewApiToken = typeof apiTokens.$inferInsert;
+export type ApiToken = typeof apiTokens.$inferSelect
+export type NewApiToken = typeof apiTokens.$inferInsert
 
 export const GROUP_TYPES = [
   'series',
@@ -302,8 +302,8 @@ export const GROUP_TYPES = [
   'playlist',
   'shelf',
   'folder',
-] as const;
-export type GroupType = (typeof GROUP_TYPES)[number];
+] as const
+export type GroupType = (typeof GROUP_TYPES)[number]
 
 export const groups = sqliteTable(
   'groups',
@@ -324,7 +324,7 @@ export const groups = sqliteTable(
     index('groups_library_id_idx').on(table.libraryId),
     index('groups_parent_group_id_idx').on(table.parentGroupId),
   ],
-);
+)
 
 export const groupMembers = sqliteTable(
   'group_members',
@@ -338,12 +338,12 @@ export const groupMembers = sqliteTable(
     sortOrder: integer('sort_order').notNull().default(0),
   },
   (table) => [primaryKey({ columns: [table.groupId, table.mediaItemId] })],
-);
+)
 
-export type Group = typeof groups.$inferSelect;
-export type NewGroup = typeof groups.$inferInsert;
-export type GroupMember = typeof groupMembers.$inferSelect;
-export type NewGroupMember = typeof groupMembers.$inferInsert;
+export type Group = typeof groups.$inferSelect
+export type NewGroup = typeof groups.$inferInsert
+export type GroupMember = typeof groupMembers.$inferSelect
+export type NewGroupMember = typeof groupMembers.$inferInsert
 
 export const matchingQueue = sqliteTable(
   'matching_queue',
@@ -372,10 +372,10 @@ export const matchingQueue = sqliteTable(
     index('matching_queue_media_item_id_idx').on(table.mediaItemId),
     index('matching_queue_status_idx').on(table.status),
   ],
-);
+)
 
-export type MatchingQueueItem = typeof matchingQueue.$inferSelect;
-export type NewMatchingQueueItem = typeof matchingQueue.$inferInsert;
+export type MatchingQueueItem = typeof matchingQueue.$inferSelect
+export type NewMatchingQueueItem = typeof matchingQueue.$inferInsert
 
 export const imageHashes = sqliteTable(
   'image_hashes',
@@ -391,10 +391,10 @@ export const imageHashes = sqliteTable(
       .default(sql`(unixepoch())`),
   },
   (table) => [index('image_hashes_media_item_id_idx').on(table.mediaItemId)],
-);
+)
 
-export type ImageHash = typeof imageHashes.$inferSelect;
-export type NewImageHash = typeof imageHashes.$inferInsert;
+export type ImageHash = typeof imageHashes.$inferSelect
+export type NewImageHash = typeof imageHashes.$inferInsert
 
 export const duplicateCandidates = sqliteTable(
   'duplicate_candidates',
@@ -427,10 +427,10 @@ export const duplicateCandidates = sqliteTable(
     index('duplicate_candidates_library_id_idx').on(table.libraryId),
     index('duplicate_candidates_status_idx').on(table.status),
   ],
-);
+)
 
-export type DuplicateCandidate = typeof duplicateCandidates.$inferSelect;
-export type NewDuplicateCandidate = typeof duplicateCandidates.$inferInsert;
+export type DuplicateCandidate = typeof duplicateCandidates.$inferSelect
+export type NewDuplicateCandidate = typeof duplicateCandidates.$inferInsert
 
 export const suggestedGroups = sqliteTable(
   'suggested_groups',
@@ -462,17 +462,17 @@ export const suggestedGroups = sqliteTable(
     index('suggested_groups_library_id_idx').on(table.libraryId),
     index('suggested_groups_status_idx').on(table.status),
   ],
-);
+)
 
-export type SuggestedGroup = typeof suggestedGroups.$inferSelect;
-export type NewSuggestedGroup = typeof suggestedGroups.$inferInsert;
+export type SuggestedGroup = typeof suggestedGroups.$inferSelect
+export type NewSuggestedGroup = typeof suggestedGroups.$inferInsert
 
 export const AI_MODES = [
   'local-only',
   'cloud-only',
   'local-with-cloud-fallback',
-] as const;
-export type AiMode = (typeof AI_MODES)[number];
+] as const
+export type AiMode = (typeof AI_MODES)[number]
 
 export const aiSettings = sqliteTable('ai_settings', {
   id: text('id').primaryKey(),
@@ -500,10 +500,10 @@ export const aiSettings = sqliteTable('ai_settings', {
   updatedAt: integer('updated_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),
-});
+})
 
-export type AiSettingsRow = typeof aiSettings.$inferSelect;
-export type NewAiSettings = typeof aiSettings.$inferInsert;
+export type AiSettingsRow = typeof aiSettings.$inferSelect
+export type NewAiSettings = typeof aiSettings.$inferInsert
 
 export const backupTargets = sqliteTable('backup_targets', {
   id: text('id').primaryKey(),
@@ -530,10 +530,10 @@ export const backupTargets = sqliteTable('backup_targets', {
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),
-});
+})
 
-export type BackupTarget = typeof backupTargets.$inferSelect;
-export type NewBackupTarget = typeof backupTargets.$inferInsert;
+export type BackupTarget = typeof backupTargets.$inferSelect
+export type NewBackupTarget = typeof backupTargets.$inferInsert
 
 export const backupJobs = sqliteTable('backup_jobs', {
   id: text('id').primaryKey(),
@@ -558,10 +558,10 @@ export const backupJobs = sqliteTable('backup_jobs', {
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),
-});
+})
 
-export type BackupJob = typeof backupJobs.$inferSelect;
-export type NewBackupJob = typeof backupJobs.$inferInsert;
+export type BackupJob = typeof backupJobs.$inferSelect
+export type NewBackupJob = typeof backupJobs.$inferInsert
 
 export const backupFileState = sqliteTable(
   'backup_file_state',
@@ -584,10 +584,10 @@ export const backupFileState = sqliteTable(
   (t) => [
     uniqueIndex('backup_file_state_target_path_idx').on(t.targetId, t.filePath),
   ],
-);
+)
 
-export type BackupFileState = typeof backupFileState.$inferSelect;
-export type NewBackupFileState = typeof backupFileState.$inferInsert;
+export type BackupFileState = typeof backupFileState.$inferSelect
+export type NewBackupFileState = typeof backupFileState.$inferInsert
 
 export const backupVerifyJobs = sqliteTable('backup_verify_jobs', {
   id: text('id').primaryKey(),
@@ -611,10 +611,10 @@ export const backupVerifyJobs = sqliteTable('backup_verify_jobs', {
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),
-});
+})
 
-export type BackupVerifyJob = typeof backupVerifyJobs.$inferSelect;
-export type NewBackupVerifyJob = typeof backupVerifyJobs.$inferInsert;
+export type BackupVerifyJob = typeof backupVerifyJobs.$inferSelect
+export type NewBackupVerifyJob = typeof backupVerifyJobs.$inferInsert
 
 export const syncProfiles = sqliteTable('sync_profiles', {
   id: text('id').primaryKey(),
@@ -635,10 +635,10 @@ export const syncProfiles = sqliteTable('sync_profiles', {
   updatedAt: integer('updated_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),
-});
+})
 
-export type SyncProfile = typeof syncProfiles.$inferSelect;
-export type NewSyncProfile = typeof syncProfiles.$inferInsert;
+export type SyncProfile = typeof syncProfiles.$inferSelect
+export type NewSyncProfile = typeof syncProfiles.$inferInsert
 
 export const syncRuns = sqliteTable('sync_runs', {
   id: text('id').primaryKey(),
@@ -660,10 +660,10 @@ export const syncRuns = sqliteTable('sync_runs', {
   createdAt: integer('created_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),
-});
+})
 
-export type SyncRun = typeof syncRuns.$inferSelect;
-export type NewSyncRun = typeof syncRuns.$inferInsert;
+export type SyncRun = typeof syncRuns.$inferSelect
+export type NewSyncRun = typeof syncRuns.$inferInsert
 
 export const serverSettings = sqliteTable('server_settings', {
   id: text('id').primaryKey(),
@@ -714,7 +714,7 @@ export const serverSettings = sqliteTable('server_settings', {
   updatedAt: integer('updated_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),
-});
+})
 
-export type ServerSettings = typeof serverSettings.$inferSelect;
-export type NewServerSettings = typeof serverSettings.$inferInsert;
+export type ServerSettings = typeof serverSettings.$inferSelect
+export type NewServerSettings = typeof serverSettings.$inferInsert

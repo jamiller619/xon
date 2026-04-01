@@ -1,6 +1,6 @@
-import { zValidator } from '@hono/zod-validator';
-import type { ValidationTargets } from 'hono';
-import type { ZodSchema } from 'zod';
+import { zValidator } from '@hono/zod-validator'
+import type { ValidationTargets } from 'hono'
+import type { ZodSchema } from 'zod'
 
 /**
  * Wrapper around @hono/zod-validator that enforces a consistent error response format:
@@ -15,7 +15,7 @@ export function validate<
       return c.json(
         { error: 'Validation failed', details: result.error.issues },
         400,
-      );
+      )
     }
-  });
+  })
 }

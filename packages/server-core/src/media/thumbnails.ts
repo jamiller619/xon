@@ -1,46 +1,46 @@
-import { mkdir } from 'node:fs/promises';
-import { join } from 'node:path';
-import sharp from 'sharp';
-import { convertRawToJpeg, isRawImage } from './raw.js';
+import { mkdir } from 'node:fs/promises'
+import { join } from 'node:path'
+import sharp from 'sharp'
+import { convertRawToJpeg, isRawImage } from './raw.js'
 
 export type ThumbnailPaths = {
-  small: string;
-  medium: string;
-  large: string;
-};
+  small: string
+  medium: string
+  large: string
+}
 
 const THUMBNAIL_SIZES = {
   small: 150,
   medium: 300,
   large: 600,
-} as const;
+} as const
 
 export async function generateThumbnails(
   filePath: string,
   mediaItemId: string,
   dataDir: string,
 ): Promise<ThumbnailPaths | null> {
-  const thumbnailDir = join(dataDir, 'thumbnails');
+  const thumbnailDir = join(dataDir, 'thumbnails')
   try {
-    await mkdir(thumbnailDir, { recursive: true });
+    await mkdir(thumbnailDir, { recursive: true })
   } catch {
-    console.error(`Failed to create thumbnails directory: ${thumbnailDir}`);
-    return null;
+    console.error(`Failed to create thumbnails directory: ${thumbnailDir}`)
+    return null
   }
 
   const paths: ThumbnailPaths = {
     small: join(thumbnailDir, `${mediaItemId}_small.jpg`),
     medium: join(thumbnailDir, `${mediaItemId}_medium.jpg`),
     large: join(thumbnailDir, `${mediaItemId}_large.jpg`),
-  };
+  }
 
   try {
-    let img: ReturnType<typeof sharp>;
+    let img: ReturnType<typeof sharp>
     if (isRawImage(filePath)) {
-      const rawBuffer = await convertRawToJpeg(filePath);
-      img = sharp(rawBuffer);
+      const rawBuffer = await convertRawToJpeg(filePath)
+      img = sharp(rawBuffer)
     } else {
-      img = sharp(filePath);
+      img = sharp(filePath)
     }
     await Promise.all([
       img
@@ -67,12 +67,10 @@ export async function generateThumbnails(
         })
         .jpeg({ quality: 80 })
         .toFile(paths.large),
-    ]);
-    return paths;
+    ])
+    return paths
   } catch (err) {
-    console.error(
-      `Thumbnail generation failed for ${filePath}: ${String(err)}`,
-    );
-    return null;
+    console.error(`Thumbnail generation failed for ${filePath}: ${String(err)}`)
+    return null
   }
 }

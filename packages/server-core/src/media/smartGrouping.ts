@@ -1,29 +1,29 @@
-import { randomUUID } from 'node:crypto';
-import { basename, dirname } from 'node:path';
-import { MediaCategory } from '@xon/shared';
-import { and, eq, inArray } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import { randomUUID } from 'node:crypto'
+import { basename, dirname } from 'node:path'
+import { MediaCategory } from '@xon/shared'
+import { and, eq, inArray } from 'drizzle-orm'
+import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import {
   groupMembers,
   groups,
   libraries,
   mediaItems,
   suggestedGroups,
-} from '../db/schema.js';
+} from '../db/schema.js'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export interface SmartGroupCandidate {
-  title: string;
-  type: 'album' | 'book-series' | 'collection';
-  reason: string;
-  itemIds: string[];
-  confidence: number;
+  title: string
+  type: 'album' | 'book-series' | 'collection'
+  reason: string
+  itemIds: string[]
+  confidence: number
 }
 
 // ─── Multi-disc album detection ───────────────────────────────────────────────
 
-const DISC_PATTERN = /\b(?:disc|disk|cd|vol(?:ume)?|part|pt)\s*(\d+)\b/i;
+const DISC_PATTERN = /\b(?:disc|disk|cd|vol(?:ume)?|part|pt)\s*(\d+)\b/i
 
 /**
  * Extracts album title from music item metadata, falling back to parent folder.
@@ -33,27 +33,27 @@ const DISC_PATTERN = /\b(?:disc|disk|cd|vol(?:ume)?|part|pt)\s*(\d+)\b/i;
 function getAlbumTitle(item: typeof mediaItems.$inferSelect): string | null {
   const meta = (() => {
     try {
-      return JSON.parse(item.metadata) as Record<string, unknown>;
+      return JSON.parse(item.metadata) as Record<string, unknown>
     } catch {
-      return null;
+      return null
     }
-  })();
+  })()
   if (typeof meta?.album === 'string' && meta.album.length > 0) {
-    return meta.album;
+    return meta.album
   }
   // Fallback: use parent directory name, or grandparent if parent is a disc folder
-  const parentDir = basename(dirname(item.filePath));
+  const parentDir = basename(dirname(item.filePath))
   if (DISC_PATTERN.test(parentDir)) {
     // Parent is itself a disc folder → use grandparent as album name
-    const grandParentDir = basename(dirname(dirname(item.filePath)));
-    return grandParentDir.length > 0 ? grandParentDir : null;
+    const grandParentDir = basename(dirname(dirname(item.filePath)))
+    return grandParentDir.length > 0 ? grandParentDir : null
   }
   // Strip trailing disc indicator from folder name
   const cleaned = parentDir
     .replace(DISC_PATTERN, '')
     .trim()
-    .replace(/[-_\s]+$/, '');
-  return cleaned.length > 0 ? cleaned : null;
+    .replace(/[-_\s]+$/, '')
+  return cleaned.length > 0 ? cleaned : null
 }
 
 /**
@@ -70,40 +70,40 @@ export function detectMultiDiscAlbums(
     MediaCategory.Music,
     MediaCategory.Audiobooks,
     MediaCategory.AudioClips,
-  ];
+  ]
 
   const musicItems = items.filter(
     (i) =>
       i.mediaCategory !== null && MUSIC_CATEGORIES.includes(i.mediaCategory),
-  );
+  )
 
   // Group by album title → collect parent directories
-  const albumDirs = new Map<string, { dirs: Set<string>; ids: string[] }>();
+  const albumDirs = new Map<string, { dirs: Set<string>; ids: string[] }>()
 
   for (const item of musicItems) {
-    const album = getAlbumTitle(item);
-    if (!album) continue;
+    const album = getAlbumTitle(item)
+    if (!album) continue
 
-    const parentDir = dirname(item.filePath);
-    const existing = albumDirs.get(album);
+    const parentDir = dirname(item.filePath)
+    const existing = albumDirs.get(album)
     if (existing) {
-      existing.dirs.add(parentDir);
-      existing.ids.push(item.id);
+      existing.dirs.add(parentDir)
+      existing.ids.push(item.id)
     } else {
-      albumDirs.set(album, { dirs: new Set([parentDir]), ids: [item.id] });
+      albumDirs.set(album, { dirs: new Set([parentDir]), ids: [item.id] })
     }
   }
 
-  const candidates: SmartGroupCandidate[] = [];
+  const candidates: SmartGroupCandidate[] = []
 
   for (const [albumTitle, { dirs, ids }] of albumDirs) {
-    if (dirs.size < 2) continue; // All tracks in same folder → not multi-disc
+    if (dirs.size < 2) continue // All tracks in same folder → not multi-disc
 
     // Check if any directory contains a disc indicator
     const hasDiscIndicator = [...dirs].some((d) =>
       DISC_PATTERN.test(basename(d)),
-    );
-    if (!hasDiscIndicator) continue;
+    )
+    if (!hasDiscIndicator) continue
 
     candidates.push({
       title: albumTitle,
@@ -111,10 +111,10 @@ export function detectMultiDiscAlbums(
       reason: `Multi-disc album "${albumTitle}" found across ${dirs.size} directories`,
       itemIds: ids,
       confidence: 85,
-    });
+    })
   }
 
-  return candidates;
+  return candidates
 }
 
 // ─── Book series detection ─────────────────────────────────────────────────────
@@ -123,7 +123,7 @@ const SERIES_INDICATORS = [
   /\b(?:vol(?:ume)?|book|part|pt|#|no\.?)\s*(\d+)\b/i,
   /\s(\d+)\s*(?:of\s*\d+)?$/i, // trailing number "Book 1 of 5" or "Title 3"
   /[-_\s](\d{1,2})(?:\s*[-_(]|$)/i, // "Title - 2" or "Title_02"
-];
+]
 
 /**
  * Normalises a title for comparison: lowercase, remove numbers and punctuation.
@@ -135,7 +135,7 @@ function normaliseTitleForSeries(title: string): string {
     .replace(/\s\d+(\s*(?:of\s*\d+))?$/i, '')
     .replace(/[^a-z0-9\s]/g, '')
     .replace(/\s+/g, ' ')
-    .trim();
+    .trim()
 }
 
 /**
@@ -149,52 +149,52 @@ export function detectBookSeries(
   const BOOK_CATEGORIES: string[] = [
     MediaCategory.Documents,
     MediaCategory.Audiobooks,
-  ];
+  ]
 
   const bookItems = items.filter(
     (i) =>
       i.mediaCategory !== null && BOOK_CATEGORIES.includes(i.mediaCategory),
-  );
+  )
 
   // Group by normalised title base
-  const titleGroups = new Map<string, { ids: string[]; titles: string[] }>();
+  const titleGroups = new Map<string, { ids: string[]; titles: string[] }>()
 
   for (const item of bookItems) {
-    const rawTitle = item.title ?? item.fileName;
+    const rawTitle = item.title ?? item.fileName
     // Only consider items that have a series indicator
-    const hasIndicator = SERIES_INDICATORS.some((re) => re.test(rawTitle));
-    if (!hasIndicator) continue;
+    const hasIndicator = SERIES_INDICATORS.some((re) => re.test(rawTitle))
+    if (!hasIndicator) continue
 
-    const normalised = normaliseTitleForSeries(rawTitle);
-    if (normalised.length < 3) continue;
+    const normalised = normaliseTitleForSeries(rawTitle)
+    if (normalised.length < 3) continue
 
-    const existing = titleGroups.get(normalised);
+    const existing = titleGroups.get(normalised)
     if (existing) {
-      existing.ids.push(item.id);
-      existing.titles.push(rawTitle);
+      existing.ids.push(item.id)
+      existing.titles.push(rawTitle)
     } else {
-      titleGroups.set(normalised, { ids: [item.id], titles: [rawTitle] });
+      titleGroups.set(normalised, { ids: [item.id], titles: [rawTitle] })
     }
   }
 
-  const candidates: SmartGroupCandidate[] = [];
+  const candidates: SmartGroupCandidate[] = []
 
   for (const [normalised, { ids, titles }] of titleGroups) {
-    if (ids.length < 2) continue;
+    if (ids.length < 2) continue
 
     const seriesTitle = (() => {
       // Use the longest common prefix of actual titles as the series name
-      let prefix = titles[0] ?? normalised;
+      let prefix = titles[0] ?? normalised
       for (const t of titles.slice(1)) {
-        let i = 0;
-        while (i < prefix.length && i < t.length && prefix[i] === t[i]) i++;
+        let i = 0
+        while (i < prefix.length && i < t.length && prefix[i] === t[i]) i++
         prefix = prefix
           .slice(0, i)
           .replace(/[-_\s,]+$/, '')
-          .trim();
+          .trim()
       }
-      return prefix.length > 2 ? prefix : normalised;
-    })();
+      return prefix.length > 2 ? prefix : normalised
+    })()
 
     candidates.push({
       title: seriesTitle,
@@ -202,10 +202,10 @@ export function detectBookSeries(
       reason: `Book series "${seriesTitle}" detected across ${ids.length} items`,
       itemIds: ids,
       confidence: 75,
-    });
+    })
   }
 
-  return candidates;
+  return candidates
 }
 
 // ─── Supplementary materials detection ───────────────────────────────────────
@@ -214,7 +214,7 @@ export function detectBookSeries(
  * Strips extension and common quality/format suffixes, then normalises separators.
  */
 function baseNameKey(fileName: string): string {
-  const withoutExt = fileName.replace(/\.[^.]+$/, '');
+  const withoutExt = fileName.replace(/\.[^.]+$/, '')
   return withoutExt
     .toLowerCase()
     .replace(/[-_.\s]+/g, ' ')
@@ -223,7 +223,7 @@ function baseNameKey(fileName: string): string {
       '',
     )
     .replace(/\s+/g, ' ')
-    .trim();
+    .trim()
 }
 
 /**
@@ -243,44 +243,44 @@ export function detectSupplementaryMaterials(
     MediaCategory.Clips,
     MediaCategory.HomeVideos,
     MediaCategory.WebMedia,
-  ];
+  ]
 
   const eligible = items.filter(
     (i) =>
       i.mediaCategory !== null &&
       SUPPLEMENTARY_CATEGORIES.includes(i.mediaCategory),
-  );
+  )
 
   // Group by normalised base name key
   const baseGroups = new Map<
     string,
     { ids: string[]; categories: Set<string>; dirs: Set<string> }
-  >();
+  >()
 
   for (const item of eligible) {
-    const key = baseNameKey(item.fileName);
-    if (key.length < 3) continue;
+    const key = baseNameKey(item.fileName)
+    if (key.length < 3) continue
 
-    const existing = baseGroups.get(key);
+    const existing = baseGroups.get(key)
     if (existing) {
-      existing.ids.push(item.id);
-      if (item.mediaCategory) existing.categories.add(item.mediaCategory);
-      existing.dirs.add(dirname(item.filePath));
+      existing.ids.push(item.id)
+      if (item.mediaCategory) existing.categories.add(item.mediaCategory)
+      existing.dirs.add(dirname(item.filePath))
     } else {
       baseGroups.set(key, {
         ids: [item.id],
         categories: new Set(item.mediaCategory ? [item.mediaCategory] : []),
         dirs: new Set([dirname(item.filePath)]),
-      });
+      })
     }
   }
 
-  const candidates: SmartGroupCandidate[] = [];
+  const candidates: SmartGroupCandidate[] = []
 
   for (const [key, { ids, categories, dirs }] of baseGroups) {
     // Require: multiple categories OR files in different directories
-    if (ids.length < 2) continue;
-    if (categories.size < 2 && dirs.size < 2) continue;
+    if (ids.length < 2) continue
+    if (categories.size < 2 && dirs.size < 2) continue
 
     candidates.push({
       title: key,
@@ -288,10 +288,10 @@ export function detectSupplementaryMaterials(
       reason: `Supplementary materials for "${key}" found across ${categories.size} media type(s)`,
       itemIds: ids,
       confidence: 65,
-    });
+    })
   }
 
-  return candidates;
+  return candidates
 }
 
 // ─── Deduplication of candidates ─────────────────────────────────────────────
@@ -303,33 +303,33 @@ export function detectSupplementaryMaterials(
 function deduplicateCandidates(
   candidates: SmartGroupCandidate[],
 ): SmartGroupCandidate[] {
-  const result: SmartGroupCandidate[] = [];
-  const used = new Set<number>();
+  const result: SmartGroupCandidate[] = []
+  const used = new Set<number>()
 
   // Sort by confidence descending so higher-confidence wins
-  const sorted = [...candidates].sort((a, b) => b.confidence - a.confidence);
+  const sorted = [...candidates].sort((a, b) => b.confidence - a.confidence)
 
   for (let i = 0; i < sorted.length; i++) {
-    if (used.has(i)) continue;
-    const a = sorted[i];
-    if (!a) continue;
-    const setA = new Set(a.itemIds);
+    if (used.has(i)) continue
+    const a = sorted[i]
+    if (!a) continue
+    const setA = new Set(a.itemIds)
 
     for (let j = i + 1; j < sorted.length; j++) {
-      if (used.has(j)) continue;
-      const b = sorted[j];
-      if (!b) continue;
-      const intersection = b.itemIds.filter((id) => setA.has(id)).length;
-      const smaller = Math.min(a.itemIds.length, b.itemIds.length);
+      if (used.has(j)) continue
+      const b = sorted[j]
+      if (!b) continue
+      const intersection = b.itemIds.filter((id) => setA.has(id)).length
+      const smaller = Math.min(a.itemIds.length, b.itemIds.length)
       if (intersection / smaller >= 0.5) {
-        used.add(j);
+        used.add(j)
       }
     }
 
-    result.push(a);
+    result.push(a)
   }
 
-  return result;
+  return result
 }
 
 // ─── Main scan function ────────────────────────────────────────────────────────
@@ -349,27 +349,27 @@ export async function scanLibraryForSmartGroups(
   const libRows = await db
     .select()
     .from(libraries)
-    .where(eq(libraries.id, libraryId));
-  if (libRows.length === 0) return 0;
+    .where(eq(libraries.id, libraryId))
+  if (libRows.length === 0) return 0
 
   // Load all media items for this library
   const items = await db
     .select()
     .from(mediaItems)
-    .where(eq(mediaItems.libraryId, libraryId));
+    .where(eq(mediaItems.libraryId, libraryId))
 
-  if (items.length === 0) return 0;
+  if (items.length === 0) return 0
 
   // Run all detectors
   const raw: SmartGroupCandidate[] = [
     ...detectMultiDiscAlbums(items),
     ...detectBookSeries(items),
     ...detectSupplementaryMaterials(items),
-  ];
+  ]
 
-  const candidates = deduplicateCandidates(raw);
+  const candidates = deduplicateCandidates(raw)
 
-  if (candidates.length === 0) return 0;
+  if (candidates.length === 0) return 0
 
   // Load existing pending/accepted suggestions for this library to avoid duplicates
   const existing = await db
@@ -383,19 +383,19 @@ export async function scanLibraryForSmartGroups(
         eq(suggestedGroups.libraryId, libraryId),
         inArray(suggestedGroups.status, ['pending', 'accepted']),
       ),
-    );
+    )
 
   const existingKeys = new Set(
     existing.map((e) => `${e.type}::${e.title.toLowerCase()}`),
-  );
+  )
 
   const toInsert = candidates.filter(
     (c) => !existingKeys.has(`${c.type}::${c.title.toLowerCase()}`),
-  );
+  )
 
-  if (toInsert.length === 0) return 0;
+  if (toInsert.length === 0) return 0
 
-  const now = new Date();
+  const now = new Date()
   await db.insert(suggestedGroups).values(
     toInsert.map((c) => ({
       id: randomUUID(),
@@ -409,9 +409,9 @@ export async function scanLibraryForSmartGroups(
       createdAt: now,
       updatedAt: now,
     })),
-  );
+  )
 
-  return toInsert.length;
+  return toInsert.length
 }
 
 /**
@@ -425,23 +425,23 @@ export async function acceptSuggestedGroup(
   const rows = await db
     .select()
     .from(suggestedGroups)
-    .where(eq(suggestedGroups.id, suggestionId));
+    .where(eq(suggestedGroups.id, suggestionId))
 
-  if (rows.length === 0) return null;
-  const suggestion = rows[0];
-  if (!suggestion) return null;
-  if (suggestion.status !== 'pending') return null;
+  if (rows.length === 0) return null
+  const suggestion = rows[0]
+  if (!suggestion) return null
+  if (suggestion.status !== 'pending') return null
 
   const itemIds: string[] = (() => {
     try {
-      return JSON.parse(suggestion.memberItemIds) as string[];
+      return JSON.parse(suggestion.memberItemIds) as string[]
     } catch {
-      return [];
+      return []
     }
-  })();
+  })()
 
-  const groupId = `grp:smart:${suggestion.libraryId}:${suggestion.suggestedTitle}`;
-  const now = new Date();
+  const groupId = `grp:smart:${suggestion.libraryId}:${suggestion.suggestedTitle}`
+  const now = new Date()
 
   // Upsert the group
   await db
@@ -460,7 +460,7 @@ export async function acceptSuggestedGroup(
     .onConflictDoUpdate({
       target: groups.id,
       set: { title: suggestion.suggestedTitle },
-    });
+    })
 
   // Insert group members (skip duplicates)
   if (itemIds.length > 0) {
@@ -468,7 +468,7 @@ export async function acceptSuggestedGroup(
       await db
         .insert(groupMembers)
         .values({ groupId, mediaItemId, sortOrder: 0 })
-        .onConflictDoNothing();
+        .onConflictDoNothing()
     }
   }
 
@@ -476,7 +476,7 @@ export async function acceptSuggestedGroup(
   await db
     .update(suggestedGroups)
     .set({ status: 'accepted', updatedAt: now })
-    .where(eq(suggestedGroups.id, suggestionId));
+    .where(eq(suggestedGroups.id, suggestionId))
 
-  return { groupId };
+  return { groupId }
 }

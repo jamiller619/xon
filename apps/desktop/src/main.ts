@@ -1,21 +1,21 @@
-import { boot } from '@xon/server-core';
-import { DEFAULT_PORT } from '@xon/shared';
-import { BrowserWindow, app, screen } from 'electron';
+import { boot } from '@xon/server-core'
+import { DEFAULT_PORT } from '@xon/shared'
+import { BrowserWindow, app, screen } from 'electron'
 import {
   type NotificationManager,
   createNotificationManager,
-} from './notifications.js';
-import { type TrayHandle, createTray } from './tray.js';
+} from './notifications.js'
+import { type TrayHandle, createTray } from './tray.js'
 
 const headless =
-  process.env.XON_HEADLESS === '1' || process.env.XON_HEADLESS === 'true';
+  process.env.XON_HEADLESS === '1' || process.env.XON_HEADLESS === 'true'
 
-let mainWindow: BrowserWindow | null = null;
-let trayHandle: TrayHandle | null = null;
-let notificationManager: NotificationManager | null = null;
-let isQuitting = false;
+let mainWindow: BrowserWindow | null = null
+let trayHandle: TrayHandle | null = null
+let notificationManager: NotificationManager | null = null
+let isQuitting = false
 // Set to true if either XON_HEADLESS is set or no display server is detected at startup
-let runHeadless = headless;
+let runHeadless = headless
 
 /**
  * Detect whether a display server is available.
@@ -25,16 +25,16 @@ let runHeadless = headless;
  */
 function hasDisplayServer(): boolean {
   if (process.platform === 'linux') {
-    return !!(process.env.DISPLAY || process.env.WAYLAND_DISPLAY);
+    return !!(process.env.DISPLAY || process.env.WAYLAND_DISPLAY)
   }
   if (process.platform === 'win32') {
-    return true;
+    return true
   }
   // macOS: check if any displays are connected via Electron screen API
   try {
-    return screen.getAllDisplays().length > 0;
+    return screen.getAllDisplays().length > 0
   } catch {
-    return false;
+    return false
   }
 }
 
@@ -46,56 +46,56 @@ function createWindow(): void {
       nodeIntegration: false,
       contextIsolation: true,
     },
-  });
+  })
 
-  const port = Number(process.env.PORT ?? DEFAULT_PORT);
-  mainWindow.loadURL(`http://localhost:${port}`);
+  const port = Number(process.env.PORT ?? DEFAULT_PORT)
+  mainWindow.loadURL(`http://localhost:${port}`)
 
   mainWindow.on('closed', () => {
-    mainWindow = null;
-  });
+    mainWindow = null
+  })
 }
 
 app.whenReady().then(() => {
-  boot();
+  boot()
 
-  const displayAvailable = hasDisplayServer();
-  runHeadless = headless || !displayAvailable;
+  const displayAvailable = hasDisplayServer()
+  runHeadless = headless || !displayAvailable
 
   if (!displayAvailable) {
     console.log(
       'No display server detected. Xon desktop activating headless fallback.',
-    );
+    )
   }
 
   if (!runHeadless) {
-    createWindow();
-    notificationManager = createNotificationManager();
-    trayHandle = createTray(notificationManager);
+    createWindow()
+    notificationManager = createNotificationManager()
+    trayHandle = createTray(notificationManager)
   } else if (headless) {
-    console.log('Xon desktop running in headless mode');
+    console.log('Xon desktop running in headless mode')
   }
 
   app.on('activate', () => {
     if (!runHeadless && BrowserWindow.getAllWindows().length === 0) {
-      createWindow();
+      createWindow()
     }
-  });
-});
+  })
+})
 
 app.on('window-all-closed', () => {
   if (process.platform !== 'darwin' || runHeadless) {
-    app.quit();
+    app.quit()
   }
-});
+})
 
 app.on('before-quit', (event) => {
   if (!isQuitting) {
-    isQuitting = true;
-    event.preventDefault();
-    notificationManager?.destroy();
-    trayHandle?.destroy();
+    isQuitting = true
+    event.preventDefault()
+    notificationManager?.destroy()
+    trayHandle?.destroy()
     // Trigger server-core graceful shutdown; its handler calls process.exit(0)
-    process.emit('SIGTERM');
+    process.emit('SIGTERM')
   }
-});
+})

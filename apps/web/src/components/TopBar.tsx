@@ -1,46 +1,46 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { apiFetch } from '../apiFetch.js';
-import styles from './TopBar.module.css';
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { apiFetch } from '../apiFetch.js'
+import styles from './TopBar.module.css'
 
-const HISTORY_KEY = 'xon:searchHistory';
-const MAX_HISTORY = 10;
-const DEBOUNCE_MS = 300;
+const HISTORY_KEY = 'xon:searchHistory'
+const MAX_HISTORY = 10
+const DEBOUNCE_MS = 300
 
 interface SuggestionItem {
-  id: string;
-  title: string | null;
-  mediaCategory: string | null;
-  thumbnailUrls: { small: string; medium: string; large: string } | null;
+  id: string
+  title: string | null
+  mediaCategory: string | null
+  thumbnailUrls: { small: string; medium: string; large: string } | null
 }
 
 function loadHistory(): string[] {
   try {
-    return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]') as string[];
+    return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]') as string[]
   } catch {
-    return [];
+    return []
   }
 }
 
 function saveHistory(query: string) {
-  const prev = loadHistory().filter((h) => h !== query);
-  const next = [query, ...prev].slice(0, MAX_HISTORY);
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
+  const prev = loadHistory().filter((h) => h !== query)
+  const next = [query, ...prev].slice(0, MAX_HISTORY)
+  localStorage.setItem(HISTORY_KEY, JSON.stringify(next))
 }
 
 interface TopBarProps {
-  onMenuClick: () => void;
+  onMenuClick: () => void
 }
 
 export default function TopBar({ onMenuClick }: TopBarProps) {
-  const navigate = useNavigate();
-  const [query, setQuery] = useState('');
-  const [suggestions, setSuggestions] = useState<SuggestionItem[]>([]);
-  const [history, setHistory] = useState<string[]>([]);
-  const [open, setOpen] = useState(false);
-  const [highlightIdx, setHighlightIdx] = useState(-1);
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-  const wrapperRef = useRef<HTMLDivElement>(null);
+  const navigate = useNavigate()
+  const [query, setQuery] = useState('')
+  const [suggestions, setSuggestions] = useState<SuggestionItem[]>([])
+  const [history, setHistory] = useState<string[]>([])
+  const [open, setOpen] = useState(false)
+  const [highlightIdx, setHighlightIdx] = useState(-1)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const wrapperRef = useRef<HTMLDivElement>(null)
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -49,88 +49,83 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
         wrapperRef.current &&
         !wrapperRef.current.contains(e.target as Node)
       ) {
-        setOpen(false);
+        setOpen(false)
       }
     }
-    document.addEventListener('mousedown', handleMouseDown);
-    return () => document.removeEventListener('mousedown', handleMouseDown);
-  }, []);
+    document.addEventListener('mousedown', handleMouseDown)
+    return () => document.removeEventListener('mousedown', handleMouseDown)
+  }, [])
 
   const fetchSuggestions = useCallback((q: string) => {
     if (!q.trim()) {
-      setSuggestions([]);
-      return;
+      setSuggestions([])
+      return
     }
     apiFetch(`/api/v1/search?q=${encodeURIComponent(q)}&limit=5`)
       .then((r) => r.json())
       .then((data) => {
-        setSuggestions((data as { results: SuggestionItem[] }).results ?? []);
+        setSuggestions((data as { results: SuggestionItem[] }).results ?? [])
       })
-      .catch(() => setSuggestions([]));
-  }, []);
+      .catch(() => setSuggestions([]))
+  }, [])
 
   function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const val = e.target.value;
-    setQuery(val);
-    setHighlightIdx(-1);
-    if (debounceRef.current) clearTimeout(debounceRef.current);
+    const val = e.target.value
+    setQuery(val)
+    setHighlightIdx(-1)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
     if (val.trim()) {
-      debounceRef.current = setTimeout(
-        () => fetchSuggestions(val),
-        DEBOUNCE_MS,
-      );
+      debounceRef.current = setTimeout(() => fetchSuggestions(val), DEBOUNCE_MS)
     } else {
-      setSuggestions([]);
+      setSuggestions([])
     }
-    setOpen(true);
+    setOpen(true)
   }
 
   function handleFocus() {
-    setHistory(loadHistory());
-    setOpen(true);
+    setHistory(loadHistory())
+    setOpen(true)
   }
 
   function navigate2search(q: string) {
-    if (!q.trim()) return;
-    saveHistory(q.trim());
-    setHistory(loadHistory());
-    setOpen(false);
-    setQuery('');
-    navigate(`/search?q=${encodeURIComponent(q.trim())}`);
+    if (!q.trim()) return
+    saveHistory(q.trim())
+    setHistory(loadHistory())
+    setOpen(false)
+    setQuery('')
+    navigate(`/search?q=${encodeURIComponent(q.trim())}`)
   }
 
   function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
     const items =
-      suggestions.length > 0
-        ? suggestions.map((s) => s.title ?? s.id)
-        : history;
+      suggestions.length > 0 ? suggestions.map((s) => s.title ?? s.id) : history
     if (e.key === 'ArrowDown') {
-      e.preventDefault();
-      setHighlightIdx((i) => Math.min(i + 1, items.length - 1));
+      e.preventDefault()
+      setHighlightIdx((i) => Math.min(i + 1, items.length - 1))
     } else if (e.key === 'ArrowUp') {
-      e.preventDefault();
-      setHighlightIdx((i) => Math.max(i - 1, -1));
+      e.preventDefault()
+      setHighlightIdx((i) => Math.max(i - 1, -1))
     } else if (e.key === 'Enter') {
-      e.preventDefault();
+      e.preventDefault()
       if (highlightIdx >= 0 && items[highlightIdx]) {
-        navigate2search(items[highlightIdx]);
+        navigate2search(items[highlightIdx])
       } else {
-        navigate2search(query);
+        navigate2search(query)
       }
     } else if (e.key === 'Escape') {
-      setOpen(false);
+      setOpen(false)
     }
   }
 
   function removeHistoryItem(e: React.MouseEvent, item: string) {
-    e.stopPropagation();
-    const next = loadHistory().filter((h) => h !== item);
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(next));
-    setHistory(next);
+    e.stopPropagation()
+    const next = loadHistory().filter((h) => h !== item)
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(next))
+    setHistory(next)
   }
 
-  const showHistory = open && !query.trim() && history.length > 0;
-  const showSuggestions = open && query.trim().length > 0;
+  const showHistory = open && !query.trim() && history.length > 0
+  const showSuggestions = open && query.trim().length > 0
 
   return (
     <header className={styles.topBar ?? ''}>
@@ -238,5 +233,5 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
         <span>User</span>
       </button>
     </header>
-  );
+  )
 }

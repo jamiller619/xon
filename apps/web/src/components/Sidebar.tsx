@@ -1,35 +1,35 @@
-import { useEffect, useState } from 'react';
-import { NavLink } from 'react-router-dom';
-import { apiFetch } from '../apiFetch.js';
-import PluginSlot from './PluginSlot.js';
-import styles from './Sidebar.module.css';
+import { useEffect, useState } from 'react'
+import { NavLink } from 'react-router-dom'
+import { apiFetch } from '../apiFetch.js'
+import PluginSlot from './PluginSlot.js'
+import styles from './Sidebar.module.css'
 
 interface Library {
-  id: string;
-  name: string;
+  id: string
+  name: string
 }
 
 interface SidebarProps {
-  open: boolean;
+  open: boolean
 }
 
 export default function Sidebar({ open }: SidebarProps) {
-  const [libraries, setLibraries] = useState<Library[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [libraries, setLibraries] = useState<Library[]>([])
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     apiFetch('/api/v1/libraries')
       .then((r) => r.json())
       .then((data: Library[]) => setLibraries(data))
       .catch(() => setLibraries([]))
-      .finally(() => setLoading(false));
-  }, []);
+      .finally(() => setLoading(false))
+  }, [])
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
-    `${styles.navLink ?? ''}${isActive ? ` ${styles.active ?? ''}` : ''}`;
+    `${styles.navLink ?? ''}${isActive ? ` ${styles.active ?? ''}` : ''}`
 
   const libClass = ({ isActive }: { isActive: boolean }) =>
-    `${styles.libraryLink ?? ''}${isActive ? ` ${styles.active ?? ''}` : ''}`;
+    `${styles.libraryLink ?? ''}${isActive ? ` ${styles.active ?? ''}` : ''}`
 
   return (
     <nav
@@ -90,5 +90,5 @@ export default function Sidebar({ open }: SidebarProps) {
         )}
       </div>
     </nav>
-  );
+  )
 }

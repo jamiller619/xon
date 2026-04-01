@@ -1,20 +1,20 @@
-import { and, eq, inArray } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { dataSources, libraries, mediaItems } from '../db/schema.js';
-import { emitEvent } from '../events.js';
-import { autoTagMediaItems } from '../media/autoTag.js';
-import { detectDrm } from '../media/drm.js';
-import { extractExiftoolMetadata, isImageCategory } from '../media/exiftool.js';
+import { and, eq, inArray } from 'drizzle-orm'
+import type { LibSQLDatabase } from 'drizzle-orm/libsql'
+import { dataSources, libraries, mediaItems } from '../db/schema.js'
+import { emitEvent } from '../events.js'
+import { autoTagMediaItems } from '../media/autoTag.js'
+import { detectDrm } from '../media/drm.js'
+import { extractExiftoolMetadata, isImageCategory } from '../media/exiftool.js'
 import {
   extractFfprobeMetadata,
   isAudioVideoCategory,
-} from '../media/ffprobe.js';
+} from '../media/ffprobe.js'
 import {
   groupAudiobooks,
   groupMusicTracks,
   groupPhotos,
   groupTvEpisodes,
-} from '../media/grouping.js';
+} from '../media/grouping.js'
 import {
   extract3DModelMetadata,
   extractArchiveMetadata,
@@ -24,30 +24,30 @@ import {
   isArchiveCategory,
   isDocumentCategory,
   isFontCategory,
-} from '../media/miscmeta.js';
-import { extractMusicTags, isMusicCategory } from '../media/musictags.js';
-import { generateThumbnails } from '../media/thumbnails.js';
+} from '../media/miscmeta.js'
+import { extractMusicTags, isMusicCategory } from '../media/musictags.js'
+import { generateThumbnails } from '../media/thumbnails.js'
 import {
   generateVideoThumbnails,
   isVideoCategory,
-} from '../media/videoThumbnails.js';
-import { emitPluginEvent } from '../plugins/pluginManager.js';
-import { scanDataSource } from './scanner.js';
+} from '../media/videoThumbnails.js'
+import { emitPluginEvent } from '../plugins/pluginManager.js'
+import { scanDataSource } from './scanner.js'
 
 export type ScanProgress = {
-  dataSourceId: string;
-  totalFiles: number;
-  processedFiles: number;
-  currentFile: string | null;
-};
+  dataSourceId: string
+  totalFiles: number
+  processedFiles: number
+  currentFile: string | null
+}
 
 export type ScanSummary = {
-  libraryId: string;
-  newItems: number;
-  updatedItems: number;
-  removedItems: number;
-  totalDiscovered: number;
-};
+  libraryId: string
+  newItems: number
+  updatedItems: number
+  removedItems: number
+  totalDiscovered: number
+}
 
 export async function scanLibrary(
   db: LibSQLDatabase,
@@ -55,13 +55,13 @@ export async function scanLibrary(
   onProgress?: (progress: ScanProgress) => void,
   dataDir?: string,
 ): Promise<ScanSummary> {
-  const resolvedDataDir = dataDir ?? process.env.DATA_DIR ?? './data';
+  const resolvedDataDir = dataDir ?? process.env.DATA_DIR ?? './data'
   const libraryRows = await db
     .select()
     .from(libraries)
-    .where(eq(libraries.id, libraryId));
+    .where(eq(libraries.id, libraryId))
   if (libraryRows.length === 0) {
-    throw new Error(`Library not found: ${libraryId}`);
+    throw new Error(`Library not found: ${libraryId}`)
   }
 
   const sources = await db
@@ -69,94 +69,94 @@ export async function scanLibrary(
     .from(dataSources)
     .where(
       and(eq(dataSources.libraryId, libraryId), eq(dataSources.enabled, true)),
-    );
+    )
 
-  let totalNew = 0;
-  let totalUpdated = 0;
-  let totalRemoved = 0;
-  let totalDiscovered = 0;
+  let totalNew = 0
+  let totalUpdated = 0
+  let totalRemoved = 0
+  let totalDiscovered = 0
 
   for (const source of sources) {
     const existing = await db
       .select({ filePath: mediaItems.filePath, fileSize: mediaItems.fileSize })
       .from(mediaItems)
-      .where(eq(mediaItems.dataSourceId, source.id));
+      .where(eq(mediaItems.dataSourceId, source.id))
 
-    const result = await scanDataSource(source, existing);
-    totalDiscovered += result.discovered.length;
+    const result = await scanDataSource(source, existing)
+    totalDiscovered += result.discovered.length
 
     const progress: ScanProgress = {
       dataSourceId: source.id,
       totalFiles: result.discovered.length,
       processedFiles: 0,
       currentFile: null,
-    };
+    }
 
-    const now = new Date();
+    const now = new Date()
 
     for (const entry of result.newFiles) {
-      progress.currentFile = entry.filePath;
-      onProgress?.(progress);
+      progress.currentFile = entry.filePath
+      onProgress?.(progress)
 
-      let metadata = '{}';
+      let metadata = '{}'
       if (isMusicCategory(entry.mediaCategory)) {
-        const musicMeta = await extractMusicTags(entry.filePath);
+        const musicMeta = await extractMusicTags(entry.filePath)
         if (musicMeta) {
-          metadata = JSON.stringify(musicMeta);
+          metadata = JSON.stringify(musicMeta)
         }
       } else if (isAudioVideoCategory(entry.mediaCategory)) {
-        const ffMeta = await extractFfprobeMetadata(entry.filePath);
+        const ffMeta = await extractFfprobeMetadata(entry.filePath)
         if (ffMeta) {
-          metadata = JSON.stringify(ffMeta);
+          metadata = JSON.stringify(ffMeta)
         }
       } else if (isImageCategory(entry.mediaCategory)) {
-        const exifMeta = await extractExiftoolMetadata(entry.filePath);
+        const exifMeta = await extractExiftoolMetadata(entry.filePath)
         if (exifMeta) {
-          metadata = JSON.stringify(exifMeta);
+          metadata = JSON.stringify(exifMeta)
         }
       } else if (isDocumentCategory(entry.mediaCategory)) {
-        const docMeta = await extractDocumentMetadata(entry.filePath);
+        const docMeta = await extractDocumentMetadata(entry.filePath)
         if (docMeta) {
-          metadata = JSON.stringify(docMeta);
+          metadata = JSON.stringify(docMeta)
         }
       } else if (isFontCategory(entry.mediaCategory)) {
-        const fontMeta = await extractFontMetadata(entry.filePath);
+        const fontMeta = await extractFontMetadata(entry.filePath)
         if (fontMeta) {
-          metadata = JSON.stringify(fontMeta);
+          metadata = JSON.stringify(fontMeta)
         }
       } else if (is3DModelCategory(entry.mediaCategory)) {
-        const modelMeta = await extract3DModelMetadata(entry.filePath);
+        const modelMeta = await extract3DModelMetadata(entry.filePath)
         if (modelMeta) {
-          metadata = JSON.stringify(modelMeta);
+          metadata = JSON.stringify(modelMeta)
         }
       } else if (isArchiveCategory(entry.mediaCategory)) {
-        const archiveMeta = await extractArchiveMetadata(entry.filePath);
+        const archiveMeta = await extractArchiveMetadata(entry.filePath)
         if (archiveMeta) {
-          metadata = JSON.stringify(archiveMeta);
+          metadata = JSON.stringify(archiveMeta)
         }
       }
 
-      const id = crypto.randomUUID();
-      const drmProtected = await detectDrm(entry.filePath);
+      const id = crypto.randomUUID()
+      const drmProtected = await detectDrm(entry.filePath)
 
-      let thumbnailPaths: string | null = null;
+      let thumbnailPaths: string | null = null
       if (isImageCategory(entry.mediaCategory)) {
         const thumbs = await generateThumbnails(
           entry.filePath,
           id,
           resolvedDataDir,
-        );
+        )
         if (thumbs) {
-          thumbnailPaths = JSON.stringify(thumbs);
+          thumbnailPaths = JSON.stringify(thumbs)
         }
       } else if (isVideoCategory(entry.mediaCategory)) {
         const thumbs = await generateVideoThumbnails(
           entry.filePath,
           id,
           resolvedDataDir,
-        );
+        )
         if (thumbs) {
-          thumbnailPaths = JSON.stringify(thumbs);
+          thumbnailPaths = JSON.stringify(thumbs)
         }
       }
 
@@ -175,23 +175,23 @@ export async function scanLibrary(
         createdAt: now,
         updatedAt: now,
         scannedAt: now,
-      });
+      })
 
       emitEvent({
         type: 'media:added',
         payload: { libraryId, mediaItemId: id },
-      });
+      })
       emitPluginEvent('media:created', {
         mediaId: id,
         filePath: entry.filePath,
-      });
-      progress.processedFiles++;
-      totalNew++;
+      })
+      progress.processedFiles++
+      totalNew++
     }
 
     for (const entry of result.changedFiles) {
-      progress.currentFile = entry.filePath;
-      onProgress?.(progress);
+      progress.currentFile = entry.filePath
+      onProgress?.(progress)
 
       const existingRows = await db
         .select({ id: mediaItems.id })
@@ -201,10 +201,10 @@ export async function scanLibrary(
             eq(mediaItems.dataSourceId, source.id),
             eq(mediaItems.filePath, entry.filePath),
           ),
-        );
-      const existingId = existingRows[0]?.id ?? crypto.randomUUID();
+        )
+      const existingId = existingRows[0]?.id ?? crypto.randomUUID()
 
-      const drmProtectedUpdate = await detectDrm(entry.filePath);
+      const drmProtectedUpdate = await detectDrm(entry.filePath)
       const updateFields: Record<string, unknown> = {
         fileSize: entry.fileSize,
         mimeType: entry.mimeType ?? null,
@@ -212,59 +212,59 @@ export async function scanLibrary(
         drmProtected: drmProtectedUpdate,
         updatedAt: now,
         scannedAt: now,
-      };
+      }
 
       if (isMusicCategory(entry.mediaCategory)) {
-        const musicMeta = await extractMusicTags(entry.filePath);
+        const musicMeta = await extractMusicTags(entry.filePath)
         if (musicMeta) {
-          updateFields.metadata = JSON.stringify(musicMeta);
+          updateFields.metadata = JSON.stringify(musicMeta)
         }
       } else if (isAudioVideoCategory(entry.mediaCategory)) {
-        const ffMeta = await extractFfprobeMetadata(entry.filePath);
+        const ffMeta = await extractFfprobeMetadata(entry.filePath)
         if (ffMeta) {
-          updateFields.metadata = JSON.stringify(ffMeta);
+          updateFields.metadata = JSON.stringify(ffMeta)
         }
       } else if (isImageCategory(entry.mediaCategory)) {
-        const exifMeta = await extractExiftoolMetadata(entry.filePath);
+        const exifMeta = await extractExiftoolMetadata(entry.filePath)
         if (exifMeta) {
-          updateFields.metadata = JSON.stringify(exifMeta);
+          updateFields.metadata = JSON.stringify(exifMeta)
         }
         const thumbs = await generateThumbnails(
           entry.filePath,
           existingId,
           resolvedDataDir,
-        );
+        )
         if (thumbs) {
-          updateFields.thumbnailPaths = JSON.stringify(thumbs);
+          updateFields.thumbnailPaths = JSON.stringify(thumbs)
         }
       } else if (isVideoCategory(entry.mediaCategory)) {
         const thumbs = await generateVideoThumbnails(
           entry.filePath,
           existingId,
           resolvedDataDir,
-        );
+        )
         if (thumbs) {
-          updateFields.thumbnailPaths = JSON.stringify(thumbs);
+          updateFields.thumbnailPaths = JSON.stringify(thumbs)
         }
       } else if (isDocumentCategory(entry.mediaCategory)) {
-        const docMeta = await extractDocumentMetadata(entry.filePath);
+        const docMeta = await extractDocumentMetadata(entry.filePath)
         if (docMeta) {
-          updateFields.metadata = JSON.stringify(docMeta);
+          updateFields.metadata = JSON.stringify(docMeta)
         }
       } else if (isFontCategory(entry.mediaCategory)) {
-        const fontMeta = await extractFontMetadata(entry.filePath);
+        const fontMeta = await extractFontMetadata(entry.filePath)
         if (fontMeta) {
-          updateFields.metadata = JSON.stringify(fontMeta);
+          updateFields.metadata = JSON.stringify(fontMeta)
         }
       } else if (is3DModelCategory(entry.mediaCategory)) {
-        const modelMeta = await extract3DModelMetadata(entry.filePath);
+        const modelMeta = await extract3DModelMetadata(entry.filePath)
         if (modelMeta) {
-          updateFields.metadata = JSON.stringify(modelMeta);
+          updateFields.metadata = JSON.stringify(modelMeta)
         }
       } else if (isArchiveCategory(entry.mediaCategory)) {
-        const archiveMeta = await extractArchiveMetadata(entry.filePath);
+        const archiveMeta = await extractArchiveMetadata(entry.filePath)
         if (archiveMeta) {
-          updateFields.metadata = JSON.stringify(archiveMeta);
+          updateFields.metadata = JSON.stringify(archiveMeta)
         }
       }
 
@@ -276,14 +276,14 @@ export async function scanLibrary(
             eq(mediaItems.dataSourceId, source.id),
             eq(mediaItems.filePath, entry.filePath),
           ),
-        );
+        )
 
       emitPluginEvent('media:updated', {
         mediaId: existingId,
         filePath: entry.filePath,
-      });
-      progress.processedFiles++;
-      totalUpdated++;
+      })
+      progress.processedFiles++
+      totalUpdated++
     }
 
     if (result.removedFilePaths.length > 0) {
@@ -295,7 +295,7 @@ export async function scanLibrary(
             eq(mediaItems.dataSourceId, source.id),
             inArray(mediaItems.filePath, result.removedFilePaths),
           ),
-        );
+        )
       await db
         .delete(mediaItems)
         .where(
@@ -303,31 +303,31 @@ export async function scanLibrary(
             eq(mediaItems.dataSourceId, source.id),
             inArray(mediaItems.filePath, result.removedFilePaths),
           ),
-        );
+        )
       for (const row of removedRows) {
         emitEvent({
           type: 'media:removed',
           payload: { libraryId, mediaItemId: row.id },
-        });
+        })
         emitPluginEvent('media:deleted', {
           mediaId: row.id,
           filePath: row.filePath,
-        });
+        })
       }
-      totalRemoved += result.removedFilePaths.length;
+      totalRemoved += result.removedFilePaths.length
     }
   }
 
   // Auto-group TV episodes into series and season groups
-  await groupTvEpisodes(db, libraryId);
+  await groupTvEpisodes(db, libraryId)
   // Auto-group music tracks into artist and album groups
-  await groupMusicTracks(db, libraryId);
+  await groupMusicTracks(db, libraryId)
   // Auto-group audiobook chapters into book and series groups
-  await groupAudiobooks(db, libraryId);
+  await groupAudiobooks(db, libraryId)
   // Auto-group photos by date and GPS location
-  await groupPhotos(db, libraryId);
+  await groupPhotos(db, libraryId)
   // Auto-tag images and documents with AI-generated tags
-  await autoTagMediaItems(db, libraryId);
+  await autoTagMediaItems(db, libraryId)
 
   return {
     libraryId,
@@ -335,5 +335,5 @@ export async function scanLibrary(
     updatedItems: totalUpdated,
     removedItems: totalRemoved,
     totalDiscovered,
-  };
+  }
 }

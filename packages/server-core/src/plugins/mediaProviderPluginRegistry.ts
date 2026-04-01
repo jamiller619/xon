@@ -1,7 +1,7 @@
-import type { MediaProviderPlugin } from '@xon/plugin-sdk';
+import type { MediaProviderPlugin } from '@xon/plugin-sdk'
 
 /** Registry mapping pluginId → MediaProviderPlugin instance */
-const registry = new Map<string, MediaProviderPlugin>();
+const registry = new Map<string, MediaProviderPlugin>()
 
 /**
  * Register a MediaProviderPlugin instance under the given pluginId.
@@ -11,7 +11,7 @@ export function registerMediaProviderPlugin(
   pluginId: string,
   plugin: MediaProviderPlugin,
 ): void {
-  registry.set(pluginId, plugin);
+  registry.set(pluginId, plugin)
 }
 
 /**
@@ -21,15 +21,15 @@ export function registerMediaProviderPlugin(
 export function getMediaProviderPlugin(
   pluginId: string,
 ): MediaProviderPlugin | undefined {
-  return registry.get(pluginId);
+  return registry.get(pluginId)
 }
 
 /** Unregister a MediaProviderPlugin — called when the plugin is deactivated. */
 export function unregisterMediaProviderPlugin(pluginId: string): void {
-  registry.delete(pluginId);
+  registry.delete(pluginId)
 }
 
 /** Reset the registry — use only in tests. */
 export function _resetMediaProviderPluginRegistry(): void {
-  registry.clear();
+  registry.clear()
 }

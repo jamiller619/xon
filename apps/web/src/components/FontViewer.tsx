@@ -1,23 +1,23 @@
-import { useEffect, useState } from 'react';
-import { apiFetch } from '../apiFetch.js';
-import styles from './FontViewer.module.css';
+import { useEffect, useState } from 'react'
+import { apiFetch } from '../apiFetch.js'
+import styles from './FontViewer.module.css'
 
 interface Props {
-  mediaId: string;
-  title: string;
-  onClose: () => void;
+  mediaId: string
+  title: string
+  onClose: () => void
 }
 
 interface FontMeta {
-  family: string;
-  subfamily: string;
-  glyphCount: number | null;
-  unitsPerEm: number | null;
+  family: string
+  subfamily: string
+  glyphCount: number | null
+  unitsPerEm: number | null
 }
 
-type Tab = 'specimen' | 'charmap';
+type Tab = 'specimen' | 'charmap'
 
-const SPECIMEN_SIZES = [14, 18, 24, 36, 48, 72] as const;
+const SPECIMEN_SIZES = [14, 18, 24, 36, 48, 72] as const
 
 const SPECIMEN_ROWS: { label: string; text: string }[] = [
   { label: 'Pangram', text: 'The quick brown fox jumps over the lazy dog' },
@@ -25,93 +25,91 @@ const SPECIMEN_ROWS: { label: string; text: string }[] = [
   { label: 'Lowercase', text: 'abcdefghijklmnopqrstuvwxyz' },
   { label: 'Digits', text: '0123456789' },
   { label: 'Symbols', text: "!@#$%^&*()_+-=[]{}|;':,.<>?/" },
-];
+]
 
 // Unicode ranges for character map
 function buildCharList(): number[] {
-  const chars: number[] = [];
+  const chars: number[] = []
   // ASCII printable
-  for (let i = 0x21; i <= 0x7e; i++) chars.push(i);
+  for (let i = 0x21; i <= 0x7e; i++) chars.push(i)
   // Latin-1 Supplement
-  for (let i = 0xa1; i <= 0xff; i++) chars.push(i);
+  for (let i = 0xa1; i <= 0xff; i++) chars.push(i)
   // Latin Extended-A
-  for (let i = 0x0100; i <= 0x017f; i++) chars.push(i);
-  return chars;
+  for (let i = 0x0100; i <= 0x017f; i++) chars.push(i)
+  return chars
 }
 
-const CHAR_LIST = buildCharList();
+const CHAR_LIST = buildCharList()
 
-const FONT_FAMILY_PREFIX = 'xon-preview-font-';
+const FONT_FAMILY_PREFIX = 'xon-preview-font-'
 
 export default function FontViewer({ mediaId, title, onClose }: Props) {
-  const [meta, setMeta] = useState<FontMeta | null>(null);
-  const [fontLoaded, setFontLoaded] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [tab, setTab] = useState<Tab>('specimen');
+  const [meta, setMeta] = useState<FontMeta | null>(null)
+  const [fontLoaded, setFontLoaded] = useState(false)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [tab, setTab] = useState<Tab>('specimen')
   const [specimenSize, setSpecimenSize] =
-    useState<(typeof SPECIMEN_SIZES)[number]>(36);
+    useState<(typeof SPECIMEN_SIZES)[number]>(36)
 
-  const fontFamily = `${FONT_FAMILY_PREFIX}${mediaId}`;
+  const fontFamily = `${FONT_FAMILY_PREFIX}${mediaId}`
 
   // biome-ignore lint/correctness/useExhaustiveDependencies: only re-run on mediaId change
   useEffect(() => {
-    setLoading(true);
-    setError(null);
-    setFontLoaded(false);
-    setMeta(null);
+    setLoading(true)
+    setError(null)
+    setFontLoaded(false)
+    setMeta(null)
 
-    let cancelled = false;
+    let cancelled = false
 
     const run = async () => {
       try {
         // Load font metadata
-        const metaRes = await apiFetch(
-          `/api/v1/media/${mediaId}/font-metadata`,
-        );
-        if (!metaRes.ok) throw new Error('Failed to load font metadata');
-        const metaData = (await metaRes.json()) as FontMeta;
-        if (cancelled) return;
-        setMeta(metaData);
+        const metaRes = await apiFetch(`/api/v1/media/${mediaId}/font-metadata`)
+        if (!metaRes.ok) throw new Error('Failed to load font metadata')
+        const metaData = (await metaRes.json()) as FontMeta
+        if (cancelled) return
+        setMeta(metaData)
 
         // Load font via FontFace API
         const fontFace = new FontFace(
           fontFamily,
           `url(/api/v1/media/${mediaId}/stream)`,
-        );
-        await fontFace.load();
-        if (cancelled) return;
-        document.fonts.add(fontFace);
-        setFontLoaded(true);
+        )
+        await fontFace.load()
+        if (cancelled) return
+        document.fonts.add(fontFace)
+        setFontLoaded(true)
       } catch (err) {
-        if (cancelled) return;
-        setError(err instanceof Error ? err.message : 'Failed to load font');
+        if (cancelled) return
+        setError(err instanceof Error ? err.message : 'Failed to load font')
       } finally {
-        if (!cancelled) setLoading(false);
+        if (!cancelled) setLoading(false)
       }
-    };
+    }
 
-    run().catch(() => {});
+    run().catch(() => {})
 
     return () => {
-      cancelled = true;
+      cancelled = true
       // Clean up the registered font face when component unmounts
       for (const ff of document.fonts) {
         if (ff.family === fontFamily) {
-          document.fonts.delete(ff);
-          break;
+          document.fonts.delete(ff)
+          break
         }
       }
-    };
-  }, [mediaId]);
+    }
+  }, [mediaId])
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose();
-    };
-    window.addEventListener('keydown', onKey);
-    return () => window.removeEventListener('keydown', onKey);
-  }, [onClose]);
+      if (e.key === 'Escape') onClose()
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [onClose])
 
   return (
     <dialog open className={styles.dialog ?? ''}>
@@ -228,8 +226,8 @@ export default function FontViewer({ mediaId, title, onClose }: Props) {
                 style={{ fontFamily: `'${fontFamily}', serif` }}
               >
                 {CHAR_LIST.map((cp) => {
-                  const ch = String.fromCodePoint(cp);
-                  const hex = cp.toString(16).toUpperCase().padStart(4, '0');
+                  const ch = String.fromCodePoint(cp)
+                  const hex = cp.toString(16).toUpperCase().padStart(4, '0')
                   return (
                     <div
                       key={cp}
@@ -238,7 +236,7 @@ export default function FontViewer({ mediaId, title, onClose }: Props) {
                     >
                       {ch}
                     </div>
-                  );
+                  )
                 })}
               </div>
             </div>
@@ -246,5 +244,5 @@ export default function FontViewer({ mediaId, title, onClose }: Props) {
         </main>
       </div>
     </dialog>
-  );
+  )
 }

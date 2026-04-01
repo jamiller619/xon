@@ -1,24 +1,24 @@
-import { useCallback, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { apiFetch } from '../apiFetch.js';
-import BulkEditDialog from '../components/BulkEditDialog';
-import GroupDialog from '../components/GroupDialog';
-import MediaCard, { type MediaCardItem } from '../components/MediaCard';
-import { useAppStore } from '../store/index';
-import styles from './LibraryBrowser.module.css';
+import { useCallback, useEffect, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { apiFetch } from '../apiFetch.js'
+import BulkEditDialog from '../components/BulkEditDialog'
+import GroupDialog from '../components/GroupDialog'
+import MediaCard, { type MediaCardItem } from '../components/MediaCard'
+import { useAppStore } from '../store/index'
+import styles from './LibraryBrowser.module.css'
 
 interface Library {
-  id: string;
-  name: string;
+  id: string
+  name: string
 }
 
 interface Group {
-  id: string;
-  type: string;
-  title: string;
+  id: string
+  type: string
+  title: string
 }
 
-type TabMode = 'media' | 'groups';
+type TabMode = 'media' | 'groups'
 
 type SortColumn =
   | 'title'
@@ -26,10 +26,10 @@ type SortColumn =
   | 'fileSize'
   | 'createdAt'
   | 'releaseDate'
-  | 'rating';
-type SortDir = 'asc' | 'desc';
+  | 'rating'
+type SortDir = 'asc' | 'desc'
 
-const PAGE_SIZE = 40;
+const PAGE_SIZE = 40
 
 const MEDIA_CATEGORIES = [
   'Movies',
@@ -52,7 +52,7 @@ const MEDIA_CATEGORIES = [
   'Archives',
   'Fonts',
   'Icons',
-] as const;
+] as const
 
 const SORT_OPTIONS: { label: string; col: SortColumn; dir: SortDir }[] = [
   { label: 'Date Added (newest)', col: 'createdAt', dir: 'desc' },
@@ -63,14 +63,14 @@ const SORT_OPTIONS: { label: string; col: SortColumn; dir: SortDir }[] = [
   { label: 'File Size (smallest)', col: 'fileSize', dir: 'asc' },
   { label: 'Release Date (newest)', col: 'releaseDate', dir: 'desc' },
   { label: 'Rating (highest)', col: 'rating', dir: 'desc' },
-];
+]
 
 function makeSortKey(col: SortColumn, dir: SortDir): string {
-  return `${col}:${dir}`;
+  return `${col}:${dir}`
 }
 
 function SkeletonCard() {
-  return <div className={styles.skeletonCard ?? ''} />;
+  return <div className={styles.skeletonCard ?? ''} />
 }
 
 function SkeletonRow() {
@@ -80,169 +80,169 @@ function SkeletonRow() {
         <div className={styles.skeletonLine ?? ''} />
       </td>
     </tr>
-  );
+  )
 }
 
 export default function LibraryBrowser() {
-  const { id } = useParams<{ id: string }>();
-  const { viewMode, setViewMode } = useAppStore();
-  const [library, setLibrary] = useState<Library | null>(null);
-  const [items, setItems] = useState<MediaCardItem[]>([]);
-  const [page, setPage] = useState(1);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [sortCol, setSortCol] = useState<SortColumn>('createdAt');
-  const [sortDir, setSortDir] = useState<SortDir>('desc');
-  const [filterCategory, setFilterCategory] = useState('');
-  const [tab, setTab] = useState<TabMode>('media');
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [groupsLoading, setGroupsLoading] = useState(false);
-  const [showGroupDialog, setShowGroupDialog] = useState(false);
-  const [selectMode, setSelectMode] = useState(false);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [showBulkDialog, setShowBulkDialog] = useState(false);
+  const { id } = useParams<{ id: string }>()
+  const { viewMode, setViewMode } = useAppStore()
+  const [library, setLibrary] = useState<Library | null>(null)
+  const [items, setItems] = useState<MediaCardItem[]>([])
+  const [page, setPage] = useState(1)
+  const [totalPages, setTotalPages] = useState(1)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [sortCol, setSortCol] = useState<SortColumn>('createdAt')
+  const [sortDir, setSortDir] = useState<SortDir>('desc')
+  const [filterCategory, setFilterCategory] = useState('')
+  const [tab, setTab] = useState<TabMode>('media')
+  const [groups, setGroups] = useState<Group[]>([])
+  const [groupsLoading, setGroupsLoading] = useState(false)
+  const [showGroupDialog, setShowGroupDialog] = useState(false)
+  const [selectMode, setSelectMode] = useState(false)
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [showBulkDialog, setShowBulkDialog] = useState(false)
 
   useEffect(() => {
-    if (!id) return;
+    if (!id) return
     apiFetch(`/api/v1/libraries/${id}`)
       .then((r) => r.json())
       .then((lib) => setLibrary(lib as Library))
-      .catch(() => setError('Failed to load library'));
-  }, [id]);
+      .catch(() => setError('Failed to load library'))
+  }, [id])
 
   useEffect(() => {
-    if (!id) return;
-    setLoading(true);
-    const apiSortBy = sortCol === 'mediaCategory' ? 'createdAt' : sortCol;
+    if (!id) return
+    setLoading(true)
+    const apiSortBy = sortCol === 'mediaCategory' ? 'createdAt' : sortCol
     const params = new URLSearchParams({
       order: sortDir,
       sortBy: apiSortBy,
       limit: String(PAGE_SIZE),
       page: String(page),
-    });
-    if (filterCategory) params.set('mediaCategory', filterCategory);
+    })
+    if (filterCategory) params.set('mediaCategory', filterCategory)
     apiFetch(`/api/v1/libraries/${id}/media?${params.toString()}`)
       .then((r) => r.json())
       .then((data) => {
-        const mediaList = data as MediaCardItem[];
-        setItems(mediaList);
+        const mediaList = data as MediaCardItem[]
+        setItems(mediaList)
         if (mediaList.length === PAGE_SIZE) {
-          setTotalPages((prev) => Math.max(prev, page + 1));
+          setTotalPages((prev) => Math.max(prev, page + 1))
         } else {
-          setTotalPages(page);
+          setTotalPages(page)
         }
-        setLoading(false);
+        setLoading(false)
       })
       .catch(() => {
-        setError('Failed to load media');
-        setLoading(false);
-      });
-  }, [id, page, sortCol, sortDir, filterCategory]);
+        setError('Failed to load media')
+        setLoading(false)
+      })
+  }, [id, page, sortCol, sortDir, filterCategory])
 
   const loadGroups = useCallback(() => {
-    if (!id) return;
-    setGroupsLoading(true);
+    if (!id) return
+    setGroupsLoading(true)
     apiFetch(`/api/v1/groups?libraryId=${id}`)
       .then((r) => r.json())
       .then((data) => setGroups(data as Group[]))
       .catch(() => {
         /* ignore */
       })
-      .finally(() => setGroupsLoading(false));
-  }, [id]);
+      .finally(() => setGroupsLoading(false))
+  }, [id])
 
   useEffect(() => {
-    if (tab === 'groups') loadGroups();
-  }, [tab, loadGroups]);
+    if (tab === 'groups') loadGroups()
+  }, [tab, loadGroups])
 
   function handleGroupCreated(group: Group) {
-    setShowGroupDialog(false);
-    setGroups((prev) => [...prev, group]);
+    setShowGroupDialog(false)
+    setGroups((prev) => [...prev, group])
   }
 
   function toggleSelectMode() {
-    setSelectMode((prev) => !prev);
-    setSelectedIds(new Set());
+    setSelectMode((prev) => !prev)
+    setSelectedIds(new Set())
   }
 
   function toggleSelectItem(itemId: string) {
     setSelectedIds((prev) => {
-      const next = new Set(prev);
+      const next = new Set(prev)
       if (next.has(itemId)) {
-        next.delete(itemId);
+        next.delete(itemId)
       } else {
-        next.add(itemId);
+        next.add(itemId)
       }
-      return next;
-    });
+      return next
+    })
   }
 
   function selectAll() {
-    setSelectedIds(new Set(items.map((item) => item.id)));
+    setSelectedIds(new Set(items.map((item) => item.id)))
   }
 
   function clearSelection() {
-    setSelectedIds(new Set());
+    setSelectedIds(new Set())
   }
 
   function handleBulkDone() {
-    setShowBulkDialog(false);
-    setSelectMode(false);
-    setSelectedIds(new Set());
+    setShowBulkDialog(false)
+    setSelectMode(false)
+    setSelectedIds(new Set())
     // Reload items
-    setPage(1);
-    setTotalPages(1);
+    setPage(1)
+    setTotalPages(1)
   }
 
   function handleSort(col: SortColumn) {
     if (col === sortCol) {
-      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'));
+      setSortDir((d) => (d === 'asc' ? 'desc' : 'asc'))
     } else {
-      setSortCol(col);
-      setSortDir('asc');
+      setSortCol(col)
+      setSortDir('asc')
     }
-    setPage(1);
+    setPage(1)
   }
 
   function handleSortOption(value: string) {
-    const opt = SORT_OPTIONS.find((o) => makeSortKey(o.col, o.dir) === value);
+    const opt = SORT_OPTIONS.find((o) => makeSortKey(o.col, o.dir) === value)
     if (opt) {
-      setSortCol(opt.col);
-      setSortDir(opt.dir);
-      setPage(1);
+      setSortCol(opt.col)
+      setSortDir(opt.dir)
+      setPage(1)
     }
   }
 
   function handleCategoryFilter(value: string) {
-    setFilterCategory(value);
-    setPage(1);
-    setTotalPages(1);
+    setFilterCategory(value)
+    setPage(1)
+    setTotalPages(1)
   }
 
   function sortIndicator(col: SortColumn) {
-    if (col !== sortCol) return null;
+    if (col !== sortCol) return null
     return (
       <span className={styles.sortArrow ?? ''}>
         {sortDir === 'asc' ? ' ▲' : ' ▼'}
       </span>
-    );
+    )
   }
 
-  const currentSortKey = makeSortKey(sortCol, sortDir);
+  const currentSortKey = makeSortKey(sortCol, sortDir)
 
   const activeFilters: { key: string; label: string; onRemove: () => void }[] =
-    [];
+    []
   if (filterCategory) {
     activeFilters.push({
       key: 'category',
       label: `Category: ${filterCategory}`,
       onRemove: () => handleCategoryFilter(''),
-    });
+    })
   }
 
   if (error) {
-    return <div className={styles.error ?? ''}>{error}</div>;
+    return <div className={styles.error ?? ''}>{error}</div>
   }
 
   return (
@@ -664,5 +664,5 @@ export default function LibraryBrowser() {
         />
       )}
     </div>
-  );
+  )
 }

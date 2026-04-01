@@ -1,18 +1,18 @@
-import { useEffect, useState } from 'react';
-import { apiFetch } from '../apiFetch.js';
-import styles from './AdminAiSettings.module.css';
+import { useEffect, useState } from 'react'
+import { apiFetch } from '../apiFetch.js'
+import styles from './AdminAiSettings.module.css'
 
-type AiMode = 'local-only' | 'cloud-only' | 'local-with-cloud-fallback';
+type AiMode = 'local-only' | 'cloud-only' | 'local-with-cloud-fallback'
 
 interface AiSettingsData {
-  aiEnabled: boolean;
-  aiMode: AiMode;
-  cloudApiKeySet: boolean;
-  cloudApiUrl: string | null;
-  featureMatching: boolean;
-  featureTagging: boolean;
-  featureSimilarity: boolean;
-  featureSmartGrouping: boolean;
+  aiEnabled: boolean
+  aiMode: AiMode
+  cloudApiKeySet: boolean
+  cloudApiUrl: string | null
+  featureMatching: boolean
+  featureTagging: boolean
+  featureSimilarity: boolean
+  featureSmartGrouping: boolean
 }
 
 const DEFAULT_SETTINGS: AiSettingsData = {
@@ -24,48 +24,48 @@ const DEFAULT_SETTINGS: AiSettingsData = {
   featureTagging: true,
   featureSimilarity: true,
   featureSmartGrouping: true,
-};
+}
 
 export default function AdminAiSettings() {
-  const [settings, setSettings] = useState<AiSettingsData>(DEFAULT_SETTINGS);
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [settings, setSettings] = useState<AiSettingsData>(DEFAULT_SETTINGS)
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
   // Form state
-  const [aiEnabled, setAiEnabled] = useState(true);
-  const [aiMode, setAiMode] = useState<AiMode>('local-only');
-  const [cloudApiUrl, setCloudApiUrl] = useState('');
-  const [cloudApiKey, setCloudApiKey] = useState('');
-  const [featureMatching, setFeatureMatching] = useState(true);
-  const [featureTagging, setFeatureTagging] = useState(true);
-  const [featureSimilarity, setFeatureSimilarity] = useState(true);
-  const [featureSmartGrouping, setFeatureSmartGrouping] = useState(true);
+  const [aiEnabled, setAiEnabled] = useState(true)
+  const [aiMode, setAiMode] = useState<AiMode>('local-only')
+  const [cloudApiUrl, setCloudApiUrl] = useState('')
+  const [cloudApiKey, setCloudApiKey] = useState('')
+  const [featureMatching, setFeatureMatching] = useState(true)
+  const [featureTagging, setFeatureTagging] = useState(true)
+  const [featureSimilarity, setFeatureSimilarity] = useState(true)
+  const [featureSmartGrouping, setFeatureSmartGrouping] = useState(true)
 
   useEffect(() => {
-    setLoading(true);
+    setLoading(true)
     apiFetch('/api/v1/admin/ai-settings')
       .then((r) => r.json() as Promise<AiSettingsData>)
       .then((data) => {
-        setSettings(data);
-        setAiEnabled(data.aiEnabled);
-        setAiMode(data.aiMode);
-        setCloudApiUrl(data.cloudApiUrl ?? '');
-        setFeatureMatching(data.featureMatching);
-        setFeatureTagging(data.featureTagging);
-        setFeatureSimilarity(data.featureSimilarity);
-        setFeatureSmartGrouping(data.featureSmartGrouping);
+        setSettings(data)
+        setAiEnabled(data.aiEnabled)
+        setAiMode(data.aiMode)
+        setCloudApiUrl(data.cloudApiUrl ?? '')
+        setFeatureMatching(data.featureMatching)
+        setFeatureTagging(data.featureTagging)
+        setFeatureSimilarity(data.featureSimilarity)
+        setFeatureSmartGrouping(data.featureSmartGrouping)
       })
       .catch(() => setError('Failed to load AI settings'))
-      .finally(() => setLoading(false));
-  }, []);
+      .finally(() => setLoading(false))
+  }, [])
 
   async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setError('');
-    setSuccess('');
+    e.preventDefault()
+    setSaving(true)
+    setError('')
+    setSuccess('')
 
     const body: Record<string, unknown> = {
       aiEnabled,
@@ -75,11 +75,11 @@ export default function AdminAiSettings() {
       featureTagging,
       featureSimilarity,
       featureSmartGrouping,
-    };
+    }
 
     // Only send the API key if the user typed something new
     if (cloudApiKey !== '') {
-      body.cloudApiKey = cloudApiKey;
+      body.cloudApiKey = cloudApiKey
     }
 
     try {
@@ -87,20 +87,20 @@ export default function AdminAiSettings() {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
-      });
+      })
       if (!res.ok) {
-        setError('Failed to save settings');
+        setError('Failed to save settings')
       } else {
-        const data = (await res.json()) as AiSettingsData;
-        setSettings(data);
-        setCloudApiKey('');
-        setSuccess('Settings saved');
-        setTimeout(() => setSuccess(''), 3000);
+        const data = (await res.json()) as AiSettingsData
+        setSettings(data)
+        setCloudApiKey('')
+        setSuccess('Settings saved')
+        setTimeout(() => setSuccess(''), 3000)
       }
     } catch {
-      setError('Failed to save settings');
+      setError('Failed to save settings')
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
   }
 
@@ -109,7 +109,7 @@ export default function AdminAiSettings() {
       <div className={styles.page ?? ''}>
         <p className={styles.loading ?? ''}>Loading...</p>
       </div>
-    );
+    )
   }
 
   return (
@@ -244,5 +244,5 @@ export default function AdminAiSettings() {
         </div>
       </form>
     </div>
-  );
+  )
 }

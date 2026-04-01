@@ -1,82 +1,82 @@
-import { useEffect, useRef, useState } from 'react';
-import { apiFetch } from '../apiFetch.js';
-import type { QueueItem } from '../store/index';
-import { useAudioStore } from '../store/index';
-import styles from './AudioPlayer.module.css';
+import { useEffect, useRef, useState } from 'react'
+import { apiFetch } from '../apiFetch.js'
+import type { QueueItem } from '../store/index'
+import { useAudioStore } from '../store/index'
+import styles from './AudioPlayer.module.css'
 
 export default function AudioPlayer() {
-  const queue = useAudioStore((s) => s.queue);
-  const currentIndex = useAudioStore((s) => s.currentIndex);
-  const playing = useAudioStore((s) => s.playing);
-  const volume = useAudioStore((s) => s.volume);
-  const shuffle = useAudioStore((s) => s.shuffle);
-  const repeat = useAudioStore((s) => s.repeat);
-  const playNext = useAudioStore((s) => s.playNext);
-  const playPrev = useAudioStore((s) => s.playPrev);
-  const setPlaying = useAudioStore((s) => s.setPlaying);
-  const setVolume = useAudioStore((s) => s.setVolume);
-  const toggleShuffle = useAudioStore((s) => s.toggleShuffle);
-  const toggleRepeat = useAudioStore((s) => s.toggleRepeat);
-  const playAtIndex = useAudioStore((s) => s.playAtIndex);
-  const removeFromQueue = useAudioStore((s) => s.removeFromQueue);
-  const clearQueue = useAudioStore((s) => s.clearQueue);
-  const moveUp = useAudioStore((s) => s.moveUp);
-  const moveDown = useAudioStore((s) => s.moveDown);
+  const queue = useAudioStore((s) => s.queue)
+  const currentIndex = useAudioStore((s) => s.currentIndex)
+  const playing = useAudioStore((s) => s.playing)
+  const volume = useAudioStore((s) => s.volume)
+  const shuffle = useAudioStore((s) => s.shuffle)
+  const repeat = useAudioStore((s) => s.repeat)
+  const playNext = useAudioStore((s) => s.playNext)
+  const playPrev = useAudioStore((s) => s.playPrev)
+  const setPlaying = useAudioStore((s) => s.setPlaying)
+  const setVolume = useAudioStore((s) => s.setVolume)
+  const toggleShuffle = useAudioStore((s) => s.toggleShuffle)
+  const toggleRepeat = useAudioStore((s) => s.toggleRepeat)
+  const playAtIndex = useAudioStore((s) => s.playAtIndex)
+  const removeFromQueue = useAudioStore((s) => s.removeFromQueue)
+  const clearQueue = useAudioStore((s) => s.clearQueue)
+  const moveUp = useAudioStore((s) => s.moveUp)
+  const moveDown = useAudioStore((s) => s.moveDown)
 
-  const audioRef = useRef<HTMLAudioElement>(null);
-  const [currentTime, setCurrentTime] = useState(0);
-  const [duration, setDuration] = useState(0);
-  const [showQueue, setShowQueue] = useState(false);
+  const audioRef = useRef<HTMLAudioElement>(null)
+  const [currentTime, setCurrentTime] = useState(0)
+  const [duration, setDuration] = useState(0)
+  const [showQueue, setShowQueue] = useState(false)
 
-  const currentTrack: QueueItem | null = queue[currentIndex] ?? null;
+  const currentTrack: QueueItem | null = queue[currentIndex] ?? null
 
   // Keep a ref to playing so the track-load effect doesn't re-run on play/pause
-  const playingRef = useRef(playing);
+  const playingRef = useRef(playing)
   useEffect(() => {
-    playingRef.current = playing;
-  }, [playing]);
+    playingRef.current = playing
+  }, [playing])
 
   // Sync playing state with audio element
   useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
+    const audio = audioRef.current
+    if (!audio) return
     if (playing) {
-      audio.play().catch(() => setPlaying(false));
+      audio.play().catch(() => setPlaying(false))
     } else {
-      audio.pause();
+      audio.pause()
     }
-  }, [playing, setPlaying]);
+  }, [playing, setPlaying])
 
   // Sync volume
   useEffect(() => {
-    if (audioRef.current) audioRef.current.volume = volume;
-  }, [volume]);
+    if (audioRef.current) audioRef.current.volume = volume
+  }, [volume])
 
   // When track changes, load and play
   useEffect(() => {
-    const audio = audioRef.current;
-    if (!audio) return;
+    const audio = audioRef.current
+    if (!audio) return
     if (currentTrack) {
-      audio.src = `/api/v1/media/${currentTrack.id}/stream`;
-      audio.load();
-      if (playingRef.current) audio.play().catch(() => setPlaying(false));
+      audio.src = `/api/v1/media/${currentTrack.id}/stream`
+      audio.load()
+      if (playingRef.current) audio.play().catch(() => setPlaying(false))
     } else {
-      audio.src = '';
+      audio.src = ''
     }
-    setCurrentTime(0);
-    setDuration(0);
-  }, [currentTrack, setPlaying]);
+    setCurrentTime(0)
+    setDuration(0)
+  }, [currentTrack, setPlaying])
 
   // Report progress every 10 seconds while playing
   useEffect(() => {
-    if (!currentTrack) return;
-    const audio = audioRef.current;
-    if (!audio) return;
+    if (!currentTrack) return
+    const audio = audioRef.current
+    if (!audio) return
 
-    const trackId = currentTrack.id;
+    const trackId = currentTrack.id
     const interval = setInterval(() => {
       if (!audio.paused && audio.duration > 0) {
-        const completed = audio.currentTime >= audio.duration - 1;
+        const completed = audio.currentTime >= audio.duration - 1
         apiFetch(`/api/v1/media/${trackId}/progress`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
@@ -87,47 +87,47 @@ export default function AudioPlayer() {
           }),
         }).catch(() => {
           // best-effort save
-        });
+        })
       }
-    }, 10000);
+    }, 10000)
 
-    return () => clearInterval(interval);
-  }, [currentTrack]);
+    return () => clearInterval(interval)
+  }, [currentTrack])
 
-  if (queue.length === 0) return null;
+  if (queue.length === 0) return null
 
   function handleTimeUpdate() {
-    setCurrentTime(audioRef.current?.currentTime ?? 0);
+    setCurrentTime(audioRef.current?.currentTime ?? 0)
   }
 
   function handleLoadedMetadata() {
-    setDuration(audioRef.current?.duration ?? 0);
+    setDuration(audioRef.current?.duration ?? 0)
   }
 
   function handleEnded() {
-    playNext();
+    playNext()
   }
 
   function handleSeek(e: React.ChangeEvent<HTMLInputElement>) {
-    const t = Number(e.target.value);
-    setCurrentTime(t);
-    if (audioRef.current) audioRef.current.currentTime = t;
+    const t = Number(e.target.value)
+    setCurrentTime(t)
+    if (audioRef.current) audioRef.current.currentTime = t
   }
 
   function formatTime(s: number): string {
-    if (!Number.isFinite(s)) return '0:00';
-    const m = Math.floor(s / 60);
-    const sec = Math.floor(s % 60);
-    return `${m}:${sec.toString().padStart(2, '0')}`;
+    if (!Number.isFinite(s)) return '0:00'
+    const m = Math.floor(s / 60)
+    const sec = Math.floor(s % 60)
+    return `${m}:${sec.toString().padStart(2, '0')}`
   }
 
-  const repeatLabel = repeat === 'none' ? '↺' : repeat === 'all' ? '↺' : '↺¹';
+  const repeatLabel = repeat === 'none' ? '↺' : repeat === 'all' ? '↺' : '↺¹'
   const repeatTitle =
     repeat === 'none'
       ? 'Repeat: off'
       : repeat === 'all'
         ? 'Repeat: all'
-        : 'Repeat: one';
+        : 'Repeat: one'
 
   return (
     <div className={styles.bar ?? ''}>
@@ -305,5 +305,5 @@ export default function AudioPlayer() {
         </div>
       </div>
     </div>
-  );
+  )
 }

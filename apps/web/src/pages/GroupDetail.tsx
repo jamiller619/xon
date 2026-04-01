@@ -1,200 +1,200 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { apiFetch } from '../apiFetch.js';
-import styles from './GroupDetail.module.css';
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { Link, useNavigate, useParams } from 'react-router-dom'
+import { apiFetch } from '../apiFetch.js'
+import styles from './GroupDetail.module.css'
 
 interface GroupMemberItem {
-  mediaItemId: string;
-  sortOrder: number;
-  title: string;
-  mediaCategory: string | null;
-  mimeType: string | null;
-  fileSize: number | null;
-  createdAt: number | null;
-  thumbnailUrls: { small: string; medium: string; large: string } | null;
+  mediaItemId: string
+  sortOrder: number
+  title: string
+  mediaCategory: string | null
+  mimeType: string | null
+  fileSize: number | null
+  createdAt: number | null
+  thumbnailUrls: { small: string; medium: string; large: string } | null
 }
 
 interface GroupDetail {
-  id: string;
-  libraryId: string;
-  type: string;
-  title: string;
-  members: GroupMemberItem[];
+  id: string
+  libraryId: string
+  type: string
+  title: string
+  members: GroupMemberItem[]
 }
 
 interface LibraryMediaItem {
-  id: string;
-  title: string;
-  mediaCategory: string | null;
-  thumbnailUrls: { small: string; medium: string; large: string } | null;
+  id: string
+  title: string
+  mediaCategory: string | null
+  thumbnailUrls: { small: string; medium: string; large: string } | null
 }
 
 function formatBytes(bytes: number | null): string {
-  if (bytes == null) return '—';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes == null) return '—'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   if (bytes < 1024 * 1024 * 1024)
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
 }
 
 export default function GroupDetail() {
-  const { id } = useParams<{ id: string }>();
-  const navigate = useNavigate();
-  const [group, setGroup] = useState<GroupDetail | null>(null);
-  const [members, setMembers] = useState<GroupMemberItem[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { id } = useParams<{ id: string }>()
+  const navigate = useNavigate()
+  const [group, setGroup] = useState<GroupDetail | null>(null)
+  const [members, setMembers] = useState<GroupMemberItem[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
   // Add items modal state
-  const [showAddModal, setShowAddModal] = useState(false);
-  const [libraryItems, setLibraryItems] = useState<LibraryMediaItem[]>([]);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [addLoading, setAddLoading] = useState(false);
-  const [addError, setAddError] = useState<string | null>(null);
+  const [showAddModal, setShowAddModal] = useState(false)
+  const [libraryItems, setLibraryItems] = useState<LibraryMediaItem[]>([])
+  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+  const [addLoading, setAddLoading] = useState(false)
+  const [addError, setAddError] = useState<string | null>(null)
 
   // Drag-and-drop state
-  const dragIndexRef = useRef<number | null>(null);
+  const dragIndexRef = useRef<number | null>(null)
 
   const loadGroup = useCallback(async () => {
-    if (!id) return;
-    setLoading(true);
-    setError(null);
+    if (!id) return
+    setLoading(true)
+    setError(null)
     try {
-      const res = await apiFetch(`/api/v1/groups/${id}`);
+      const res = await apiFetch(`/api/v1/groups/${id}`)
       if (!res.ok) {
-        setError('Group not found');
-        return;
+        setError('Group not found')
+        return
       }
-      const data = (await res.json()) as GroupDetail;
-      setGroup(data);
-      setMembers(data.members);
+      const data = (await res.json()) as GroupDetail
+      setGroup(data)
+      setMembers(data.members)
     } catch {
-      setError('Failed to load group');
+      setError('Failed to load group')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [id]);
+  }, [id])
 
   useEffect(() => {
-    loadGroup();
-  }, [loadGroup]);
+    loadGroup()
+  }, [loadGroup])
 
   async function handleRemoveItem(mediaItemId: string) {
-    if (!id) return;
+    if (!id) return
     await apiFetch(`/api/v1/groups/${id}/items/${mediaItemId}`, {
       method: 'DELETE',
-    });
-    setMembers((prev) => prev.filter((m) => m.mediaItemId !== mediaItemId));
+    })
+    setMembers((prev) => prev.filter((m) => m.mediaItemId !== mediaItemId))
   }
 
   // Drag-and-drop handlers
   function handleDragStart(index: number) {
-    dragIndexRef.current = index;
+    dragIndexRef.current = index
   }
 
   function handleDragOver(e: React.DragEvent, index: number) {
-    e.preventDefault();
-    const from = dragIndexRef.current;
-    if (from === null || from === index) return;
+    e.preventDefault()
+    const from = dragIndexRef.current
+    if (from === null || from === index) return
     setMembers((prev) => {
-      const next = [...prev];
-      const [moved] = next.splice(from, 1);
-      if (!moved) return prev;
-      next.splice(index, 0, moved);
-      dragIndexRef.current = index;
-      return next;
-    });
+      const next = [...prev]
+      const [moved] = next.splice(from, 1)
+      if (!moved) return prev
+      next.splice(index, 0, moved)
+      dragIndexRef.current = index
+      return next
+    })
   }
 
   async function handleDrop() {
-    if (!id) return;
-    dragIndexRef.current = null;
+    if (!id) return
+    dragIndexRef.current = null
     // Persist new sort order
     const payload = members.map((m, i) => ({
       mediaItemId: m.mediaItemId,
       sortOrder: i,
-    }));
+    }))
     try {
       await apiFetch(`/api/v1/groups/${id}/items`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: payload }),
-      });
-      setMembers((prev) => prev.map((m, i) => ({ ...m, sortOrder: i })));
+      })
+      setMembers((prev) => prev.map((m, i) => ({ ...m, sortOrder: i })))
     } catch {
       // Non-critical: reorder failed silently
     }
   }
 
   async function handleDeleteGroup() {
-    if (!id || !group) return;
+    if (!id || !group) return
     if (
       !confirm(
         `Delete "${group.title}"? This will remove the group and all its items.`,
       )
     )
-      return;
-    const res = await apiFetch(`/api/v1/groups/${id}`, { method: 'DELETE' });
+      return
+    const res = await apiFetch(`/api/v1/groups/${id}`, { method: 'DELETE' })
     if (res.ok) {
-      navigate(`/libraries/${group.libraryId}`);
+      navigate(`/libraries/${group.libraryId}`)
     }
   }
 
   async function openAddModal() {
-    if (!group) return;
-    setAddError(null);
-    setSelectedIds(new Set());
-    setShowAddModal(true);
+    if (!group) return
+    setAddError(null)
+    setSelectedIds(new Set())
+    setShowAddModal(true)
     // Load library items
     try {
-      setAddLoading(true);
+      setAddLoading(true)
       const res = await apiFetch(
         `/api/v1/libraries/${group.libraryId}/media?limit=100&page=1`,
-      );
+      )
       if (res.ok) {
-        const data = (await res.json()) as LibraryMediaItem[];
+        const data = (await res.json()) as LibraryMediaItem[]
         // Filter out items already in the group
-        const existingIds = new Set(members.map((m) => m.mediaItemId));
-        setLibraryItems(data.filter((item) => !existingIds.has(item.id)));
+        const existingIds = new Set(members.map((m) => m.mediaItemId))
+        setLibraryItems(data.filter((item) => !existingIds.has(item.id)))
       }
     } catch {
-      setAddError('Failed to load library items');
+      setAddError('Failed to load library items')
     } finally {
-      setAddLoading(false);
+      setAddLoading(false)
     }
   }
 
   function toggleSelectItem(itemId: string) {
     setSelectedIds((prev) => {
-      const next = new Set(prev);
+      const next = new Set(prev)
       if (next.has(itemId)) {
-        next.delete(itemId);
+        next.delete(itemId)
       } else {
-        next.add(itemId);
+        next.add(itemId)
       }
-      return next;
-    });
+      return next
+    })
   }
 
   async function handleAddSelected() {
-    if (!id || selectedIds.size === 0) return;
-    setAddLoading(true);
-    setAddError(null);
+    if (!id || selectedIds.size === 0) return
+    setAddLoading(true)
+    setAddError(null)
     try {
       for (const mediaItemId of selectedIds) {
         await apiFetch(`/api/v1/groups/${id}/items`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ mediaItemId }),
-        });
+        })
       }
-      setShowAddModal(false);
-      await loadGroup();
+      setShowAddModal(false)
+      await loadGroup()
     } catch {
-      setAddError('Failed to add items');
+      setAddError('Failed to add items')
     } finally {
-      setAddLoading(false);
+      setAddLoading(false)
     }
   }
 
@@ -203,7 +203,7 @@ export default function GroupDetail() {
       <div className={styles.page ?? ''}>
         <div className={styles.loading ?? ''}>Loading…</div>
       </div>
-    );
+    )
   }
 
   if (error || !group) {
@@ -211,10 +211,10 @@ export default function GroupDetail() {
       <div className={styles.page ?? ''}>
         <div className={styles.errorMsg ?? ''}>{error ?? 'Not found'}</div>
       </div>
-    );
+    )
   }
 
-  const typeLabel = group.type.charAt(0).toUpperCase() + group.type.slice(1);
+  const typeLabel = group.type.charAt(0).toUpperCase() + group.type.slice(1)
 
   return (
     <div className={styles.page ?? ''}>
@@ -376,5 +376,5 @@ export default function GroupDetail() {
         </div>
       )}
     </div>
-  );
+  )
 }

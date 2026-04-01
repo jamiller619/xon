@@ -1,24 +1,24 @@
-import { createReadStream, existsSync } from 'node:fs';
-import { stat } from 'node:fs/promises';
-import { join } from 'node:path';
-import { Hono } from 'hono';
-import { registry } from '../plugins/pluginManager.js';
+import { createReadStream, existsSync } from 'node:fs'
+import { stat } from 'node:fs/promises'
+import { join } from 'node:path'
+import { Hono } from 'hono'
+import { registry } from '../plugins/pluginManager.js'
 
 export function makePluginsRouter(): Hono {
-  const router = new Hono();
+  const router = new Hono()
 
   /** List all registered UI components from active plugins */
   router.get('/ui-components', (c) => {
     const components: {
-      pluginId: string;
-      id: string;
-      injectionPoint: string;
-      bundleUrl: string;
-      label?: string;
-    }[] = [];
+      pluginId: string
+      id: string
+      injectionPoint: string
+      bundleUrl: string
+      label?: string
+    }[] = []
 
     for (const [pluginId, entry] of registry) {
-      if (entry.status !== 'active') continue;
+      if (entry.status !== 'active') continue
       for (const component of entry.uiComponents) {
         components.push({
           pluginId,
@@ -26,49 +26,49 @@ export function makePluginsRouter(): Hono {
           injectionPoint: component.injectionPoint,
           bundleUrl: component.bundleUrl,
           ...(component.label !== undefined ? { label: component.label } : {}),
-        });
+        })
       }
     }
 
-    return c.json(components);
-  });
+    return c.json(components)
+  })
 
   /** Serve static assets from a plugin's directory */
   router.get('/:pluginId/assets/*', async (c) => {
-    const pluginId = c.req.param('pluginId');
-    const entry = registry.get(pluginId);
+    const pluginId = c.req.param('pluginId')
+    const entry = registry.get(pluginId)
     if (!entry) {
-      return c.json({ error: 'Plugin not found' }, 404);
+      return c.json({ error: 'Plugin not found' }, 404)
     }
 
     // Extract the file path after /assets/
-    const url = new URL(c.req.url);
-    const prefix = `/api/v1/plugins/${pluginId}/assets/`;
-    const filePath = url.pathname.slice(prefix.length);
+    const url = new URL(c.req.url)
+    const prefix = `/api/v1/plugins/${pluginId}/assets/`
+    const filePath = url.pathname.slice(prefix.length)
 
     if (!filePath) {
-      return c.json({ error: 'No file path specified' }, 400);
+      return c.json({ error: 'No file path specified' }, 400)
     }
 
     // Prevent path traversal
-    const resolved = join(entry.pluginDir, 'assets', filePath);
+    const resolved = join(entry.pluginDir, 'assets', filePath)
     if (!resolved.startsWith(join(entry.pluginDir, 'assets'))) {
-      return c.json({ error: 'Forbidden' }, 403);
+      return c.json({ error: 'Forbidden' }, 403)
     }
 
     if (!existsSync(resolved)) {
-      return c.json({ error: 'Not found' }, 404);
+      return c.json({ error: 'Not found' }, 404)
     }
 
-    let size: number;
+    let size: number
     try {
-      const info = await stat(resolved);
-      size = info.size;
+      const info = await stat(resolved)
+      size = info.size
     } catch {
-      return c.json({ error: 'Not found' }, 404);
+      return c.json({ error: 'Not found' }, 404)
     }
 
-    const ext = resolved.split('.').pop() ?? '';
+    const ext = resolved.split('.').pop() ?? ''
     const mimeTypes: Record<string, string> = {
       js: 'application/javascript',
       mjs: 'application/javascript',
@@ -81,19 +81,19 @@ export function makePluginsRouter(): Hono {
       svg: 'image/svg+xml',
       woff2: 'font/woff2',
       woff: 'font/woff',
-    };
-    const contentType = mimeTypes[ext] ?? 'application/octet-stream';
+    }
+    const contentType = mimeTypes[ext] ?? 'application/octet-stream'
 
-    const stream = createReadStream(resolved);
+    const stream = createReadStream(resolved)
     const readable = new ReadableStream({
       start(controller) {
         stream.on('data', (chunk) => {
-          controller.enqueue(new Uint8Array(chunk as Buffer));
-        });
-        stream.on('end', () => controller.close());
-        stream.on('error', (err) => controller.error(err));
+          controller.enqueue(new Uint8Array(chunk as Buffer))
+        })
+        stream.on('end', () => controller.close())
+        stream.on('error', (err) => controller.error(err))
       },
-    });
+    })
 
     return new Response(readable, {
       headers: {
@@ -101,8 +101,8 @@ export function makePluginsRouter(): Hono {
         'Content-Length': String(size),
         'Cache-Control': 'public, max-age=3600',
       },
-    });
-  });
+    })
+  })
 
-  return router;
+  return router
 }

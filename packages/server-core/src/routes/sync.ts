@@ -1,11 +1,11 @@
-import { copyFile, mkdir, writeFile } from 'node:fs/promises';
-import { join } from 'node:path';
-import { and, desc, eq, inArray } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { Hono } from 'hono';
-import { z } from 'zod';
-import { mediaItems, syncProfiles, syncRuns } from '../db/schema.js';
-import { validate } from '../http/validate.js';
+import { copyFile, mkdir, writeFile } from 'node:fs/promises'
+import { join } from 'node:path'
+import { and, desc, eq, inArray } from 'drizzle-orm'
+import type { LibSQLDatabase } from 'drizzle-orm/libsql'
+import { Hono } from 'hono'
+import { z } from 'zod'
+import { mediaItems, syncProfiles, syncRuns } from '../db/schema.js'
+import { validate } from '../http/validate.js'
 
 // ---------------------------------------------------------------------------
 // Request schemas
@@ -16,7 +16,7 @@ const scopeSchema = z.object({
   groupIds: z.array(z.string()).optional(),
   itemIds: z.array(z.string()).optional(),
   mediaTypes: z.array(z.string()).optional(),
-});
+})
 
 const createSchema = z.object({
   name: z.string().min(1),
@@ -24,7 +24,7 @@ const createSchema = z.object({
   scope: scopeSchema.default({}),
   targetPath: z.string().min(1),
   includeMedia: z.boolean().default(false),
-});
+})
 
 const updateSchema = z.object({
   name: z.string().min(1).optional(),
@@ -32,7 +32,7 @@ const updateSchema = z.object({
   scope: scopeSchema.optional(),
   targetPath: z.string().min(1).optional(),
   includeMedia: z.boolean().optional(),
-});
+})
 
 // ---------------------------------------------------------------------------
 // Sync execution
@@ -42,25 +42,22 @@ export async function runSyncJob(
   db: LibSQLDatabase,
   runId: string,
 ): Promise<void> {
-  const now = new Date();
+  const now = new Date()
 
   await db
     .update(syncRuns)
     .set({ status: 'running', startedAt: now })
-    .where(eq(syncRuns.id, runId));
+    .where(eq(syncRuns.id, runId))
 
-  const runRows = await db
-    .select()
-    .from(syncRuns)
-    .where(eq(syncRuns.id, runId));
-  const run = runRows[0];
-  if (!run) return;
+  const runRows = await db.select().from(syncRuns).where(eq(syncRuns.id, runId))
+  const run = runRows[0]
+  if (!run) return
 
   const profileRows = await db
     .select()
     .from(syncProfiles)
-    .where(eq(syncProfiles.id, run.profileId));
-  const profile = profileRows[0];
+    .where(eq(syncProfiles.id, run.profileId))
+  const profile = profileRows[0]
   if (!profile) {
     await db
       .update(syncRuns)
@@ -69,32 +66,32 @@ export async function runSyncJob(
         errors: JSON.stringify(['Sync profile not found']),
         completedAt: new Date(),
       })
-      .where(eq(syncRuns.id, runId));
-    return;
+      .where(eq(syncRuns.id, runId))
+    return
   }
 
-  let scope: z.infer<typeof scopeSchema> = {};
+  let scope: z.infer<typeof scopeSchema> = {}
   try {
-    scope = scopeSchema.parse(JSON.parse(profile.scope));
+    scope = scopeSchema.parse(JSON.parse(profile.scope))
   } catch {
-    scope = {};
+    scope = {}
   }
 
-  const errors: string[] = [];
-  let synced = 0;
+  const errors: string[] = []
+  let synced = 0
 
   try {
     // Build query filters based on scope (for partial sync)
-    const filters = [];
+    const filters = []
     if (profile.type === 'partial') {
       if (scope.libraryIds && scope.libraryIds.length > 0) {
-        filters.push(inArray(mediaItems.libraryId, scope.libraryIds));
+        filters.push(inArray(mediaItems.libraryId, scope.libraryIds))
       }
       if (scope.mediaTypes && scope.mediaTypes.length > 0) {
-        filters.push(inArray(mediaItems.mediaCategory, scope.mediaTypes));
+        filters.push(inArray(mediaItems.mediaCategory, scope.mediaTypes))
       }
       if (scope.itemIds && scope.itemIds.length > 0) {
-        filters.push(inArray(mediaItems.id, scope.itemIds));
+        filters.push(inArray(mediaItems.id, scope.itemIds))
       }
     }
 
@@ -104,32 +101,32 @@ export async function runSyncJob(
             .select()
             .from(mediaItems)
             .where(and(...filters))
-        : await db.select().from(mediaItems);
+        : await db.select().from(mediaItems)
 
     await db
       .update(syncRuns)
       .set({ totalItems: items.length })
-      .where(eq(syncRuns.id, runId));
+      .where(eq(syncRuns.id, runId))
 
     // Write metadata JSON
-    await mkdir(profile.targetPath, { recursive: true });
-    const metadataPath = join(profile.targetPath, 'metadata.json');
-    await writeFile(metadataPath, JSON.stringify(items, null, 2), 'utf-8');
-    synced++;
+    await mkdir(profile.targetPath, { recursive: true })
+    const metadataPath = join(profile.targetPath, 'metadata.json')
+    await writeFile(metadataPath, JSON.stringify(items, null, 2), 'utf-8')
+    synced++
 
     // Optionally copy media files
     if (profile.includeMedia) {
-      const mediaDir = join(profile.targetPath, 'media');
-      await mkdir(mediaDir, { recursive: true });
+      const mediaDir = join(profile.targetPath, 'media')
+      await mkdir(mediaDir, { recursive: true })
       for (const item of items) {
         try {
-          const dest = join(mediaDir, item.fileName);
-          await copyFile(item.filePath, dest);
-          synced++;
+          const dest = join(mediaDir, item.fileName)
+          await copyFile(item.filePath, dest)
+          synced++
         } catch (err) {
           errors.push(
             `${item.filePath}: ${err instanceof Error ? err.message : String(err)}`,
-          );
+          )
         }
       }
     }
@@ -142,9 +139,9 @@ export async function runSyncJob(
         errors: JSON.stringify(errors),
         completedAt: new Date(),
       })
-      .where(eq(syncRuns.id, runId));
+      .where(eq(syncRuns.id, runId))
   } catch (err) {
-    const msg = err instanceof Error ? err.message : String(err);
+    const msg = err instanceof Error ? err.message : String(err)
     await db
       .update(syncRuns)
       .set({
@@ -152,7 +149,7 @@ export async function runSyncJob(
         errors: JSON.stringify([...errors, msg]),
         completedAt: new Date(),
       })
-      .where(eq(syncRuns.id, runId));
+      .where(eq(syncRuns.id, runId))
   }
 }
 
@@ -161,31 +158,31 @@ export async function runSyncJob(
 // ---------------------------------------------------------------------------
 
 export function makeSyncRouter(db: LibSQLDatabase): Hono {
-  const router = new Hono();
+  const router = new Hono()
 
   // GET /sync/profiles — list all profiles
   router.get('/', async (c) => {
-    const rows = await db.select().from(syncProfiles);
-    return c.json(rows);
-  });
+    const rows = await db.select().from(syncProfiles)
+    return c.json(rows)
+  })
 
   // GET /sync/profiles/:id — get single profile
   router.get('/:id', async (c) => {
-    const id = c.req.param('id') as string;
+    const id = c.req.param('id') as string
     const rows = await db
       .select()
       .from(syncProfiles)
-      .where(eq(syncProfiles.id, id));
-    const row = rows[0];
-    if (!row) return c.json({ error: 'Not found' }, 404);
-    return c.json(row);
-  });
+      .where(eq(syncProfiles.id, id))
+    const row = rows[0]
+    if (!row) return c.json({ error: 'Not found' }, 404)
+    return c.json(row)
+  })
 
   // POST /sync/profiles — create profile
   router.post('/', validate('json', createSchema), async (c) => {
-    const body = c.req.valid('json');
-    const id = crypto.randomUUID();
-    const now = new Date();
+    const body = c.req.valid('json')
+    const id = crypto.randomUUID()
+    const now = new Date()
     const inserted = await db
       .insert(syncProfiles)
       .values({
@@ -198,100 +195,100 @@ export function makeSyncRouter(db: LibSQLDatabase): Hono {
         createdAt: now,
         updatedAt: now,
       })
-      .returning();
-    const row = inserted[0];
-    if (!row) return c.json({ error: 'Insert failed' }, 500);
-    return c.json(row, 201);
-  });
+      .returning()
+    const row = inserted[0]
+    if (!row) return c.json({ error: 'Insert failed' }, 500)
+    return c.json(row, 201)
+  })
 
   // PUT /sync/profiles/:id — update profile
   router.put('/:id', validate('json', updateSchema), async (c) => {
-    const id = c.req.param('id') as string;
-    const body = c.req.valid('json');
+    const id = c.req.param('id') as string
+    const body = c.req.valid('json')
 
     const existing = await db
       .select()
       .from(syncProfiles)
-      .where(eq(syncProfiles.id, id));
-    if (!existing[0]) return c.json({ error: 'Not found' }, 404);
+      .where(eq(syncProfiles.id, id))
+    if (!existing[0]) return c.json({ error: 'Not found' }, 404)
 
-    const updates: Record<string, unknown> = { updatedAt: new Date() };
-    if (body.name !== undefined) updates.name = body.name;
-    if (body.type !== undefined) updates.type = body.type;
-    if (body.scope !== undefined) updates.scope = JSON.stringify(body.scope);
-    if (body.targetPath !== undefined) updates.targetPath = body.targetPath;
+    const updates: Record<string, unknown> = { updatedAt: new Date() }
+    if (body.name !== undefined) updates.name = body.name
+    if (body.type !== undefined) updates.type = body.type
+    if (body.scope !== undefined) updates.scope = JSON.stringify(body.scope)
+    if (body.targetPath !== undefined) updates.targetPath = body.targetPath
     if (body.includeMedia !== undefined)
-      updates.includeMedia = body.includeMedia;
+      updates.includeMedia = body.includeMedia
 
     const updated = await db
       .update(syncProfiles)
       .set(updates)
       .where(eq(syncProfiles.id, id))
-      .returning();
-    const row = updated[0];
-    if (!row) return c.json({ error: 'Update failed' }, 500);
-    return c.json(row);
-  });
+      .returning()
+    const row = updated[0]
+    if (!row) return c.json({ error: 'Update failed' }, 500)
+    return c.json(row)
+  })
 
   // DELETE /sync/profiles/:id — delete profile
   router.delete('/:id', async (c) => {
-    const id = c.req.param('id') as string;
+    const id = c.req.param('id') as string
     const existing = await db
       .select()
       .from(syncProfiles)
-      .where(eq(syncProfiles.id, id));
-    if (!existing[0]) return c.json({ error: 'Not found' }, 404);
-    await db.delete(syncProfiles).where(eq(syncProfiles.id, id));
-    return c.body(null, 204);
-  });
+      .where(eq(syncProfiles.id, id))
+    if (!existing[0]) return c.json({ error: 'Not found' }, 404)
+    await db.delete(syncProfiles).where(eq(syncProfiles.id, id))
+    return c.body(null, 204)
+  })
 
   // POST /sync/profiles/:id/run — execute sync
   router.post('/:id/run', async (c) => {
-    const id = c.req.param('id') as string;
+    const id = c.req.param('id') as string
     const profileRows = await db
       .select()
       .from(syncProfiles)
-      .where(eq(syncProfiles.id, id));
-    if (!profileRows[0]) return c.json({ error: 'Not found' }, 404);
+      .where(eq(syncProfiles.id, id))
+    if (!profileRows[0]) return c.json({ error: 'Not found' }, 404)
 
-    const runId = crypto.randomUUID();
-    const now = new Date();
+    const runId = crypto.randomUUID()
+    const now = new Date()
     await db.insert(syncRuns).values({
       id: runId,
       profileId: id,
       status: 'pending',
       createdAt: now,
-    });
+    })
 
-    runSyncJob(db, runId).catch(() => {});
+    runSyncJob(db, runId).catch(() => {})
 
-    return c.json({ runId, status: 'running' }, 202);
-  });
+    return c.json({ runId, status: 'running' }, 202)
+  })
 
   // GET /sync/profiles/:id/runs — list runs for a profile
   router.get('/:id/runs', async (c) => {
-    const id = c.req.param('id') as string;
+    const id = c.req.param('id') as string
     const profileRows = await db
       .select()
       .from(syncProfiles)
-      .where(eq(syncProfiles.id, id));
-    if (!profileRows[0]) return c.json({ error: 'Not found' }, 404);
+      .where(eq(syncProfiles.id, id))
+    if (!profileRows[0]) return c.json({ error: 'Not found' }, 404)
     const rows = await db
       .select()
       .from(syncRuns)
       .where(eq(syncRuns.profileId, id))
-      .orderBy(desc(syncRuns.createdAt));
-    return c.json(rows);
-  });
+      .orderBy(desc(syncRuns.createdAt))
+    return c.json(rows)
+  })
 
   // GET /sync/runs/:id — get single run
   router.get('/runs/:id', async (c) => {
-    const id = c.req.param('id') as string;
-    const rows = await db.select().from(syncRuns).where(eq(syncRuns.id, id));
-    const row = rows[0];
-    if (!row) return c.json({ error: 'Not found' }, 404);
-    return c.json(row);
-  });
+    const id = c.req.param('id') as string
+    const rows = await db.select().from(syncRuns).where(eq(syncRuns.id, id))
+    const row = rows[0]
+    if (!row) return c.json({ error: 'Not found' }, 404)
+    return c.json(row)
+  })
 
-  return router;
+  return router
 }

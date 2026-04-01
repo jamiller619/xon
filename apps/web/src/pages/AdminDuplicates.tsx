@@ -1,86 +1,86 @@
-import { useCallback, useEffect, useState } from 'react';
-import { apiFetch } from '../apiFetch.js';
-import styles from './AdminDuplicates.module.css';
+import { useCallback, useEffect, useState } from 'react'
+import { apiFetch } from '../apiFetch.js'
+import styles from './AdminDuplicates.module.css'
 
 interface MediaItemInfo {
-  id: string;
-  title: string;
-  fileName: string;
-  fileSize: number | null;
-  mimeType: string;
-  mediaCategory: string;
-  libraryId: string;
-  thumbnailSmall?: string;
-  thumbnailMedium?: string;
+  id: string
+  title: string
+  fileName: string
+  fileSize: number | null
+  mimeType: string
+  mediaCategory: string
+  libraryId: string
+  thumbnailSmall?: string
+  thumbnailMedium?: string
 }
 
 interface DuplicateCandidate {
-  id: string;
-  libraryId: string;
-  mediaItemId1: string;
-  mediaItemId2: string;
-  similarity: number;
-  status: 'pending' | 'kept_both' | 'kept_first' | 'kept_second';
-  mediaItem1: MediaItemInfo | null;
-  mediaItem2: MediaItemInfo | null;
+  id: string
+  libraryId: string
+  mediaItemId1: string
+  mediaItemId2: string
+  similarity: number
+  status: 'pending' | 'kept_both' | 'kept_first' | 'kept_second'
+  mediaItem1: MediaItemInfo | null
+  mediaItem2: MediaItemInfo | null
 }
 
 interface Library {
-  id: string;
-  name: string;
+  id: string
+  name: string
 }
 
 function formatBytes(bytes: number | null): string {
-  if (!bytes) return '';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
-  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+  if (!bytes) return ''
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
 }
 
 export default function AdminDuplicates() {
-  const [candidates, setCandidates] = useState<DuplicateCandidate[]>([]);
-  const [libraries, setLibraries] = useState<Library[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [minSimilarity, setMinSimilarity] = useState(70);
-  const [selectedLibraryId, setSelectedLibraryId] = useState('');
-  const [scanning, setScanning] = useState(false);
-  const [scanThreshold, setScanThreshold] = useState(10);
-  const [resolvingId, setResolvingId] = useState<string | null>(null);
+  const [candidates, setCandidates] = useState<DuplicateCandidate[]>([])
+  const [libraries, setLibraries] = useState<Library[]>([])
+  const [loading, setLoading] = useState(true)
+  const [minSimilarity, setMinSimilarity] = useState(70)
+  const [selectedLibraryId, setSelectedLibraryId] = useState('')
+  const [scanning, setScanning] = useState(false)
+  const [scanThreshold, setScanThreshold] = useState(10)
+  const [resolvingId, setResolvingId] = useState<string | null>(null)
 
   const fetchCandidates = useCallback(async () => {
-    setLoading(true);
+    setLoading(true)
     try {
       const params = new URLSearchParams({
         minSimilarity: String(minSimilarity),
         limit: '50',
-      });
-      if (selectedLibraryId) params.set('libraryId', selectedLibraryId);
-      const res = await apiFetch(`/api/v1/ai/duplicates?${params.toString()}`);
+      })
+      if (selectedLibraryId) params.set('libraryId', selectedLibraryId)
+      const res = await apiFetch(`/api/v1/ai/duplicates?${params.toString()}`)
       if (res.ok) {
-        const data = (await res.json()) as { items: DuplicateCandidate[] };
-        setCandidates(data.items);
+        const data = (await res.json()) as { items: DuplicateCandidate[] }
+        setCandidates(data.items)
       }
     } catch {
       // ignore
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
-  }, [minSimilarity, selectedLibraryId]);
+  }, [minSimilarity, selectedLibraryId])
 
   useEffect(() => {
     apiFetch('/api/v1/libraries')
       .then((r) => r.json() as Promise<Library[]>)
       .then(setLibraries)
-      .catch(() => {});
-  }, []);
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
-    fetchCandidates();
-  }, [fetchCandidates]);
+    fetchCandidates()
+  }, [fetchCandidates])
 
   async function handleScan() {
-    if (!selectedLibraryId) return;
-    setScanning(true);
+    if (!selectedLibraryId) return
+    setScanning(true)
     try {
       await apiFetch('/api/v1/ai/duplicates/scan', {
         method: 'POST',
@@ -89,12 +89,12 @@ export default function AdminDuplicates() {
           libraryId: selectedLibraryId,
           threshold: scanThreshold,
         }),
-      });
-      await fetchCandidates();
+      })
+      await fetchCandidates()
     } catch {
       // ignore
     } finally {
-      setScanning(false);
+      setScanning(false)
     }
   }
 
@@ -102,7 +102,7 @@ export default function AdminDuplicates() {
     candidateId: string,
     action: 'keep_both' | 'keep_first' | 'keep_second',
   ) {
-    setResolvingId(candidateId);
+    setResolvingId(candidateId)
     try {
       const res = await apiFetch(
         `/api/v1/ai/duplicates/${candidateId}/resolve`,
@@ -111,14 +111,14 @@ export default function AdminDuplicates() {
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ action }),
         },
-      );
+      )
       if (res.ok) {
-        setCandidates((prev) => prev.filter((c) => c.id !== candidateId));
+        setCandidates((prev) => prev.filter((c) => c.id !== candidateId))
       }
     } catch {
       // ignore
     } finally {
-      setResolvingId(null);
+      setResolvingId(null)
     }
   }
 
@@ -198,7 +198,7 @@ export default function AdminDuplicates() {
                 onClick={() => handleResolve(candidate.id, 'keep_first')}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter')
-                    handleResolve(candidate.id, 'keep_first');
+                    handleResolve(candidate.id, 'keep_first')
                 }}
                 disabled={resolvingId === candidate.id}
                 type="button"
@@ -210,7 +210,7 @@ export default function AdminDuplicates() {
                 onClick={() => handleResolve(candidate.id, 'keep_second')}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter')
-                    handleResolve(candidate.id, 'keep_second');
+                    handleResolve(candidate.id, 'keep_second')
                 }}
                 disabled={resolvingId === candidate.id}
                 type="button"
@@ -222,7 +222,7 @@ export default function AdminDuplicates() {
                 onClick={() => handleResolve(candidate.id, 'keep_both')}
                 onKeyDown={(e) => {
                   if (e.key === 'Enter')
-                    handleResolve(candidate.id, 'keep_both');
+                    handleResolve(candidate.id, 'keep_both')
                 }}
                 disabled={resolvingId === candidate.id}
                 type="button"
@@ -234,7 +234,7 @@ export default function AdminDuplicates() {
         ))
       )}
     </div>
-  );
+  )
 }
 
 function MediaCard({
@@ -249,7 +249,7 @@ function MediaCard({
           <div className={styles.mediaTitle}>{label} (removed)</div>
         </div>
       </div>
-    );
+    )
   }
 
   return (
@@ -269,5 +269,5 @@ function MediaCard({
         <div className={styles.mediaSize}>{formatBytes(item.fileSize)}</div>
       </div>
     </div>
-  );
+  )
 }

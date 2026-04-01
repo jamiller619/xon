@@ -1,41 +1,41 @@
-import Hls from 'hls.js';
-import { useEffect, useRef, useState } from 'react';
-import { apiFetch } from '../apiFetch.js';
-import styles from './VideoPlayer.module.css';
+import Hls from 'hls.js'
+import { useEffect, useRef, useState } from 'react'
+import { apiFetch } from '../apiFetch.js'
+import styles from './VideoPlayer.module.css'
 
 type AudioTrack = {
-  index: number;
-  codec: string;
-  language?: string;
-  title?: string;
-};
+  index: number
+  codec: string
+  language?: string
+  title?: string
+}
 
 type SubtitleTrack =
   | {
-      type: 'embedded';
-      index: number;
-      codec: string;
-      language?: string;
-      title?: string;
-      label: string;
+      type: 'embedded'
+      index: number
+      codec: string
+      language?: string
+      title?: string
+      label: string
     }
-  | { type: 'external'; file: string; language?: string; label: string };
+  | { type: 'external'; file: string; language?: string; label: string }
 
 type TracksResponse = {
-  audioTracks: AudioTrack[];
-  subtitleTracks: SubtitleTrack[];
-};
+  audioTracks: AudioTrack[]
+  subtitleTracks: SubtitleTrack[]
+}
 
 interface VideoPlayerProps {
-  mediaId: string;
-  mimeType?: string;
-  onClose: () => void;
+  mediaId: string
+  mimeType?: string
+  onClose: () => void
 }
 
 function browserCanPlay(mimeType: string): boolean {
-  const v = document.createElement('video');
-  const result = v.canPlayType(mimeType);
-  return result === 'probably' || result === 'maybe';
+  const v = document.createElement('video')
+  const result = v.canPlayType(mimeType)
+  return result === 'probably' || result === 'maybe'
 }
 
 function saveProgress(
@@ -54,7 +54,7 @@ function saveProgress(
     }),
   }).catch(() => {
     // best-effort save
-  });
+  })
 }
 
 export default function VideoPlayer({
@@ -62,157 +62,157 @@ export default function VideoPlayer({
   mimeType,
   onClose,
 }: VideoPlayerProps) {
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const [tracks, setTracks] = useState<TracksResponse | null>(null);
-  const [selectedSub, setSelectedSub] = useState<string>('none');
-  const [selectedAudio, setSelectedAudio] = useState<number>(-1);
+  const videoRef = useRef<HTMLVideoElement>(null)
+  const [tracks, setTracks] = useState<TracksResponse | null>(null)
+  const [selectedSub, setSelectedSub] = useState<string>('none')
+  const [selectedAudio, setSelectedAudio] = useState<number>(-1)
 
   // Determine upfront (before first render) whether HLS is needed
   const [useHls] = useState<boolean>(() => {
-    if (!mimeType) return false;
+    if (!mimeType) return false
     try {
-      return !browserCanPlay(mimeType);
+      return !browserCanPlay(mimeType)
     } catch {
-      return false;
+      return false
     }
-  });
+  })
 
   useEffect(() => {
     apiFetch(`/api/v1/media/${mediaId}/tracks`)
       .then((r) => r.json())
       .then((data: TracksResponse) => {
-        setTracks(data);
+        setTracks(data)
       })
       .catch(() => {
         // tracks unavailable
-      });
-  }, [mediaId]);
+      })
+  }, [mediaId])
 
   // Report progress every 10 seconds while playing
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
+    const video = videoRef.current
+    if (!video) return
 
     const interval = setInterval(() => {
       if (!video.paused && video.duration > 0) {
-        const completed = video.currentTime >= video.duration - 1;
-        saveProgress(mediaId, video.currentTime, video.duration, completed);
+        const completed = video.currentTime >= video.duration - 1
+        saveProgress(mediaId, video.currentTime, video.duration, completed)
       }
-    }, 10000);
+    }, 10000)
 
-    return () => clearInterval(interval);
-  }, [mediaId]);
+    return () => clearInterval(interval)
+  }, [mediaId])
 
   // HLS setup via hls.js when native playback is not supported
   useEffect(() => {
-    if (!useHls) return;
-    const video = videoRef.current;
-    if (!video) return;
+    if (!useHls) return
+    const video = videoRef.current
+    if (!video) return
 
-    const hlsUrl = `/api/v1/media/${mediaId}/hls/playlist.m3u8`;
+    const hlsUrl = `/api/v1/media/${mediaId}/hls/playlist.m3u8`
 
     if (Hls.isSupported()) {
-      const hls = new Hls();
-      hls.loadSource(hlsUrl);
-      hls.attachMedia(video);
-      return () => hls.destroy();
+      const hls = new Hls()
+      hls.loadSource(hlsUrl)
+      hls.attachMedia(video)
+      return () => hls.destroy()
     }
     // Safari supports HLS natively
     if (video.canPlayType('application/vnd.apple.mpegurl')) {
-      video.src = hlsUrl;
+      video.src = hlsUrl
     }
-  }, [useHls, mediaId]);
+  }, [useHls, mediaId])
 
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
+    const video = videoRef.current
+    if (!video) return
 
     function handleKeyDown(e: KeyboardEvent) {
-      if (!video) return;
+      if (!video) return
       switch (e.key) {
         case ' ':
-          e.preventDefault();
+          e.preventDefault()
           if (video.paused) {
-            void video.play();
+            void video.play()
           } else {
-            video.pause();
+            video.pause()
           }
-          break;
+          break
         case 'ArrowLeft':
-          e.preventDefault();
-          video.currentTime = Math.max(0, video.currentTime - 5);
-          break;
+          e.preventDefault()
+          video.currentTime = Math.max(0, video.currentTime - 5)
+          break
         case 'ArrowRight':
-          e.preventDefault();
-          video.currentTime = Math.min(video.duration, video.currentTime + 5);
-          break;
+          e.preventDefault()
+          video.currentTime = Math.min(video.duration, video.currentTime + 5)
+          break
         case 'f':
         case 'F':
-          e.preventDefault();
+          e.preventDefault()
           if (document.fullscreenElement) {
-            void document.exitFullscreen();
+            void document.exitFullscreen()
           } else {
-            void video.requestFullscreen();
+            void video.requestFullscreen()
           }
-          break;
+          break
         case 'Escape':
-          onClose();
-          break;
+          onClose()
+          break
         default:
-          break;
+          break
       }
     }
 
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
 
   // Sync selected subtitle track with the video's textTracks
   useEffect(() => {
-    const video = videoRef.current;
-    if (!video) return;
+    const video = videoRef.current
+    if (!video) return
 
     const syncTracks = () => {
       for (let i = 0; i < video.textTracks.length; i++) {
-        const track = video.textTracks[i];
-        if (!track) continue;
-        track.mode = track.id === selectedSub ? 'showing' : 'hidden';
+        const track = video.textTracks[i]
+        if (!track) continue
+        track.mode = track.id === selectedSub ? 'showing' : 'hidden'
       }
-    };
+    }
 
     if (video.readyState >= 1) {
-      syncTracks();
+      syncTracks()
     } else {
-      video.addEventListener('loadedmetadata', syncTracks, { once: true });
+      video.addEventListener('loadedmetadata', syncTracks, { once: true })
     }
-  }, [selectedSub]);
+  }, [selectedSub])
 
   // Attempt audio track switching (Safari / future browsers)
   useEffect(() => {
-    if (selectedAudio < 0) return;
-    const video = videoRef.current;
-    if (!video) return;
+    if (selectedAudio < 0) return
+    const video = videoRef.current
+    if (!video) return
     // HTMLVideoElement.audioTracks is non-standard; access via index signature
     const audioTracks = (
       video as unknown as {
-        audioTracks?: { length: number; [i: number]: { enabled: boolean } };
+        audioTracks?: { length: number; [i: number]: { enabled: boolean } }
       }
-    ).audioTracks;
-    if (!audioTracks) return;
+    ).audioTracks
+    if (!audioTracks) return
     for (let i = 0; i < audioTracks.length; i++) {
-      const t = audioTracks[i];
-      if (t) t.enabled = i === selectedAudio;
+      const t = audioTracks[i]
+      if (t) t.enabled = i === selectedAudio
     }
-  }, [selectedAudio]);
+  }, [selectedAudio])
 
   const externalSubTracks =
     tracks?.subtitleTracks.filter(
       (t): t is Extract<SubtitleTrack, { type: 'external' }> =>
         t.type === 'external',
-    ) ?? [];
+    ) ?? []
 
-  const hasSubtitles = (tracks?.subtitleTracks.length ?? 0) > 0;
-  const hasAudio = (tracks?.audioTracks.length ?? 0) > 1;
+  const hasSubtitles = (tracks?.subtitleTracks.length ?? 0) > 0
+  const hasAudio = (tracks?.audioTracks.length ?? 0) > 1
 
   return (
     <div className={styles.playerWrapper ?? ''}>
@@ -290,5 +290,5 @@ export default function VideoPlayer({
         </div>
       )}
     </div>
-  );
+  )
 }

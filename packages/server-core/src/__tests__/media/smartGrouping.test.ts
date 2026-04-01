@@ -1,19 +1,19 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it } from 'vitest'
 import {
   detectBookSeries,
   detectMultiDiscAlbums,
   detectSupplementaryMaterials,
-} from '../../media/smartGrouping.js';
+} from '../../media/smartGrouping.js'
 
 // Minimal mediaItem shape for testing
 type MinItem = {
-  id: string;
-  fileName: string;
-  filePath: string;
-  mediaCategory: string | null;
-  title: string | null;
-  metadata: string;
-};
+  id: string
+  fileName: string
+  filePath: string
+  mediaCategory: string | null
+  title: string | null
+  metadata: string
+}
 
 function makeItem(overrides: Partial<MinItem> & { id: string }): MinItem {
   return {
@@ -23,13 +23,13 @@ function makeItem(overrides: Partial<MinItem> & { id: string }): MinItem {
     title: null,
     metadata: '{}',
     ...overrides,
-  };
+  }
 }
 
 // Cast helper — our functions accept LibSQLDatabase $inferSelect which includes
 // more fields; for unit tests we pass the minimal subset.
 // biome-ignore lint/suspicious/noExplicitAny: test helper
-type AnyItem = any;
+type AnyItem = any
 
 describe('detectMultiDiscAlbums', () => {
   it('returns empty when all tracks are in the same directory', () => {
@@ -44,9 +44,9 @@ describe('detectMultiDiscAlbums', () => {
         filePath: '/music/Album/02.mp3',
         metadata: '{"album":"Album"}',
       }),
-    ];
-    expect(detectMultiDiscAlbums(items)).toHaveLength(0);
-  });
+    ]
+    expect(detectMultiDiscAlbums(items)).toHaveLength(0)
+  })
 
   it('detects multi-disc album when tracks are in disc subdirectories', () => {
     const items: AnyItem[] = [
@@ -65,14 +65,14 @@ describe('detectMultiDiscAlbums', () => {
         filePath: '/music/Album/Disc 2/01.mp3',
         metadata: '{"album":"Album"}',
       }),
-    ];
-    const result = detectMultiDiscAlbums(items);
-    expect(result).toHaveLength(1);
-    expect(result[0]?.title).toBe('Album');
-    expect(result[0]?.type).toBe('album');
-    expect(result[0]?.itemIds).toHaveLength(3);
-    expect(result[0]?.confidence).toBeGreaterThan(0);
-  });
+    ]
+    const result = detectMultiDiscAlbums(items)
+    expect(result).toHaveLength(1)
+    expect(result[0]?.title).toBe('Album')
+    expect(result[0]?.type).toBe('album')
+    expect(result[0]?.itemIds).toHaveLength(3)
+    expect(result[0]?.confidence).toBeGreaterThan(0)
+  })
 
   it('detects multi-disc album with CD pattern', () => {
     const items: AnyItem[] = [
@@ -86,11 +86,11 @@ describe('detectMultiDiscAlbums', () => {
         filePath: '/music/Artist/Album/CD2/track.mp3',
         metadata: '{"album":"Album"}',
       }),
-    ];
-    const result = detectMultiDiscAlbums(items);
-    expect(result).toHaveLength(1);
-    expect(result[0]?.title).toBe('Album');
-  });
+    ]
+    const result = detectMultiDiscAlbums(items)
+    expect(result).toHaveLength(1)
+    expect(result[0]?.title).toBe('Album')
+  })
 
   it('ignores non-music categories', () => {
     const items: AnyItem[] = [
@@ -106,9 +106,9 @@ describe('detectMultiDiscAlbums', () => {
         mediaCategory: 'Documents',
         metadata: '{"album":"Report"}',
       }),
-    ];
-    expect(detectMultiDiscAlbums(items)).toHaveLength(0);
-  });
+    ]
+    expect(detectMultiDiscAlbums(items)).toHaveLength(0)
+  })
 
   it('uses parent directory name when album metadata is absent', () => {
     const items: AnyItem[] = [
@@ -122,12 +122,12 @@ describe('detectMultiDiscAlbums', () => {
         filePath: '/music/MyAlbum/Disc 2/01.mp3',
         metadata: '{}',
       }),
-    ];
-    const result = detectMultiDiscAlbums(items);
-    expect(result).toHaveLength(1);
-    expect(result[0]?.title).toBeTruthy();
-  });
-});
+    ]
+    const result = detectMultiDiscAlbums(items)
+    expect(result).toHaveLength(1)
+    expect(result[0]?.title).toBeTruthy()
+  })
+})
 
 describe('detectBookSeries', () => {
   it('returns empty when there is only one book', () => {
@@ -139,9 +139,9 @@ describe('detectBookSeries', () => {
         mediaCategory: 'Documents',
         title: 'MyBook Vol 1',
       }),
-    ];
-    expect(detectBookSeries(items)).toHaveLength(0);
-  });
+    ]
+    expect(detectBookSeries(items)).toHaveLength(0)
+  })
 
   it('detects a series from Volume indicators', () => {
     const items: AnyItem[] = [
@@ -166,12 +166,12 @@ describe('detectBookSeries', () => {
         mediaCategory: 'Documents',
         title: 'Dune Vol 3',
       }),
-    ];
-    const result = detectBookSeries(items);
-    expect(result).toHaveLength(1);
-    expect(result[0]?.type).toBe('book-series');
-    expect(result[0]?.itemIds).toHaveLength(3);
-  });
+    ]
+    const result = detectBookSeries(items)
+    expect(result).toHaveLength(1)
+    expect(result[0]?.type).toBe('book-series')
+    expect(result[0]?.itemIds).toHaveLength(3)
+  })
 
   it('detects audiobook series with Part indicator', () => {
     const items: AnyItem[] = [
@@ -189,12 +189,12 @@ describe('detectBookSeries', () => {
         mediaCategory: 'Audiobooks',
         title: 'Foundation Part 2',
       }),
-    ];
-    const result = detectBookSeries(items);
-    expect(result).toHaveLength(1);
-    expect(result[0]?.type).toBe('book-series');
-    expect(result[0]?.itemIds).toHaveLength(2);
-  });
+    ]
+    const result = detectBookSeries(items)
+    expect(result).toHaveLength(1)
+    expect(result[0]?.type).toBe('book-series')
+    expect(result[0]?.itemIds).toHaveLength(2)
+  })
 
   it('ignores non-book categories', () => {
     const items: AnyItem[] = [
@@ -212,10 +212,10 @@ describe('detectBookSeries', () => {
         mediaCategory: 'Music',
         title: 'Track Vol 2',
       }),
-    ];
-    expect(detectBookSeries(items)).toHaveLength(0);
-  });
-});
+    ]
+    expect(detectBookSeries(items)).toHaveLength(0)
+  })
+})
 
 describe('detectSupplementaryMaterials', () => {
   it('returns empty for single items', () => {
@@ -226,9 +226,9 @@ describe('detectSupplementaryMaterials', () => {
         filePath: '/course/lecture.mp4',
         mediaCategory: 'Movies',
       }),
-    ];
-    expect(detectSupplementaryMaterials(items)).toHaveLength(0);
-  });
+    ]
+    expect(detectSupplementaryMaterials(items)).toHaveLength(0)
+  })
 
   it('detects supplementary materials from different categories with shared base name', () => {
     const items: AnyItem[] = [
@@ -244,12 +244,12 @@ describe('detectSupplementaryMaterials', () => {
         filePath: '/videos/React Course.mp4',
         mediaCategory: 'Movies',
       }),
-    ];
-    const result = detectSupplementaryMaterials(items);
-    expect(result).toHaveLength(1);
-    expect(result[0]?.type).toBe('collection');
-    expect(result[0]?.itemIds).toHaveLength(2);
-  });
+    ]
+    const result = detectSupplementaryMaterials(items)
+    expect(result).toHaveLength(1)
+    expect(result[0]?.type).toBe('collection')
+    expect(result[0]?.itemIds).toHaveLength(2)
+  })
 
   it('detects files in different directories with same base name', () => {
     const items: AnyItem[] = [
@@ -265,11 +265,11 @@ describe('detectSupplementaryMaterials', () => {
         filePath: '/course/week2/intro.mp4',
         mediaCategory: 'Movies',
       }),
-    ];
-    const result = detectSupplementaryMaterials(items);
-    expect(result).toHaveLength(1);
-    expect(result[0]?.itemIds).toHaveLength(2);
-  });
+    ]
+    const result = detectSupplementaryMaterials(items)
+    expect(result).toHaveLength(1)
+    expect(result[0]?.itemIds).toHaveLength(2)
+  })
 
   it('ignores items from the same directory with same category', () => {
     const items: AnyItem[] = [
@@ -285,8 +285,8 @@ describe('detectSupplementaryMaterials', () => {
         filePath: '/show/episode guide.mp4',
         mediaCategory: 'Movies',
       }),
-    ];
+    ]
     // Same category, same dir — should not be flagged
-    expect(detectSupplementaryMaterials(items)).toHaveLength(0);
-  });
-});
+    expect(detectSupplementaryMaterials(items)).toHaveLength(0)
+  })
+})

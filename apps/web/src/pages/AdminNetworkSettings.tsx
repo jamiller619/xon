@@ -1,16 +1,16 @@
-import { useCallback, useEffect, useState } from 'react';
-import { apiFetch } from '../apiFetch.js';
-import styles from './AdminNetworkSettings.module.css';
+import { useCallback, useEffect, useState } from 'react'
+import { apiFetch } from '../apiFetch.js'
+import styles from './AdminNetworkSettings.module.css'
 
 interface NetworkSettingsData {
-  httpsEnabled: boolean;
-  httpsCertPath: string | null;
-  httpsKeyPath: string | null;
-  acmeEnabled: boolean;
-  acmeDomain: string | null;
-  acmeEmail: string | null;
-  acmeCertsDir: string | null;
-  trustProxy: boolean;
+  httpsEnabled: boolean
+  httpsCertPath: string | null
+  httpsKeyPath: string | null
+  acmeEnabled: boolean
+  acmeDomain: string | null
+  acmeEmail: string | null
+  acmeCertsDir: string | null
+  trustProxy: boolean
 }
 
 const DEFAULT_SETTINGS: NetworkSettingsData = {
@@ -22,50 +22,50 @@ const DEFAULT_SETTINGS: NetworkSettingsData = {
   acmeEmail: null,
   acmeCertsDir: null,
   trustProxy: false,
-};
+}
 
 export default function AdminNetworkSettings() {
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
-  const [httpsEnabled, setHttpsEnabled] = useState(false);
-  const [httpsCertPath, setHttpsCertPath] = useState('');
-  const [httpsKeyPath, setHttpsKeyPath] = useState('');
-  const [acmeEnabled, setAcmeEnabled] = useState(false);
-  const [acmeDomain, setAcmeDomain] = useState('');
-  const [acmeEmail, setAcmeEmail] = useState('');
-  const [acmeCertsDir, setAcmeCertsDir] = useState('');
-  const [trustProxy, setTrustProxy] = useState(false);
+  const [httpsEnabled, setHttpsEnabled] = useState(false)
+  const [httpsCertPath, setHttpsCertPath] = useState('')
+  const [httpsKeyPath, setHttpsKeyPath] = useState('')
+  const [acmeEnabled, setAcmeEnabled] = useState(false)
+  const [acmeDomain, setAcmeDomain] = useState('')
+  const [acmeEmail, setAcmeEmail] = useState('')
+  const [acmeCertsDir, setAcmeCertsDir] = useState('')
+  const [trustProxy, setTrustProxy] = useState(false)
 
   const applySettings = useCallback((data: NetworkSettingsData) => {
-    setHttpsEnabled(data.httpsEnabled);
-    setHttpsCertPath(data.httpsCertPath ?? '');
-    setHttpsKeyPath(data.httpsKeyPath ?? '');
-    setAcmeEnabled(data.acmeEnabled);
-    setAcmeDomain(data.acmeDomain ?? '');
-    setAcmeEmail(data.acmeEmail ?? '');
-    setAcmeCertsDir(data.acmeCertsDir ?? '');
-    setTrustProxy(data.trustProxy);
-  }, []);
+    setHttpsEnabled(data.httpsEnabled)
+    setHttpsCertPath(data.httpsCertPath ?? '')
+    setHttpsKeyPath(data.httpsKeyPath ?? '')
+    setAcmeEnabled(data.acmeEnabled)
+    setAcmeDomain(data.acmeDomain ?? '')
+    setAcmeEmail(data.acmeEmail ?? '')
+    setAcmeCertsDir(data.acmeCertsDir ?? '')
+    setTrustProxy(data.trustProxy)
+  }, [])
 
   useEffect(() => {
-    setLoading(true);
+    setLoading(true)
     apiFetch('/api/v1/admin/server-settings')
       .then((r) => r.json() as Promise<NetworkSettingsData>)
       .then((data) => {
-        applySettings(data);
+        applySettings(data)
       })
       .catch(() => setError('Failed to load network settings'))
-      .finally(() => setLoading(false));
-  }, [applySettings]);
+      .finally(() => setLoading(false))
+  }, [applySettings])
 
   async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setError('');
-    setSuccess('');
+    e.preventDefault()
+    setSaving(true)
+    setError('')
+    setSuccess('')
 
     const body: Record<string, unknown> = {
       httpsEnabled,
@@ -76,31 +76,29 @@ export default function AdminNetworkSettings() {
       acmeEmail: acmeEmail || null,
       acmeCertsDir: acmeCertsDir || null,
       trustProxy,
-    };
+    }
 
     try {
       const res = await apiFetch('/api/v1/admin/server-settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
-      });
+      })
       if (!res.ok) {
         const errBody = (await res.json().catch(() => ({}))) as {
-          error?: string;
-        };
-        setError(errBody.error ?? 'Failed to save settings');
+          error?: string
+        }
+        setError(errBody.error ?? 'Failed to save settings')
       } else {
-        const data = (await res.json()) as NetworkSettingsData;
-        applySettings(data);
-        setSuccess(
-          'Settings saved. Restart the server to apply HTTPS changes.',
-        );
-        setTimeout(() => setSuccess(''), 5000);
+        const data = (await res.json()) as NetworkSettingsData
+        applySettings(data)
+        setSuccess('Settings saved. Restart the server to apply HTTPS changes.')
+        setTimeout(() => setSuccess(''), 5000)
       }
     } catch {
-      setError('Failed to save settings');
+      setError('Failed to save settings')
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
   }
 
@@ -109,7 +107,7 @@ export default function AdminNetworkSettings() {
       <div className={styles.page ?? ''}>
         <p className={styles.loading ?? ''}>Loading...</p>
       </div>
-    );
+    )
   }
 
   return (
@@ -256,7 +254,7 @@ export default function AdminNetworkSettings() {
         </div>
       </form>
     </div>
-  );
+  )
 }
 
-export { DEFAULT_SETTINGS };
+export { DEFAULT_SETTINGS }

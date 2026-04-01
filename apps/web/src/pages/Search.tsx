@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
-import { apiFetch } from '../apiFetch.js';
-import MediaCard, { type MediaCardItem } from '../components/MediaCard';
-import { useAppStore } from '../store/index';
-import styles from './Search.module.css';
+import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
+import { apiFetch } from '../apiFetch.js'
+import MediaCard, { type MediaCardItem } from '../components/MediaCard'
+import { useAppStore } from '../store/index'
+import styles from './Search.module.css'
 
 const MEDIA_CATEGORIES = [
   'Movies',
@@ -26,16 +26,16 @@ const MEDIA_CATEGORIES = [
   'Archives',
   'Fonts',
   'Icons',
-] as const;
+] as const
 
-const PAGE_SIZE = 20;
+const PAGE_SIZE = 20
 
 interface SearchResult {
-  id: string;
-  title: string | null;
-  mediaCategory: string | null;
-  thumbnailUrls: { small: string; medium: string; large: string } | null;
-  createdAt: string | null;
+  id: string
+  title: string | null
+  mediaCategory: string | null
+  thumbnailUrls: { small: string; medium: string; large: string } | null
+  createdAt: string | null
 }
 
 function toMediaCardItem(r: SearchResult): MediaCardItem {
@@ -49,11 +49,11 @@ function toMediaCardItem(r: SearchResult): MediaCardItem {
       ? Math.floor(new Date(r.createdAt).getTime() / 1000)
       : null,
     thumbnailUrls: r.thumbnailUrls,
-  };
+  }
 }
 
 function SkeletonCard() {
-  return <div className={styles.skeletonCard ?? ''} />;
+  return <div className={styles.skeletonCard ?? ''} />
 }
 
 function SkeletonRow() {
@@ -63,75 +63,75 @@ function SkeletonRow() {
         <div className={styles.skeletonLine ?? ''} />
       </td>
     </tr>
-  );
+  )
 }
 
 export default function Search() {
-  const [searchParams, setSearchParams] = useSearchParams();
-  const { viewMode, setViewMode } = useAppStore();
+  const [searchParams, setSearchParams] = useSearchParams()
+  const { viewMode, setViewMode } = useAppStore()
 
-  const q = searchParams.get('q') ?? '';
-  const category = searchParams.get('category') ?? '';
-  const page = Number(searchParams.get('page') ?? '1');
+  const q = searchParams.get('q') ?? ''
+  const category = searchParams.get('category') ?? ''
+  const page = Number(searchParams.get('page') ?? '1')
 
-  const [results, setResults] = useState<MediaCardItem[]>([]);
-  const [totalPages, setTotalPages] = useState(1);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [results, setResults] = useState<MediaCardItem[]>([])
+  const [totalPages, setTotalPages] = useState(1)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     if (!q) {
-      setResults([]);
-      setTotalPages(1);
-      setLoading(false);
-      return;
+      setResults([])
+      setTotalPages(1)
+      setLoading(false)
+      return
     }
 
-    setLoading(true);
-    setError(null);
+    setLoading(true)
+    setError(null)
 
     const params = new URLSearchParams({
       q,
       limit: String(PAGE_SIZE),
       offset: String((page - 1) * PAGE_SIZE),
-    });
-    if (category) params.set('category', category);
+    })
+    if (category) params.set('category', category)
 
     apiFetch(`/api/v1/search?${params.toString()}`)
       .then((r) => r.json())
       .then((data) => {
-        const rows = (data as { results: SearchResult[] }).results;
-        setResults(rows.map(toMediaCardItem));
+        const rows = (data as { results: SearchResult[] }).results
+        setResults(rows.map(toMediaCardItem))
         if (rows.length === PAGE_SIZE) {
-          setTotalPages((prev) => Math.max(prev, page + 1));
+          setTotalPages((prev) => Math.max(prev, page + 1))
         } else {
-          setTotalPages(page);
+          setTotalPages(page)
         }
-        setLoading(false);
+        setLoading(false)
       })
       .catch(() => {
-        setError('Search failed. Please try again.');
-        setLoading(false);
-      });
-  }, [q, category, page]);
+        setError('Search failed. Please try again.')
+        setLoading(false)
+      })
+  }, [q, category, page])
 
   function setCategory(val: string) {
     setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (val) next.set('category', val);
-      else next.delete('category');
-      next.delete('page');
-      return next;
-    });
+      const next = new URLSearchParams(prev)
+      if (val) next.set('category', val)
+      else next.delete('category')
+      next.delete('page')
+      return next
+    })
   }
 
   function setPage(p: number) {
     setSearchParams((prev) => {
-      const next = new URLSearchParams(prev);
-      if (p > 1) next.set('page', String(p));
-      else next.delete('page');
-      return next;
-    });
+      const next = new URLSearchParams(prev)
+      if (p > 1) next.set('page', String(p))
+      else next.delete('page')
+      return next
+    })
   }
 
   return (
@@ -269,5 +269,5 @@ export default function Search() {
         </div>
       )}
     </div>
-  );
+  )
 }

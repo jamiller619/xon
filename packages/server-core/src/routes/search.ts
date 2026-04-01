@@ -1,47 +1,47 @@
-import { type SQL, eq, sql } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { Hono } from 'hono';
-import { z } from 'zod';
-import { getAllowedRatings, libraryAccess, users } from '../db/schema.js';
-import { validate } from '../http/validate.js';
+import { type SQL, eq, sql } from 'drizzle-orm'
+import type { LibSQLDatabase } from 'drizzle-orm/libsql'
+import { Hono } from 'hono'
+import { z } from 'zod'
+import { getAllowedRatings, libraryAccess, users } from '../db/schema.js'
+import { validate } from '../http/validate.js'
 
 const searchQuerySchema = z.object({
   q: z.string().trim().min(1, 'q is required'),
   category: z.string().optional(),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
   offset: z.coerce.number().int().min(0).optional().default(0),
-});
+})
 
-const PRIVILEGED_ROLES = ['admin', 'manager'] as const;
+const PRIVILEGED_ROLES = ['admin', 'manager'] as const
 
 async function getAccessibleLibraryIds(
   db: LibSQLDatabase,
   userId: string,
   role: string,
 ): Promise<string[] | null> {
-  if ((PRIVILEGED_ROLES as readonly string[]).includes(role)) return null;
+  if ((PRIVILEGED_ROLES as readonly string[]).includes(role)) return null
   const rows = await db
     .select({ libraryId: libraryAccess.libraryId })
     .from(libraryAccess)
-    .where(eq(libraryAccess.userId, userId));
-  return rows.map((r) => r.libraryId);
+    .where(eq(libraryAccess.userId, userId))
+  return rows.map((r) => r.libraryId)
 }
 
 interface SearchRow {
-  id: string;
-  library_id: string;
-  title: string | null;
-  description: string | null;
-  file_name: string;
-  media_category: string | null;
-  content_rating: string | null;
-  thumbnail_paths: string | null;
-  created_at: number;
-  fts_rank: number;
+  id: string
+  library_id: string
+  title: string | null
+  description: string | null
+  file_name: string
+  media_category: string | null
+  content_rating: string | null
+  thumbnail_paths: string | null
+  created_at: number
+  fts_rank: number
 }
 
 export function makeSearchRouter(db: LibSQLDatabase): Hono {
-  const router = new Hono();
+  const router = new Hono()
 
   router.get('/', validate('query', searchQuerySchema), async (c) => {
     const {
@@ -49,26 +49,26 @@ export function makeSearchRouter(db: LibSQLDatabase): Hono {
       category,
       limit: limitNum,
       offset: offsetNum,
-    } = c.req.valid('query');
+    } = c.req.valid('query')
 
-    const user = c.get('user');
+    const user = c.get('user')
 
     // Get accessible library IDs for this user
-    const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role);
+    const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
     if (accessibleIds !== null && accessibleIds.length === 0) {
-      return c.json({ results: [] });
+      return c.json({ results: [] })
     }
 
     // Get user's content rating restriction
     const userRows = await db
       .select({ maxContentRating: users.maxContentRating })
       .from(users)
-      .where(eq(users.id, user.id));
-    const maxRating = userRows[0]?.maxContentRating ?? 'none';
-    const allowedRatings = getAllowedRatings(maxRating);
+      .where(eq(users.id, user.id))
+    const maxRating = userRows[0]?.maxContentRating ?? 'none'
+    const allowedRatings = getAllowedRatings(maxRating)
 
     // Build WHERE conditions for the raw SQL query
-    const conditions: SQL[] = [sql`media_fts MATCH ${q}`];
+    const conditions: SQL[] = [sql`media_fts MATCH ${q}`]
 
     if (accessibleIds !== null) {
       conditions.push(
@@ -76,37 +76,37 @@ export function makeSearchRouter(db: LibSQLDatabase): Hono {
           accessibleIds.map((id) => sql`${id}`),
           sql`, `,
         )})`,
-      );
+      )
     }
 
     if (category) {
-      conditions.push(sql`m.media_category = ${category}`);
+      conditions.push(sql`m.media_category = ${category}`)
     }
 
     if (allowedRatings !== null) {
       if (allowedRatings.length === 0) {
-        conditions.push(sql`m.content_rating IS NULL`);
+        conditions.push(sql`m.content_rating IS NULL`)
       } else {
-        const unratedAllowed = (allowedRatings as string[]).includes('unrated');
+        const unratedAllowed = (allowedRatings as string[]).includes('unrated')
         if (unratedAllowed) {
           conditions.push(
             sql`(m.content_rating IS NULL OR m.content_rating IN (${sql.join(
               allowedRatings.map((r) => sql`${r}`),
               sql`, `,
             )}))`,
-          );
+          )
         } else {
           conditions.push(
             sql`m.content_rating IN (${sql.join(
               allowedRatings.map((r) => sql`${r}`),
               sql`, `,
             )})`,
-          );
+          )
         }
       }
     }
 
-    const whereClause = sql.join(conditions, sql` AND `);
+    const whereClause = sql.join(conditions, sql` AND `)
 
     const rows = await db.all<SearchRow>(sql`
       SELECT
@@ -125,7 +125,7 @@ export function makeSearchRouter(db: LibSQLDatabase): Hono {
       WHERE ${whereClause}
       ORDER BY fts_rank
       LIMIT ${limitNum} OFFSET ${offsetNum}
-    `);
+    `)
 
     const results = rows.map((row) => ({
       id: row.id,
@@ -145,10 +145,10 @@ export function makeSearchRouter(db: LibSQLDatabase): Hono {
             large: `/api/v1/media/${row.id}/thumbnail?size=large`,
           }
         : null,
-    }));
+    }))
 
-    return c.json({ results });
-  });
+    return c.json({ results })
+  })
 
-  return router;
+  return router
 }

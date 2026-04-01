@@ -1,14 +1,14 @@
-import { Outlet } from 'react-router-dom';
-import { useAppStore, useAudioStore } from '../store/index';
-import AudioPlayer from './AudioPlayer';
-import styles from './Layout.module.css';
-import Sidebar from './Sidebar';
-import TopBar from './TopBar';
+import { Outlet } from 'react-router-dom'
+import { useAppStore, useAudioStore } from '../store/index'
+import AudioPlayer from './AudioPlayer'
+import styles from './Layout.module.css'
+import Sidebar from './Sidebar'
+import TopBar from './TopBar'
 
 export default function Layout() {
-  const sidebarOpen = useAppStore((s) => s.sidebarOpen);
-  const setSidebarOpen = useAppStore((s) => s.setSidebarOpen);
-  const hasQueue = useAudioStore((s) => s.queue.length > 0);
+  const sidebarOpen = useAppStore((s) => s.sidebarOpen)
+  const setSidebarOpen = useAppStore((s) => s.setSidebarOpen)
+  const hasQueue = useAudioStore((s) => s.queue.length > 0)
 
   return (
     <div className={styles.shell ?? ''}>
@@ -29,5 +29,5 @@ export default function Layout() {
       </div>
       <AudioPlayer />
     </div>
-  );
+  )
 }

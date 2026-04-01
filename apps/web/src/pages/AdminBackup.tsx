@@ -1,51 +1,51 @@
-import { useEffect, useState } from 'react';
-import { apiFetch } from '../apiFetch.js';
-import styles from './AdminBackup.module.css';
+import { useEffect, useState } from 'react'
+import { apiFetch } from '../apiFetch.js'
+import styles from './AdminBackup.module.css'
 
 // ---------------------------------------------------------------------------
 // Types
 // ---------------------------------------------------------------------------
 
 interface BackupTarget {
-  id: string;
-  name: string;
-  type: 'local' | 'network' | 'plugin';
-  config: string;
-  enabled: boolean;
-  removeDeleted: boolean;
-  schedule: string | null;
-  retentionKeepCount: number | null;
-  retentionKeepDays: number | null;
-  nextScheduledAt: string | null;
-  createdAt: string;
+  id: string
+  name: string
+  type: 'local' | 'network' | 'plugin'
+  config: string
+  enabled: boolean
+  removeDeleted: boolean
+  schedule: string | null
+  retentionKeepCount: number | null
+  retentionKeepDays: number | null
+  nextScheduledAt: string | null
+  createdAt: string
 }
 
 interface BackupJob {
-  id: string;
-  targetId: string;
-  scope: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
-  totalFiles: number;
-  copiedFiles: number;
-  skippedFiles: number;
-  errors: string;
-  startedAt: string | null;
-  completedAt: string | null;
-  createdAt: string;
+  id: string
+  targetId: string
+  scope: string
+  status: 'pending' | 'running' | 'completed' | 'failed'
+  totalFiles: number
+  copiedFiles: number
+  skippedFiles: number
+  errors: string
+  startedAt: string | null
+  completedAt: string | null
+  createdAt: string
 }
 
 interface VerifyJob {
-  id: string;
-  targetId: string;
-  status: 'pending' | 'running' | 'completed' | 'failed';
-  totalFiles: number;
-  passedFiles: number;
-  failedFiles: number;
-  missingFiles: number;
-  failedItems: string;
-  startedAt: string | null;
-  completedAt: string | null;
-  createdAt: string;
+  id: string
+  targetId: string
+  status: 'pending' | 'running' | 'completed' | 'failed'
+  totalFiles: number
+  passedFiles: number
+  failedFiles: number
+  missingFiles: number
+  failedItems: string
+  startedAt: string | null
+  completedAt: string | null
+  createdAt: string
 }
 
 // ---------------------------------------------------------------------------
@@ -53,29 +53,29 @@ interface VerifyJob {
 // ---------------------------------------------------------------------------
 
 function formatDate(ts: string | null): string {
-  if (!ts) return '—';
-  return new Date(ts).toLocaleString();
+  if (!ts) return '—'
+  return new Date(ts).toLocaleString()
 }
 
 function formatDuration(start: string | null, end: string | null): string {
-  if (!start || !end) return '—';
-  const ms = new Date(end).getTime() - new Date(start).getTime();
-  if (ms < 1000) return `${ms}ms`;
-  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`;
-  return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`;
+  if (!start || !end) return '—'
+  const ms = new Date(end).getTime() - new Date(start).getTime()
+  if (ms < 1000) return `${ms}ms`
+  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
+  return `${Math.floor(ms / 60000)}m ${Math.floor((ms % 60000) / 1000)}s`
 }
 
 function statusBadge(status: string): string {
   switch (status) {
     case 'completed':
-      return styles.badgeGreen ?? '';
+      return styles.badgeGreen ?? ''
     case 'running':
     case 'pending':
-      return styles.badgeBlue ?? '';
+      return styles.badgeBlue ?? ''
     case 'failed':
-      return styles.badgeRed ?? '';
+      return styles.badgeRed ?? ''
     default:
-      return styles.badge ?? '';
+      return styles.badge ?? ''
   }
 }
 
@@ -84,13 +84,13 @@ function statusBadge(status: string): string {
 // ---------------------------------------------------------------------------
 
 interface TargetFormState {
-  name: string;
-  type: 'local' | 'network' | 'plugin';
-  destPath: string;
-  mountPath: string;
-  pluginId: string;
-  enabled: boolean;
-  removeDeleted: boolean;
+  name: string
+  type: 'local' | 'network' | 'plugin'
+  destPath: string
+  mountPath: string
+  pluginId: string
+  enabled: boolean
+  removeDeleted: boolean
 }
 
 const EMPTY_TARGET_FORM: TargetFormState = {
@@ -101,32 +101,32 @@ const EMPTY_TARGET_FORM: TargetFormState = {
   pluginId: '',
   enabled: true,
   removeDeleted: false,
-};
+}
 
 function buildConfig(form: TargetFormState): Record<string, string> {
-  if (form.type === 'local') return { destPath: form.destPath };
-  if (form.type === 'network') return { mountPath: form.mountPath };
-  return { pluginId: form.pluginId };
+  if (form.type === 'local') return { destPath: form.destPath }
+  if (form.type === 'network') return { mountPath: form.mountPath }
+  return { pluginId: form.pluginId }
 }
 
 function parseConfig(type: string, config: string): Partial<TargetFormState> {
   try {
-    const cfg = JSON.parse(config) as Record<string, string>;
-    if (type === 'local') return { destPath: cfg.destPath ?? '' };
-    if (type === 'network') return { mountPath: cfg.mountPath ?? '' };
-    if (type === 'plugin') return { pluginId: cfg.pluginId ?? '' };
+    const cfg = JSON.parse(config) as Record<string, string>
+    if (type === 'local') return { destPath: cfg.destPath ?? '' }
+    if (type === 'network') return { mountPath: cfg.mountPath ?? '' }
+    if (type === 'plugin') return { pluginId: cfg.pluginId ?? '' }
   } catch {
     // ignore
   }
-  return {};
+  return {}
 }
 
 interface TargetModalProps {
-  initial: TargetFormState;
-  title: string;
-  onSave: (form: TargetFormState) => Promise<void>;
-  onClose: () => void;
-  error: string;
+  initial: TargetFormState
+  title: string
+  onSave: (form: TargetFormState) => Promise<void>
+  onClose: () => void
+  error: string
 }
 
 function TargetModal({
@@ -136,17 +136,17 @@ function TargetModal({
   onClose,
   error,
 }: TargetModalProps) {
-  const [form, setForm] = useState<TargetFormState>(initial);
-  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState<TargetFormState>(initial)
+  const [saving, setSaving] = useState(false)
 
   function set(patch: Partial<TargetFormState>) {
-    setForm((f) => ({ ...f, ...patch }));
+    setForm((f) => ({ ...f, ...patch }))
   }
 
   async function handleSave() {
-    setSaving(true);
-    await onSave(form);
-    setSaving(false);
+    setSaving(true)
+    await onSave(form)
+    setSaving(false)
   }
 
   return (
@@ -244,7 +244,7 @@ function TargetModal({
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -252,17 +252,17 @@ function TargetModal({
 // ---------------------------------------------------------------------------
 
 interface ScheduleForm {
-  schedule: string;
-  retentionKeepCount: string;
-  retentionKeepDays: string;
+  schedule: string
+  retentionKeepCount: string
+  retentionKeepDays: string
 }
 
 interface ScheduleModalProps {
-  targetId: string;
-  initial: ScheduleForm;
-  onSave: (targetId: string, form: ScheduleForm) => Promise<void>;
-  onClose: () => void;
-  error: string;
+  targetId: string
+  initial: ScheduleForm
+  onSave: (targetId: string, form: ScheduleForm) => Promise<void>
+  onClose: () => void
+  error: string
 }
 
 function ScheduleModal({
@@ -272,13 +272,13 @@ function ScheduleModal({
   onClose,
   error,
 }: ScheduleModalProps) {
-  const [form, setForm] = useState<ScheduleForm>(initial);
-  const [saving, setSaving] = useState(false);
+  const [form, setForm] = useState<ScheduleForm>(initial)
+  const [saving, setSaving] = useState(false)
 
   async function handleSave() {
-    setSaving(true);
-    await onSave(targetId, form);
-    setSaving(false);
+    setSaving(true)
+    await onSave(targetId, form)
+    setSaving(false)
   }
 
   return (
@@ -336,7 +336,7 @@ function ScheduleModal({
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -344,18 +344,18 @@ function ScheduleModal({
 // ---------------------------------------------------------------------------
 
 interface BackupScopeForm {
-  targetId: string;
-  scopeAll: boolean;
-  libraryIds: string;
-  mediaTypes: string;
-  itemIds: string;
+  targetId: string
+  scopeAll: boolean
+  libraryIds: string
+  mediaTypes: string
+  itemIds: string
 }
 
 interface BackupTriggerModalProps {
-  targets: BackupTarget[];
-  onTrigger: (form: BackupScopeForm) => Promise<void>;
-  onClose: () => void;
-  error: string;
+  targets: BackupTarget[]
+  onTrigger: (form: BackupScopeForm) => Promise<void>
+  onClose: () => void
+  error: string
 }
 
 function BackupTriggerModal({
@@ -370,17 +370,17 @@ function BackupTriggerModal({
     libraryIds: '',
     mediaTypes: '',
     itemIds: '',
-  });
-  const [running, setRunning] = useState(false);
+  })
+  const [running, setRunning] = useState(false)
 
   function set(patch: Partial<BackupScopeForm>) {
-    setForm((f) => ({ ...f, ...patch }));
+    setForm((f) => ({ ...f, ...patch }))
   }
 
   async function handleTrigger() {
-    setRunning(true);
-    await onTrigger(form);
-    setRunning(false);
+    setRunning(true)
+    await onTrigger(form)
+    setRunning(false)
   }
 
   return (
@@ -459,7 +459,7 @@ function BackupTriggerModal({
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -467,9 +467,9 @@ function BackupTriggerModal({
 // ---------------------------------------------------------------------------
 
 interface VerifyResultsModalProps {
-  job: VerifyJob;
-  targetName: string;
-  onClose: () => void;
+  job: VerifyJob
+  targetName: string
+  onClose: () => void
 }
 
 function VerifyResultsModal({
@@ -477,10 +477,10 @@ function VerifyResultsModal({
   targetName,
   onClose,
 }: VerifyResultsModalProps) {
-  type FailedItem = { filePath: string; reason: string };
-  let failedItems: FailedItem[] = [];
+  type FailedItem = { filePath: string; reason: string }
+  let failedItems: FailedItem[] = []
   try {
-    failedItems = JSON.parse(job.failedItems) as FailedItem[];
+    failedItems = JSON.parse(job.failedItems) as FailedItem[]
   } catch {
     // ignore
   }
@@ -546,7 +546,7 @@ function VerifyResultsModal({
         </div>
       </div>
     </div>
-  );
+  )
 }
 
 // ---------------------------------------------------------------------------
@@ -560,45 +560,45 @@ type ModalState =
   | { kind: 'deleteConfirm'; target: BackupTarget }
   | { kind: 'schedule'; target: BackupTarget }
   | { kind: 'triggerBackup' }
-  | { kind: 'verifyResults'; job: VerifyJob; targetName: string };
+  | { kind: 'verifyResults'; job: VerifyJob; targetName: string }
 
 export default function AdminBackup() {
-  const [targets, setTargets] = useState<BackupTarget[]>([]);
-  const [jobs, setJobs] = useState<BackupJob[]>([]);
-  const [verifyJobs, setVerifyJobs] = useState<VerifyJob[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [modal, setModal] = useState<ModalState>({ kind: 'none' });
-  const [modalError, setModalError] = useState('');
-  const [actionError, setActionError] = useState('');
+  const [targets, setTargets] = useState<BackupTarget[]>([])
+  const [jobs, setJobs] = useState<BackupJob[]>([])
+  const [verifyJobs, setVerifyJobs] = useState<VerifyJob[]>([])
+  const [loading, setLoading] = useState(true)
+  const [modal, setModal] = useState<ModalState>({ kind: 'none' })
+  const [modalError, setModalError] = useState('')
+  const [actionError, setActionError] = useState('')
 
   useEffect(() => {
-    loadAll();
-  }, []);
+    loadAll()
+  }, [])
 
   async function loadAll() {
-    setLoading(true);
+    setLoading(true)
     try {
       const [tRes, jRes, vRes] = await Promise.all([
         apiFetch('/api/v1/admin/backup/targets'),
         apiFetch('/api/v1/admin/backup/media/jobs'),
         apiFetch('/api/v1/admin/backup/verify/jobs'),
-      ]);
-      if (tRes.ok) setTargets((await tRes.json()) as BackupTarget[]);
-      if (jRes.ok) setJobs((await jRes.json()) as BackupJob[]);
-      if (vRes.ok) setVerifyJobs((await vRes.json()) as VerifyJob[]);
+      ])
+      if (tRes.ok) setTargets((await tRes.json()) as BackupTarget[])
+      if (jRes.ok) setJobs((await jRes.json()) as BackupJob[])
+      if (vRes.ok) setVerifyJobs((await vRes.json()) as VerifyJob[])
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
   function targetName(id: string): string {
-    return targets.find((t) => t.id === id)?.name ?? id;
+    return targets.find((t) => t.id === id)?.name ?? id
   }
 
   // -- Target CRUD --
 
   async function handleAddTarget(form: TargetFormState) {
-    setModalError('');
+    setModalError('')
     const res = await apiFetch('/api/v1/admin/backup/targets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -609,19 +609,19 @@ export default function AdminBackup() {
         enabled: form.enabled,
         removeDeleted: form.removeDeleted,
       }),
-    });
+    })
     if (!res.ok) {
-      const data = (await res.json()) as { error?: string };
-      setModalError(data.error ?? `HTTP ${res.status}`);
-      return;
+      const data = (await res.json()) as { error?: string }
+      setModalError(data.error ?? `HTTP ${res.status}`)
+      return
     }
-    setModal({ kind: 'none' });
-    await loadAll();
+    setModal({ kind: 'none' })
+    await loadAll()
   }
 
   async function handleEditTarget(form: TargetFormState) {
-    if (modal.kind !== 'editTarget') return;
-    setModalError('');
+    if (modal.kind !== 'editTarget') return
+    setModalError('')
     const res = await apiFetch(
       `/api/v1/admin/backup/targets/${modal.target.id}`,
       {
@@ -635,33 +635,33 @@ export default function AdminBackup() {
           removeDeleted: form.removeDeleted,
         }),
       },
-    );
+    )
     if (!res.ok) {
-      const data = (await res.json()) as { error?: string };
-      setModalError(data.error ?? `HTTP ${res.status}`);
-      return;
+      const data = (await res.json()) as { error?: string }
+      setModalError(data.error ?? `HTTP ${res.status}`)
+      return
     }
-    setModal({ kind: 'none' });
-    await loadAll();
+    setModal({ kind: 'none' })
+    await loadAll()
   }
 
   async function handleDeleteTarget(target: BackupTarget) {
-    setModalError('');
+    setModalError('')
     const res = await apiFetch(`/api/v1/admin/backup/targets/${target.id}`, {
       method: 'DELETE',
-    });
+    })
     if (!res.ok) {
-      const data = (await res.json()) as { error?: string };
-      setActionError(data.error ?? `HTTP ${res.status}`);
+      const data = (await res.json()) as { error?: string }
+      setActionError(data.error ?? `HTTP ${res.status}`)
     }
-    setModal({ kind: 'none' });
-    await loadAll();
+    setModal({ kind: 'none' })
+    await loadAll()
   }
 
   // -- Schedule --
 
   async function handleSaveSchedule(targetId: string, form: ScheduleForm) {
-    setModalError('');
+    setModalError('')
     const body: Record<string, unknown> = {
       schedule: form.schedule || null,
       retentionKeepCount:
@@ -672,7 +672,7 @@ export default function AdminBackup() {
         form.retentionKeepDays !== ''
           ? Number.parseInt(form.retentionKeepDays, 10)
           : null,
-    };
+    }
     const res = await apiFetch(
       `/api/v1/admin/backup/targets/${targetId}/schedule`,
       {
@@ -680,42 +680,42 @@ export default function AdminBackup() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
       },
-    );
+    )
     if (!res.ok) {
-      const data = (await res.json()) as { error?: string };
-      setModalError(data.error ?? `HTTP ${res.status}`);
-      return;
+      const data = (await res.json()) as { error?: string }
+      setModalError(data.error ?? `HTTP ${res.status}`)
+      return
     }
-    setModal({ kind: 'none' });
-    await loadAll();
+    setModal({ kind: 'none' })
+    await loadAll()
   }
 
   // -- Backup trigger --
 
   async function handleTriggerBackup(form: BackupScopeForm) {
-    setModalError('');
+    setModalError('')
 
-    const scope: Record<string, unknown> = {};
+    const scope: Record<string, unknown> = {}
     if (form.scopeAll) {
-      scope.all = true;
+      scope.all = true
     } else {
       if (form.libraryIds.trim()) {
         scope.libraryIds = form.libraryIds
           .split(',')
           .map((s) => s.trim())
-          .filter(Boolean);
+          .filter(Boolean)
       }
       if (form.mediaTypes.trim()) {
         scope.mediaTypes = form.mediaTypes
           .split(',')
           .map((s) => s.trim())
-          .filter(Boolean);
+          .filter(Boolean)
       }
       if (form.itemIds.trim()) {
         scope.itemIds = form.itemIds
           .split(',')
           .map((s) => s.trim())
-          .filter(Boolean);
+          .filter(Boolean)
       }
     }
 
@@ -723,42 +723,42 @@ export default function AdminBackup() {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ targetId: form.targetId, scope }),
-    });
+    })
     if (!res.ok) {
-      const data = (await res.json()) as { error?: string };
-      setModalError(data.error ?? `HTTP ${res.status}`);
-      return;
+      const data = (await res.json()) as { error?: string }
+      setModalError(data.error ?? `HTTP ${res.status}`)
+      return
     }
-    setModal({ kind: 'none' });
-    await loadAll();
+    setModal({ kind: 'none' })
+    await loadAll()
   }
 
   // -- Verify --
 
   async function handleVerify(target: BackupTarget) {
-    setActionError('');
+    setActionError('')
     const res = await apiFetch(`/api/v1/admin/backup/verify/${target.id}`, {
       method: 'POST',
-    });
+    })
     if (!res.ok) {
-      const data = (await res.json()) as { error?: string };
-      setActionError(data.error ?? `HTTP ${res.status}`);
-      return;
+      const data = (await res.json()) as { error?: string }
+      setActionError(data.error ?? `HTTP ${res.status}`)
+      return
     }
-    await loadAll();
+    await loadAll()
   }
 
   function showVerifyResults(targetId: string) {
-    const job = verifyJobs.find((j) => j.targetId === targetId);
-    if (!job) return;
-    setModal({ kind: 'verifyResults', job, targetName: targetName(targetId) });
+    const job = verifyJobs.find((j) => j.targetId === targetId)
+    if (!job) return
+    setModal({ kind: 'verifyResults', job, targetName: targetName(targetId) })
   }
 
   // ---------------------------------------------------------------------------
   // Render
   // ---------------------------------------------------------------------------
 
-  if (loading) return <div className={styles.page}>Loading…</div>;
+  if (loading) return <div className={styles.page}>Loading…</div>
 
   return (
     <div className={styles.page}>
@@ -776,8 +776,8 @@ export default function AdminBackup() {
             <button
               type="button"
               onClick={() => {
-                setModalError('');
-                setModal({ kind: 'triggerBackup' });
+                setModalError('')
+                setModal({ kind: 'triggerBackup' })
               }}
             >
               Trigger Backup
@@ -785,8 +785,8 @@ export default function AdminBackup() {
             <button
               type="button"
               onClick={() => {
-                setModalError('');
-                setModal({ kind: 'addTarget' });
+                setModalError('')
+                setModal({ kind: 'addTarget' })
               }}
             >
               Add Target
@@ -813,7 +813,7 @@ export default function AdminBackup() {
               {targets.map((target) => {
                 const latestVerify = verifyJobs.find(
                   (j) => j.targetId === target.id,
-                );
+                )
                 return (
                   <tr key={target.id}>
                     <td>{target.name}</td>
@@ -834,8 +834,8 @@ export default function AdminBackup() {
                       <button
                         type="button"
                         onClick={() => {
-                          setModalError('');
-                          setModal({ kind: 'editTarget', target });
+                          setModalError('')
+                          setModal({ kind: 'editTarget', target })
                         }}
                       >
                         Edit
@@ -843,8 +843,8 @@ export default function AdminBackup() {
                       <button
                         type="button"
                         onClick={() => {
-                          setModalError('');
-                          setModal({ kind: 'schedule', target });
+                          setModalError('')
+                          setModal({ kind: 'schedule', target })
                         }}
                       >
                         Schedule
@@ -874,15 +874,15 @@ export default function AdminBackup() {
                         type="button"
                         className={styles.btnDanger}
                         onClick={() => {
-                          setModalError('');
-                          setModal({ kind: 'deleteConfirm', target });
+                          setModalError('')
+                          setModal({ kind: 'deleteConfirm', target })
                         }}
                       >
                         Delete
                       </button>
                     </td>
                   </tr>
-                );
+                )
               })}
             </tbody>
           </table>
@@ -918,9 +918,9 @@ export default function AdminBackup() {
             </thead>
             <tbody>
               {jobs.map((job) => {
-                let errorCount = 0;
+                let errorCount = 0
                 try {
-                  errorCount = (JSON.parse(job.errors) as string[]).length;
+                  errorCount = (JSON.parse(job.errors) as string[]).length
                 } catch {
                   // ignore
                 }
@@ -943,7 +943,7 @@ export default function AdminBackup() {
                     <td>{formatDuration(job.startedAt, job.completedAt)}</td>
                     <td>{formatDate(job.createdAt)}</td>
                   </tr>
-                );
+                )
               })}
             </tbody>
           </table>
@@ -1042,5 +1042,5 @@ export default function AdminBackup() {
         />
       )}
     </div>
-  );
+  )
 }

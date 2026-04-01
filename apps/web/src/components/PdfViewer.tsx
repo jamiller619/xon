@@ -1,123 +1,123 @@
-import * as pdfjsLib from 'pdfjs-dist';
-import type { PDFDocumentProxy, PDFPageProxy, RenderTask } from 'pdfjs-dist';
-import { useCallback, useEffect, useRef, useState } from 'react';
-import { apiFetch } from '../apiFetch.js';
-import styles from './PdfViewer.module.css';
+import * as pdfjsLib from 'pdfjs-dist'
+import type { PDFDocumentProxy, PDFPageProxy, RenderTask } from 'pdfjs-dist'
+import { useCallback, useEffect, useRef, useState } from 'react'
+import { apiFetch } from '../apiFetch.js'
+import styles from './PdfViewer.module.css'
 
 // Configure worker
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   'pdfjs-dist/build/pdf.worker.min.mjs',
   import.meta.url,
-).href;
+).href
 
 interface Props {
-  mediaId: string;
-  title: string;
-  onClose: () => void;
+  mediaId: string
+  title: string
+  onClose: () => void
 }
 
-const ZOOM_LEVELS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0];
-const DEFAULT_ZOOM_IDX = 2; // 1.0
-const THUMBNAIL_SCALE = 0.15;
+const ZOOM_LEVELS = [0.5, 0.75, 1.0, 1.25, 1.5, 2.0, 3.0]
+const DEFAULT_ZOOM_IDX = 2 // 1.0
+const THUMBNAIL_SCALE = 0.15
 
 export default function PdfViewer({ mediaId, title, onClose }: Props) {
-  const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null);
-  const [numPages, setNumPages] = useState(0);
-  const [currentPage, setCurrentPage] = useState(1);
-  const [zoomIdx, setZoomIdx] = useState(DEFAULT_ZOOM_IDX);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const [pdfDoc, setPdfDoc] = useState<PDFDocumentProxy | null>(null)
+  const [numPages, setNumPages] = useState(0)
+  const [currentPage, setCurrentPage] = useState(1)
+  const [zoomIdx, setZoomIdx] = useState(DEFAULT_ZOOM_IDX)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const mainCanvasRef = useRef<HTMLCanvasElement>(null);
-  const mainRenderTaskRef = useRef<RenderTask | null>(null);
-  const thumbCanvasRefs = useRef<(HTMLCanvasElement | null)[]>([]);
-  const thumbRenderTasksRef = useRef<(RenderTask | null)[]>([]);
+  const mainCanvasRef = useRef<HTMLCanvasElement>(null)
+  const mainRenderTaskRef = useRef<RenderTask | null>(null)
+  const thumbCanvasRefs = useRef<(HTMLCanvasElement | null)[]>([])
+  const thumbRenderTasksRef = useRef<(RenderTask | null)[]>([])
 
-  const zoom = ZOOM_LEVELS[zoomIdx] ?? 1.0;
+  const zoom = ZOOM_LEVELS[zoomIdx] ?? 1.0
 
   // Load PDF document
   useEffect(() => {
-    setLoading(true);
-    setError(null);
-    let cancelled = false;
+    setLoading(true)
+    setError(null)
+    let cancelled = false
 
     const loadDoc = async () => {
       try {
         const loadingTask = pdfjsLib.getDocument(
           `/api/v1/media/${mediaId}/stream`,
-        );
-        const doc = await loadingTask.promise;
+        )
+        const doc = await loadingTask.promise
         if (cancelled) {
-          doc.destroy();
-          return;
+          doc.destroy()
+          return
         }
-        setPdfDoc(doc);
-        setNumPages(doc.numPages);
-        setCurrentPage(1);
-        setLoading(false);
+        setPdfDoc(doc)
+        setNumPages(doc.numPages)
+        setCurrentPage(1)
+        setLoading(false)
       } catch {
         if (!cancelled) {
-          setError('Failed to load PDF document.');
-          setLoading(false);
+          setError('Failed to load PDF document.')
+          setLoading(false)
         }
       }
-    };
+    }
 
-    loadDoc();
+    loadDoc()
     return () => {
-      cancelled = true;
-    };
-  }, [mediaId]);
+      cancelled = true
+    }
+  }, [mediaId])
 
   // Render main page
   const renderPage = useCallback(
     async (doc: PDFDocumentProxy, pageNum: number, scale: number) => {
-      const canvas = mainCanvasRef.current;
-      if (!canvas) return;
+      const canvas = mainCanvasRef.current
+      if (!canvas) return
 
       // Cancel any in-flight render
       if (mainRenderTaskRef.current) {
-        mainRenderTaskRef.current.cancel();
-        mainRenderTaskRef.current = null;
+        mainRenderTaskRef.current.cancel()
+        mainRenderTaskRef.current = null
       }
 
-      let page: PDFPageProxy;
+      let page: PDFPageProxy
       try {
-        page = await doc.getPage(pageNum);
+        page = await doc.getPage(pageNum)
       } catch {
-        return;
+        return
       }
 
-      const viewport = page.getViewport({ scale });
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
+      const viewport = page.getViewport({ scale })
+      canvas.width = viewport.width
+      canvas.height = viewport.height
 
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
 
-      const task = page.render({ canvas, canvasContext: ctx, viewport });
-      mainRenderTaskRef.current = task;
+      const task = page.render({ canvas, canvasContext: ctx, viewport })
+      mainRenderTaskRef.current = task
 
       try {
-        await task.promise;
+        await task.promise
       } catch {
         // render cancelled or failed — ignore
       } finally {
-        page.cleanup();
+        page.cleanup()
       }
     },
     [],
-  );
+  )
 
   useEffect(() => {
-    if (!pdfDoc) return;
-    renderPage(pdfDoc, currentPage, zoom);
-  }, [pdfDoc, currentPage, zoom, renderPage]);
+    if (!pdfDoc) return
+    renderPage(pdfDoc, currentPage, zoom)
+  }, [pdfDoc, currentPage, zoom, renderPage])
 
   // Save reading progress on page change
   useEffect(() => {
-    if (!pdfDoc || numPages === 0) return;
-    const completed = currentPage >= numPages;
+    if (!pdfDoc || numPages === 0) return
+    const completed = currentPage >= numPages
     apiFetch(`/api/v1/media/${mediaId}/progress`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
@@ -128,83 +128,83 @@ export default function PdfViewer({ mediaId, title, onClose }: Props) {
       }),
     }).catch(() => {
       // best-effort save
-    });
-  }, [mediaId, currentPage, numPages, pdfDoc]);
+    })
+  }, [mediaId, currentPage, numPages, pdfDoc])
 
   // Render thumbnail for a given page index
   const renderThumbnail = useCallback(
     async (doc: PDFDocumentProxy, pageNum: number) => {
-      const canvas = thumbCanvasRefs.current[pageNum - 1];
-      if (!canvas) return;
+      const canvas = thumbCanvasRefs.current[pageNum - 1]
+      if (!canvas) return
 
       // Cancel any in-flight render for this thumb
-      const prev = thumbRenderTasksRef.current[pageNum - 1];
+      const prev = thumbRenderTasksRef.current[pageNum - 1]
       if (prev) {
-        prev.cancel();
-        thumbRenderTasksRef.current[pageNum - 1] = null;
+        prev.cancel()
+        thumbRenderTasksRef.current[pageNum - 1] = null
       }
 
-      let page: PDFPageProxy;
+      let page: PDFPageProxy
       try {
-        page = await doc.getPage(pageNum);
+        page = await doc.getPage(pageNum)
       } catch {
-        return;
+        return
       }
 
-      const viewport = page.getViewport({ scale: THUMBNAIL_SCALE });
-      canvas.width = viewport.width;
-      canvas.height = viewport.height;
+      const viewport = page.getViewport({ scale: THUMBNAIL_SCALE })
+      canvas.width = viewport.width
+      canvas.height = viewport.height
 
-      const ctx = canvas.getContext('2d');
-      if (!ctx) return;
+      const ctx = canvas.getContext('2d')
+      if (!ctx) return
 
-      const task = page.render({ canvas, canvasContext: ctx, viewport });
-      thumbRenderTasksRef.current[pageNum - 1] = task;
+      const task = page.render({ canvas, canvasContext: ctx, viewport })
+      thumbRenderTasksRef.current[pageNum - 1] = task
 
       try {
-        await task.promise;
+        await task.promise
       } catch {
         // cancelled or failed
       } finally {
-        page.cleanup();
+        page.cleanup()
       }
     },
     [],
-  );
+  )
 
   // Render all thumbnails when doc loads
   useEffect(() => {
-    if (!pdfDoc) return;
-    thumbRenderTasksRef.current = new Array(numPages).fill(null);
+    if (!pdfDoc) return
+    thumbRenderTasksRef.current = new Array(numPages).fill(null)
     for (let i = 1; i <= numPages; i++) {
-      renderThumbnail(pdfDoc, i);
+      renderThumbnail(pdfDoc, i)
     }
-  }, [pdfDoc, numPages, renderThumbnail]);
+  }, [pdfDoc, numPages, renderThumbnail])
 
   // Keyboard shortcuts
   useEffect(() => {
     function onKeyDown(e: KeyboardEvent) {
       if (e.key === 'Escape') {
-        onClose();
+        onClose()
       } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-        setCurrentPage((p) => Math.min(p + 1, numPages));
+        setCurrentPage((p) => Math.min(p + 1, numPages))
       } else if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-        setCurrentPage((p) => Math.max(p - 1, 1));
+        setCurrentPage((p) => Math.max(p - 1, 1))
       } else if (e.key === '+' || e.key === '=') {
-        setZoomIdx((z) => Math.min(z + 1, ZOOM_LEVELS.length - 1));
+        setZoomIdx((z) => Math.min(z + 1, ZOOM_LEVELS.length - 1))
       } else if (e.key === '-') {
-        setZoomIdx((z) => Math.max(z - 1, 0));
+        setZoomIdx((z) => Math.max(z - 1, 0))
       }
     }
-    document.addEventListener('keydown', onKeyDown);
-    return () => document.removeEventListener('keydown', onKeyDown);
-  }, [onClose, numPages]);
+    document.addEventListener('keydown', onKeyDown)
+    return () => document.removeEventListener('keydown', onKeyDown)
+  }, [onClose, numPages])
 
   // Scroll active thumbnail into view
   useEffect(() => {
-    const el = thumbCanvasRefs.current[currentPage - 1];
-    el?.parentElement?.scrollIntoView({ block: 'nearest' });
-  }, [currentPage]);
+    const el = thumbCanvasRefs.current[currentPage - 1]
+    el?.parentElement?.scrollIntoView({ block: 'nearest' })
+  }, [currentPage])
 
   return (
     <dialog
@@ -293,7 +293,7 @@ export default function PdfViewer({ mediaId, title, onClose }: Props) {
               >
                 <canvas
                   ref={(el) => {
-                    thumbCanvasRefs.current[pageNum - 1] = el;
+                    thumbCanvasRefs.current[pageNum - 1] = el
                   }}
                   className={styles.thumbCanvas ?? ''}
                 />
@@ -314,5 +314,5 @@ export default function PdfViewer({ mediaId, title, onClose }: Props) {
         </div>
       </div>
     </dialog>
-  );
+  )
 }

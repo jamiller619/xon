@@ -1,26 +1,26 @@
-import { and, eq } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { Hono } from 'hono';
-import { z } from 'zod';
-import { libraries, libraryAccess, users } from '../db/schema.js';
-import { validate } from '../http/validate.js';
+import { and, eq } from 'drizzle-orm'
+import type { LibSQLDatabase } from 'drizzle-orm/libsql'
+import { Hono } from 'hono'
+import { z } from 'zod'
+import { libraries, libraryAccess, users } from '../db/schema.js'
+import { validate } from '../http/validate.js'
 
 const grantSchema = z.object({
   userId: z.string().min(1),
-});
+})
 
 export function makeAdminLibraryAccessRouter(db: LibSQLDatabase): Hono {
-  const router = new Hono();
+  const router = new Hono()
 
   // GET /admin/libraries/:libraryId/access — list users with access to a library
   router.get('/:libraryId/access', async (c) => {
-    const libraryId = c.req.param('libraryId');
+    const libraryId = c.req.param('libraryId')
 
     const lib = await db
       .select()
       .from(libraries)
-      .where(eq(libraries.id, libraryId));
-    if (lib.length === 0) return c.json({ error: 'Not found' }, 404);
+      .where(eq(libraries.id, libraryId))
+    if (lib.length === 0) return c.json({ error: 'Not found' }, 404)
 
     const rows = await db
       .select({
@@ -35,32 +35,31 @@ export function makeAdminLibraryAccessRouter(db: LibSQLDatabase): Hono {
       })
       .from(libraryAccess)
       .innerJoin(users, eq(users.id, libraryAccess.userId))
-      .where(eq(libraryAccess.libraryId, libraryId));
+      .where(eq(libraryAccess.libraryId, libraryId))
 
-    return c.json(rows);
-  });
+    return c.json(rows)
+  })
 
   // POST /admin/libraries/:libraryId/access — grant a user access to a library
   router.post(
     '/:libraryId/access',
     validate('json', grantSchema),
     async (c) => {
-      const libraryId = c.req.param('libraryId');
-      const body = c.req.valid('json');
-      const adminUser = c.get('user');
+      const libraryId = c.req.param('libraryId')
+      const body = c.req.valid('json')
+      const adminUser = c.get('user')
 
       const lib = await db
         .select()
         .from(libraries)
-        .where(eq(libraries.id, libraryId));
-      if (lib.length === 0) return c.json({ error: 'Not found' }, 404);
+        .where(eq(libraries.id, libraryId))
+      if (lib.length === 0) return c.json({ error: 'Not found' }, 404)
 
       const userRows = await db
         .select()
         .from(users)
-        .where(eq(users.id, body.userId));
-      if (userRows.length === 0)
-        return c.json({ error: 'User not found' }, 404);
+        .where(eq(users.id, body.userId))
+      if (userRows.length === 0) return c.json({ error: 'User not found' }, 404)
 
       await db
         .insert(libraryAccess)
@@ -70,22 +69,22 @@ export function makeAdminLibraryAccessRouter(db: LibSQLDatabase): Hono {
           grantedAt: new Date(),
           grantedBy: adminUser.id,
         })
-        .onConflictDoNothing();
+        .onConflictDoNothing()
 
-      return c.json({ userId: body.userId, libraryId }, 201);
+      return c.json({ userId: body.userId, libraryId }, 201)
     },
-  );
+  )
 
   // DELETE /admin/libraries/:libraryId/access/:userId — revoke a user's access
   router.delete('/:libraryId/access/:userId', async (c) => {
-    const libraryId = c.req.param('libraryId');
-    const userId = c.req.param('userId');
+    const libraryId = c.req.param('libraryId')
+    const userId = c.req.param('userId')
 
     const lib = await db
       .select()
       .from(libraries)
-      .where(eq(libraries.id, libraryId));
-    if (lib.length === 0) return c.json({ error: 'Not found' }, 404);
+      .where(eq(libraries.id, libraryId))
+    if (lib.length === 0) return c.json({ error: 'Not found' }, 404)
 
     await db
       .delete(libraryAccess)
@@ -94,10 +93,10 @@ export function makeAdminLibraryAccessRouter(db: LibSQLDatabase): Hono {
           eq(libraryAccess.userId, userId),
           eq(libraryAccess.libraryId, libraryId),
         ),
-      );
+      )
 
-    return c.json({ success: true });
-  });
+    return c.json({ success: true })
+  })
 
-  return router;
+  return router
 }

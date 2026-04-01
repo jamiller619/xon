@@ -1,25 +1,25 @@
-import { useEffect, useRef, useState } from 'react';
-import { apiFetch } from '../apiFetch.js';
-import styles from './ArchiveViewer.module.css';
+import { useEffect, useRef, useState } from 'react'
+import { apiFetch } from '../apiFetch.js'
+import styles from './ArchiveViewer.module.css'
 
 interface Props {
-  mediaId: string;
-  title: string;
-  onClose: () => void;
+  mediaId: string
+  title: string
+  onClose: () => void
 }
 
 interface ArchiveEntry {
-  path: string;
-  size: number;
-  isDirectory: boolean;
+  path: string
+  size: number
+  isDirectory: boolean
 }
 
 interface TreeNode {
-  name: string;
-  fullPath: string;
-  isDirectory: boolean;
-  size: number;
-  children: TreeNode[];
+  name: string
+  fullPath: string
+  isDirectory: boolean
+  size: number
+  children: TreeNode[]
 }
 
 function buildTree(entries: ArchiveEntry[]): TreeNode[] {
@@ -29,23 +29,23 @@ function buildTree(entries: ArchiveEntry[]): TreeNode[] {
     isDirectory: true,
     size: 0,
     children: [],
-  };
+  }
 
   for (const entry of entries) {
     const cleanPath = entry.path.endsWith('/')
       ? entry.path.slice(0, -1)
-      : entry.path;
-    const parts = cleanPath.split('/').filter((p) => p.length > 0);
-    if (parts.length === 0) continue;
+      : entry.path
+    const parts = cleanPath.split('/').filter((p) => p.length > 0)
+    if (parts.length === 0) continue
 
-    let node = root;
+    let node = root
     for (let i = 0; i < parts.length; i++) {
-      const part = parts[i] ?? '';
-      if (!part) continue;
-      const isLast = i === parts.length - 1;
-      const fullPath = parts.slice(0, i + 1).join('/');
+      const part = parts[i] ?? ''
+      if (!part) continue
+      const isLast = i === parts.length - 1
+      const fullPath = parts.slice(0, i + 1).join('/')
 
-      let child = node.children.find((c) => c.name === part);
+      let child = node.children.find((c) => c.name === part)
       if (!child) {
         child = {
           name: part,
@@ -53,36 +53,36 @@ function buildTree(entries: ArchiveEntry[]): TreeNode[] {
           isDirectory: isLast ? entry.isDirectory : true,
           size: isLast ? entry.size : 0,
           children: [],
-        };
-        node.children.push(child);
+        }
+        node.children.push(child)
       } else if (isLast) {
-        child.size = entry.size;
-        child.isDirectory = entry.isDirectory;
+        child.size = entry.size
+        child.isDirectory = entry.isDirectory
       }
-      node = child;
+      node = child
     }
   }
 
   // Sort: directories first, then files, alphabetically within each group
   function sortNodes(nodes: TreeNode[]): void {
     nodes.sort((a, b) => {
-      if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1;
-      return a.name.localeCompare(b.name);
-    });
-    for (const n of nodes) sortNodes(n.children);
+      if (a.isDirectory !== b.isDirectory) return a.isDirectory ? -1 : 1
+      return a.name.localeCompare(b.name)
+    })
+    for (const n of nodes) sortNodes(n.children)
   }
-  sortNodes(root.children);
+  sortNodes(root.children)
 
-  return root.children;
+  return root.children
 }
 
 function formatBytes(bytes: number): string {
-  if (bytes === 0) return '—';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes === 0) return '—'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   if (bytes < 1024 * 1024 * 1024)
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
 }
 
 const IMAGE_EXTS = new Set([
@@ -94,7 +94,7 @@ const IMAGE_EXTS = new Set([
   '.svg',
   '.bmp',
   '.ico',
-]);
+])
 const VIDEO_EXTS = new Set([
   '.mp4',
   '.mkv',
@@ -104,7 +104,7 @@ const VIDEO_EXTS = new Set([
   '.m4v',
   '.wmv',
   '.flv',
-]);
+])
 const AUDIO_EXTS = new Set([
   '.mp3',
   '.flac',
@@ -113,7 +113,7 @@ const AUDIO_EXTS = new Set([
   '.wav',
   '.m4a',
   '.opus',
-]);
+])
 const DOC_EXTS = new Set([
   '.pdf',
   '.epub',
@@ -123,7 +123,7 @@ const DOC_EXTS = new Set([
   '.md',
   '.csv',
   '.xlsx',
-]);
+])
 const CODE_EXTS = new Set([
   '.ts',
   '.tsx',
@@ -141,39 +141,39 @@ const CODE_EXTS = new Set([
   '.json',
   '.yaml',
   '.yml',
-]);
+])
 
 function getFileIcon(name: string, isDirectory: boolean): string {
-  if (isDirectory) return '📁';
+  if (isDirectory) return '📁'
   const ext = name.includes('.')
     ? `.${name.split('.').pop()?.toLowerCase() ?? ''}`
-    : '';
-  if (IMAGE_EXTS.has(ext)) return '🖼';
-  if (VIDEO_EXTS.has(ext)) return '🎬';
-  if (AUDIO_EXTS.has(ext)) return '🎵';
-  if (DOC_EXTS.has(ext)) return '📄';
-  if (CODE_EXTS.has(ext)) return '📝';
-  return '📋';
+    : ''
+  if (IMAGE_EXTS.has(ext)) return '🖼'
+  if (VIDEO_EXTS.has(ext)) return '🎬'
+  if (AUDIO_EXTS.has(ext)) return '🎵'
+  if (DOC_EXTS.has(ext)) return '📄'
+  if (CODE_EXTS.has(ext)) return '📝'
+  return '📋'
 }
 
 function getMediaType(name: string): string | null {
   const ext = name.includes('.')
     ? `.${name.split('.').pop()?.toLowerCase() ?? ''}`
-    : '';
-  if (IMAGE_EXTS.has(ext)) return 'Image';
-  if (VIDEO_EXTS.has(ext)) return 'Video';
-  if (AUDIO_EXTS.has(ext)) return 'Audio';
-  if (DOC_EXTS.has(ext)) return 'Document';
-  return null;
+    : ''
+  if (IMAGE_EXTS.has(ext)) return 'Image'
+  if (VIDEO_EXTS.has(ext)) return 'Video'
+  if (AUDIO_EXTS.has(ext)) return 'Audio'
+  if (DOC_EXTS.has(ext)) return 'Document'
+  return null
 }
 
 interface TreeRowProps {
-  node: TreeNode;
-  depth: number;
-  expanded: Set<string>;
-  onToggle: (path: string) => void;
-  onSelect: (node: TreeNode) => void;
-  selected: string | null;
+  node: TreeNode
+  depth: number
+  expanded: Set<string>
+  onToggle: (path: string) => void
+  onSelect: (node: TreeNode) => void
+  selected: string | null
 }
 
 function TreeRow({
@@ -184,14 +184,14 @@ function TreeRow({
   onSelect,
   selected,
 }: TreeRowProps) {
-  const isExpanded = expanded.has(node.fullPath);
-  const isSelected = selected === node.fullPath;
+  const isExpanded = expanded.has(node.fullPath)
+  const isSelected = selected === node.fullPath
 
   function handleClick() {
     if (node.isDirectory) {
-      onToggle(node.fullPath);
+      onToggle(node.fullPath)
     } else {
-      onSelect(node);
+      onSelect(node)
     }
   }
 
@@ -248,70 +248,70 @@ function TreeRow({
         </>
       )}
     </>
-  );
+  )
 }
 
 export default function ArchiveViewer({ mediaId, title, onClose }: Props) {
-  const [entries, setEntries] = useState<ArchiveEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const [selected, setSelected] = useState<string | null>(null);
-  const dialogRef = useRef<HTMLDialogElement>(null);
+  const [entries, setEntries] = useState<ArchiveEntry[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
+  const [expanded, setExpanded] = useState<Set<string>>(new Set())
+  const [selected, setSelected] = useState<string | null>(null)
+  const dialogRef = useRef<HTMLDialogElement>(null)
 
   useEffect(() => {
-    setLoading(true);
-    setError(null);
+    setLoading(true)
+    setError(null)
     apiFetch(`/api/v1/media/${mediaId}/archive-contents`)
       .then((r) => {
-        if (!r.ok) throw new Error('Failed to load archive contents');
-        return r.json();
+        if (!r.ok) throw new Error('Failed to load archive contents')
+        return r.json()
       })
       .then((data: unknown) => {
-        const d = data as { entries: ArchiveEntry[] };
-        setEntries(d.entries);
-        setLoading(false);
+        const d = data as { entries: ArchiveEntry[] }
+        setEntries(d.entries)
+        setLoading(false)
       })
       .catch((err: unknown) => {
-        setError((err as Error).message ?? 'Failed to load');
-        setLoading(false);
-      });
-  }, [mediaId]);
+        setError((err as Error).message ?? 'Failed to load')
+        setLoading(false)
+      })
+  }, [mediaId])
 
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') onClose()
     }
-    window.addEventListener('keydown', handleKeyDown);
-    return () => window.removeEventListener('keydown', handleKeyDown);
-  }, [onClose]);
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [onClose])
 
   function toggleDir(path: string) {
     setExpanded((prev) => {
-      const next = new Set(prev);
+      const next = new Set(prev)
       if (next.has(path)) {
-        next.delete(path);
+        next.delete(path)
       } else {
-        next.add(path);
+        next.add(path)
       }
-      return next;
-    });
+      return next
+    })
   }
 
   function selectNode(node: TreeNode) {
-    setSelected(node.fullPath);
+    setSelected(node.fullPath)
   }
 
-  const tree = buildTree(entries);
-  const fileCount = entries.filter((e) => !e.isDirectory).length;
+  const tree = buildTree(entries)
+  const fileCount = entries.filter((e) => !e.isDirectory).length
   const totalSize = entries.reduce(
     (sum, e) => sum + (e.isDirectory ? 0 : e.size),
     0,
-  );
+  )
 
   const selectedEntry = selected
     ? entries.find((e) => e.path === selected || e.path === `${selected}/`)
-    : null;
+    : null
 
   return (
     <dialog open ref={dialogRef} className={styles.dialog ?? ''}>
@@ -402,5 +402,5 @@ export default function ArchiveViewer({ mediaId, title, onClose }: Props) {
         </div>
       </div>
     </dialog>
-  );
+  )
 }

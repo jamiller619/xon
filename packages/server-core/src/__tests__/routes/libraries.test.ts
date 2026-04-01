@@ -1,35 +1,35 @@
-import type { Client } from '@libsql/client';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
-import { createApp } from '../../app.js';
-import { openDatabase } from '../../db/db.js';
-import { migrateDatabase } from '../../db/migrate.js';
-import { dataSources, libraries, mediaItems } from '../../db/schema.js';
-import { signAccessToken } from '../../routes/auth.js';
+import type { Client } from '@libsql/client'
+import type { LibSQLDatabase } from 'drizzle-orm/libsql'
+import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { createApp } from '../../app.js'
+import { openDatabase } from '../../db/db.js'
+import { migrateDatabase } from '../../db/migrate.js'
+import { dataSources, libraries, mediaItems } from '../../db/schema.js'
+import { signAccessToken } from '../../routes/auth.js'
 
-const AUTH = `Bearer ${await signAccessToken('test-id', 'testuser', 'admin')}`;
+const AUTH = `Bearer ${await signAccessToken('test-id', 'testuser', 'admin')}`
 
 describe('Libraries CRUD API', () => {
-  let client: Client;
-  let db: LibSQLDatabase;
-  let app: ReturnType<typeof createApp>;
+  let client: Client
+  let db: LibSQLDatabase
+  let app: ReturnType<typeof createApp>
 
   beforeEach(async () => {
-    ({ client, db } = await openDatabase(':memory:'));
-    await migrateDatabase(db);
-    app = createApp(db);
-  });
+    ;({ client, db } = await openDatabase(':memory:'))
+    await migrateDatabase(db)
+    app = createApp(db)
+  })
 
   afterEach(() => {
-    client.close();
-  });
+    client.close()
+  })
 
   // Helper to create a library
   async function createLibrary(
     data: {
-      name: string;
-      description?: string;
-      allowedMediaTypes?: string[];
+      name: string
+      description?: string
+      allowedMediaTypes?: string[]
     } = {
       name: 'Test Library',
     },
@@ -38,7 +38,7 @@ describe('Libraries CRUD API', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: AUTH },
       body: JSON.stringify(data),
-    });
+    })
   }
 
   describe('POST /api/v1/libraries', () => {
@@ -47,185 +47,185 @@ describe('Libraries CRUD API', () => {
         name: 'My Movies',
         description: 'Movie collection',
         allowedMediaTypes: ['Movies'],
-      });
-      expect(res.status).toBe(201);
-      const body = await res.json();
+      })
+      expect(res.status).toBe(201)
+      const body = await res.json()
       expect(body).toMatchObject({
         name: 'My Movies',
         description: 'Movie collection',
         allowedMediaTypes: '["Movies"]',
-      });
-      expect(body).toHaveProperty('id');
-      expect(body).toHaveProperty('createdAt');
-    });
+      })
+      expect(body).toHaveProperty('id')
+      expect(body).toHaveProperty('createdAt')
+    })
 
     it('creates a library with defaults for optional fields', async () => {
-      const res = await createLibrary({ name: 'Minimal Library' });
-      expect(res.status).toBe(201);
-      const body = await res.json();
-      expect(body.name).toBe('Minimal Library');
-      expect(body.allowedMediaTypes).toBe('[]');
-      expect(body.description).toBeNull();
-    });
+      const res = await createLibrary({ name: 'Minimal Library' })
+      expect(res.status).toBe(201)
+      const body = await res.json()
+      expect(body.name).toBe('Minimal Library')
+      expect(body.allowedMediaTypes).toBe('[]')
+      expect(body.description).toBeNull()
+    })
 
     it('returns 400 for missing name', async () => {
       const res = await app.request('/api/v1/libraries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: AUTH },
         body: JSON.stringify({ description: 'no name' }),
-      });
-      expect(res.status).toBe(400);
-    });
+      })
+      expect(res.status).toBe(400)
+    })
 
     it('returns 400 for empty name', async () => {
       const res = await app.request('/api/v1/libraries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: AUTH },
         body: JSON.stringify({ name: '' }),
-      });
-      expect(res.status).toBe(400);
-    });
-  });
+      })
+      expect(res.status).toBe(400)
+    })
+  })
 
   describe('GET /api/v1/libraries', () => {
     it('returns empty array when no libraries exist', async () => {
       const res = await app.request('/api/v1/libraries', {
         headers: { Authorization: AUTH },
-      });
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body).toEqual([]);
-    });
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body).toEqual([])
+    })
 
     it('lists all libraries', async () => {
-      await createLibrary({ name: 'Library 1' });
-      await createLibrary({ name: 'Library 2' });
+      await createLibrary({ name: 'Library 1' })
+      await createLibrary({ name: 'Library 2' })
       const res = await app.request('/api/v1/libraries', {
         headers: { Authorization: AUTH },
-      });
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body).toHaveLength(2);
-      expect(body.map((l: { name: string }) => l.name)).toContain('Library 1');
-      expect(body.map((l: { name: string }) => l.name)).toContain('Library 2');
-    });
-  });
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body).toHaveLength(2)
+      expect(body.map((l: { name: string }) => l.name)).toContain('Library 1')
+      expect(body.map((l: { name: string }) => l.name)).toContain('Library 2')
+    })
+  })
 
   describe('GET /api/v1/libraries/:id', () => {
     it('returns library with empty dataSources array', async () => {
       const created = await (
         await createLibrary({ name: 'Detail Library' })
-      ).json();
+      ).json()
       const res = await app.request(`/api/v1/libraries/${created.id}`, {
         headers: { Authorization: AUTH },
-      });
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body.id).toBe(created.id);
-      expect(body.name).toBe('Detail Library');
-      expect(body.dataSources).toEqual([]);
-    });
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.id).toBe(created.id)
+      expect(body.name).toBe('Detail Library')
+      expect(body.dataSources).toEqual([])
+    })
 
     it('returns 404 for unknown id', async () => {
       const res = await app.request('/api/v1/libraries/nonexistent', {
         headers: { Authorization: AUTH },
-      });
-      expect(res.status).toBe(404);
-    });
-  });
+      })
+      expect(res.status).toBe(404)
+    })
+  })
 
   describe('PUT /api/v1/libraries/:id', () => {
     it('updates library name', async () => {
-      const created = await (await createLibrary({ name: 'Old Name' })).json();
+      const created = await (await createLibrary({ name: 'Old Name' })).json()
       const res = await app.request(`/api/v1/libraries/${created.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: AUTH },
         body: JSON.stringify({ name: 'New Name' }),
-      });
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body.name).toBe('New Name');
-    });
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.name).toBe('New Name')
+    })
 
     it('updates allowedMediaTypes', async () => {
-      const created = await (await createLibrary({ name: 'Library' })).json();
+      const created = await (await createLibrary({ name: 'Library' })).json()
       const res = await app.request(`/api/v1/libraries/${created.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: AUTH },
         body: JSON.stringify({ allowedMediaTypes: ['Movies', 'TV Shows'] }),
-      });
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body.allowedMediaTypes).toBe('["Movies","TV Shows"]');
-    });
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.allowedMediaTypes).toBe('["Movies","TV Shows"]')
+    })
 
     it('returns 404 for unknown id', async () => {
       const res = await app.request('/api/v1/libraries/nonexistent', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: AUTH },
         body: JSON.stringify({ name: 'Updated' }),
-      });
-      expect(res.status).toBe(404);
-    });
-  });
+      })
+      expect(res.status).toBe(404)
+    })
+  })
 
   describe('DELETE /api/v1/libraries/:id', () => {
     it('deletes a library and returns success', async () => {
-      const created = await (await createLibrary({ name: 'To Delete' })).json();
+      const created = await (await createLibrary({ name: 'To Delete' })).json()
       const res = await app.request(`/api/v1/libraries/${created.id}`, {
         method: 'DELETE',
         headers: { Authorization: AUTH },
-      });
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body.success).toBe(true);
-    });
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body.success).toBe(true)
+    })
 
     it('deleted library is no longer found', async () => {
-      const created = await (await createLibrary({ name: 'Gone' })).json();
+      const created = await (await createLibrary({ name: 'Gone' })).json()
       await app.request(`/api/v1/libraries/${created.id}`, {
         method: 'DELETE',
         headers: { Authorization: AUTH },
-      });
+      })
       const res = await app.request(`/api/v1/libraries/${created.id}`, {
         headers: { Authorization: AUTH },
-      });
-      expect(res.status).toBe(404);
-    });
+      })
+      expect(res.status).toBe(404)
+    })
 
     it('returns 404 for unknown id', async () => {
       const res = await app.request('/api/v1/libraries/nonexistent', {
         method: 'DELETE',
         headers: { Authorization: AUTH },
-      });
-      expect(res.status).toBe(404);
-    });
-  });
-});
+      })
+      expect(res.status).toBe(404)
+    })
+  })
+})
 
 describe('Libraries Media List API', () => {
-  let client: Client;
-  let db: LibSQLDatabase;
-  let app: ReturnType<typeof createApp>;
-  let libId: string;
-  let sourceId: string;
+  let client: Client
+  let db: LibSQLDatabase
+  let app: ReturnType<typeof createApp>
+  let libId: string
+  let sourceId: string
 
   beforeEach(async () => {
-    ({ client, db } = await openDatabase(':memory:'));
-    await migrateDatabase(db);
-    app = createApp(db);
+    ;({ client, db } = await openDatabase(':memory:'))
+    await migrateDatabase(db)
+    app = createApp(db)
 
-    libId = crypto.randomUUID();
-    const now = new Date();
+    libId = crypto.randomUUID()
+    const now = new Date()
     await db.insert(libraries).values({
       id: libId,
       name: 'Test Library',
       allowedMediaTypes: '[]',
       createdAt: now,
       updatedAt: now,
-    });
+    })
 
-    sourceId = crypto.randomUUID();
+    sourceId = crypto.randomUUID()
     await db.insert(dataSources).values({
       id: sourceId,
       libraryId: libId,
@@ -235,7 +235,7 @@ describe('Libraries Media List API', () => {
       enabled: true,
       createdAt: now,
       updatedAt: now,
-    });
+    })
 
     // Insert 3 test media items
     for (let i = 0; i < 3; i++) {
@@ -250,43 +250,43 @@ describe('Libraries Media List API', () => {
         mediaCategory: 'Pictures',
         createdAt: now,
         updatedAt: now,
-      });
+      })
     }
-  });
+  })
 
   afterEach(() => {
-    client.close();
-  });
+    client.close()
+  })
 
   describe('GET /api/v1/libraries/:libraryId/media', () => {
     it('returns all media items for the library', async () => {
       const res = await app.request(`/api/v1/libraries/${libId}/media`, {
         headers: { Authorization: AUTH },
-      });
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body).toHaveLength(3);
-    });
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body).toHaveLength(3)
+    })
 
     it('includes thumbnailUrls field on each item', async () => {
       const res = await app.request(`/api/v1/libraries/${libId}/media`, {
         headers: { Authorization: AUTH },
-      });
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body[0]).toHaveProperty('thumbnailUrls');
-    });
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body[0]).toHaveProperty('thumbnailUrls')
+    })
 
     it('returns 404 for unknown library', async () => {
       const res = await app.request('/api/v1/libraries/nonexistent/media', {
         headers: { Authorization: AUTH },
-      });
-      expect(res.status).toBe(404);
-    });
+      })
+      expect(res.status).toBe(404)
+    })
 
     it('filters by mediaCategory', async () => {
       // Add a non-picture item
-      const now = new Date();
+      const now = new Date()
       await db.insert(mediaItems).values({
         id: crypto.randomUUID(),
         libraryId: libId,
@@ -298,19 +298,19 @@ describe('Libraries Media List API', () => {
         mediaCategory: 'Documents',
         createdAt: now,
         updatedAt: now,
-      });
+      })
 
       const res = await app.request(
         `/api/v1/libraries/${libId}/media?mediaCategory=Documents`,
         {
           headers: { Authorization: AUTH },
         },
-      );
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body).toHaveLength(1);
-      expect(body[0].mediaCategory).toBe('Documents');
-    });
+      )
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body).toHaveLength(1)
+      expect(body[0].mediaCategory).toBe('Documents')
+    })
 
     it('filters by mimeType', async () => {
       const res = await app.request(
@@ -318,11 +318,11 @@ describe('Libraries Media List API', () => {
         {
           headers: { Authorization: AUTH },
         },
-      );
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body).toHaveLength(3);
-    });
+      )
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body).toHaveLength(3)
+    })
 
     it('filters by drmProtected=false', async () => {
       const res = await app.request(
@@ -330,11 +330,11 @@ describe('Libraries Media List API', () => {
         {
           headers: { Authorization: AUTH },
         },
-      );
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body).toHaveLength(3);
-    });
+      )
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body).toHaveLength(3)
+    })
 
     it('paginates results with page and limit', async () => {
       const res = await app.request(
@@ -342,21 +342,21 @@ describe('Libraries Media List API', () => {
         {
           headers: { Authorization: AUTH },
         },
-      );
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body).toHaveLength(2);
+      )
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body).toHaveLength(2)
 
       const res2 = await app.request(
         `/api/v1/libraries/${libId}/media?limit=2&page=2`,
         {
           headers: { Authorization: AUTH },
         },
-      );
-      expect(res2.status).toBe(200);
-      const body2 = await res2.json();
-      expect(body2).toHaveLength(1);
-    });
+      )
+      expect(res2.status).toBe(200)
+      const body2 = await res2.json()
+      expect(body2).toHaveLength(1)
+    })
 
     it('sorts by fileSize', async () => {
       const res = await app.request(
@@ -364,29 +364,29 @@ describe('Libraries Media List API', () => {
         {
           headers: { Authorization: AUTH },
         },
-      );
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body[0].fileSize).toBe(3000);
-      expect(body[2].fileSize).toBe(1000);
-    });
+      )
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body[0].fileSize).toBe(3000)
+      expect(body[2].fileSize).toBe(1000)
+    })
 
     it('returns empty array when library has no media', async () => {
-      const emptyLibId = crypto.randomUUID();
-      const now = new Date();
+      const emptyLibId = crypto.randomUUID()
+      const now = new Date()
       await db.insert(libraries).values({
         id: emptyLibId,
         name: 'Empty Library',
         allowedMediaTypes: '[]',
         createdAt: now,
         updatedAt: now,
-      });
+      })
       const res = await app.request(`/api/v1/libraries/${emptyLibId}/media`, {
         headers: { Authorization: AUTH },
-      });
-      expect(res.status).toBe(200);
-      const body = await res.json();
-      expect(body).toHaveLength(0);
-    });
-  });
-});
+      })
+      expect(res.status).toBe(200)
+      const body = await res.json()
+      expect(body).toHaveLength(0)
+    })
+  })
+})

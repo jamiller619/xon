@@ -1,35 +1,35 @@
-import type { PluginContext } from '@xon/plugin-sdk';
-import { beforeEach, describe, expect, it, vi } from 'vitest';
-import ModelViewerPlugin from '../index.js';
+import type { PluginContext } from '@xon/plugin-sdk'
+import { beforeEach, describe, expect, it, vi } from 'vitest'
+import ModelViewerPlugin from '../index.js'
 
 describe('ModelViewerPlugin', () => {
-  let plugin: ModelViewerPlugin;
+  let plugin: ModelViewerPlugin
 
   beforeEach(() => {
-    plugin = new ModelViewerPlugin();
-  });
+    plugin = new ModelViewerPlugin()
+  })
 
   describe('manifest', () => {
     it('has correct id', () => {
-      expect(plugin.manifest.id).toBe('3d-model-viewer');
-    });
+      expect(plugin.manifest.id).toBe('3d-model-viewer')
+    })
 
     it('has FormatHandler category', () => {
-      expect(plugin.manifest.category).toBe('FormatHandler');
-    });
+      expect(plugin.manifest.category).toBe('FormatHandler')
+    })
 
     it('handles 3D Models media category', () => {
-      expect(plugin.manifest.mediaCategories).toContain('3D Models');
-    });
+      expect(plugin.manifest.mediaCategories).toContain('3D Models')
+    })
 
     it('has main entry point', () => {
-      expect(plugin.manifest.main).toBe('dist/index.js');
-    });
-  });
+      expect(plugin.manifest.main).toBe('dist/index.js')
+    })
+  })
 
   describe('init', () => {
     it('registers a detail-panel UI component', async () => {
-      const registeredComponents: unknown[] = [];
+      const registeredComponents: unknown[] = []
       const mockContext: PluginContext = {
         manifest: plugin.manifest,
         db: { query: vi.fn().mockResolvedValue([]) },
@@ -39,18 +39,18 @@ describe('ModelViewerPlugin', () => {
         logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
         fs: {} as PluginContext['fs'],
         fetch: vi.fn(),
-      };
+      }
 
-      await plugin.init(mockContext);
+      await plugin.init(mockContext)
 
-      expect(mockContext.registerUI).toHaveBeenCalledOnce();
+      expect(mockContext.registerUI).toHaveBeenCalledOnce()
       expect(registeredComponents[0]).toMatchObject({
         id: 'model-viewer-panel',
         injectionPoint: 'detail-panel',
         bundleUrl: '/api/v1/plugins/3d-model-viewer/assets/viewer.js',
         label: '3D Model Viewer',
-      });
-    });
+      })
+    })
 
     it('does not register any event hooks', async () => {
       const mockContext: PluginContext = {
@@ -62,12 +62,12 @@ describe('ModelViewerPlugin', () => {
         logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
         fs: {} as PluginContext['fs'],
         fetch: vi.fn(),
-      };
+      }
 
-      await plugin.init(mockContext);
+      await plugin.init(mockContext)
 
-      expect(mockContext.on).not.toHaveBeenCalled();
-    });
+      expect(mockContext.on).not.toHaveBeenCalled()
+    })
 
     it('does not register any API routes', async () => {
       const mockContext: PluginContext = {
@@ -79,12 +79,12 @@ describe('ModelViewerPlugin', () => {
         logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
         fs: {} as PluginContext['fs'],
         fetch: vi.fn(),
-      };
+      }
 
-      await plugin.init(mockContext);
+      await plugin.init(mockContext)
 
-      expect(mockContext.registerRoute).not.toHaveBeenCalled();
-    });
+      expect(mockContext.registerRoute).not.toHaveBeenCalled()
+    })
 
     it('logs initialization info', async () => {
       const mockContext: PluginContext = {
@@ -96,13 +96,13 @@ describe('ModelViewerPlugin', () => {
         logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
         fs: {} as PluginContext['fs'],
         fetch: vi.fn(),
-      };
+      }
 
-      await plugin.init(mockContext);
+      await plugin.init(mockContext)
 
       expect(mockContext.logger.info).toHaveBeenCalledWith(
         '3D Model Viewer plugin initialized',
-      );
-    });
-  });
-});
+      )
+    })
+  })
+})

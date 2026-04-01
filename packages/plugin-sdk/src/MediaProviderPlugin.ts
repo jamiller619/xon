@@ -1,9 +1,9 @@
-import { BasePlugin } from './BasePlugin.js';
+import { BasePlugin } from './BasePlugin.js'
 import type {
   MediaProviderConfigSchema,
   MediaProviderFile,
   WatchCallback,
-} from './types.js';
+} from './types.js'
 
 /**
  * Abstract base class for MediaProvider plugins.
@@ -19,21 +19,21 @@ export abstract class MediaProviderPlugin extends BasePlugin {
    * for data source setup (e.g. auth tokens, root paths, bucket names).
    * Used by the admin UI to render a configuration form.
    */
-  abstract readonly configSchema: MediaProviderConfigSchema;
+  abstract readonly configSchema: MediaProviderConfigSchema
 
   /**
    * List all media files under the given path in the remote storage.
    * @param path Virtual path within the remote storage to enumerate
    * @returns Array of file entries with id, name, path, size, and optional metadata
    */
-  abstract listFiles(path: string): Promise<MediaProviderFile[]>;
+  abstract listFiles(path: string): Promise<MediaProviderFile[]>
 
   /**
    * Retrieve the full content of a file by its remote id.
    * @param id Unique identifier for the file (from MediaProviderFile.id)
    * @returns File contents as a Uint8Array
    */
-  abstract getFile(id: string): Promise<Uint8Array>;
+  abstract getFile(id: string): Promise<Uint8Array>
 
   /**
    * Open a streaming read for a file by its remote id.
@@ -41,7 +41,7 @@ export abstract class MediaProviderPlugin extends BasePlugin {
    * @param id Unique identifier for the file (from MediaProviderFile.id)
    * @returns ReadableStream of the file contents
    */
-  abstract getStream(id: string): Promise<ReadableStream<Uint8Array>>;
+  abstract getStream(id: string): Promise<ReadableStream<Uint8Array>>
 
   /**
    * Watch for file changes in the remote storage and invoke the callback
@@ -49,5 +49,5 @@ export abstract class MediaProviderPlugin extends BasePlugin {
    * @param callback Function called with event type and affected file
    * @returns Unsubscribe function — call it to stop watching
    */
-  abstract watch(callback: WatchCallback): Promise<() => void>;
+  abstract watch(callback: WatchCallback): Promise<() => void>
 }

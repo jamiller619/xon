@@ -1,24 +1,24 @@
-import { useCallback, useEffect, useRef, useState } from 'react';
-import styles from './ImageViewer.module.css';
+import { useCallback, useEffect, useRef, useState } from 'react'
+import styles from './ImageViewer.module.css'
 
 export interface ImageSibling {
-  id: string;
-  title: string;
+  id: string
+  title: string
 }
 
 interface ImageViewerProps {
-  mediaId: string;
-  title: string;
-  onClose: () => void;
-  siblings?: ImageSibling[];
+  mediaId: string
+  title: string
+  onClose: () => void
+  siblings?: ImageSibling[]
 }
 
-const MIN_SCALE = 1;
-const MAX_SCALE = 8;
-const SLIDESHOW_INTERVAL_MS = 4000;
+const MIN_SCALE = 1
+const MAX_SCALE = 8
+const SLIDESHOW_INTERVAL_MS = 4000
 
 function clamp(value: number, min: number, max: number): number {
-  return Math.min(max, Math.max(min, value));
+  return Math.min(max, Math.max(min, value))
 }
 
 export default function ImageViewer({
@@ -33,183 +33,183 @@ export default function ImageViewer({
         0,
         siblings.findIndex((s) => s.id === mediaId),
       )
-    : 0;
-  const [currentIndex, setCurrentIndex] = useState(startIndex);
+    : 0
+  const [currentIndex, setCurrentIndex] = useState(startIndex)
 
   const currentId =
     siblings && siblings.length > 0
       ? (siblings[currentIndex]?.id ?? mediaId)
-      : mediaId;
+      : mediaId
   const currentTitle =
     siblings && siblings.length > 0
       ? (siblings[currentIndex]?.title ?? title)
-      : title;
+      : title
 
-  const [scale, setScale] = useState(1);
-  const [translateX, setTranslateX] = useState(0);
-  const [translateY, setTranslateY] = useState(0);
-  const [dragging, setDragging] = useState(false);
-  const [slideshowActive, setSlideshowActive] = useState(false);
-  const [loaded, setLoaded] = useState(false);
+  const [scale, setScale] = useState(1)
+  const [translateX, setTranslateX] = useState(0)
+  const [translateY, setTranslateY] = useState(0)
+  const [dragging, setDragging] = useState(false)
+  const [slideshowActive, setSlideshowActive] = useState(false)
+  const [loaded, setLoaded] = useState(false)
 
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLDivElement>(null)
   const dragStart = useRef<{
-    x: number;
-    y: number;
-    tx: number;
-    ty: number;
-  } | null>(null);
-  const pinchRef = useRef<{ dist: number; scale: number } | null>(null);
+    x: number
+    y: number
+    tx: number
+    ty: number
+  } | null>(null)
+  const pinchRef = useRef<{ dist: number; scale: number } | null>(null)
 
-  const hasSiblings = siblings && siblings.length > 1;
+  const hasSiblings = siblings && siblings.length > 1
 
   const resetTransform = useCallback(() => {
-    setScale(1);
-    setTranslateX(0);
-    setTranslateY(0);
-  }, []);
+    setScale(1)
+    setTranslateX(0)
+    setTranslateY(0)
+  }, [])
 
   const goNext = useCallback(() => {
-    if (!hasSiblings) return;
-    setCurrentIndex((i) => (i + 1) % (siblings?.length ?? 1));
-    resetTransform();
-    setLoaded(false);
-  }, [hasSiblings, siblings?.length, resetTransform]);
+    if (!hasSiblings) return
+    setCurrentIndex((i) => (i + 1) % (siblings?.length ?? 1))
+    resetTransform()
+    setLoaded(false)
+  }, [hasSiblings, siblings?.length, resetTransform])
 
   const goPrev = useCallback(() => {
-    if (!hasSiblings) return;
+    if (!hasSiblings) return
     setCurrentIndex(
       (i) => (i - 1 + (siblings?.length ?? 1)) % (siblings?.length ?? 1),
-    );
-    resetTransform();
-    setLoaded(false);
-  }, [hasSiblings, siblings?.length, resetTransform]);
+    )
+    resetTransform()
+    setLoaded(false)
+  }, [hasSiblings, siblings?.length, resetTransform])
 
   // Keyboard navigation
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       switch (e.key) {
         case 'Escape':
-          onClose();
-          break;
+          onClose()
+          break
         case 'ArrowLeft':
-          e.preventDefault();
-          goPrev();
-          break;
+          e.preventDefault()
+          goPrev()
+          break
         case 'ArrowRight':
-          e.preventDefault();
-          goNext();
-          break;
+          e.preventDefault()
+          goNext()
+          break
         case ' ':
-          e.preventDefault();
-          if (hasSiblings) setSlideshowActive((a) => !a);
-          break;
+          e.preventDefault()
+          if (hasSiblings) setSlideshowActive((a) => !a)
+          break
         default:
-          break;
+          break
       }
     }
-    document.addEventListener('keydown', handleKeyDown);
-    return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [onClose, goNext, goPrev, hasSiblings]);
+    document.addEventListener('keydown', handleKeyDown)
+    return () => document.removeEventListener('keydown', handleKeyDown)
+  }, [onClose, goNext, goPrev, hasSiblings])
 
   // Slideshow timer
   useEffect(() => {
-    if (!slideshowActive || !hasSiblings) return;
-    const timer = setInterval(goNext, SLIDESHOW_INTERVAL_MS);
-    return () => clearInterval(timer);
-  }, [slideshowActive, hasSiblings, goNext]);
+    if (!slideshowActive || !hasSiblings) return
+    const timer = setInterval(goNext, SLIDESHOW_INTERVAL_MS)
+    return () => clearInterval(timer)
+  }, [slideshowActive, hasSiblings, goNext])
 
   // Mouse wheel zoom
   function handleWheel(e: React.WheelEvent) {
-    e.preventDefault();
-    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15;
+    e.preventDefault()
+    const factor = e.deltaY < 0 ? 1.15 : 1 / 1.15
     setScale((s) => {
-      const newScale = clamp(s * factor, MIN_SCALE, MAX_SCALE);
+      const newScale = clamp(s * factor, MIN_SCALE, MAX_SCALE)
       // When zooming back to 1, reset translation
       if (newScale === MIN_SCALE) {
-        setTranslateX(0);
-        setTranslateY(0);
+        setTranslateX(0)
+        setTranslateY(0)
       }
-      return newScale;
-    });
+      return newScale
+    })
   }
 
   // Mouse drag pan
   function handleMouseDown(e: React.MouseEvent) {
-    if (scale <= 1) return;
-    e.preventDefault();
-    setDragging(true);
+    if (scale <= 1) return
+    e.preventDefault()
+    setDragging(true)
     dragStart.current = {
       x: e.clientX,
       y: e.clientY,
       tx: translateX,
       ty: translateY,
-    };
+    }
   }
 
   function handleMouseMove(e: React.MouseEvent) {
-    if (!dragging || !dragStart.current) return;
-    const dx = e.clientX - dragStart.current.x;
-    const dy = e.clientY - dragStart.current.y;
-    setTranslateX(dragStart.current.tx + dx);
-    setTranslateY(dragStart.current.ty + dy);
+    if (!dragging || !dragStart.current) return
+    const dx = e.clientX - dragStart.current.x
+    const dy = e.clientY - dragStart.current.y
+    setTranslateX(dragStart.current.tx + dx)
+    setTranslateY(dragStart.current.ty + dy)
   }
 
   function handleMouseUp() {
-    setDragging(false);
-    dragStart.current = null;
+    setDragging(false)
+    dragStart.current = null
   }
 
   // Touch events for pinch-zoom and pan
   function handleTouchStart(e: React.TouchEvent) {
     if (e.touches.length === 2) {
-      const t1 = e.touches[0];
-      const t2 = e.touches[1];
-      if (!t1 || !t2) return;
-      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
-      pinchRef.current = { dist, scale };
+      const t1 = e.touches[0]
+      const t2 = e.touches[1]
+      if (!t1 || !t2) return
+      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY)
+      pinchRef.current = { dist, scale }
     } else if (e.touches.length === 1 && scale > 1) {
-      const t = e.touches[0];
-      if (!t) return;
+      const t = e.touches[0]
+      if (!t) return
       dragStart.current = {
         x: t.clientX,
         y: t.clientY,
         tx: translateX,
         ty: translateY,
-      };
+      }
     }
   }
 
   function handleTouchMove(e: React.TouchEvent) {
-    e.preventDefault();
+    e.preventDefault()
     if (e.touches.length === 2 && pinchRef.current) {
-      const t1 = e.touches[0];
-      const t2 = e.touches[1];
-      if (!t1 || !t2) return;
-      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY);
+      const t1 = e.touches[0]
+      const t2 = e.touches[1]
+      if (!t1 || !t2) return
+      const dist = Math.hypot(t2.clientX - t1.clientX, t2.clientY - t1.clientY)
       const newScale = clamp(
         pinchRef.current.scale * (dist / pinchRef.current.dist),
         MIN_SCALE,
         MAX_SCALE,
-      );
-      setScale(newScale);
+      )
+      setScale(newScale)
       if (newScale === MIN_SCALE) {
-        setTranslateX(0);
-        setTranslateY(0);
+        setTranslateX(0)
+        setTranslateY(0)
       }
     } else if (e.touches.length === 1 && dragStart.current && scale > 1) {
-      const t = e.touches[0];
-      if (!t) return;
-      const dx = t.clientX - dragStart.current.x;
-      const dy = t.clientY - dragStart.current.y;
-      setTranslateX(dragStart.current.tx + dx);
-      setTranslateY(dragStart.current.ty + dy);
+      const t = e.touches[0]
+      if (!t) return
+      const dx = t.clientX - dragStart.current.x
+      const dy = t.clientY - dragStart.current.y
+      setTranslateX(dragStart.current.tx + dx)
+      setTranslateY(dragStart.current.ty + dy)
     }
   }
 
   function handleTouchEnd() {
-    pinchRef.current = null;
-    dragStart.current = null;
+    pinchRef.current = null
+    dragStart.current = null
   }
 
   return (
@@ -303,5 +303,5 @@ export default function ImageViewer({
         </>
       )}
     </dialog>
-  );
+  )
 }

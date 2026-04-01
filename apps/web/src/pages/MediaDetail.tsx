@@ -1,52 +1,52 @@
-import { Suspense, lazy, useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
-import { apiFetch } from '../apiFetch.js';
-import PluginSlot from '../components/PluginSlot.js';
-import { useAudioStore } from '../store/index';
-import styles from './MediaDetail.module.css';
+import { Suspense, lazy, useEffect, useState } from 'react'
+import { Link, useParams } from 'react-router-dom'
+import { apiFetch } from '../apiFetch.js'
+import PluginSlot from '../components/PluginSlot.js'
+import { useAudioStore } from '../store/index'
+import styles from './MediaDetail.module.css'
 
 // Player/viewer components loaded on demand — separate JS chunks
-const ArchiveViewer = lazy(() => import('../components/ArchiveViewer.js'));
-const EpubViewer = lazy(() => import('../components/EpubViewer.js'));
-const FontViewer = lazy(() => import('../components/FontViewer.js'));
-const ImageViewer = lazy(() => import('../components/ImageViewer.js'));
-const PdfViewer = lazy(() => import('../components/PdfViewer.js'));
-const VideoPlayer = lazy(() => import('../components/VideoPlayer.js'));
+const ArchiveViewer = lazy(() => import('../components/ArchiveViewer.js'))
+const EpubViewer = lazy(() => import('../components/EpubViewer.js'))
+const FontViewer = lazy(() => import('../components/FontViewer.js'))
+const ImageViewer = lazy(() => import('../components/ImageViewer.js'))
+const PdfViewer = lazy(() => import('../components/PdfViewer.js'))
+const VideoPlayer = lazy(() => import('../components/VideoPlayer.js'))
 
 interface ImageSibling {
-  id: string;
-  title: string;
+  id: string
+  title: string
 }
 
 interface MediaDetailItem {
-  id: string;
-  title: string | null;
-  description: string | null;
-  mediaCategory: string | null;
-  mimeType: string | null;
-  fileSize: number | null;
-  filePath: string;
-  fileName: string;
-  metadata: string;
-  drmProtected: boolean;
-  createdAt: number | null;
-  scannedAt: number | null;
-  libraryId: string | null;
-  thumbnailUrls: { small: string; medium: string; large: string } | null;
+  id: string
+  title: string | null
+  description: string | null
+  mediaCategory: string | null
+  mimeType: string | null
+  fileSize: number | null
+  filePath: string
+  fileName: string
+  metadata: string
+  drmProtected: boolean
+  createdAt: number | null
+  scannedAt: number | null
+  libraryId: string | null
+  thumbnailUrls: { small: string; medium: string; large: string } | null
 }
 
 function formatBytes(bytes: number | null): string {
-  if (bytes == null) return '—';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes == null) return '—'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   if (bytes < 1024 * 1024 * 1024)
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
 }
 
 function formatDate(ts: number | null): string {
-  if (ts == null) return '—';
-  return new Date(ts * 1000).toLocaleString();
+  if (ts == null) return '—'
+  return new Date(ts * 1000).toLocaleString()
 }
 
 function MetaRow({ label, value }: { label: string; value: string }) {
@@ -55,94 +55,93 @@ function MetaRow({ label, value }: { label: string; value: string }) {
       <td className={styles.metaLabel ?? ''}>{label}</td>
       <td className={styles.metaValue ?? ''}>{value}</td>
     </tr>
-  );
+  )
 }
 
 export default function MediaDetail() {
-  const { id } = useParams<{ id: string }>();
-  const [item, setItem] = useState<MediaDetailItem | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
+  const { id } = useParams<{ id: string }>()
+  const [item, setItem] = useState<MediaDetailItem | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState<string | null>(null)
 
-  const [showPlayer, setShowPlayer] = useState(false);
-  const [showImageViewer, setShowImageViewer] = useState(false);
-  const [showPdfViewer, setShowPdfViewer] = useState(false);
-  const [showEpubViewer, setShowEpubViewer] = useState(false);
-  const [showFontViewer, setShowFontViewer] = useState(false);
-  const [showArchiveViewer, setShowArchiveViewer] = useState(false);
-  const [imageSiblings, setImageSiblings] = useState<ImageSibling[]>([]);
+  const [showPlayer, setShowPlayer] = useState(false)
+  const [showImageViewer, setShowImageViewer] = useState(false)
+  const [showPdfViewer, setShowPdfViewer] = useState(false)
+  const [showEpubViewer, setShowEpubViewer] = useState(false)
+  const [showFontViewer, setShowFontViewer] = useState(false)
+  const [showArchiveViewer, setShowArchiveViewer] = useState(false)
+  const [imageSiblings, setImageSiblings] = useState<ImageSibling[]>([])
 
-  const [isFavorited, setIsFavorited] = useState(false);
-  const [isWatchlisted, setIsWatchlisted] = useState(false);
+  const [isFavorited, setIsFavorited] = useState(false)
+  const [isWatchlisted, setIsWatchlisted] = useState(false)
 
-  const playTrack = useAudioStore((s) => s.playTrack);
-  const addToQueue = useAudioStore((s) => s.addToQueue);
+  const playTrack = useAudioStore((s) => s.playTrack)
+  const addToQueue = useAudioStore((s) => s.addToQueue)
 
   // Edit state
-  const [editing, setEditing] = useState(false);
-  const [editTitle, setEditTitle] = useState('');
-  const [editDescription, setEditDescription] = useState('');
-  const [editTags, setEditTags] = useState('');
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState<string | null>(null);
+  const [editing, setEditing] = useState(false)
+  const [editTitle, setEditTitle] = useState('')
+  const [editDescription, setEditDescription] = useState('')
+  const [editTags, setEditTags] = useState('')
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (!id) return;
-    setLoading(true);
+    if (!id) return
+    setLoading(true)
     apiFetch(`/api/v1/media/${id}`)
       .then((r) => {
-        if (!r.ok) throw new Error('Not found');
-        return r.json();
+        if (!r.ok) throw new Error('Not found')
+        return r.json()
       })
       .then((data) => {
-        setItem(data as MediaDetailItem);
-        setLoading(false);
+        setItem(data as MediaDetailItem)
+        setLoading(false)
       })
       .catch(() => {
-        setError('Media item not found.');
-        setLoading(false);
-      });
-  }, [id]);
+        setError('Media item not found.')
+        setLoading(false)
+      })
+  }, [id])
 
   // Load favorite/watchlist state
   useEffect(() => {
-    if (!id) return;
+    if (!id) return
     apiFetch('/api/v1/users/me/favorites')
       .then((r) => r.json())
       .then((data: unknown) => {
         if (Array.isArray(data)) {
-          setIsFavorited((data as { id: string }[]).some((m) => m.id === id));
+          setIsFavorited((data as { id: string }[]).some((m) => m.id === id))
         }
       })
-      .catch(() => {});
+      .catch(() => {})
     apiFetch('/api/v1/users/me/watchlist')
       .then((r) => r.json())
       .then((data: unknown) => {
         if (Array.isArray(data)) {
-          setIsWatchlisted((data as { id: string }[]).some((m) => m.id === id));
+          setIsWatchlisted((data as { id: string }[]).some((m) => m.id === id))
         }
       })
-      .catch(() => {});
-  }, [id]);
+      .catch(() => {})
+  }, [id])
 
   async function toggleFavorite() {
-    if (!id) return;
-    const method = isFavorited ? 'DELETE' : 'POST';
-    const res = await apiFetch(`/api/v1/media/${id}/favorite`, { method });
-    if (res.ok) setIsFavorited(!isFavorited);
+    if (!id) return
+    const method = isFavorited ? 'DELETE' : 'POST'
+    const res = await apiFetch(`/api/v1/media/${id}/favorite`, { method })
+    if (res.ok) setIsFavorited(!isFavorited)
   }
 
   async function toggleWatchlist() {
-    if (!id) return;
-    const method = isWatchlisted ? 'DELETE' : 'POST';
-    const res = await apiFetch(`/api/v1/media/${id}/watchlist`, { method });
-    if (res.ok) setIsWatchlisted(!isWatchlisted);
+    if (!id) return
+    const method = isWatchlisted ? 'DELETE' : 'POST'
+    const res = await apiFetch(`/api/v1/media/${id}/watchlist`, { method })
+    if (res.ok) setIsWatchlisted(!isWatchlisted)
   }
 
   // Fetch sibling images from same library for slideshow
   useEffect(() => {
-    if (!item || !item.mimeType?.startsWith('image/') || !item.libraryId)
-      return;
+    if (!item || !item.mimeType?.startsWith('image/') || !item.libraryId) return
     apiFetch(
       `/api/v1/libraries/${item.libraryId}/media?mediaCategory=${encodeURIComponent(item.mediaCategory ?? 'Pictures')}&limit=100`,
     )
@@ -151,79 +150,79 @@ export default function MediaDetail() {
         if (Array.isArray(data)) {
           const siblings: ImageSibling[] = (
             data as { id: string; title: string | null; fileName: string }[]
-          ).map((m) => ({ id: m.id, title: m.title ?? m.fileName }));
-          setImageSiblings(siblings);
+          ).map((m) => ({ id: m.id, title: m.title ?? m.fileName }))
+          setImageSiblings(siblings)
         }
       })
       .catch(() => {
         // siblings unavailable — viewer will work for single image
-      });
-  }, [item]);
+      })
+  }, [item])
 
   function startEditing() {
-    if (!item) return;
-    setEditTitle(item.title ?? '');
-    setEditDescription(item.description ?? '');
-    let tags: string[] = [];
+    if (!item) return
+    setEditTitle(item.title ?? '')
+    setEditDescription(item.description ?? '')
+    let tags: string[] = []
     try {
-      const meta = JSON.parse(item.metadata) as Record<string, unknown>;
-      if (Array.isArray(meta.tags)) tags = meta.tags as string[];
+      const meta = JSON.parse(item.metadata) as Record<string, unknown>
+      if (Array.isArray(meta.tags)) tags = meta.tags as string[]
     } catch {
       // ignore
     }
-    setEditTags(tags.join(', '));
-    setSaveError(null);
-    setEditing(true);
+    setEditTags(tags.join(', '))
+    setSaveError(null)
+    setEditing(true)
   }
 
   function cancelEditing() {
-    setEditing(false);
-    setSaveError(null);
+    setEditing(false)
+    setSaveError(null)
   }
 
   async function handleAiTag(action: 'accept' | 'reject', tagText: string) {
-    if (!id) return;
+    if (!id) return
     const body =
-      action === 'accept' ? { accept: [tagText] } : { reject: [tagText] };
+      action === 'accept' ? { accept: [tagText] } : { reject: [tagText] }
     const res = await apiFetch(`/api/v1/media/${id}/ai-tags`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
-    }).catch(() => null);
+    }).catch(() => null)
     if (res?.ok) {
-      const updated = (await res.json()) as MediaDetailItem;
-      setItem(updated);
+      const updated = (await res.json()) as MediaDetailItem
+      setItem(updated)
     }
   }
 
   async function saveEditing() {
-    if (!item || !id) return;
-    setSaving(true);
-    setSaveError(null);
+    if (!item || !id) return
+    setSaving(true)
+    setSaveError(null)
     const tags = editTags
       .split(',')
       .map((t) => t.trim())
-      .filter((t) => t.length > 0);
-    const payload: Record<string, unknown> = {};
-    if (editTitle.trim()) payload.title = editTitle.trim();
+      .filter((t) => t.length > 0)
+    const payload: Record<string, unknown> = {}
+    if (editTitle.trim()) payload.title = editTitle.trim()
     if (editDescription !== item.description)
-      payload.description = editDescription;
-    payload.tags = tags;
+      payload.description = editDescription
+    payload.tags = tags
 
     try {
       const res = await apiFetch(`/api/v1/media/${id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),
-      });
-      if (!res.ok) throw new Error('Failed to save');
-      const updated = (await res.json()) as MediaDetailItem;
-      setItem(updated);
-      setEditing(false);
+      })
+      if (!res.ok) throw new Error('Failed to save')
+      const updated = (await res.json()) as MediaDetailItem
+      setItem(updated)
+      setEditing(false)
     } catch {
-      setSaveError('Failed to save changes. Please try again.');
+      setSaveError('Failed to save changes. Please try again.')
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
   }
 
@@ -239,7 +238,7 @@ export default function MediaDetail() {
           </div>
         </div>
       </div>
-    );
+    )
   }
 
   if (error || !item) {
@@ -252,20 +251,20 @@ export default function MediaDetail() {
           </Link>
         </div>
       </div>
-    );
+    )
   }
 
-  let parsedMeta: Record<string, unknown> = {};
+  let parsedMeta: Record<string, unknown> = {}
   try {
-    parsedMeta = JSON.parse(item.metadata) as Record<string, unknown>;
+    parsedMeta = JSON.parse(item.metadata) as Record<string, unknown>
   } catch {
     // ignore
   }
 
   interface AiTagEntry {
-    text: string;
-    confidence: number;
-    source: string;
+    text: string
+    confidence: number
+    source: string
   }
 
   const metaEntries = Object.entries(parsedMeta).filter(
@@ -276,31 +275,31 @@ export default function MediaDetail() {
       v !== undefined &&
       v !== '' &&
       !Array.isArray(v),
-  );
+  )
   const metaArrayEntries = Object.entries(parsedMeta).filter(
     ([k, v]) => k !== 'tags' && k !== 'aiTags' && Array.isArray(v),
-  );
+  )
   const tags = Array.isArray(parsedMeta.tags)
     ? (parsedMeta.tags as string[])
-    : [];
+    : []
   const aiTags = Array.isArray(parsedMeta.aiTags)
     ? (parsedMeta.aiTags as AiTagEntry[])
-    : [];
+    : []
 
-  const isImage = item.mimeType?.startsWith('image/');
-  const isPdf = item.mimeType === 'application/pdf';
+  const isImage = item.mimeType?.startsWith('image/')
+  const isPdf = item.mimeType === 'application/pdf'
   const isEpub =
     item.mimeType === 'application/epub+zip' ||
     item.mimeType === 'application/x-mobipocket-ebook' ||
-    item.mimeType === 'application/vnd.amazon.ebook';
+    item.mimeType === 'application/vnd.amazon.ebook'
   const isFont =
     item.mimeType?.startsWith('font/') ||
-    item.mimeType === 'application/vnd.ms-fontobject';
+    item.mimeType === 'application/vnd.ms-fontobject'
   const isArchive =
     item.mimeType === 'application/zip' ||
     item.mimeType === 'application/x-7z-compressed' ||
     item.mimeType === 'application/x-tar' ||
-    item.mediaCategory === 'Archives';
+    item.mediaCategory === 'Archives'
 
   return (
     <div className={styles.page ?? ''}>
@@ -393,7 +392,7 @@ export default function MediaDetail() {
                     isImage && !item.drmProtected
                       ? (e) => {
                           if (e.key === 'Enter' || e.key === ' ')
-                            setShowImageViewer(true);
+                            setShowImageViewer(true)
                         }
                       : undefined
                   }
@@ -683,7 +682,7 @@ export default function MediaDetail() {
                             id,
                             title: item.title ?? item.fileName,
                             mimeType: item.mimeType ?? 'audio/mpeg',
-                          });
+                          })
                         }
                       }}
                     >
@@ -700,7 +699,7 @@ export default function MediaDetail() {
                             id,
                             title: item.title ?? item.fileName,
                             mimeType: item.mimeType ?? 'audio/mpeg',
-                          });
+                          })
                         }
                       }}
                     >
@@ -810,5 +809,5 @@ export default function MediaDetail() {
         </p>
       </section>
     </div>
-  );
+  )
 }

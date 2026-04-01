@@ -1,9 +1,9 @@
-import { createHash, randomBytes } from 'node:crypto';
-import { and, desc, eq, isNull, or } from 'drizzle-orm';
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { Hono } from 'hono';
-import { z } from 'zod';
-import { hashPassword, verifyPassword } from '../auth/password.js';
+import { createHash, randomBytes } from 'node:crypto'
+import { and, desc, eq, isNull, or } from 'drizzle-orm'
+import type { LibSQLDatabase } from 'drizzle-orm/libsql'
+import { Hono } from 'hono'
+import { z } from 'zod'
+import { hashPassword, verifyPassword } from '../auth/password.js'
 import {
   apiTokens,
   favorites,
@@ -11,20 +11,20 @@ import {
   mediaProgress,
   users,
   watchlist,
-} from '../db/schema.js';
-import { validate } from '../http/validate.js';
-import { withThumbnailUrls } from './media.js';
+} from '../db/schema.js'
+import { validate } from '../http/validate.js'
+import { withThumbnailUrls } from './media.js'
 
 export function hashApiToken(token: string): string {
-  return createHash('sha256').update(token).digest('hex');
+  return createHash('sha256').update(token).digest('hex')
 }
 
 export function makeUsersRouter(db: LibSQLDatabase): Hono {
-  const router = new Hono();
+  const router = new Hono()
 
   // GET /users/me — get current user profile (no password hash)
   router.get('/me', async (c) => {
-    const user = c.get('user');
+    const user = c.get('user')
     const rows = await db
       .select({
         id: users.id,
@@ -40,24 +40,24 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
       })
       .from(users)
       .where(eq(users.id, user.id))
-      .limit(1);
-    if (!rows[0]) return c.json({ error: 'Not found' }, 404);
-    return c.json(rows[0]);
-  });
+      .limit(1)
+    if (!rows[0]) return c.json({ error: 'Not found' }, 404)
+    return c.json(rows[0])
+  })
 
   // PATCH /users/me — update current user preferences (legacy, kept for backwards compat)
   router.patch(
     '/me',
     validate('json', z.object({ hideDrmItems: z.boolean().optional() })),
     async (c) => {
-      const user = c.get('user');
-      const body = c.req.valid('json');
+      const user = c.get('user')
+      const body = c.req.valid('json')
       const updates: Partial<typeof users.$inferInsert> = {
         updatedAt: new Date(),
-      };
+      }
       if (body.hideDrmItems !== undefined)
-        updates.hideDrmItems = body.hideDrmItems;
-      await db.update(users).set(updates).where(eq(users.id, user.id));
+        updates.hideDrmItems = body.hideDrmItems
+      await db.update(users).set(updates).where(eq(users.id, user.id))
       const rows = await db
         .select({
           id: users.id,
@@ -73,10 +73,10 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
         })
         .from(users)
         .where(eq(users.id, user.id))
-        .limit(1);
-      return c.json(rows[0]);
+        .limit(1)
+      return c.json(rows[0])
     },
-  );
+  )
 
   const profileUpdateSchema = z.object({
     displayName: z.string().min(1).max(128).optional(),
@@ -86,24 +86,24 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
       .enum(['G', 'PG', 'PG-13', 'R', 'unrated', 'none'])
       .optional(),
     hideDrmItems: z.boolean().optional(),
-  });
+  })
 
   // PUT /users/me — update full profile and preferences
   router.put('/me', validate('json', profileUpdateSchema), async (c) => {
-    const user = c.get('user');
-    const body = c.req.valid('json');
+    const user = c.get('user')
+    const body = c.req.valid('json')
     const updates: Partial<typeof users.$inferInsert> = {
       updatedAt: new Date(),
-    };
-    if (body.displayName !== undefined) updates.displayName = body.displayName;
-    if (body.email !== undefined) updates.email = body.email;
+    }
+    if (body.displayName !== undefined) updates.displayName = body.displayName
+    if (body.email !== undefined) updates.email = body.email
     if (body.avatarUrl !== undefined)
-      updates.avatarUrl = body.avatarUrl ?? undefined;
+      updates.avatarUrl = body.avatarUrl ?? undefined
     if (body.maxContentRating !== undefined)
-      updates.maxContentRating = body.maxContentRating;
+      updates.maxContentRating = body.maxContentRating
     if (body.hideDrmItems !== undefined)
-      updates.hideDrmItems = body.hideDrmItems;
-    await db.update(users).set(updates).where(eq(users.id, user.id));
+      updates.hideDrmItems = body.hideDrmItems
+    await db.update(users).set(updates).where(eq(users.id, user.id))
     const rows = await db
       .select({
         id: users.id,
@@ -119,10 +119,10 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
       })
       .from(users)
       .where(eq(users.id, user.id))
-      .limit(1);
-    if (!rows[0]) return c.json({ error: 'Not found' }, 404);
-    return c.json(rows[0]);
-  });
+      .limit(1)
+    if (!rows[0]) return c.json({ error: 'Not found' }, 404)
+    return c.json(rows[0])
+  })
 
   // PUT /users/me/password — change current user's password
   router.put(
@@ -135,33 +135,32 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
       }),
     ),
     async (c) => {
-      const user = c.get('user');
-      const { currentPassword, newPassword } = c.req.valid('json');
+      const user = c.get('user')
+      const { currentPassword, newPassword } = c.req.valid('json')
 
       const rows = await db
         .select({ passwordHash: users.passwordHash })
         .from(users)
         .where(eq(users.id, user.id))
-        .limit(1);
-      if (!rows[0]) return c.json({ error: 'Not found' }, 404);
+        .limit(1)
+      if (!rows[0]) return c.json({ error: 'Not found' }, 404)
 
-      const valid = await verifyPassword(rows[0].passwordHash, currentPassword);
-      if (!valid)
-        return c.json({ error: 'Current password is incorrect' }, 400);
+      const valid = await verifyPassword(rows[0].passwordHash, currentPassword)
+      if (!valid) return c.json({ error: 'Current password is incorrect' }, 400)
 
-      const newHash = await hashPassword(newPassword);
+      const newHash = await hashPassword(newPassword)
       await db
         .update(users)
         .set({ passwordHash: newHash, updatedAt: new Date() })
-        .where(eq(users.id, user.id));
+        .where(eq(users.id, user.id))
 
-      return c.json({ message: 'Password updated' });
+      return c.json({ message: 'Password updated' })
     },
-  );
+  )
 
   // GET /users/me/progress — list in-progress (not completed) items for the current user
   router.get('/me/progress', async (c) => {
-    const user = c.get('user');
+    const user = c.get('user')
 
     const rows = await db
       .select({
@@ -184,7 +183,7 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
           ),
         ),
       )
-      .orderBy(desc(mediaProgress.updatedAt));
+      .orderBy(desc(mediaProgress.updatedAt))
 
     return c.json(
       rows.map((r) => ({
@@ -195,32 +194,32 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
         updatedAt: r.updatedAt,
         mediaItem: withThumbnailUrls(r.mediaItem),
       })),
-    );
-  });
+    )
+  })
 
   // GET /users/me/favorites — list favorited items for the current user
   router.get('/me/favorites', async (c) => {
-    const user = c.get('user');
+    const user = c.get('user')
     const rows = await db
       .select({ mediaItem: mediaItems })
       .from(favorites)
       .innerJoin(mediaItems, eq(favorites.mediaItemId, mediaItems.id))
       .where(eq(favorites.userId, user.id))
-      .orderBy(desc(favorites.createdAt));
-    return c.json(rows.map((r) => withThumbnailUrls(r.mediaItem)));
-  });
+      .orderBy(desc(favorites.createdAt))
+    return c.json(rows.map((r) => withThumbnailUrls(r.mediaItem)))
+  })
 
   // GET /users/me/watchlist — list watchlist items for the current user
   router.get('/me/watchlist', async (c) => {
-    const user = c.get('user');
+    const user = c.get('user')
     const rows = await db
       .select({ mediaItem: mediaItems })
       .from(watchlist)
       .innerJoin(mediaItems, eq(watchlist.mediaItemId, mediaItems.id))
       .where(eq(watchlist.userId, user.id))
-      .orderBy(desc(watchlist.createdAt));
-    return c.json(rows.map((r) => withThumbnailUrls(r.mediaItem)));
-  });
+      .orderBy(desc(watchlist.createdAt))
+    return c.json(rows.map((r) => withThumbnailUrls(r.mediaItem)))
+  })
 
   // POST /users/me/tokens — generate a new API token (returned once)
   router.post(
@@ -233,13 +232,13 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
       }),
     ),
     async (c) => {
-      const user = c.get('user');
-      const { name, expiresAt } = c.req.valid('json');
+      const user = c.get('user')
+      const { name, expiresAt } = c.req.valid('json')
 
       // Generate a random 32-byte token with "xon_" prefix
-      const rawToken = `xon_${randomBytes(32).toString('hex')}`;
-      const tokenHash = hashApiToken(rawToken);
-      const id = crypto.randomUUID();
+      const rawToken = `xon_${randomBytes(32).toString('hex')}`
+      const tokenHash = hashApiToken(rawToken)
+      const id = crypto.randomUUID()
 
       await db.insert(apiTokens).values({
         id,
@@ -247,18 +246,18 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
         name,
         tokenHash,
         expiresAt: expiresAt ? new Date(expiresAt) : null,
-      });
+      })
 
       return c.json(
         { id, name, token: rawToken, expiresAt: expiresAt ?? null },
         201,
-      );
+      )
     },
-  );
+  )
 
   // GET /users/me/tokens — list tokens (names only, not values)
   router.get('/me/tokens', async (c) => {
-    const user = c.get('user');
+    const user = c.get('user')
     const rows = await db
       .select({
         id: apiTokens.id,
@@ -269,28 +268,28 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
       })
       .from(apiTokens)
       .where(eq(apiTokens.userId, user.id))
-      .orderBy(desc(apiTokens.createdAt));
-    return c.json(rows);
-  });
+      .orderBy(desc(apiTokens.createdAt))
+    return c.json(rows)
+  })
 
   // DELETE /users/me/tokens/:id — revoke token
   router.delete('/me/tokens/:id', async (c) => {
-    const user = c.get('user');
-    const id = c.req.param('id');
+    const user = c.get('user')
+    const id = c.req.param('id')
 
     const rows = await db
       .select({ id: apiTokens.id })
       .from(apiTokens)
       .where(and(eq(apiTokens.id, id), eq(apiTokens.userId, user.id)))
-      .limit(1);
+      .limit(1)
 
     if (!rows[0]) {
-      return c.json({ error: 'Token not found' }, 404);
+      return c.json({ error: 'Token not found' }, 404)
     }
 
-    await db.delete(apiTokens).where(eq(apiTokens.id, id));
-    return c.json({ message: 'Token revoked' });
-  });
+    await db.delete(apiTokens).where(eq(apiTokens.id, id))
+    return c.json({ message: 'Token revoked' })
+  })
 
-  return router;
+  return router
 }

@@ -1,53 +1,53 @@
-import { createServer as createHttpsServer } from 'node:https';
-import { serve } from '@hono/node-server';
-import { DEFAULT_PORT } from '@xon/shared';
-import { eq } from 'drizzle-orm';
-import { Hono } from 'hono';
-import { createApp } from './app.js';
-import { openDatabase } from './db/db.js';
-import { migrateDatabase } from './db/migrate.js';
-import { serverSettings } from './db/schema.js';
-import { acquireAcmeCert, loadManualCerts } from './http/httpsManager.js';
-import { makeStaticMiddleware } from './http/staticFiles.js';
-import { emitPluginEvent, setPluginDatabase } from './plugins/pluginManager.js';
-import { WS_PATH, createWsServer } from './routes/ws.js';
-import { startScheduler } from './scanner/scheduler.js';
-import { ensureAdminUser } from './userInit.js';
+import { createServer as createHttpsServer } from 'node:https'
+import { serve } from '@hono/node-server'
+import { DEFAULT_PORT } from '@xon/shared'
+import { eq } from 'drizzle-orm'
+import { Hono } from 'hono'
+import { createApp } from './app.js'
+import { openDatabase } from './db/db.js'
+import { migrateDatabase } from './db/migrate.js'
+import { serverSettings } from './db/schema.js'
+import { acquireAcmeCert, loadManualCerts } from './http/httpsManager.js'
+import { makeStaticMiddleware } from './http/staticFiles.js'
+import { emitPluginEvent, setPluginDatabase } from './plugins/pluginManager.js'
+import { WS_PATH, createWsServer } from './routes/ws.js'
+import { startScheduler } from './scanner/scheduler.js'
+import { ensureAdminUser } from './userInit.js'
 
-const SERVER_SETTINGS_ID = 'default';
+const SERVER_SETTINGS_ID = 'default'
 
 // Catch uncaught exceptions and unhandled rejections so the process doesn't crash silently.
 // These are registered once at module load time, not per boot() call.
 process.on('uncaughtException', (err: Error) => {
-  console.error('Uncaught exception:', err);
-});
+  console.error('Uncaught exception:', err)
+})
 
 process.on('unhandledRejection', (reason: unknown) => {
-  console.error('Unhandled promise rejection:', reason);
-});
+  console.error('Unhandled promise rejection:', reason)
+})
 
 export function boot(): void {
-  const port = Number(process.env.PORT ?? DEFAULT_PORT);
-  const webClientDir = process.env.WEB_CLIENT_DIR;
-  const webSsrBundle = process.env.WEB_SSR_BUNDLE;
+  const port = Number(process.env.PORT ?? DEFAULT_PORT)
+  const webClientDir = process.env.WEB_CLIENT_DIR
+  const webSsrBundle = process.env.WEB_SSR_BUNDLE
 
   openDatabase()
     .then(async ({ client, db }) => {
-      await migrateDatabase(db);
-      await ensureAdminUser(db);
-      setPluginDatabase(client);
-      const { handleUpgrade } = createWsServer();
-      const scheduler = await startScheduler(db);
+      await migrateDatabase(db)
+      await ensureAdminUser(db)
+      setPluginDatabase(client)
+      const { handleUpgrade } = createWsServer()
+      const scheduler = await startScheduler(db)
 
       // Load HTTPS settings to determine server mode
       const settingsRows = await db
         .select()
         .from(serverSettings)
-        .where(eq(serverSettings.id, SERVER_SETTINGS_ID));
-      const httpsConfig = settingsRows[0];
+        .where(eq(serverSettings.id, SERVER_SETTINGS_ID))
+      const httpsConfig = settingsRows[0]
 
-      let tlsCert: string | undefined;
-      let tlsKey: string | undefined;
+      let tlsCert: string | undefined
+      let tlsKey: string | undefined
 
       if (httpsConfig?.httpsEnabled) {
         if (
@@ -56,22 +56,22 @@ export function boot(): void {
           httpsConfig.acmeEmail
         ) {
           // Automatic HTTPS via Let's Encrypt ACME
-          const certsDir = httpsConfig.acmeCertsDir ?? './certs';
+          const certsDir = httpsConfig.acmeCertsDir ?? './certs'
           console.log(
             `Acquiring ACME certificate for ${httpsConfig.acmeDomain}...`,
-          );
+          )
           try {
             const certs = await acquireAcmeCert({
               domain: httpsConfig.acmeDomain,
               email: httpsConfig.acmeEmail,
               certsDir,
-            });
-            tlsCert = certs.cert;
-            tlsKey = certs.key;
-            console.log(`ACME certificate ready for ${httpsConfig.acmeDomain}`);
+            })
+            tlsCert = certs.cert
+            tlsKey = certs.key
+            console.log(`ACME certificate ready for ${httpsConfig.acmeDomain}`)
           } catch (err) {
-            console.error('Failed to acquire ACME certificate:', err);
-            console.log('Falling back to HTTP');
+            console.error('Failed to acquire ACME certificate:', err)
+            console.log('Falling back to HTTP')
           }
         } else if (httpsConfig.httpsCertPath && httpsConfig.httpsKeyPath) {
           // Manual certificate
@@ -79,22 +79,22 @@ export function boot(): void {
             const certs = await loadManualCerts(
               httpsConfig.httpsCertPath,
               httpsConfig.httpsKeyPath,
-            );
-            tlsCert = certs.cert;
-            tlsKey = certs.key;
+            )
+            tlsCert = certs.cert
+            tlsKey = certs.key
           } catch (err) {
-            console.error('Failed to load TLS certificates:', err);
-            console.log('Falling back to HTTP');
+            console.error('Failed to load TLS certificates:', err)
+            console.log('Falling back to HTTP')
           }
         }
       }
 
-      const isHttps = !!(tlsCert && tlsKey);
-      const apiApp = createApp(db, { isHttps });
-      const app = new Hono();
-      app.route('/', apiApp);
+      const isHttps = !!(tlsCert && tlsKey)
+      const apiApp = createApp(db, { isHttps })
+      const app = new Hono()
+      app.route('/', apiApp)
       if (webClientDir) {
-        app.use('/*', makeStaticMiddleware(webClientDir, webSsrBundle));
+        app.use('/*', makeStaticMiddleware(webClientDir, webSsrBundle))
       }
 
       const serveOptions =
@@ -105,38 +105,38 @@ export function boot(): void {
               createServer: createHttpsServer,
               serverOptions: { cert: tlsCert, key: tlsKey },
             }
-          : { fetch: app.fetch, port };
+          : { fetch: app.fetch, port }
 
       const server = serve(serveOptions, (info) => {
-        const protocol = tlsCert ? 'https' : 'http';
+        const protocol = tlsCert ? 'https' : 'http'
         console.log(
           `Xon server listening on ${protocol}://0.0.0.0:${info.port}`,
-        );
-        emitPluginEvent('server:boot', {});
-      });
+        )
+        emitPluginEvent('server:boot', {})
+      })
 
       server.on('upgrade', (req, socket, head) => {
         if (req.url === WS_PATH) {
-          handleUpgrade(req, socket, head);
+          handleUpgrade(req, socket, head)
         } else {
-          socket.destroy();
+          socket.destroy()
         }
-      });
+      })
 
       function shutdown(): void {
-        emitPluginEvent('server:shutdown', {});
-        scheduler.stop();
+        emitPluginEvent('server:shutdown', {})
+        scheduler.stop()
         server.close(() => {
-          client.close();
-          process.exit(0);
-        });
+          client.close()
+          process.exit(0)
+        })
       }
 
-      process.on('SIGTERM', shutdown);
-      process.on('SIGINT', shutdown);
+      process.on('SIGTERM', shutdown)
+      process.on('SIGINT', shutdown)
     })
     .catch((err: unknown) => {
-      console.error('Failed to start server:', err);
-      process.exit(1);
-    });
+      console.error('Failed to start server:', err)
+      process.exit(1)
+    })
 }

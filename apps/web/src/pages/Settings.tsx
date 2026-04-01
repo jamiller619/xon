@@ -1,27 +1,27 @@
-import { useCallback, useEffect, useState } from 'react';
-import { apiFetch } from '../apiFetch.js';
-import PluginSlot from '../components/PluginSlot.js';
-import { useAppStore, useThemeStore } from '../store/index.js';
-import styles from './Settings.module.css';
+import { useCallback, useEffect, useState } from 'react'
+import { apiFetch } from '../apiFetch.js'
+import PluginSlot from '../components/PluginSlot.js'
+import { useAppStore, useThemeStore } from '../store/index.js'
+import styles from './Settings.module.css'
 
 interface ThemeInfo {
-  id: string;
-  name: string;
-  description: string;
-  active: boolean;
-  cssUrl?: string;
-  jsUrl?: string;
+  id: string
+  name: string
+  description: string
+  active: boolean
+  cssUrl?: string
+  jsUrl?: string
 }
 
 interface UserProfile {
-  displayName: string;
-  email: string;
-  avatarUrl: string | null;
-  maxContentRating: string;
-  hideDrmItems: boolean;
+  displayName: string
+  email: string
+  avatarUrl: string | null
+  maxContentRating: string
+  hideDrmItems: boolean
 }
 
-const CONTENT_RATINGS = ['none', 'G', 'PG', 'PG-13', 'R', 'unrated'] as const;
+const CONTENT_RATINGS = ['none', 'G', 'PG', 'PG-13', 'R', 'unrated'] as const
 const CONTENT_RATING_LABELS: Record<string, string> = {
   none: 'No restriction',
   G: 'G — General audiences',
@@ -29,15 +29,15 @@ const CONTENT_RATING_LABELS: Record<string, string> = {
   'PG-13': 'PG-13 — Parents strongly cautioned',
   R: 'R — Restricted',
   unrated: 'Unrated',
-};
+}
 
 export default function Settings() {
-  const [themes, setThemes] = useState<ThemeInfo[]>([]);
-  const activeThemeId = useThemeStore((s) => s.activeThemeId);
-  const setActiveTheme = useThemeStore((s) => s.setActiveTheme);
+  const [themes, setThemes] = useState<ThemeInfo[]>([])
+  const activeThemeId = useThemeStore((s) => s.activeThemeId)
+  const setActiveTheme = useThemeStore((s) => s.setActiveTheme)
 
-  const viewMode = useAppStore((s) => s.viewMode);
-  const setViewMode = useAppStore((s) => s.setViewMode);
+  const viewMode = useAppStore((s) => s.viewMode)
+  const setViewMode = useAppStore((s) => s.setViewMode)
 
   const [profile, setProfile] = useState<UserProfile>({
     displayName: '',
@@ -45,44 +45,44 @@ export default function Settings() {
     avatarUrl: null,
     maxContentRating: 'none',
     hideDrmItems: false,
-  });
-  const [profileSaving, setProfileSaving] = useState(false);
-  const [profileMsg, setProfileMsg] = useState<string | null>(null);
+  })
+  const [profileSaving, setProfileSaving] = useState(false)
+  const [profileMsg, setProfileMsg] = useState<string | null>(null)
 
-  const [currentPassword, setCurrentPassword] = useState('');
-  const [newPassword, setNewPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  const [passwordMsg, setPasswordMsg] = useState<string | null>(null);
-  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [currentPassword, setCurrentPassword] = useState('')
+  const [newPassword, setNewPassword] = useState('')
+  const [confirmPassword, setConfirmPassword] = useState('')
+  const [passwordMsg, setPasswordMsg] = useState<string | null>(null)
+  const [passwordSaving, setPasswordSaving] = useState(false)
 
   const loadProfile = useCallback(() => {
     apiFetch('/api/v1/users/me')
       .then((r) => r.json())
       .then((data: unknown) => {
-        const d = data as UserProfile;
+        const d = data as UserProfile
         setProfile({
           displayName: d.displayName ?? '',
           email: d.email ?? '',
           avatarUrl: d.avatarUrl ?? null,
           maxContentRating: d.maxContentRating ?? 'none',
           hideDrmItems: d.hideDrmItems ?? false,
-        });
+        })
       })
-      .catch(() => {});
-  }, []);
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     apiFetch('/api/v1/themes')
       .then((r) => r.json() as Promise<ThemeInfo[]>)
       .then(setThemes)
-      .catch(() => {});
-    loadProfile();
-  }, [loadProfile]);
+      .catch(() => {})
+    loadProfile()
+  }, [loadProfile])
 
   async function saveProfile(e: React.FormEvent) {
-    e.preventDefault();
-    setProfileSaving(true);
-    setProfileMsg(null);
+    e.preventDefault()
+    setProfileSaving(true)
+    setProfileMsg(null)
     try {
       const res = await apiFetch('/api/v1/users/me', {
         method: 'PUT',
@@ -94,47 +94,47 @@ export default function Settings() {
           maxContentRating: profile.maxContentRating,
           hideDrmItems: profile.hideDrmItems,
         }),
-      });
+      })
       if (res.ok) {
-        setProfileMsg('Profile saved.');
+        setProfileMsg('Profile saved.')
       } else {
-        const body = (await res.json()) as { error?: string };
-        setProfileMsg(body.error ?? 'Failed to save profile.');
+        const body = (await res.json()) as { error?: string }
+        setProfileMsg(body.error ?? 'Failed to save profile.')
       }
     } catch {
-      setProfileMsg('Failed to save profile.');
+      setProfileMsg('Failed to save profile.')
     } finally {
-      setProfileSaving(false);
+      setProfileSaving(false)
     }
   }
 
   async function changePassword(e: React.FormEvent) {
-    e.preventDefault();
+    e.preventDefault()
     if (newPassword !== confirmPassword) {
-      setPasswordMsg('New passwords do not match.');
-      return;
+      setPasswordMsg('New passwords do not match.')
+      return
     }
-    setPasswordSaving(true);
-    setPasswordMsg(null);
+    setPasswordSaving(true)
+    setPasswordMsg(null)
     try {
       const res = await apiFetch('/api/v1/users/me/password', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ currentPassword, newPassword }),
-      });
+      })
       if (res.ok) {
-        setPasswordMsg('Password changed successfully.');
-        setCurrentPassword('');
-        setNewPassword('');
-        setConfirmPassword('');
+        setPasswordMsg('Password changed successfully.')
+        setCurrentPassword('')
+        setNewPassword('')
+        setConfirmPassword('')
       } else {
-        const body = (await res.json()) as { error?: string };
-        setPasswordMsg(body.error ?? 'Failed to change password.');
+        const body = (await res.json()) as { error?: string }
+        setPasswordMsg(body.error ?? 'Failed to change password.')
       }
     } catch {
-      setPasswordMsg('Failed to change password.');
+      setPasswordMsg('Failed to change password.')
     } finally {
-      setPasswordSaving(false);
+      setPasswordSaving(false)
     }
   }
 
@@ -413,5 +413,5 @@ export default function Settings() {
 
       <PluginSlot injectionPoint="settings:page" />
     </div>
-  );
+  )
 }

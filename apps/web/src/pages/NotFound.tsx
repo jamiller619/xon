@@ -1,8 +1,8 @@
-import { Link, useLocation } from 'react-router-dom';
-import styles from './NotFound.module.css';
+import { Link, useLocation } from 'react-router-dom'
+import styles from './NotFound.module.css'
 
 export default function NotFound() {
-  const location = useLocation();
+  const location = useLocation()
 
   return (
     <div className={styles.page ?? ''}>
@@ -18,5 +18,5 @@ export default function NotFound() {
         </Link>
       </div>
     </div>
-  );
+  )
 }

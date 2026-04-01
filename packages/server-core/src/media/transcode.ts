@@ -1,5 +1,5 @@
-import { spawn } from 'node:child_process';
-import type { ChildProcess } from 'node:child_process';
+import { spawn } from 'node:child_process'
+import type { ChildProcess } from 'node:child_process'
 
 // Video codecs natively supported by modern browsers (H.264, VP8, VP9, AV1, Theora)
 const BROWSER_NATIVE_VIDEO_CODECS = new Set([
@@ -8,7 +8,7 @@ const BROWSER_NATIVE_VIDEO_CODECS = new Set([
   'vp9',
   'av1',
   'theora',
-]);
+])
 
 // Audio codecs natively supported by modern browsers
 const BROWSER_NATIVE_AUDIO_CODECS = new Set([
@@ -20,7 +20,7 @@ const BROWSER_NATIVE_AUDIO_CODECS = new Set([
   'pcm_s16le',
   'pcm_s24le',
   'pcm_s32le',
-]);
+])
 
 /** Returns true if the given codecs require server-side transcoding for browser playback. */
 export function needsTranscoding(
@@ -28,10 +28,10 @@ export function needsTranscoding(
   audioCodec: string | undefined,
 ): boolean {
   if (videoCodec !== undefined && !BROWSER_NATIVE_VIDEO_CODECS.has(videoCodec))
-    return true;
+    return true
   if (audioCodec !== undefined && !BROWSER_NATIVE_AUDIO_CODECS.has(audioCodec))
-    return true;
-  return false;
+    return true
+  return false
 }
 
 /**
@@ -42,22 +42,22 @@ export function generateHlsPlaylist(
   duration: number,
   segmentDuration = 6,
 ): string {
-  const totalSegments = Math.ceil(duration / segmentDuration);
+  const totalSegments = Math.ceil(duration / segmentDuration)
   const lines: string[] = [
     '#EXTM3U',
     '#EXT-X-VERSION:3',
     `#EXT-X-TARGETDURATION:${segmentDuration}`,
     '#EXT-X-MEDIA-SEQUENCE:0',
-  ];
+  ]
 
   for (let i = 0; i < totalSegments; i++) {
-    const actual = Math.min(segmentDuration, duration - i * segmentDuration);
-    lines.push(`#EXTINF:${actual.toFixed(3)},`);
-    lines.push(`segment-${i}.ts`);
+    const actual = Math.min(segmentDuration, duration - i * segmentDuration)
+    lines.push(`#EXTINF:${actual.toFixed(3)},`)
+    lines.push(`segment-${i}.ts`)
   }
 
-  lines.push('#EXT-X-ENDLIST');
-  return lines.join('\n');
+  lines.push('#EXT-X-ENDLIST')
+  return lines.join('\n')
 }
 
 /**
@@ -69,7 +69,7 @@ export function spawnTranscodeSegment(
   segmentIndex: number,
   segmentDuration: number,
 ): ChildProcess {
-  const startTime = segmentIndex * segmentDuration;
+  const startTime = segmentIndex * segmentDuration
   return spawn('ffmpeg', [
     '-ss',
     String(startTime),
@@ -86,5 +86,5 @@ export function spawnTranscodeSegment(
     '-f',
     'mpegts',
     'pipe:1',
-  ]);
+  ])
 }

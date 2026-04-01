@@ -1,41 +1,41 @@
-import { Link } from 'react-router-dom';
-import { useAudioStore } from '../store/index';
-import styles from './MediaCard.module.css';
+import { Link } from 'react-router-dom'
+import { useAudioStore } from '../store/index'
+import styles from './MediaCard.module.css'
 
 export interface MediaCardItem {
-  id: string;
-  title: string;
-  mediaCategory: string | null;
-  mimeType: string | null;
-  fileSize: number | null;
-  createdAt: number | null;
-  drmProtected?: boolean;
-  thumbnailUrls: { small: string; medium: string; large: string } | null;
+  id: string
+  title: string
+  mediaCategory: string | null
+  mimeType: string | null
+  fileSize: number | null
+  createdAt: number | null
+  drmProtected?: boolean
+  thumbnailUrls: { small: string; medium: string; large: string } | null
 }
 
 interface MediaCardProps {
-  item: MediaCardItem;
-  listView?: boolean;
-  isFavorited?: boolean;
-  onToggleFavorite?: (id: string, currentlyFavorited: boolean) => void;
-  selectMode?: boolean;
-  selected?: boolean;
-  onToggleSelect?: (id: string) => void;
+  item: MediaCardItem
+  listView?: boolean
+  isFavorited?: boolean
+  onToggleFavorite?: (id: string, currentlyFavorited: boolean) => void
+  selectMode?: boolean
+  selected?: boolean
+  onToggleSelect?: (id: string) => void
 }
 
 function formatBytes(bytes: number | null): string {
-  if (bytes == null) return '—';
-  if (bytes < 1024) return `${bytes} B`;
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  if (bytes == null) return '—'
+  if (bytes < 1024) return `${bytes} B`
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   if (bytes < 1024 * 1024 * 1024)
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`;
+    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
 }
 
 function formatDate(ts: number | string | null): string {
-  if (ts == null) return '—';
-  const d = new Date(typeof ts === 'number' ? ts * 1000 : ts);
-  return d.toLocaleDateString();
+  if (ts == null) return '—'
+  const d = new Date(typeof ts === 'number' ? ts * 1000 : ts)
+  return d.toLocaleDateString()
 }
 
 export default function MediaCard({
@@ -47,34 +47,34 @@ export default function MediaCard({
   selected,
   onToggleSelect,
 }: MediaCardProps) {
-  const playTrack = useAudioStore((s) => s.playTrack);
-  const addToQueue = useAudioStore((s) => s.addToQueue);
-  const isAudio = item.mimeType?.startsWith('audio/') ?? false;
+  const playTrack = useAudioStore((s) => s.playTrack)
+  const addToQueue = useAudioStore((s) => s.addToQueue)
+  const isAudio = item.mimeType?.startsWith('audio/') ?? false
 
   function handlePlay(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault()
+    e.stopPropagation()
     playTrack({
       id: item.id,
       title: item.title,
       mimeType: item.mimeType ?? 'audio/mpeg',
-    });
+    })
   }
 
   function handleAddToQueue(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
+    e.preventDefault()
+    e.stopPropagation()
     addToQueue({
       id: item.id,
       title: item.title,
       mimeType: item.mimeType ?? 'audio/mpeg',
-    });
+    })
   }
 
   function handleToggleFavorite(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-    onToggleFavorite?.(item.id, isFavorited ?? false);
+    e.preventDefault()
+    e.stopPropagation()
+    onToggleFavorite?.(item.id, isFavorited ?? false)
   }
 
   if (listView) {
@@ -182,7 +182,7 @@ export default function MediaCard({
           </td>
         )}
       </tr>
-    );
+    )
   }
 
   const cardContent = (
@@ -259,7 +259,7 @@ export default function MediaCard({
         </div>
       </div>
     </>
-  );
+  )
 
   if (selectMode) {
     return (
@@ -273,12 +273,12 @@ export default function MediaCard({
       >
         {cardContent}
       </div>
-    );
+    )
   }
 
   return (
     <Link to={`/media/${item.id}`} className={styles.card ?? ''}>
       {cardContent}
     </Link>
-  );
+  )
 }

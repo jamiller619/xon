@@ -1,7 +1,7 @@
-import { type FormEvent, useEffect, useRef, useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { useAuthStore } from '../store/index.js';
-import styles from './Setup.module.css';
+import { type FormEvent, useEffect, useRef, useState } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuthStore } from '../store/index.js'
+import styles from './Setup.module.css'
 
 const ALL_MEDIA_TYPES: { label: string; emoji: string }[] = [
   { label: 'Movies', emoji: '🎬' },
@@ -24,34 +24,34 @@ const ALL_MEDIA_TYPES: { label: string; emoji: string }[] = [
   { label: 'Archives', emoji: '🗜️' },
   { label: 'Fonts', emoji: '🔤' },
   { label: 'Icons', emoji: '🔷' },
-];
+]
 
-type Step = 1 | 2 | 3;
+type Step = 1 | 2 | 3
 
 export default function Setup() {
-  const navigate = useNavigate();
-  const setAuth = useAuthStore((s) => s.setAuth);
-  const accessToken = useAuthStore((s) => s.accessToken);
+  const navigate = useNavigate()
+  const setAuth = useAuthStore((s) => s.setAuth)
+  const accessToken = useAuthStore((s) => s.accessToken)
 
   // Step 1 state
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-  const [displayName, setDisplayName] = useState('');
+  const [username, setUsername] = useState('')
+  const [password, setPassword] = useState('')
+  const [displayName, setDisplayName] = useState('')
 
   // Step 2 state
-  const [libraryName, setLibraryName] = useState('');
-  const [mediaTypes, setMediaTypes] = useState<string[]>([]);
-  const [sourcePath, setSourcePath] = useState('');
+  const [libraryName, setLibraryName] = useState('')
+  const [mediaTypes, setMediaTypes] = useState<string[]>([])
+  const [sourcePath, setSourcePath] = useState('')
 
   // Wizard state
-  const fileInputRef = useRef<HTMLInputElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   // Wizard state
-  const [step, setStep] = useState<Step>(1);
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [libraryId, setLibraryId] = useState<string | null>(null);
-  const [scanStarted, setScanStarted] = useState(false);
+  const [step, setStep] = useState<Step>(1)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+  const [libraryId, setLibraryId] = useState<string | null>(null)
+  const [scanStarted, setScanStarted] = useState(false)
 
   // Check if setup already complete — redirect to login
   useEffect(() => {
@@ -59,80 +59,80 @@ export default function Setup() {
       .then((r) => r.json())
       .then((data: { setupComplete: boolean }) => {
         if (data.setupComplete) {
-          navigate('/login', { replace: true });
+          navigate('/login', { replace: true })
         }
       })
-      .catch(() => {});
-  }, [navigate]);
+      .catch(() => {})
+  }, [navigate])
 
   function toggleMediaType(type: string) {
     setMediaTypes((prev) =>
       prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type],
-    );
+    )
   }
 
   function handleBrowse() {
     if (fileInputRef.current) {
-      fileInputRef.current.setAttribute('webkitdirectory', '');
-      fileInputRef.current.click();
+      fileInputRef.current.setAttribute('webkitdirectory', '')
+      fileInputRef.current.click()
     }
   }
 
   function handleFileInputChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    const nativeFile = file as File & { path?: string };
+    const file = e.target.files?.[0]
+    if (!file) return
+    const nativeFile = file as File & { path?: string }
     if (nativeFile.path) {
       // Electron: file.path is the full OS path; strip filename to get directory
       const lastSlash = Math.max(
         nativeFile.path.lastIndexOf('/'),
         nativeFile.path.lastIndexOf('\\'),
-      );
+      )
       setSourcePath(
         lastSlash > 0 ? nativeFile.path.slice(0, lastSlash) : nativeFile.path,
-      );
+      )
     }
-    e.target.value = '';
+    e.target.value = ''
   }
 
   async function handleStep1(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
     try {
       const res = await fetch('/api/v1/auth/setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password, displayName }),
-      });
+      })
       if (!res.ok) {
-        const body = (await res.json()) as { error?: string };
+        const body = (await res.json()) as { error?: string }
         if (res.status === 409) {
-          navigate('/login', { replace: true });
-          return;
+          navigate('/login', { replace: true })
+          return
         }
-        setError(body.error ?? 'Setup failed');
-        return;
+        setError(body.error ?? 'Setup failed')
+        return
       }
-      const body = (await res.json()) as { accessToken: string };
-      const [, payloadB64] = body.accessToken.split('.');
+      const body = (await res.json()) as { accessToken: string }
+      const [, payloadB64] = body.accessToken.split('.')
       const payload = JSON.parse(atob(payloadB64 ?? '')) as {
-        username: string;
-        role: string;
-      };
-      setAuth(body.accessToken, payload.username, payload.role);
-      setStep(2);
+        username: string
+        role: string
+      }
+      setAuth(body.accessToken, payload.username, payload.role)
+      setStep(2)
     } catch {
-      setError('Network error — please try again');
+      setError('Network error — please try again')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
   async function handleStep2(e: FormEvent) {
-    e.preventDefault();
-    setError(null);
-    setLoading(true);
+    e.preventDefault()
+    setError(null)
+    setLoading(true)
     try {
       // Create library
       const libRes = await fetch('/api/v1/libraries', {
@@ -145,13 +145,13 @@ export default function Setup() {
           name: libraryName,
           allowedMediaTypes: mediaTypes,
         }),
-      });
+      })
       if (!libRes.ok) {
-        const body = (await libRes.json()) as { error?: string };
-        setError(body.error ?? 'Failed to create library');
-        return;
+        const body = (await libRes.json()) as { error?: string }
+        setError(body.error ?? 'Failed to create library')
+        return
       }
-      const lib = (await libRes.json()) as { id: string };
+      const lib = (await libRes.json()) as { id: string }
 
       // Add data source
       const srcRes = await fetch(`/api/v1/libraries/${lib.id}/sources`, {
@@ -165,46 +165,46 @@ export default function Setup() {
           path: sourcePath.trim(),
           recursive: true,
         }),
-      });
+      })
       if (!srcRes.ok) {
-        const body = (await srcRes.json()) as { error?: string };
-        setError(body.error ?? 'Failed to add data source');
-        return;
+        const body = (await srcRes.json()) as { error?: string }
+        setError(body.error ?? 'Failed to add data source')
+        return
       }
 
-      setLibraryId(lib.id);
-      setStep(3);
+      setLibraryId(lib.id)
+      setStep(3)
     } catch {
-      setError('Network error — please try again');
+      setError('Network error — please try again')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
   async function handleScan() {
-    if (!libraryId) return;
-    setError(null);
-    setLoading(true);
+    if (!libraryId) return
+    setError(null)
+    setLoading(true)
     try {
       const res = await fetch(`/api/v1/libraries/${libraryId}/scan`, {
         method: 'POST',
         headers: { Authorization: `Bearer ${accessToken}` },
-      });
+      })
       if (!res.ok && res.status !== 409) {
-        const body = (await res.json()) as { error?: string };
-        setError(body.error ?? 'Failed to start scan');
-        return;
+        const body = (await res.json()) as { error?: string }
+        setError(body.error ?? 'Failed to start scan')
+        return
       }
-      setScanStarted(true);
+      setScanStarted(true)
     } catch {
-      setError('Network error — please try again');
+      setError('Network error — please try again')
     } finally {
-      setLoading(false);
+      setLoading(false)
     }
   }
 
   function handleFinish() {
-    navigate('/', { replace: true });
+    navigate('/', { replace: true })
   }
 
   return (
@@ -435,5 +435,5 @@ export default function Setup() {
         )}
       </div>
     </div>
-  );
+  )
 }

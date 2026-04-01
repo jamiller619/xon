@@ -1,42 +1,42 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest'
 
 vi.mock('music-metadata', () => ({
   parseFile: vi.fn(),
-}));
+}))
 
-import { MediaCategory } from '@xon/shared';
-import { parseFile } from 'music-metadata';
+import { MediaCategory } from '@xon/shared'
+import { parseFile } from 'music-metadata'
 import {
   type MusicTagsMetadata,
   extractMusicTags,
   isMusicCategory,
-} from '../../media/musictags.js';
+} from '../../media/musictags.js'
 
-const mockParseFile = vi.mocked(parseFile);
+const mockParseFile = vi.mocked(parseFile)
 
 type MockCommon = {
-  title?: string;
-  artist?: string;
-  album?: string;
-  year?: number;
-  genre?: string[];
-  track: { no: number | null; of: number | null };
-  disk: { no: number | null; of: number | null };
+  title?: string
+  artist?: string
+  album?: string
+  year?: number
+  genre?: string[]
+  track: { no: number | null; of: number | null }
+  disk: { no: number | null; of: number | null }
   picture?: {
-    format: string;
-    data: Uint8Array;
-    type?: string;
-    description?: string;
-  }[];
-};
+    format: string
+    data: Uint8Array
+    type?: string
+    description?: string
+  }[]
+}
 
 type MockFormat = {
-  duration?: number;
-  bitrate?: number;
-  sampleRate?: number;
-  numberOfChannels?: number;
-  codec?: string;
-};
+  duration?: number
+  bitrate?: number
+  sampleRate?: number
+  numberOfChannels?: number
+  codec?: string
+}
 
 function makeMeta(
   common: Partial<MockCommon> = {},
@@ -49,30 +49,30 @@ function makeMeta(
       ...common,
     },
     format,
-  };
+  }
 }
 
 beforeEach(() => {
-  vi.clearAllMocks();
-});
+  vi.clearAllMocks()
+})
 
 describe('isMusicCategory', () => {
   it('returns true for music categories', () => {
-    expect(isMusicCategory(MediaCategory.Music)).toBe(true);
-    expect(isMusicCategory(MediaCategory.Audiobooks)).toBe(true);
-  });
+    expect(isMusicCategory(MediaCategory.Music)).toBe(true)
+    expect(isMusicCategory(MediaCategory.Audiobooks)).toBe(true)
+  })
 
   it('returns false for non-music categories', () => {
-    expect(isMusicCategory(MediaCategory.Movies)).toBe(false);
-    expect(isMusicCategory(MediaCategory.AudioClips)).toBe(false);
-    expect(isMusicCategory(MediaCategory.Podcasts)).toBe(false);
-    expect(isMusicCategory(MediaCategory.Pictures)).toBe(false);
-  });
+    expect(isMusicCategory(MediaCategory.Movies)).toBe(false)
+    expect(isMusicCategory(MediaCategory.AudioClips)).toBe(false)
+    expect(isMusicCategory(MediaCategory.Podcasts)).toBe(false)
+    expect(isMusicCategory(MediaCategory.Pictures)).toBe(false)
+  })
 
   it('returns false for null', () => {
-    expect(isMusicCategory(null)).toBe(false);
-  });
-});
+    expect(isMusicCategory(null)).toBe(false)
+  })
+})
 
 describe('extractMusicTags', () => {
   it('extracts full tag metadata from an MP3 file', async () => {
@@ -98,9 +98,9 @@ describe('extractMusicTags', () => {
           codec: 'MPEG 1 Layer 3',
         },
       ) as never,
-    );
+    )
 
-    const result = await extractMusicTags('/music/bohemian.mp3');
+    const result = await extractMusicTags('/music/bohemian.mp3')
 
     expect(result).toEqual<MusicTagsMetadata>({
       title: 'Bohemian Rhapsody',
@@ -116,8 +116,8 @@ describe('extractMusicTags', () => {
       sampleRate: 44100,
       channels: 2,
       codec: 'MPEG 1 Layer 3',
-    });
-  });
+    })
+  })
 
   it('extracts FLAC file metadata with Vorbis comments', async () => {
     mockParseFile.mockResolvedValue(
@@ -139,17 +139,17 @@ describe('extractMusicTags', () => {
           codec: 'FLAC',
         },
       ) as never,
-    );
+    )
 
-    const result = await extractMusicTags('/music/dreams.flac');
+    const result = await extractMusicTags('/music/dreams.flac')
 
-    expect(result?.title).toBe('Dreams');
-    expect(result?.artist).toBe('Fleetwood Mac');
-    expect(result?.genre).toBe('Soft Rock');
-    expect(result?.trackNumber).toBe(2);
-    expect(result?.discNumber).toBeUndefined();
-    expect(result?.codec).toBe('FLAC');
-  });
+    expect(result?.title).toBe('Dreams')
+    expect(result?.artist).toBe('Fleetwood Mac')
+    expect(result?.genre).toBe('Soft Rock')
+    expect(result?.trackNumber).toBe(2)
+    expect(result?.discNumber).toBeUndefined()
+    expect(result?.codec).toBe('FLAC')
+  })
 
   it('returns empty object for file with no tags', async () => {
     mockParseFile.mockResolvedValue(
@@ -157,22 +157,22 @@ describe('extractMusicTags', () => {
         { track: { no: null, of: null }, disk: { no: null, of: null } },
         {},
       ) as never,
-    );
+    )
 
-    const result = await extractMusicTags('/music/untagged.mp3');
+    const result = await extractMusicTags('/music/untagged.mp3')
 
-    expect(result).toEqual({});
-  });
+    expect(result).toEqual({})
+  })
 
   it('takes first genre when multiple genres are present', async () => {
     mockParseFile.mockResolvedValue(
       makeMeta({ genre: ['Jazz', 'Blues', 'Soul'] }) as never,
-    );
+    )
 
-    const result = await extractMusicTags('/music/track.mp3');
+    const result = await extractMusicTags('/music/track.mp3')
 
-    expect(result?.genre).toBe('Jazz');
-  });
+    expect(result?.genre).toBe('Jazz')
+  })
 
   it('sets hasAlbumArt true when picture array is non-empty', async () => {
     mockParseFile.mockResolvedValue(
@@ -182,38 +182,38 @@ describe('extractMusicTags', () => {
           { format: 'image/jpeg', data: new Uint8Array([0xff, 0xd8]) },
         ],
       }) as never,
-    );
+    )
 
-    const result = await extractMusicTags('/music/track.ogg');
+    const result = await extractMusicTags('/music/track.ogg')
 
-    expect(result?.hasAlbumArt).toBe(true);
-  });
+    expect(result?.hasAlbumArt).toBe(true)
+  })
 
   it('does not set hasAlbumArt when picture array is empty', async () => {
-    mockParseFile.mockResolvedValue(makeMeta({ picture: [] }) as never);
+    mockParseFile.mockResolvedValue(makeMeta({ picture: [] }) as never)
 
-    const result = await extractMusicTags('/music/track.ogg');
+    const result = await extractMusicTags('/music/track.ogg')
 
-    expect(result?.hasAlbumArt).toBeUndefined();
-  });
+    expect(result?.hasAlbumArt).toBeUndefined()
+  })
 
   it('returns null when parseFile throws (file not found)', async () => {
     mockParseFile.mockRejectedValue(
       new Error('ENOENT: no such file or directory'),
-    );
+    )
 
-    const result = await extractMusicTags('/music/missing.mp3');
+    const result = await extractMusicTags('/music/missing.mp3')
 
-    expect(result).toBeNull();
-  });
+    expect(result).toBeNull()
+  })
 
   it('returns null when parseFile throws for unsupported format', async () => {
-    mockParseFile.mockRejectedValue(new Error('No valid ID3 frame found'));
+    mockParseFile.mockRejectedValue(new Error('No valid ID3 frame found'))
 
-    const result = await extractMusicTags('/music/corrupt.mp3');
+    const result = await extractMusicTags('/music/corrupt.mp3')
 
-    expect(result).toBeNull();
-  });
+    expect(result).toBeNull()
+  })
 
   it('extracts M4A metadata with iTunes tags', async () => {
     mockParseFile.mockResolvedValue(
@@ -235,16 +235,16 @@ describe('extractMusicTags', () => {
           codec: 'AAC',
         },
       ) as never,
-    );
+    )
 
-    const result = await extractMusicTags('/music/abbey.m4a');
+    const result = await extractMusicTags('/music/abbey.m4a')
 
-    expect(result?.title).toBe('Come Together');
-    expect(result?.trackNumber).toBe(1);
-    expect(result?.discNumber).toBe(1);
-    expect(result?.duration).toBe(259.7);
-    expect(result?.codec).toBe('AAC');
-  });
+    expect(result?.title).toBe('Come Together')
+    expect(result?.trackNumber).toBe(1)
+    expect(result?.discNumber).toBe(1)
+    expect(result?.duration).toBe(259.7)
+    expect(result?.codec).toBe('AAC')
+  })
 
   it('extracts OGG Vorbis metadata', async () => {
     mockParseFile.mockResolvedValue(
@@ -262,13 +262,13 @@ describe('extractMusicTags', () => {
           codec: 'Vorbis',
         },
       ) as never,
-    );
+    )
 
-    const result = await extractMusicTags('/music/track.ogg');
+    const result = await extractMusicTags('/music/track.ogg')
 
-    expect(result?.title).toBe('Vorbis Track');
-    expect(result?.trackNumber).toBe(3);
-    expect(result?.sampleRate).toBe(48000);
-    expect(result?.codec).toBe('Vorbis');
-  });
-});
+    expect(result?.title).toBe('Vorbis Track')
+    expect(result?.trackNumber).toBe(3)
+    expect(result?.sampleRate).toBe(48000)
+    expect(result?.codec).toBe('Vorbis')
+  })
+})

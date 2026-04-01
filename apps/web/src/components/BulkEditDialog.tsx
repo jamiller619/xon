@@ -1,21 +1,21 @@
-import { useEffect, useState } from 'react';
-import { apiFetch } from '../apiFetch.js';
-import styles from './GroupDialog.module.css';
+import { useEffect, useState } from 'react'
+import { apiFetch } from '../apiFetch.js'
+import styles from './GroupDialog.module.css'
 
 interface Group {
-  id: string;
-  type: string;
-  title: string;
+  id: string
+  type: string
+  title: string
 }
 
 interface BulkEditDialogProps {
-  selectedIds: string[];
-  libraryId: string;
-  onDone: () => void;
-  onClose: () => void;
+  selectedIds: string[]
+  libraryId: string
+  onDone: () => void
+  onClose: () => void
 }
 
-const CONTENT_RATINGS = ['G', 'PG', 'PG-13', 'R', 'unrated'] as const;
+const CONTENT_RATINGS = ['G', 'PG', 'PG-13', 'R', 'unrated'] as const
 
 export default function BulkEditDialog({
   selectedIds,
@@ -23,13 +23,13 @@ export default function BulkEditDialog({
   onDone,
   onClose,
 }: BulkEditDialogProps) {
-  const [genre, setGenre] = useState('');
-  const [tags, setTags] = useState('');
-  const [contentRating, setContentRating] = useState('');
-  const [groupId, setGroupId] = useState('');
-  const [groups, setGroups] = useState<Group[]>([]);
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [genre, setGenre] = useState('')
+  const [tags, setTags] = useState('')
+  const [contentRating, setContentRating] = useState('')
+  const [groupId, setGroupId] = useState('')
+  const [groups, setGroups] = useState<Group[]>([])
+  const [submitting, setSubmitting] = useState(false)
+  const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     apiFetch(`/api/v1/groups?libraryId=${libraryId}`)
@@ -37,61 +37,61 @@ export default function BulkEditDialog({
       .then((data) => setGroups(data as Group[]))
       .catch(() => {
         /* ignore */
-      });
-  }, [libraryId]);
+      })
+  }, [libraryId])
 
   useEffect(() => {
     function onKey(e: KeyboardEvent) {
-      if (e.key === 'Escape') onClose();
+      if (e.key === 'Escape') onClose()
     }
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [onClose]);
+    document.addEventListener('keydown', onKey)
+    return () => document.removeEventListener('keydown', onKey)
+  }, [onClose])
 
   async function handleUpdate(e: React.FormEvent) {
-    e.preventDefault();
-    const updates: Record<string, unknown> = {};
-    if (genre.trim()) updates.genre = genre.trim();
+    e.preventDefault()
+    const updates: Record<string, unknown> = {}
+    if (genre.trim()) updates.genre = genre.trim()
     if (tags.trim())
       updates.tags = tags
         .split(',')
         .map((t) => t.trim())
-        .filter(Boolean);
-    if (contentRating) updates.contentRating = contentRating;
+        .filter(Boolean)
+    if (contentRating) updates.contentRating = contentRating
 
     if (Object.keys(updates).length === 0) {
-      setError('Enter at least one field to update');
-      return;
+      setError('Enter at least one field to update')
+      return
     }
 
-    setSubmitting(true);
-    setError(null);
+    setSubmitting(true)
+    setError(null)
     try {
       const res = await apiFetch('/api/v1/media/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'update', ids: selectedIds, updates }),
-      });
+      })
       if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
-        setError(data.error ?? 'Failed to update items');
-        return;
+        const data = (await res.json()) as { error?: string }
+        setError(data.error ?? 'Failed to update items')
+        return
       }
-      onDone();
+      onDone()
     } catch {
-      setError('Network error');
+      setError('Network error')
     } finally {
-      setSubmitting(false);
+      setSubmitting(false)
     }
   }
 
   async function handleMoveToGroup() {
     if (!groupId) {
-      setError('Select a group');
-      return;
+      setError('Select a group')
+      return
     }
-    setSubmitting(true);
-    setError(null);
+    setSubmitting(true)
+    setError(null)
     try {
       const res = await apiFetch('/api/v1/media/bulk', {
         method: 'POST',
@@ -101,17 +101,17 @@ export default function BulkEditDialog({
           ids: selectedIds,
           groupId,
         }),
-      });
+      })
       if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
-        setError(data.error ?? 'Failed to move items');
-        return;
+        const data = (await res.json()) as { error?: string }
+        setError(data.error ?? 'Failed to move items')
+        return
       }
-      onDone();
+      onDone()
     } catch {
-      setError('Network error');
+      setError('Network error')
     } finally {
-      setSubmitting(false);
+      setSubmitting(false)
     }
   }
 
@@ -121,26 +121,26 @@ export default function BulkEditDialog({
         `Delete ${selectedIds.length} item(s) from the library? This cannot be undone.`,
       )
     ) {
-      return;
+      return
     }
-    setSubmitting(true);
-    setError(null);
+    setSubmitting(true)
+    setError(null)
     try {
       const res = await apiFetch('/api/v1/media/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'delete', ids: selectedIds }),
-      });
+      })
       if (!res.ok) {
-        const data = (await res.json()) as { error?: string };
-        setError(data.error ?? 'Failed to delete items');
-        return;
+        const data = (await res.json()) as { error?: string }
+        setError(data.error ?? 'Failed to delete items')
+        return
       }
-      onDone();
+      onDone()
     } catch {
-      setError('Network error');
+      setError('Network error')
     } finally {
-      setSubmitting(false);
+      setSubmitting(false)
     }
   }
 
@@ -303,5 +303,5 @@ export default function BulkEditDialog({
         </button>
       </div>
     </div>
-  );
+  )
 }

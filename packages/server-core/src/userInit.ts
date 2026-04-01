@@ -1,4 +1,4 @@
-import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 
 /**
  * Previously auto-created a default admin account on first boot.

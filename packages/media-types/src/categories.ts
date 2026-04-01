@@ -1,9 +1,9 @@
-import { MediaCategory } from '@xon/shared';
+import { MediaCategory } from '@xon/shared'
 
 export type MediaCategoryInfo = {
-  extensions: string[];
-  mimeTypes: Record<string, string>;
-};
+  extensions: string[]
+  mimeTypes: Record<string, string>
+}
 
 /**
  * Definitions for each media category: supported file extensions and their MIME types.
@@ -436,47 +436,47 @@ export const CATEGORY_DEFINITIONS: Record<MediaCategory, MediaCategoryInfo> = {
       '.png': 'image/png',
     },
   },
-};
+}
 
 /**
  * Maps a file extension to its MIME type.
  * When an extension is shared across categories, the first category in definition order wins.
  */
-export const EXTENSION_TO_MIME: Record<string, string> = buildExtensionToMime();
+export const EXTENSION_TO_MIME: Record<string, string> = buildExtensionToMime()
 
 /**
  * Maps a file extension to its primary media category.
  * When an extension is shared across categories, the first category in definition order wins.
  */
 export const EXTENSION_TO_CATEGORY: Record<string, MediaCategory> =
-  buildExtensionToCategory();
+  buildExtensionToCategory()
 
 function buildExtensionToMime(): Record<string, string> {
-  const result: Record<string, string> = {};
+  const result: Record<string, string> = {}
   for (const [, info] of Object.entries(CATEGORY_DEFINITIONS) as [
     MediaCategory,
     MediaCategoryInfo,
   ][]) {
     for (const ext of info.extensions) {
       if (!(ext in result)) {
-        result[ext] = info.mimeTypes[ext] ?? 'application/octet-stream';
+        result[ext] = info.mimeTypes[ext] ?? 'application/octet-stream'
       }
     }
   }
-  return result;
+  return result
 }
 
 function buildExtensionToCategory(): Record<string, MediaCategory> {
-  const result: Record<string, MediaCategory> = {};
+  const result: Record<string, MediaCategory> = {}
   for (const [category, info] of Object.entries(CATEGORY_DEFINITIONS) as [
     MediaCategory,
     MediaCategoryInfo,
   ][]) {
     for (const ext of info.extensions) {
       if (!(ext in result)) {
-        result[ext] = category;
+        result[ext] = category
       }
     }
   }
-  return result;
+  return result
 }

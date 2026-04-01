@@ -1,6 +1,6 @@
-import { BasePlugin } from '@xon/plugin-sdk';
-import type { PluginContext, PluginManifest } from '@xon/plugin-sdk';
-import { MediaCategory } from '@xon/shared';
+import { BasePlugin } from '@xon/plugin-sdk'
+import type { PluginContext, PluginManifest } from '@xon/plugin-sdk'
+import { MediaCategory } from '@xon/shared'
 
 export class ModelViewerPlugin extends BasePlugin {
   override readonly manifest: PluginManifest = {
@@ -12,7 +12,7 @@ export class ModelViewerPlugin extends BasePlugin {
     category: 'FormatHandler',
     mediaCategories: [MediaCategory.Models3D],
     main: 'dist/index.js',
-  };
+  }
 
   override async init(context: PluginContext): Promise<void> {
     context.registerUI({
@@ -20,10 +20,10 @@ export class ModelViewerPlugin extends BasePlugin {
       injectionPoint: 'detail-panel',
       bundleUrl: `/api/v1/plugins/${this.manifest.id}/assets/viewer.js`,
       label: '3D Model Viewer',
-    });
+    })
 
-    context.logger.info('3D Model Viewer plugin initialized');
+    context.logger.info('3D Model Viewer plugin initialized')
   }
 }
 
-export default ModelViewerPlugin;
+export default ModelViewerPlugin

@@ -1,15 +1,15 @@
-import { useCallback, useEffect, useState } from 'react';
-import { apiFetch } from '../apiFetch.js';
-import styles from './AdminSettings.module.css';
+import { useCallback, useEffect, useState } from 'react'
+import { apiFetch } from '../apiFetch.js'
+import styles from './AdminSettings.module.css'
 
-type ThumbnailSize = 'small' | 'medium' | 'large' | 'xlarge';
+type ThumbnailSize = 'small' | 'medium' | 'large' | 'xlarge'
 
 interface ServerConfigData {
-  serverPort: number;
-  dataDirectory: string;
-  defaultScanSchedule: string | null;
-  thumbnailSizes: ThumbnailSize[];
-  requiresRestart: boolean;
+  serverPort: number
+  dataDirectory: string
+  defaultScanSchedule: string | null
+  thumbnailSizes: ThumbnailSize[]
+  requiresRestart: boolean
 }
 
 const THUMBNAIL_SIZE_OPTIONS: ThumbnailSize[] = [
@@ -17,7 +17,7 @@ const THUMBNAIL_SIZE_OPTIONS: ThumbnailSize[] = [
   'medium',
   'large',
   'xlarge',
-];
+]
 
 const DEFAULT_CONFIG: ServerConfigData = {
   serverPort: 32400,
@@ -25,57 +25,57 @@ const DEFAULT_CONFIG: ServerConfigData = {
   defaultScanSchedule: null,
   thumbnailSizes: ['small', 'medium'],
   requiresRestart: false,
-};
+}
 
 export default function AdminSettings() {
-  const [loading, setLoading] = useState(true);
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
-  const [success, setSuccess] = useState('');
-  const [restartNotice, setRestartNotice] = useState(false);
+  const [loading, setLoading] = useState(true)
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
+  const [restartNotice, setRestartNotice] = useState(false)
 
-  const [serverPort, setServerPort] = useState(32400);
-  const [dataDirectory, setDataDirectory] = useState('./data');
-  const [defaultScanSchedule, setDefaultScanSchedule] = useState('');
+  const [serverPort, setServerPort] = useState(32400)
+  const [dataDirectory, setDataDirectory] = useState('./data')
+  const [defaultScanSchedule, setDefaultScanSchedule] = useState('')
   const [thumbnailSizes, setThumbnailSizes] = useState<ThumbnailSize[]>([
     'small',
     'medium',
-  ]);
+  ])
 
   const applyConfig = useCallback((data: ServerConfigData) => {
-    setServerPort(data.serverPort);
-    setDataDirectory(data.dataDirectory);
-    setDefaultScanSchedule(data.defaultScanSchedule ?? '');
-    setThumbnailSizes(data.thumbnailSizes);
-  }, []);
+    setServerPort(data.serverPort)
+    setDataDirectory(data.dataDirectory)
+    setDefaultScanSchedule(data.defaultScanSchedule ?? '')
+    setThumbnailSizes(data.thumbnailSizes)
+  }, [])
 
   useEffect(() => {
-    setLoading(true);
+    setLoading(true)
     apiFetch('/api/v1/admin/settings')
       .then((r) => r.json() as Promise<ServerConfigData>)
       .then((data) => {
-        applyConfig(data);
+        applyConfig(data)
       })
       .catch(() => setError('Failed to load settings'))
-      .finally(() => setLoading(false));
-  }, [applyConfig]);
+      .finally(() => setLoading(false))
+  }, [applyConfig])
 
   function toggleThumbnailSize(size: ThumbnailSize) {
     setThumbnailSizes((prev) => {
       if (prev.includes(size)) {
-        if (prev.length === 1) return prev; // keep at least one
-        return prev.filter((s) => s !== size);
+        if (prev.length === 1) return prev // keep at least one
+        return prev.filter((s) => s !== size)
       }
-      return [...prev, size];
-    });
+      return [...prev, size]
+    })
   }
 
   async function handleSave(e: React.FormEvent) {
-    e.preventDefault();
-    setSaving(true);
-    setError('');
-    setSuccess('');
-    setRestartNotice(false);
+    e.preventDefault()
+    setSaving(true)
+    setError('')
+    setSuccess('')
+    setRestartNotice(false)
 
     try {
       const res = await apiFetch('/api/v1/admin/settings', {
@@ -87,20 +87,20 @@ export default function AdminSettings() {
           defaultScanSchedule: defaultScanSchedule || null,
           thumbnailSizes,
         }),
-      });
+      })
       if (!res.ok) {
-        setError('Failed to save settings');
+        setError('Failed to save settings')
       } else {
-        const data = (await res.json()) as ServerConfigData;
-        applyConfig(data);
-        setSuccess('Settings saved');
-        if (data.requiresRestart) setRestartNotice(true);
-        setTimeout(() => setSuccess(''), 3000);
+        const data = (await res.json()) as ServerConfigData
+        applyConfig(data)
+        setSuccess('Settings saved')
+        if (data.requiresRestart) setRestartNotice(true)
+        setTimeout(() => setSuccess(''), 3000)
       }
     } catch {
-      setError('Failed to save settings');
+      setError('Failed to save settings')
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
   }
 
@@ -109,7 +109,7 @@ export default function AdminSettings() {
       <div className={styles.page ?? ''}>
         <p className={styles.loading ?? ''}>Loading...</p>
       </div>
-    );
+    )
   }
 
   return (
@@ -224,5 +224,5 @@ export default function AdminSettings() {
         </div>
       </form>
     </div>
-  );
+  )
 }

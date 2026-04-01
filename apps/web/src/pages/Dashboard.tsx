@@ -1,56 +1,56 @@
-import { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { apiFetch } from '../apiFetch.js';
-import MediaCard, { type MediaCardItem } from '../components/MediaCard';
-import PluginSlot from '../components/PluginSlot';
-import styles from './Dashboard.module.css';
+import { useEffect, useState } from 'react'
+import { Link } from 'react-router-dom'
+import { apiFetch } from '../apiFetch.js'
+import MediaCard, { type MediaCardItem } from '../components/MediaCard'
+import PluginSlot from '../components/PluginSlot'
+import styles from './Dashboard.module.css'
 
 interface Library {
-  id: string;
-  name: string;
+  id: string
+  name: string
 }
 
 export default function Dashboard() {
-  const [recentMedia, setRecentMedia] = useState<MediaCardItem[]>([]);
-  const [libraries, setLibraries] = useState<Library[]>([]);
+  const [recentMedia, setRecentMedia] = useState<MediaCardItem[]>([])
+  const [libraries, setLibraries] = useState<Library[]>([])
   const [libraryMedia, setLibraryMedia] = useState<
     Record<string, MediaCardItem[]>
-  >({});
-  const [loading, setLoading] = useState(true);
+  >({})
+  const [loading, setLoading] = useState(true)
 
   useEffect(() => {
     const fetchData = async () => {
       const [mediaRes, libsRes] = await Promise.all([
         apiFetch('/api/v1/media?order=desc&limit=20'),
         apiFetch('/api/v1/libraries'),
-      ]);
-      const media = (await mediaRes.json()) as MediaCardItem[];
-      const libs = (await libsRes.json()) as Library[];
-      setRecentMedia(media);
-      setLibraries(libs);
+      ])
+      const media = (await mediaRes.json()) as MediaCardItem[]
+      const libs = (await libsRes.json()) as Library[]
+      setRecentMedia(media)
+      setLibraries(libs)
 
       const entries = await Promise.all(
         libs.map(async (lib) => {
           const res = await apiFetch(
             `/api/v1/libraries/${lib.id}/media?order=desc&limit=8`,
-          );
-          const items = (await res.json()) as MediaCardItem[];
-          return [lib.id, items] as const;
+          )
+          const items = (await res.json()) as MediaCardItem[]
+          return [lib.id, items] as const
         }),
-      );
-      setLibraryMedia(Object.fromEntries(entries));
-      setLoading(false);
-    };
+      )
+      setLibraryMedia(Object.fromEntries(entries))
+      setLoading(false)
+    }
 
-    fetchData().catch(() => setLoading(false));
-  }, []);
+    fetchData().catch(() => setLoading(false))
+  }, [])
 
   if (loading) {
     return (
       <div className={styles.loading ?? ''}>
         <p>Loading…</p>
       </div>
-    );
+    )
   }
 
   return (
@@ -77,7 +77,7 @@ export default function Dashboard() {
       </section>
 
       {libraries.map((lib) => {
-        const items = libraryMedia[lib.id] ?? [];
+        const items = libraryMedia[lib.id] ?? []
         return (
           <section key={lib.id} className={styles.section ?? ''}>
             <div className={styles.sectionHeader ?? ''}>
@@ -98,8 +98,8 @@ export default function Dashboard() {
               </div>
             )}
           </section>
-        );
+        )
       })}
     </div>
-  );
+  )
 }

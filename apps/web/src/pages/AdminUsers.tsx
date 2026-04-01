@@ -1,20 +1,20 @@
-import { useEffect, useState } from 'react';
-import { apiFetch } from '../apiFetch.js';
-import styles from './AdminUsers.module.css';
+import { useEffect, useState } from 'react'
+import { apiFetch } from '../apiFetch.js'
+import styles from './AdminUsers.module.css'
 
 interface UserInfo {
-  id: string;
-  username: string;
-  email: string;
-  displayName: string;
-  role: 'admin' | 'manager' | 'user' | 'guest';
-  maxContentRating: 'G' | 'PG' | 'PG-13' | 'R' | 'unrated' | 'none';
-  createdAt: number;
+  id: string
+  username: string
+  email: string
+  displayName: string
+  role: 'admin' | 'manager' | 'user' | 'guest'
+  maxContentRating: 'G' | 'PG' | 'PG-13' | 'R' | 'unrated' | 'none'
+  createdAt: number
 }
 
-type UserRole = 'admin' | 'manager' | 'user' | 'guest';
-const ROLES: UserRole[] = ['admin', 'manager', 'user', 'guest'];
-type ContentRatingMax = 'G' | 'PG' | 'PG-13' | 'R' | 'unrated' | 'none';
+type UserRole = 'admin' | 'manager' | 'user' | 'guest'
+const ROLES: UserRole[] = ['admin', 'manager', 'user', 'guest']
+type ContentRatingMax = 'G' | 'PG' | 'PG-13' | 'R' | 'unrated' | 'none'
 const CONTENT_RATINGS: ContentRatingMax[] = [
   'G',
   'PG',
@@ -22,22 +22,22 @@ const CONTENT_RATINGS: ContentRatingMax[] = [
   'R',
   'unrated',
   'none',
-];
+]
 
 interface CreateForm {
-  username: string;
-  email: string;
-  displayName: string;
-  password: string;
-  role: UserRole;
+  username: string
+  email: string
+  displayName: string
+  password: string
+  role: UserRole
 }
 
 interface EditForm {
-  displayName: string;
-  email: string;
-  role: UserRole;
-  maxContentRating: ContentRatingMax;
-  password: string;
+  displayName: string
+  email: string
+  role: UserRole
+  maxContentRating: ContentRatingMax
+  password: string
 }
 
 const EMPTY_CREATE: CreateForm = {
@@ -46,124 +46,124 @@ const EMPTY_CREATE: CreateForm = {
   displayName: '',
   password: '',
   role: 'user',
-};
+}
 
 export default function AdminUsers() {
-  const [users, setUsers] = useState<UserInfo[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [showCreate, setShowCreate] = useState(false);
-  const [createForm, setCreateForm] = useState<CreateForm>(EMPTY_CREATE);
-  const [creating, setCreating] = useState(false);
-  const [createError, setCreateError] = useState('');
+  const [users, setUsers] = useState<UserInfo[]>([])
+  const [loading, setLoading] = useState(true)
+  const [showCreate, setShowCreate] = useState(false)
+  const [createForm, setCreateForm] = useState<CreateForm>(EMPTY_CREATE)
+  const [creating, setCreating] = useState(false)
+  const [createError, setCreateError] = useState('')
 
-  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editingId, setEditingId] = useState<string | null>(null)
   const [editForm, setEditForm] = useState<EditForm>({
     displayName: '',
     email: '',
     role: 'user',
     maxContentRating: 'none',
     password: '',
-  });
-  const [saving, setSaving] = useState(false);
-  const [saveError, setSaveError] = useState('');
+  })
+  const [saving, setSaving] = useState(false)
+  const [saveError, setSaveError] = useState('')
 
-  const [deletingId, setDeletingId] = useState<string | null>(null);
-  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null);
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+  const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   useEffect(() => {
     apiFetch('/api/v1/admin/users')
       .then((r) => r.json() as Promise<UserInfo[]>)
       .then(setUsers)
       .catch(() => {})
-      .finally(() => setLoading(false));
-  }, []);
+      .finally(() => setLoading(false))
+  }, [])
 
   function startEdit(user: UserInfo) {
-    setEditingId(user.id);
+    setEditingId(user.id)
     setEditForm({
       displayName: user.displayName,
       email: user.email,
       role: user.role,
       maxContentRating: user.maxContentRating,
       password: '',
-    });
-    setSaveError('');
+    })
+    setSaveError('')
   }
 
   function cancelEdit() {
-    setEditingId(null);
-    setSaveError('');
+    setEditingId(null)
+    setSaveError('')
   }
 
   async function saveEdit() {
-    if (!editingId) return;
-    setSaving(true);
-    setSaveError('');
+    if (!editingId) return
+    setSaving(true)
+    setSaveError('')
     const body: Record<string, string> = {
       displayName: editForm.displayName,
       email: editForm.email,
       role: editForm.role,
       maxContentRating: editForm.maxContentRating,
-    };
-    if (editForm.password) body.password = editForm.password;
+    }
+    if (editForm.password) body.password = editForm.password
     try {
       const res = await apiFetch(`/api/v1/admin/users/${editingId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
-      });
+      })
       if (!res.ok) {
-        setSaveError('Failed to save changes');
-        return;
+        setSaveError('Failed to save changes')
+        return
       }
-      const updated = (await res.json()) as UserInfo;
-      setUsers((prev) => prev.map((u) => (u.id === editingId ? updated : u)));
-      setEditingId(null);
+      const updated = (await res.json()) as UserInfo
+      setUsers((prev) => prev.map((u) => (u.id === editingId ? updated : u)))
+      setEditingId(null)
     } catch {
-      setSaveError('Network error');
+      setSaveError('Network error')
     } finally {
-      setSaving(false);
+      setSaving(false)
     }
   }
 
   async function confirmDelete(id: string) {
-    setDeletingId(id);
+    setDeletingId(id)
     try {
       const res = await apiFetch(`/api/v1/admin/users/${id}`, {
         method: 'DELETE',
-      });
+      })
       if (res.ok) {
-        setUsers((prev) => prev.filter((u) => u.id !== id));
+        setUsers((prev) => prev.filter((u) => u.id !== id))
       }
     } catch {
       // ignore
     } finally {
-      setDeletingId(null);
-      setConfirmDeleteId(null);
+      setDeletingId(null)
+      setConfirmDeleteId(null)
     }
   }
 
   async function submitCreate() {
-    setCreating(true);
-    setCreateError('');
+    setCreating(true)
+    setCreateError('')
     try {
       const res = await apiFetch('/api/v1/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(createForm),
-      });
+      })
       if (!res.ok) {
-        setCreateError('Failed to create user');
-        return;
+        setCreateError('Failed to create user')
+        return
       }
-      const newUser = (await res.json()) as UserInfo;
-      setUsers((prev) => [...prev, newUser]);
-      setShowCreate(false);
-      setCreateForm(EMPTY_CREATE);
+      const newUser = (await res.json()) as UserInfo
+      setUsers((prev) => [...prev, newUser])
+      setShowCreate(false)
+      setCreateForm(EMPTY_CREATE)
     } catch {
-      setCreateError('Network error');
+      setCreateError('Network error')
     } finally {
-      setCreating(false);
+      setCreating(false)
     }
   }
 
@@ -175,9 +175,9 @@ export default function AdminUsers() {
           type="button"
           className={styles.createBtn ?? ''}
           onClick={() => {
-            setShowCreate(true);
-            setCreateError('');
-            setCreateForm(EMPTY_CREATE);
+            setShowCreate(true)
+            setCreateError('')
+            setCreateForm(EMPTY_CREATE)
           }}
         >
           + Create User
@@ -456,5 +456,5 @@ export default function AdminUsers() {
         </table>
       )}
     </div>
-  );
+  )
 }
