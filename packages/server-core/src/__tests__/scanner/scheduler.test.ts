@@ -4,8 +4,8 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { openDatabase } from '../../db/db.js';
 import { migrateDatabase } from '../../db/migrate.js';
-import { parseCronInterval, startScheduler } from '../../scanner/scheduler.js';
 import { dataSources, libraries } from '../../db/schema.js';
+import { parseCronInterval, startScheduler } from '../../scanner/scheduler.js';
 
 vi.mock('node:fs', () => ({
   watch: vi.fn(),

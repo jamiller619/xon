@@ -5,13 +5,13 @@ import { eq } from 'drizzle-orm';
 import { Hono } from 'hono';
 import { createApp } from './app.js';
 import { openDatabase } from './db/db.js';
-import { acquireAcmeCert, loadManualCerts } from './http/httpsManager.js';
 import { migrateDatabase } from './db/migrate.js';
+import { serverSettings } from './db/schema.js';
+import { acquireAcmeCert, loadManualCerts } from './http/httpsManager.js';
+import { makeStaticMiddleware } from './http/staticFiles.js';
 import { emitPluginEvent, setPluginDatabase } from './plugins/pluginManager.js';
 import { WS_PATH, createWsServer } from './routes/ws.js';
 import { startScheduler } from './scanner/scheduler.js';
-import { serverSettings } from './db/schema.js';
-import { makeStaticMiddleware } from './http/staticFiles.js';
 import { ensureAdminUser } from './userInit.js';
 
 const SERVER_SETTINGS_ID = 'default';

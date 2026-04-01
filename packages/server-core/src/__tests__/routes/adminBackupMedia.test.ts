@@ -3,9 +3,9 @@ import type { Client } from '@libsql/client';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../../app.js';
+import { hashPassword } from '../../auth/password.js';
 import { openDatabase } from '../../db/db.js';
 import { migrateDatabase } from '../../db/migrate.js';
-import { hashPassword } from '../../auth/password.js';
 import {
   backupJobs,
   backupTargets,
@@ -281,7 +281,9 @@ describe('Admin Backup Media API', () => {
         updatedAt: new Date(),
       });
 
-      const { runMediaBackupJob } = await import('../../routes/adminBackupMedia.js');
+      const { runMediaBackupJob } = await import(
+        '../../routes/adminBackupMedia.js'
+      );
       const jobId = crypto.randomUUID();
       await db.insert(backupJobs).values({
         id: jobId,
@@ -377,7 +379,9 @@ describe('Admin Backup Media API', () => {
         },
       ]);
 
-      const { runMediaBackupJob } = await import('../../routes/adminBackupMedia.js');
+      const { runMediaBackupJob } = await import(
+        '../../routes/adminBackupMedia.js'
+      );
       const jobId = crypto.randomUUID();
       await db.insert(backupJobs).values({
         id: jobId,
@@ -446,7 +450,9 @@ describe('Admin Backup Media API', () => {
         .mockResolvedValueOnce(undefined)
         .mockRejectedValueOnce(new Error('Permission denied'));
 
-      const { runMediaBackupJob } = await import('../../routes/adminBackupMedia.js');
+      const { runMediaBackupJob } = await import(
+        '../../routes/adminBackupMedia.js'
+      );
       const jobId = crypto.randomUUID();
       await db.insert(backupJobs).values({
         id: jobId,
@@ -474,7 +480,9 @@ describe('Admin Backup Media API', () => {
     });
 
     it('marks job failed when target not found', async () => {
-      const { runMediaBackupJob } = await import('../../routes/adminBackupMedia.js');
+      const { runMediaBackupJob } = await import(
+        '../../routes/adminBackupMedia.js'
+      );
       const jobId = crypto.randomUUID();
       const badTargetId = crypto.randomUUID();
       // Insert a fake target id reference (bypassing FK in test)
@@ -541,7 +549,9 @@ describe('Admin Backup Media API', () => {
         createdAt: new Date(),
       });
 
-      const { runMediaBackupJob } = await import('../../routes/adminBackupMedia.js');
+      const { runMediaBackupJob } = await import(
+        '../../routes/adminBackupMedia.js'
+      );
       const jobId = crypto.randomUUID();
       await db.insert(backupJobs).values({
         id: jobId,

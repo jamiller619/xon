@@ -4,9 +4,13 @@ import { join } from 'node:path';
 import { desc, eq } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { Hono } from 'hono';
-import { getBackupTargetPlugin } from '../plugins/backupTargetPluginRegistry.js';
+import {
+  backupFileState,
+  backupTargets,
+  backupVerifyJobs,
+} from '../db/schema.js';
 import { emitEvent } from '../events.js';
-import { backupFileState, backupTargets, backupVerifyJobs } from '../db/schema.js';
+import { getBackupTargetPlugin } from '../plugins/backupTargetPluginRegistry.js';
 import {
   localConfigSchema,
   networkConfigSchema,

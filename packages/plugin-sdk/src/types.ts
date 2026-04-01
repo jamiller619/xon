@@ -234,9 +234,7 @@ export interface PluginContext {
     readFile: (path: string) => Promise<Buffer>;
     writeFile: (path: string, data: string | Buffer) => Promise<void>;
     readdir: (path: string) => Promise<string[]>;
-    stat: (
-      path: string,
-    ) => Promise<{
+    stat: (path: string) => Promise<{
       size: number;
       isFile: () => boolean;
       isDirectory: () => boolean;

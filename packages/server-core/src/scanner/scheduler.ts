@@ -1,8 +1,8 @@
 import { watch } from 'node:fs';
 import { eq } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
-import { scanLibrary } from './orchestrator.js';
 import { dataSources, libraries } from '../db/schema.js';
+import { scanLibrary } from './orchestrator.js';
 
 // Parse simple cron expressions. Returns interval in milliseconds, or null if unsupported.
 // Supported patterns:

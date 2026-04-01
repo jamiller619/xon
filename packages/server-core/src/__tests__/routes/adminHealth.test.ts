@@ -4,8 +4,8 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../../app.js';
 import { openDatabase } from '../../db/db.js';
 import { migrateDatabase } from '../../db/migrate.js';
-import { scanRegistry } from '../../scanner/scanRegistry.js';
 import { signAccessToken } from '../../routes/auth.js';
+import { scanRegistry } from '../../scanner/scanRegistry.js';
 
 const AUTH = `Bearer ${await signAccessToken('admin-id', 'admin', 'admin')}`;
 

@@ -179,8 +179,15 @@ export {
 } from './media/miscmeta.js';
 export { detectDrm } from './media/drm.js';
 export { generateThumbnails, type ThumbnailPaths } from './media/thumbnails.js';
-export { generateVideoThumbnails, isVideoCategory } from './media/videoThumbnails.js';
-export { scanDataSource, type FileEntry, type ScanResult } from './scanner/scanner.js';
+export {
+  generateVideoThumbnails,
+  isVideoCategory,
+} from './media/videoThumbnails.js';
+export {
+  scanDataSource,
+  type FileEntry,
+  type ScanResult,
+} from './scanner/scanner.js';
 export {
   scanLibrary,
   type ScanProgress,

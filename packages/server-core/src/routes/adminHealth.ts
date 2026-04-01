@@ -4,8 +4,8 @@ import { eq, sql } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { Hono } from 'hono';
 import { appCache } from '../cache.js';
-import { scanRegistry } from '../scanner/scanRegistry.js';
 import { libraries, mediaItems } from '../db/schema.js';
+import { scanRegistry } from '../scanner/scanRegistry.js';
 
 export function makeAdminHealthRouter(db: LibSQLDatabase): Hono {
   const router = new Hono();

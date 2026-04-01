@@ -3,8 +3,8 @@ import { readdir, stat } from 'node:fs/promises';
 import { basename, extname, join } from 'node:path';
 import { EXTENSION_TO_MIME, getMediaCategory } from '@xon/media-types';
 import type { MediaCategory } from '@xon/shared';
-import { getMediaProviderPlugin } from '../plugins/mediaProviderPluginRegistry.js';
 import type { MediaItem } from '../db/schema.js';
+import { getMediaProviderPlugin } from '../plugins/mediaProviderPluginRegistry.js';
 
 export type FileEntry = {
   filePath: string;

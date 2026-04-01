@@ -6,12 +6,12 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { openDatabase } from '../../db/db.js';
 import { migrateDatabase } from '../../db/migrate.js';
+import { dataSources, libraries, mediaItems } from '../../db/schema.js';
 import {
   type ScanProgress,
   type ScanSummary,
   scanLibrary,
 } from '../../scanner/orchestrator.js';
-import { dataSources, libraries, mediaItems } from '../../db/schema.js';
 
 describe('scanLibrary', () => {
   let client: Client;

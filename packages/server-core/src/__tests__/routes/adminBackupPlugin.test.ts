@@ -10,10 +10,6 @@ import { BackupTargetPlugin } from '@xon/plugin-sdk';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../../app.js';
-import {
-  _resetBackupTargetPluginRegistry,
-  registerBackupTargetPlugin,
-} from '../../plugins/backupTargetPluginRegistry.js';
 import { openDatabase } from '../../db/db.js';
 import { migrateDatabase } from '../../db/migrate.js';
 import {
@@ -25,6 +21,10 @@ import {
   libraries,
   mediaItems,
 } from '../../db/schema.js';
+import {
+  _resetBackupTargetPluginRegistry,
+  registerBackupTargetPlugin,
+} from '../../plugins/backupTargetPluginRegistry.js';
 import { runMediaBackupJob } from '../../routes/adminBackupMedia.js';
 import { runBackupToTarget } from '../../routes/adminBackupTargets.js';
 import { runVerifyJob } from '../../routes/adminBackupVerify.js';

@@ -1,10 +1,14 @@
 import { and, eq, inArray } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import { dataSources, libraries, mediaItems } from '../db/schema.js';
+import { emitEvent } from '../events.js';
 import { autoTagMediaItems } from '../media/autoTag.js';
 import { detectDrm } from '../media/drm.js';
-import { emitEvent } from '../events.js';
 import { extractExiftoolMetadata, isImageCategory } from '../media/exiftool.js';
-import { extractFfprobeMetadata, isAudioVideoCategory } from '../media/ffprobe.js';
+import {
+  extractFfprobeMetadata,
+  isAudioVideoCategory,
+} from '../media/ffprobe.js';
 import {
   groupAudiobooks,
   groupMusicTracks,
@@ -22,11 +26,13 @@ import {
   isFontCategory,
 } from '../media/miscmeta.js';
 import { extractMusicTags, isMusicCategory } from '../media/musictags.js';
+import { generateThumbnails } from '../media/thumbnails.js';
+import {
+  generateVideoThumbnails,
+  isVideoCategory,
+} from '../media/videoThumbnails.js';
 import { emitPluginEvent } from '../plugins/pluginManager.js';
 import { scanDataSource } from './scanner.js';
-import { dataSources, libraries, mediaItems } from '../db/schema.js';
-import { generateThumbnails } from '../media/thumbnails.js';
-import { generateVideoThumbnails, isVideoCategory } from '../media/videoThumbnails.js';
 
 export type ScanProgress = {
   dataSourceId: string;

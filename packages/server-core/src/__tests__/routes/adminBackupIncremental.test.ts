@@ -3,9 +3,9 @@ import type { Client } from '@libsql/client';
 import { eq } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { hashPassword } from '../../auth/password.js';
 import { openDatabase } from '../../db/db.js';
 import { migrateDatabase } from '../../db/migrate.js';
-import { hashPassword } from '../../auth/password.js';
 import {
   backupFileState,
   backupJobs,
@@ -104,7 +104,9 @@ describe('Incremental backup support', () => {
   }
 
   async function runJob(scope = {}) {
-    const { runMediaBackupJob } = await import('../../routes/adminBackupMedia.js');
+    const { runMediaBackupJob } = await import(
+      '../../routes/adminBackupMedia.js'
+    );
     const jobId = crypto.randomUUID();
     await db.insert(backupJobs).values({
       id: jobId,

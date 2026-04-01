@@ -2,9 +2,9 @@ import type { Client } from '@libsql/client';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../../app.js';
+import { hashPassword } from '../../auth/password.js';
 import { openDatabase } from '../../db/db.js';
 import { migrateDatabase } from '../../db/migrate.js';
-import { hashPassword } from '../../auth/password.js';
 import { users } from '../../db/schema.js';
 import { signAccessToken } from '../../routes/auth.js';
 

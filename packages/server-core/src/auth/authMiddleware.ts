@@ -1,9 +1,9 @@
 import { eq } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import type { Context, Next } from 'hono';
+import { apiTokens, users } from '../db/schema.js';
 import { verifyAccessToken } from '../routes/auth.js';
 import { hashApiToken } from '../routes/users.js';
-import { apiTokens, users } from '../db/schema.js';
 
 export interface AuthUser {
   id: string;

@@ -2,6 +2,9 @@ import type { Client } from '@libsql/client';
 import { MediaCategory } from '@xon/shared';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { openDatabase } from '../../db/db.js';
+import { migrateDatabase } from '../../db/migrate.js';
+import { dataSources, libraries, mediaItems } from '../../db/schema.js';
 import {
   type AutoTag,
   type AutoTagOnnxSession,
@@ -11,9 +14,6 @@ import {
   getAutoTagOnnxSession,
   setAutoTagOnnxSession,
 } from '../../media/autoTag.js';
-import { openDatabase } from '../../db/db.js';
-import { migrateDatabase } from '../../db/migrate.js';
-import { dataSources, libraries, mediaItems } from '../../db/schema.js';
 
 afterEach(() => {
   setAutoTagOnnxSession(null);

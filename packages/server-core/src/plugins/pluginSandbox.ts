@@ -12,9 +12,7 @@ export interface SandboxedFs {
   readFile: (path: string) => Promise<Buffer>;
   writeFile: (path: string, data: string | Buffer) => Promise<void>;
   readdir: (path: string) => Promise<string[]>;
-  stat: (
-    path: string,
-  ) => Promise<{
+  stat: (path: string) => Promise<{
     size: number;
     isFile: () => boolean;
     isDirectory: () => boolean;
@@ -79,9 +77,7 @@ export function createSandboxedFs(
       return readdir(path);
     },
 
-    async stat(
-      path: string,
-    ): Promise<{
+    async stat(path: string): Promise<{
       size: number;
       isFile: () => boolean;
       isDirectory: () => boolean;

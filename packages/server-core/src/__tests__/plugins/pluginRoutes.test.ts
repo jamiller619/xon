@@ -6,7 +6,10 @@ import type {
 } from '@xon/plugin-sdk';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { createApp } from '../../app.js';
-import { _registerPlugin, _resetForTesting } from '../../plugins/pluginManager.js';
+import {
+  _registerPlugin,
+  _resetForTesting,
+} from '../../plugins/pluginManager.js';
 import { signAccessToken } from '../../routes/auth.js';
 
 const AUTH = `Bearer ${await signAccessToken('test-id', 'testuser', 'admin')}`;

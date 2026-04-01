@@ -2,7 +2,6 @@ import { and, desc, eq, gte, inArray } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { scanLibraryForDuplicates } from '../media/perceptualHash.js';
 import {
   duplicateCandidates,
   libraries,
@@ -10,11 +9,12 @@ import {
   mediaItems,
   suggestedGroups,
 } from '../db/schema.js';
+import { validate } from '../http/validate.js';
+import { scanLibraryForDuplicates } from '../media/perceptualHash.js';
 import {
   acceptSuggestedGroup,
   scanLibraryForSmartGroups,
 } from '../media/smartGrouping.js';
-import { validate } from '../http/validate.js';
 import { withThumbnailUrls } from './media.js';
 
 const PRIVILEGED_ROLES = ['admin', 'manager'] as const;

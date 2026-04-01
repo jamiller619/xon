@@ -3,11 +3,11 @@ import type { Client } from '@libsql/client';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { createApp } from '../../app.js';
+import { hashPassword } from '../../auth/password.js';
 import { openDatabase } from '../../db/db.js';
 import { migrateDatabase } from '../../db/migrate.js';
-import { hashPassword } from '../../auth/password.js';
-import { signAccessToken } from '../../routes/auth.js';
 import { users } from '../../db/schema.js';
+import { signAccessToken } from '../../routes/auth.js';
 
 // Mock fs/promises so tests don't touch the real filesystem
 vi.mock('node:fs/promises', () => ({

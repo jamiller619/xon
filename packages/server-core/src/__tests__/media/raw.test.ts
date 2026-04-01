@@ -12,7 +12,11 @@ vi.mock('sharp', () => ({
 
 import { spawn } from 'node:child_process';
 import sharpFn from 'sharp';
-import { RAW_EXTENSIONS, convertRawToJpeg, isRawImage } from '../../media/raw.js';
+import {
+  RAW_EXTENSIONS,
+  convertRawToJpeg,
+  isRawImage,
+} from '../../media/raw.js';
 
 type FakeChildProcess = EventEmitter & {
   stdout: EventEmitter;

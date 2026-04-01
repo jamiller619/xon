@@ -1,9 +1,9 @@
 import { basename, extname } from 'node:path';
 import { eq } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
+import { mediaItems } from '../db/schema.js';
 import { isImageCategory } from './exiftool.js';
 import { isDocumentCategory } from './miscmeta.js';
-import { mediaItems } from '../db/schema.js';
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

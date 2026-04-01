@@ -318,7 +318,9 @@ describe('discoverAndActivatePlugins', () => {
   });
 
   it('loads and activates discovered plugins', async () => {
-    const { discoverPluginManifests } = await import('../../plugins/pluginLoader.js');
+    const { discoverPluginManifests } = await import(
+      '../../plugins/pluginLoader.js'
+    );
     vi.mocked(discoverPluginManifests);
 
     // We'll test this via a mocked discoverPluginManifests

@@ -3,8 +3,8 @@ import type { SQL } from 'drizzle-orm';
 import type { LibSQLDatabase } from 'drizzle-orm/libsql';
 import { Hono } from 'hono';
 import { z } from 'zod';
-import { appCache, computeETag } from '../cache.js';
 import { requireRole } from '../auth/rbac.js';
+import { appCache, computeETag } from '../cache.js';
 import {
   dataSources,
   getAllowedRatings,
