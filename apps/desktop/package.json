@@ -10,7 +10,7 @@
     "start": "electron ."
   },
   "dependencies": {
-    "@xon/server-core": "*"
+    "@xon/server": "*"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

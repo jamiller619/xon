@@ -1,4 +1,4 @@
-import { boot } from '@xon/server-core'
+import { boot } from '@xon/server'
 import { DEFAULT_PORT } from '@xon/shared'
 import { BrowserWindow, app, screen } from 'electron'
 import {
@@ -16,27 +16,6 @@ let notificationManager: NotificationManager | null = null
 let isQuitting = false
 // Set to true if either XON_HEADLESS is set or no display server is detected at startup
 let runHeadless = headless
-
-/**
- * Detect whether a display server is available.
- * On Linux: checks DISPLAY (X11) or WAYLAND_DISPLAY environment variables.
- * On macOS: checks Electron's screen module for connected displays (call after app.whenReady).
- * On Windows: always returns true (display is always available).
- */
-function hasDisplayServer(): boolean {
-  if (process.platform === 'linux') {
-    return !!(process.env.DISPLAY || process.env.WAYLAND_DISPLAY)
-  }
-  if (process.platform === 'win32') {
-    return true
-  }
-  // macOS: check if any displays are connected via Electron screen API
-  try {
-    return screen.getAllDisplays().length > 0
-  } catch {
-    return false
-  }
-}
 
 function createWindow(): void {
   mainWindow = new BrowserWindow({
@@ -56,8 +35,8 @@ function createWindow(): void {
   })
 }
 
-app.whenReady().then(() => {
-  boot()
+app.whenReady().then(async () => {
+  await boot()
 
   const displayAvailable = hasDisplayServer()
   runHeadless = headless || !displayAvailable
@@ -95,7 +74,28 @@ app.on('before-quit', (event) => {
     event.preventDefault()
     notificationManager?.destroy()
     trayHandle?.destroy()
-    // Trigger server-core graceful shutdown; its handler calls process.exit(0)
+    // Trigger server graceful shutdown; its handler calls process.exit(0)
     process.emit('SIGTERM')
   }
 })
+
+/**
+ * Detect whether a display server is available.
+ * On Linux: checks DISPLAY (X11) or WAYLAND_DISPLAY environment variables.
+ * On macOS: checks Electron's screen module for connected displays (call after app.whenReady).
+ * On Windows: always returns true (display is always available).
+ */
+function hasDisplayServer(): boolean {
+  if (process.platform === 'linux') {
+    return !!(process.env.DISPLAY || process.env.WAYLAND_DISPLAY)
+  }
+  if (process.platform === 'win32') {
+    return true
+  }
+  // macOS: check if any displays are connected via Electron screen API
+  try {
+    return screen.getAllDisplays().length > 0
+  } catch {
+    return false
+  }
+}

@@ -4,11 +4,6 @@ import { type LibSQLDatabase, drizzle } from 'drizzle-orm/libsql'
 
 export type { LibSQLDatabase }
 
-function getDefaultDbUrl(): string {
-  const dataDir = process.env.DATA_DIR ?? './data'
-  return `file:${join(dataDir, 'xon.db')}`
-}
-
 export async function openDatabase(
   url?: string,
 ): Promise<{ client: Client; db: LibSQLDatabase }> {
@@ -21,5 +16,12 @@ export async function openDatabase(
   }
 
   const db = drizzle(client)
+  
   return { client, db }
+}
+
+function getDefaultDbUrl(): string {
+  const dataDir = process.env.DATA_DIR ?? './data'
+  
+  return `file:${join(dataDir, 'xon.db')}`
 }

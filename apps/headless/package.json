@@ -12,7 +12,7 @@
     "start": "node ./dist/main.js"
   },
   "dependencies": {
-    "@xon/server-core": "*",
+    "@xon/server": "*",
     "@xon/shared": "*"
   },
   "devDependencies": {

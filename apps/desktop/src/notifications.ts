@@ -1,4 +1,4 @@
-import { type XonEvent, eventBus } from '@xon/server-core'
+import { type XonEvent, eventBus } from '@xon/server'
 import { DEFAULT_PORT } from '@xon/shared'
 import { Notification, shell } from 'electron'
 

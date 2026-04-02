@@ -6,7 +6,7 @@
   },
   "include": ["src/**/*"],
   "references": [
-    { "path": "../../packages/server-core" },
+    { "path": "../../packages/server" },
     { "path": "../../packages/shared" }
   ]
 }

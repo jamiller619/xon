@@ -21,7 +21,7 @@
   "references": [
     { "path": "./packages/shared" },
     { "path": "./packages/media-types" },
-    { "path": "./packages/server-core" },
+    { "path": "./packages/server" },
     { "path": "./packages/plugin-sdk" },
     { "path": "./apps/desktop" },
     { "path": "./apps/headless" },
