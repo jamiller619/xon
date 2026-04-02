@@ -1,6 +1,6 @@
 import { type ReactNode, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../store/index.js'
+import { useAuthStore } from '../store/authStore.js'
 
 export default function RequireAuth({ children }: { children: ReactNode }) {
   const accessToken = useAuthStore((s) => s.accessToken)

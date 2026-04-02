@@ -1,4 +1,4 @@
-CREATE TABLE `ai_settings` (
+CREATE TABLE IF NOT EXISTS `ai_settings` (
 	`id` text PRIMARY KEY NOT NULL,
 	`ai_enabled` integer DEFAULT true NOT NULL,
 	`ai_mode` text DEFAULT 'local-only' NOT NULL,
@@ -11,7 +11,7 @@ CREATE TABLE `ai_settings` (
 	`updated_at` integer DEFAULT (unixepoch()) NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE `backup_file_state` (
+CREATE TABLE IF NOT EXISTS `backup_file_state` (
 	`id` text PRIMARY KEY NOT NULL,
 	`target_id` text NOT NULL,
 	`file_path` text NOT NULL,
@@ -22,8 +22,8 @@ CREATE TABLE `backup_file_state` (
 	FOREIGN KEY (`target_id`) REFERENCES `backup_targets`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `backup_file_state_target_path_idx` ON `backup_file_state` (`target_id`,`file_path`);--> statement-breakpoint
-CREATE TABLE `backup_jobs` (
+CREATE UNIQUE INDEX IF NOT EXISTS `backup_file_state_target_path_idx` ON `backup_file_state` (`target_id`,`file_path`);--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS `backup_jobs` (
 	`id` text PRIMARY KEY NOT NULL,
 	`target_id` text NOT NULL,
 	`scope` text DEFAULT '{}' NOT NULL,
@@ -38,7 +38,7 @@ CREATE TABLE `backup_jobs` (
 	FOREIGN KEY (`target_id`) REFERENCES `backup_targets`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE TABLE `backup_targets` (
+CREATE TABLE IF NOT EXISTS `backup_targets` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
 	`type` text DEFAULT 'local' NOT NULL,
@@ -52,7 +52,7 @@ CREATE TABLE `backup_targets` (
 	`created_at` integer DEFAULT (unixepoch()) NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE `backup_verify_jobs` (
+CREATE TABLE IF NOT EXISTS `backup_verify_jobs` (
 	`id` text PRIMARY KEY NOT NULL,
 	`target_id` text NOT NULL,
 	`status` text DEFAULT 'pending' NOT NULL,
@@ -67,7 +67,7 @@ CREATE TABLE `backup_verify_jobs` (
 	FOREIGN KEY (`target_id`) REFERENCES `backup_targets`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE TABLE `duplicate_candidates` (
+CREATE TABLE IF NOT EXISTS `duplicate_candidates` (
 	`id` text PRIMARY KEY NOT NULL,
 	`library_id` text NOT NULL,
 	`media_item_id_1` text NOT NULL,
@@ -81,9 +81,9 @@ CREATE TABLE `duplicate_candidates` (
 	FOREIGN KEY (`media_item_id_2`) REFERENCES `media_items`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE INDEX `duplicate_candidates_library_id_idx` ON `duplicate_candidates` (`library_id`);--> statement-breakpoint
-CREATE INDEX `duplicate_candidates_status_idx` ON `duplicate_candidates` (`status`);--> statement-breakpoint
-CREATE TABLE `group_members` (
+CREATE INDEX IF NOT EXISTS `duplicate_candidates_library_id_idx` ON `duplicate_candidates` (`library_id`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `duplicate_candidates_status_idx` ON `duplicate_candidates` (`status`);--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS `group_members` (
 	`group_id` text NOT NULL,
 	`media_item_id` text NOT NULL,
 	`sort_order` integer DEFAULT 0 NOT NULL,
@@ -92,7 +92,7 @@ CREATE TABLE `group_members` (
 	FOREIGN KEY (`media_item_id`) REFERENCES `media_items`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE TABLE `groups` (
+CREATE TABLE IF NOT EXISTS `groups` (
 	`id` text PRIMARY KEY NOT NULL,
 	`library_id` text NOT NULL,
 	`type` text NOT NULL,
@@ -103,9 +103,9 @@ CREATE TABLE `groups` (
 	FOREIGN KEY (`library_id`) REFERENCES `libraries`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE INDEX `groups_library_id_idx` ON `groups` (`library_id`);--> statement-breakpoint
-CREATE INDEX `groups_parent_group_id_idx` ON `groups` (`parent_group_id`);--> statement-breakpoint
-CREATE TABLE `image_hashes` (
+CREATE INDEX IF NOT EXISTS `groups_library_id_idx` ON `groups` (`library_id`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `groups_parent_group_id_idx` ON `groups` (`parent_group_id`);--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS `image_hashes` (
 	`id` text PRIMARY KEY NOT NULL,
 	`media_item_id` text NOT NULL,
 	`hash` text NOT NULL,
@@ -113,9 +113,9 @@ CREATE TABLE `image_hashes` (
 	FOREIGN KEY (`media_item_id`) REFERENCES `media_items`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `image_hashes_media_item_id_unique` ON `image_hashes` (`media_item_id`);--> statement-breakpoint
-CREATE INDEX `image_hashes_media_item_id_idx` ON `image_hashes` (`media_item_id`);--> statement-breakpoint
-CREATE TABLE `matching_queue` (
+CREATE UNIQUE INDEX IF NOT EXISTS `image_hashes_media_item_id_unique` ON `image_hashes` (`media_item_id`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `image_hashes_media_item_id_idx` ON `image_hashes` (`media_item_id`);--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS `matching_queue` (
 	`id` text PRIMARY KEY NOT NULL,
 	`media_item_id` text NOT NULL,
 	`suggested_title` text NOT NULL,
@@ -128,9 +128,9 @@ CREATE TABLE `matching_queue` (
 	FOREIGN KEY (`media_item_id`) REFERENCES `media_items`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE INDEX `matching_queue_media_item_id_idx` ON `matching_queue` (`media_item_id`);--> statement-breakpoint
-CREATE INDEX `matching_queue_status_idx` ON `matching_queue` (`status`);--> statement-breakpoint
-CREATE TABLE `server_settings` (
+CREATE INDEX IF NOT EXISTS `matching_queue_media_item_id_idx` ON `matching_queue` (`media_item_id`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `matching_queue_status_idx` ON `matching_queue` (`status`);--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS `server_settings` (
 	`id` text PRIMARY KEY NOT NULL,
 	`cors_enabled` integer DEFAULT false NOT NULL,
 	`cors_allowed_origins` text DEFAULT '["*"]' NOT NULL,
@@ -152,7 +152,7 @@ CREATE TABLE `server_settings` (
 	`updated_at` integer DEFAULT (unixepoch()) NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE `suggested_groups` (
+CREATE TABLE IF NOT EXISTS `suggested_groups` (
 	`id` text PRIMARY KEY NOT NULL,
 	`library_id` text NOT NULL,
 	`suggested_title` text NOT NULL,
@@ -166,9 +166,9 @@ CREATE TABLE `suggested_groups` (
 	FOREIGN KEY (`library_id`) REFERENCES `libraries`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE INDEX `suggested_groups_library_id_idx` ON `suggested_groups` (`library_id`);--> statement-breakpoint
-CREATE INDEX `suggested_groups_status_idx` ON `suggested_groups` (`status`);--> statement-breakpoint
-CREATE TABLE `sync_profiles` (
+CREATE INDEX IF NOT EXISTS `suggested_groups_library_id_idx` ON `suggested_groups` (`library_id`);--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS `suggested_groups_status_idx` ON `suggested_groups` (`status`);--> statement-breakpoint
+CREATE TABLE IF NOT EXISTS `sync_profiles` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
 	`type` text DEFAULT 'full' NOT NULL,
@@ -179,7 +179,7 @@ CREATE TABLE `sync_profiles` (
 	`updated_at` integer DEFAULT (unixepoch()) NOT NULL
 );
 --> statement-breakpoint
-CREATE TABLE `sync_runs` (
+CREATE TABLE IF NOT EXISTS `sync_runs` (
 	`id` text PRIMARY KEY NOT NULL,
 	`profile_id` text NOT NULL,
 	`status` text DEFAULT 'pending' NOT NULL,
@@ -191,10 +191,3 @@ CREATE TABLE `sync_runs` (
 	`created_at` integer DEFAULT (unixepoch()) NOT NULL,
 	FOREIGN KEY (`profile_id`) REFERENCES `sync_profiles`(`id`) ON UPDATE no action ON DELETE cascade
 );
---> statement-breakpoint
-ALTER TABLE `data_sources` ADD `plugin_id` text;--> statement-breakpoint
-ALTER TABLE `libraries` ADD `watch_enabled` integer DEFAULT true NOT NULL;--> statement-breakpoint
-ALTER TABLE `libraries` ADD `last_scan_result` text;--> statement-breakpoint
-ALTER TABLE `libraries` ADD `last_scan_duration` integer;--> statement-breakpoint
-ALTER TABLE `libraries` ADD `hide_drm_items` integer DEFAULT false NOT NULL;--> statement-breakpoint
-ALTER TABLE `users` ADD `hide_drm_items` integer DEFAULT false NOT NULL;

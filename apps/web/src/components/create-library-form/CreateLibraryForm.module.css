@@ -1,0 +1,123 @@
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.875rem;
+}
+
+.fieldLabel {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  font-size: 0.8rem;
+  color: var(--color-text-muted, #888);
+}
+
+.input {
+  padding: 0.4rem 0.6rem;
+  background: var(--color-bg, #0a0a0a);
+  border: 1px solid var(--color-border, #333);
+  border-radius: 0.25rem;
+  color: var(--color-text, #e0e0e0);
+  font-size: 0.875rem;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+.input:focus {
+  outline: none;
+  border-color: var(--color-accent, #6366f1);
+}
+
+.mediaTypeGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
+  gap: 0.4rem;
+  margin-top: 0.5rem;
+}
+
+.mediaTypeCheckbox {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  color: var(--color-text, #e0e0e0);
+}
+
+.pathRow {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.pathRow .input {
+  flex: 1;
+  min-width: 0;
+}
+
+.browseBtn {
+  padding: 0.4rem 0.75rem;
+  background: var(--color-surface, #1a1a1a);
+  border: 1px solid var(--color-border, #333);
+  border-radius: 0.25rem;
+  color: var(--color-text-muted, #888);
+  font-size: 0.8rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.browseBtn:hover {
+  border-color: var(--color-text-muted, #888);
+  color: var(--color-text, #e0e0e0);
+}
+
+.error {
+  padding: 0.5rem 0.75rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+  border-radius: 0.25rem;
+  color: #f87171;
+  font-size: 0.8rem;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.75rem;
+  margin-top: 0.25rem;
+}
+
+.submitBtn {
+  padding: 0.4rem 1.25rem;
+  border: 1px solid var(--color-accent, #6366f1);
+  border-radius: 0.25rem;
+  background: var(--color-accent, #6366f1);
+  color: #fff;
+  cursor: pointer;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.submitBtn:hover:not(:disabled) {
+  opacity: 0.9;
+}
+
+.submitBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.cancelBtn {
+  padding: 0.4rem 1.25rem;
+  border: 1px solid var(--color-border, #333);
+  border-radius: 0.25rem;
+  background: transparent;
+  color: var(--color-text-muted, #888);
+  cursor: pointer;
+  font-size: 0.875rem;
+}
+
+.cancelBtn:hover {
+  border-color: var(--color-text-muted, #888);
+  color: var(--color-text, #e0e0e0);
+}

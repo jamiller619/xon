@@ -1,30 +1,30 @@
 import { Suspense, lazy } from 'react'
 import { Route, Routes } from 'react-router-dom'
-import ErrorBoundary from './components/ErrorBoundary'
-import Layout from './components/Layout'
+import ErrorBoundary from './components/error-boundary/ErrorBoundary'
+import Layout from './components/layout/Layout'
 import RequireAuth from './components/RequireAuth'
 import ThemeLoader from './components/ThemeLoader'
 
 // Route-level code splitting — each page is a separate JS chunk
-const AdminAiSettings = lazy(() => import('./pages/AdminAiSettings'))
-const AdminBackup = lazy(() => import('./pages/AdminBackup'))
-const AdminDuplicates = lazy(() => import('./pages/AdminDuplicates'))
-const AdminHealth = lazy(() => import('./pages/AdminHealth'))
-const AdminLibraries = lazy(() => import('./pages/AdminLibraries'))
-const AdminLibraryAccess = lazy(() => import('./pages/AdminLibraryAccess'))
-const AdminNetworkSettings = lazy(() => import('./pages/AdminNetworkSettings'))
-const AdminPlugins = lazy(() => import('./pages/AdminPlugins'))
-const AdminSettings = lazy(() => import('./pages/AdminSettings'))
-const AdminUsers = lazy(() => import('./pages/AdminUsers'))
-const Dashboard = lazy(() => import('./pages/Dashboard'))
-const GroupDetail = lazy(() => import('./pages/GroupDetail'))
-const LibraryBrowser = lazy(() => import('./pages/LibraryBrowser'))
-const Login = lazy(() => import('./pages/Login'))
-const MediaDetail = lazy(() => import('./pages/MediaDetail'))
-const NotFound = lazy(() => import('./pages/NotFound'))
-const Search = lazy(() => import('./pages/Search'))
-const Settings = lazy(() => import('./pages/Settings'))
-const Setup = lazy(() => import('./pages/Setup'))
+const AdminAiSettings = lazy(() => import('./pages/admin/ai-settings/AdminAiSettings'))
+const AdminBackup = lazy(() => import('./pages/admin/backup/AdminBackup'))
+const AdminDuplicates = lazy(() => import('./pages/admin/duplicates/AdminDuplicates'))
+const AdminHealth = lazy(() => import('./pages/admin/health/AdminHealth'))
+const AdminLibraries = lazy(() => import('./pages/admin/libraries/AdminLibraries'))
+const AdminLibraryAccess = lazy(() => import('./pages/admin/users/AdminLibraryAccess'))
+const AdminNetworkSettings = lazy(() => import('./pages/admin/network-settings/AdminNetworkSettings'))
+const AdminPlugins = lazy(() => import('./pages/admin/plugins/AdminPlugins'))
+const AdminSettings = lazy(() => import('./pages/admin/settings/AdminSettings'))
+const AdminUsers = lazy(() => import('./pages/admin/users/AdminUsers'))
+const Dashboard = lazy(() => import('./pages/dashboard/Dashboard'))
+const GroupDetail = lazy(() => import('./pages/group-detail/GroupDetail'))
+const LibraryBrowser = lazy(() => import('./pages/library-browser/LibraryBrowser'))
+const Login = lazy(() => import('./pages/login/Login'))
+const MediaDetail = lazy(() => import('./pages/media-detail/MediaDetail'))
+const NotFound = lazy(() => import('./pages/not-found/NotFound'))
+const Search = lazy(() => import('./pages/search/Search'))
+const Settings = lazy(() => import('./pages/settings/Settings'))
+const Setup = lazy(() => import('./pages/setup/Setup'))
 
 function PageLoader() {
   return (
