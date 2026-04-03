@@ -4,7 +4,7 @@
   "private": true,
   "workspaces": ["apps/*", "packages/*", "plugins/*"],
   "scripts": {
-    "dev": "WEB_CLIENT_DIR=$(pwd)/apps/web/dist/client DATA_DIR=$(pwd)/.data yarn workspace @xon/headless start",
+    "dev": "DATA_DIR=$(pwd)/.data yarn workspace @xon/headless dev & node scripts/wait-port.mjs 32400 && yarn workspace @xon/web dev",
     "typecheck": "tsc --build",
     "lint": "biome lint .",
     "format": "biome format .",

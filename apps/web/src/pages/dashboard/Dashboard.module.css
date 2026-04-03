@@ -53,3 +53,12 @@
   color: #666;
   font-size: 0.875rem;
 }
+
+.emptyLink {
+  color: #6c63ff;
+  text-decoration: none;
+}
+
+.emptyLink:hover {
+  text-decoration: underline;
+}

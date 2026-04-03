@@ -10,25 +10,24 @@ The server package is a library — it's run via the `@xon/headless` app. From t
 # Install dependencies
 yarn install
 
-# Build all packages in watch mode (run in a separate terminal)
-yarn workspace @xon/server dev
-
-# Start the server (in another terminal)
+# Start the server + web app with hot reload
 yarn dev
 ```
 
-`yarn dev` at the root sets `DATA_DIR` to `.data/` and `WEB_CLIENT_DIR` to the built web client, then starts the headless app.
+`yarn dev` runs two processes concurrently:
+- **Backend** — `apps/headless` via `node --watch --experimental-transform-types`, loading all workspace packages directly from TypeScript source. Restarts automatically on any `.ts` change.
+- **Frontend** — Vite dev server with HMR. API calls are proxied to the backend at `localhost:32400`.
 
-On first boot, navigate to `http://localhost:<PORT>/` and complete the setup wizard to create the admin account.
+On first boot, navigate to `http://localhost:5173/` and complete the setup wizard to create the admin account.
 
 ## Environment variables
 
 | Variable | Default | Description |
 |---|---|---|
-| `PORT` | `7700` | HTTP port |
+| `PORT` | `32400` | HTTP port |
 | `DATA_DIR` | `./data` | Directory for the SQLite database |
-| `WEB_CLIENT_DIR` | _(unset)_ | Path to built web client static files |
-| `WEB_SSR_BUNDLE` | _(unset)_ | Path to SSR bundle for server-side rendering |
+| `WEB_CLIENT_DIR` | _(unset)_ | Path to built web client static files (production only) |
+| `WEB_SSR_BUNDLE` | _(unset)_ | Path to SSR bundle for server-side rendering (production only) |
 
 ## Database
 
@@ -48,7 +47,7 @@ Migrations run automatically on boot, so `db:migrate` is only needed when runnin
 
 | Script | Description |
 |---|---|
-| `dev` | Watch mode — recompiles on file changes |
+| `dev` | Unused directly — use `yarn dev` at the repo root |
 | `build` | One-shot TypeScript build |
 | `typecheck` | Type-check without emitting |
 | `test` | Run tests with Vitest |

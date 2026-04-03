@@ -58,15 +58,15 @@ export default function Login() {
   }
 
   return (
-    <div className={styles.page ?? ''}>
-      <div className={styles.card ?? ''}>
-        <div className={styles.logo ?? ''}>
-          <span className={styles.logoText ?? ''}>xon</span>
+    <div className={styles.page}>
+      <div className={styles.card}>
+        <div className={styles.logo}>
+          <span className={styles.logoText}>xon</span>
         </div>
-        <h1 className={styles.heading ?? ''}>Sign in</h1>
-        <form className={styles.form ?? ''} onSubmit={handleSubmit}>
-          <div className={styles.field ?? ''}>
-            <label htmlFor="username" className={styles.label ?? ''}>
+        <h1 className={styles.heading}>Sign in</h1>
+        <form className={styles.form} onSubmit={handleSubmit}>
+          <div className={styles.field}>
+            <label htmlFor="username" className={styles.label}>
               Username
             </label>
             <input
@@ -75,12 +75,12 @@ export default function Login() {
               autoComplete="username"
               value={username}
               onChange={(e) => setUsername(e.target.value)}
-              className={styles.input ?? ''}
+              className={styles.input}
               required
             />
           </div>
-          <div className={styles.field ?? ''}>
-            <label htmlFor="password" className={styles.label ?? ''}>
+          <div className={styles.field}>
+            <label htmlFor="password" className={styles.label}>
               Password
             </label>
             <input
@@ -89,14 +89,14 @@ export default function Login() {
               autoComplete="current-password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              className={styles.input ?? ''}
+              className={styles.input}
               required
             />
           </div>
-          {error && <div className={styles.error ?? ''}>{error}</div>}
+          {error && <div className={styles.error}>{error}</div>}
           <button
             type="submit"
-            className={styles.button ?? ''}
+            className={styles.button}
             disabled={loading}
           >
             {loading ? 'Signing in…' : 'Sign in'}

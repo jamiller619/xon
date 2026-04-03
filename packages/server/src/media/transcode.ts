@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
 import type { ChildProcess } from 'node:child_process'
+import { ffmpegPath } from './binaries.js'
 
 // Video codecs natively supported by modern browsers (H.264, VP8, VP9, AV1, Theora)
 const BROWSER_NATIVE_VIDEO_CODECS = new Set([
@@ -70,7 +71,7 @@ export function spawnTranscodeSegment(
   segmentDuration: number,
 ): ChildProcess {
   const startTime = segmentIndex * segmentDuration
-  return spawn('ffmpeg', [
+  return spawn(ffmpegPath, [
     '-ss',
     String(startTime),
     '-i',

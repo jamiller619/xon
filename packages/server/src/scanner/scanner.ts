@@ -113,6 +113,19 @@ async function scanPluginDataSource(
   return entries
 }
 
+// Converts a Windows-style path to its WSL mount equivalent.
+// E:\foo\bar → /mnt/e/foo/bar
+// No-op for paths that are already Linux-style.
+export function toLocalPath(inputPath: string): string {
+  const match = /^([A-Za-z]):[/\\](.*)$/.exec(inputPath)
+  if (match) {
+    const drive = match[1]?.toLowerCase()
+    const rest = match[2]?.replace(/\\/g, '/')
+    return `/mnt/${drive}/${rest}`
+  }
+  return inputPath
+}
+
 export async function scanDataSource(
   dataSource: {
     type?: string
@@ -130,7 +143,10 @@ export async function scanDataSource(
       dataSource.path,
     )
   } else {
-    discovered = await walkDirectory(dataSource.path, dataSource.recursive)
+    discovered = await walkDirectory(
+      toLocalPath(dataSource.path),
+      dataSource.recursive,
+    )
   }
 
   const existingMap = new Map<string, number>()

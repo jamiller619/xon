@@ -1,5 +1,5 @@
-import { spawn } from 'node:child_process'
 import { MediaCategory } from '@xon/shared'
+import { exifTool } from './binaries.js'
 
 const IMAGE_CATEGORIES = new Set<string>([
   MediaCategory.Pictures,
@@ -26,75 +26,26 @@ export function isImageCategory(category: string | null): boolean {
 export async function extractExiftoolMetadata(
   filePath: string,
 ): Promise<ExiftoolMetadata | null> {
-  return new Promise((resolve) => {
-    let stdout = ''
+  try {
+    const tags = await exifTool.read(filePath)
 
-    const proc = spawn('exiftool', ['-json', '-n', filePath])
+    const result: ExiftoolMetadata = {}
 
-    proc.stdout?.on('data', (chunk: Buffer) => {
-      stdout += chunk.toString()
-    })
+    if (tags.ImageWidth) result.width = tags.ImageWidth
+    if (tags.ImageHeight) result.height = tags.ImageHeight
+    if (tags.ColorSpace) result.colorSpace = String(tags.ColorSpace)
+    const model = tags.Model ?? tags.CameraModel
+    if (model) result.cameraModel = String(model)
+    if (tags.GPSLatitude != null) result.gpsLatitude = Number(tags.GPSLatitude)
+    if (tags.GPSLongitude != null)
+      result.gpsLongitude = Number(tags.GPSLongitude)
+    const dateTaken = tags.DateTimeOriginal ?? tags.CreateDate
+    if (dateTaken) result.dateTaken = String(dateTaken)
+    if (tags.Orientation != null) result.orientation = String(tags.Orientation)
 
-    proc.on('error', (err: Error) => {
-      console.error(`ExifTool not available: ${err.message}`)
-      resolve(null)
-    })
-
-    proc.on('close', (code: number | null) => {
-      if (code !== 0) {
-        console.error(
-          `ExifTool exited with code ${String(code)} for ${filePath}`,
-        )
-        resolve(null)
-        return
-      }
-
-      try {
-        const parsed = JSON.parse(stdout) as Record<string, unknown>[]
-        const data = parsed[0]
-        if (!data) {
-          resolve({})
-          return
-        }
-
-        const result: ExiftoolMetadata = {}
-
-        const w = Number(data.ImageWidth)
-        if (!Number.isNaN(w) && w > 0) result.width = w
-
-        const h = Number(data.ImageHeight)
-        if (!Number.isNaN(h) && h > 0) result.height = h
-
-        const colorSpace = data.ColorSpace ?? data.ColorSpaceData
-        if (typeof colorSpace === 'string') result.colorSpace = colorSpace
-
-        const model = data.Model ?? data.CameraModelName
-        if (typeof model === 'string') result.cameraModel = model
-
-        const lat = Number(data.GPSLatitude)
-        if (!Number.isNaN(lat) && data.GPSLatitude !== undefined)
-          result.gpsLatitude = lat
-
-        const lon = Number(data.GPSLongitude)
-        if (!Number.isNaN(lon) && data.GPSLongitude !== undefined)
-          result.gpsLongitude = lon
-
-        const dateTaken = data.DateTimeOriginal ?? data.CreateDate
-        if (typeof dateTaken === 'string') result.dateTaken = dateTaken
-
-        const orientation = data.Orientation
-        if (
-          typeof orientation === 'string' ||
-          typeof orientation === 'number'
-        ) {
-          result.orientation = String(orientation)
-        }
-
-        resolve(result)
-      } catch {
-        console.error(`ExifTool JSON parse error for ${filePath}`)
-        resolve(null)
-      }
-    })
-  })
+    return result
+  } catch (err) {
+    console.error(`ExifTool error for ${filePath}:`, err)
+    return null
+  }
 }

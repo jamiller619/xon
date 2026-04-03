@@ -36,11 +36,15 @@ export function makeAuthMiddleware(db?: LibSQLDatabase) {
     }
 
     const authHeader = c.req.header('Authorization')
-    if (!authHeader?.startsWith('Bearer ')) {
+    // Fall back to ?token= query param for browser-native requests (e.g. <video src>, <track src>)
+    // that cannot send custom headers.
+    const token = authHeader?.startsWith('Bearer ')
+      ? authHeader.slice(7)
+      : (c.req.query('token') ?? '')
+
+    if (!token) {
       return c.json({ error: 'Unauthorized' }, 401)
     }
-
-    const token = authHeader.slice(7)
 
     // Try JWT first
     const payload = await verifyAccessToken(token)

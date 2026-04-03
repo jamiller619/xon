@@ -1,5 +1,6 @@
 import { spawn } from 'node:child_process'
 import { MediaCategory } from '@xon/shared'
+import { ffprobePath } from './binaries.js'
 
 const VIDEO_CATEGORIES = new Set<string>([
   MediaCategory.Movies,
@@ -44,7 +45,7 @@ export async function extractStreamTracks(
   return new Promise((resolve) => {
     let stdout = ''
 
-    const proc = spawn('ffprobe', [
+    const proc = spawn(ffprobePath, [
       '-v',
       'quiet',
       '-print_format',
@@ -109,7 +110,7 @@ export async function extractFfprobeMetadata(
   return new Promise((resolve) => {
     let stdout = ''
 
-    const proc = spawn('ffprobe', [
+    const proc = spawn(ffprobePath, [
       '-v',
       'quiet',
       '-print_format',

@@ -1,4 +1,4 @@
-import { and, eq, inArray } from 'drizzle-orm'
+import { and, eq, inArray, isNull } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { dataSources, libraries, mediaItems } from '../db/schema.js'
 import { emitEvent } from '../events.js'
@@ -315,6 +315,41 @@ export async function scanLibrary(
         })
       }
       totalRemoved += result.removedFilePaths.length
+    }
+  }
+
+  // Backfill thumbnails for video/image items that were scanned before
+  // thumbnail generation was implemented (thumbnailPaths IS NULL).
+  const missingThumbs = await db
+    .select({
+      id: mediaItems.id,
+      filePath: mediaItems.filePath,
+      mediaCategory: mediaItems.mediaCategory,
+    })
+    .from(mediaItems)
+    .where(
+      and(
+        eq(mediaItems.libraryId, libraryId),
+        isNull(mediaItems.thumbnailPaths),
+      ),
+    )
+
+  for (const item of missingThumbs) {
+    let thumbs = null
+    if (isVideoCategory(item.mediaCategory)) {
+      thumbs = await generateVideoThumbnails(
+        item.filePath,
+        item.id,
+        resolvedDataDir,
+      )
+    } else if (isImageCategory(item.mediaCategory)) {
+      thumbs = await generateThumbnails(item.filePath, item.id, resolvedDataDir)
+    }
+    if (thumbs) {
+      await db
+        .update(mediaItems)
+        .set({ thumbnailPaths: JSON.stringify(thumbs), updatedAt: new Date() })
+        .where(eq(mediaItems.id, item.id))
     }
   }
 

@@ -1,4 +1,3 @@
-import { access } from 'node:fs/promises'
 import { and, eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
@@ -47,17 +46,6 @@ export function makeSourcesRouter(db: LibSQLDatabase): Hono {
           { error: 'pluginId is required for plugin type data sources' },
           400,
         )
-      }
-
-      if (body.type === 'local') {
-        try {
-          await access(body.path)
-        } catch {
-          return c.json(
-            { error: 'Path does not exist or is not accessible' },
-            400,
-          )
-        }
       }
 
       const id = crypto.randomUUID()
@@ -125,17 +113,6 @@ export function makeSourcesRouter(db: LibSQLDatabase): Hono {
           { error: 'pluginId is required for plugin type data sources' },
           400,
         )
-      }
-
-      if (newType === 'local' && body.path !== undefined) {
-        try {
-          await access(newPath)
-        } catch {
-          return c.json(
-            { error: 'Path does not exist or is not accessible' },
-            400,
-          )
-        }
       }
 
       const updates: Partial<typeof dataSources.$inferInsert> = {

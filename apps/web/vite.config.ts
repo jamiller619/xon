@@ -5,7 +5,18 @@ export default defineConfig({
   plugins: [react()],
   server: {
     proxy: {
-      '/api': 'http://localhost:32400',
+      '/api': {
+        target: 'http://localhost:32400',
+        ws: true,
+        configure: (proxy) => {
+          proxy.on('error', (_err, _req, res) => {
+            if ('writeHead' in res && !res.writableEnded) {
+              res.writeHead(503)
+              res.end()
+            }
+          })
+        },
+      },
     },
   },
   build: {

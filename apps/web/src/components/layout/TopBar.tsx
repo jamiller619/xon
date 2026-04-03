@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiFetch } from '../../lib/apiFetch.js'
+import { apiFetch, apiUrl } from '../../lib/apiFetch.js'
 import styles from './TopBar.module.css'
 
 const HISTORY_KEY = 'xon:searchHistory'
@@ -194,7 +194,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
                     {item.thumbnailUrls ? (
                       <img
                         className={styles.suggestionThumb ?? ''}
-                        src={item.thumbnailUrls.small}
+                        src={apiUrl(item.thumbnailUrls.small)}
                         alt=""
                         loading="lazy"
                       />

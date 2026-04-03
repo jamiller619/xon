@@ -1,4 +1,4 @@
-import { type FormEvent, useRef, useState } from 'react'
+import { type FormEvent, useState } from 'react'
 import { apiFetch } from '../../lib/apiFetch.js'
 import styles from './CreateLibraryForm.module.css'
 
@@ -44,35 +44,11 @@ export function CreateLibraryForm({
   const [sourcePath, setSourcePath] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  const fileInputRef = useRef<HTMLInputElement>(null)
 
   function toggleMediaType(type: string) {
     setMediaTypes((prev) =>
       prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type],
     )
-  }
-
-  function handleBrowse() {
-    if (fileInputRef.current) {
-      fileInputRef.current.setAttribute('webkitdirectory', '')
-      fileInputRef.current.click()
-    }
-  }
-
-  function handleFileInputChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const nativeFile = file as File & { path?: string }
-    if (nativeFile.path) {
-      const lastSlash = Math.max(
-        nativeFile.path.lastIndexOf('/'),
-        nativeFile.path.lastIndexOf('\\'),
-      )
-      setSourcePath(
-        lastSlash > 0 ? nativeFile.path.slice(0, lastSlash) : nativeFile.path,
-      )
-    }
-    e.target.value = ''
   }
 
   async function handleSubmit(e: FormEvent) {
@@ -167,27 +143,12 @@ export function CreateLibraryForm({
 
       <label className={styles.fieldLabel ?? ''}>
         Media Folder Path
-        <div className={styles.pathRow ?? ''}>
-          <input
-            type="text"
-            className={styles.input ?? ''}
-            value={sourcePath}
-            onChange={(e) => setSourcePath(e.target.value)}
-            placeholder="/mnt/media or C:\Media (optional — add later in settings)"
-          />
-          <button
-            type="button"
-            className={styles.browseBtn ?? ''}
-            onClick={handleBrowse}
-          >
-            Browse
-          </button>
-        </div>
         <input
-          ref={fileInputRef}
-          type="file"
-          style={{ display: 'none' }}
-          onChange={handleFileInputChange}
+          type="text"
+          className={styles.input ?? ''}
+          value={sourcePath}
+          onChange={(e) => setSourcePath(e.target.value)}
+          placeholder="/mnt/media or C:\Media (optional)"
         />
       </label>
 

@@ -1,6 +1,7 @@
 import Hls from 'hls.js'
 import { useEffect, useRef, useState } from 'react'
-import { apiFetch } from '../../lib/apiFetch.js'
+import { apiFetch, apiUrl } from '../../lib/apiFetch.js'
+import { useAuthStore } from '../../store/authStore.js'
 import styles from './VideoPlayer.module.css'
 
 type AudioTrack = {
@@ -109,10 +110,16 @@ export default function VideoPlayer({
     const video = videoRef.current
     if (!video) return
 
-    const hlsUrl = `/api/v1/media/${mediaId}/hls/playlist.m3u8`
+    const token = useAuthStore.getState().accessToken
+    const hlsUrl = `/api/v1/media/${mediaId}/hls/playlist.m3u8${token ? `?token=${token}` : ''}`
 
     if (Hls.isSupported()) {
-      const hls = new Hls()
+      const hls = new Hls({
+        xhrSetup(xhr) {
+          const t = useAuthStore.getState().accessToken
+          if (t) xhr.setRequestHeader('Authorization', `Bearer ${t}`)
+        },
+      })
       hls.loadSource(hlsUrl)
       hls.attachMedia(video)
       return () => hls.destroy()
@@ -227,7 +234,7 @@ export default function VideoPlayer({
       <video
         ref={videoRef}
         className={styles.video ?? ''}
-        {...(useHls ? {} : { src: `/api/v1/media/${mediaId}/stream` })}
+        {...(useHls ? {} : { src: apiUrl(`/api/v1/media/${mediaId}/stream`) })}
         controls
         autoPlay
       >
@@ -236,7 +243,7 @@ export default function VideoPlayer({
             key={sub.file}
             id={sub.file}
             kind="subtitles"
-            src={`/api/v1/media/${mediaId}/subtitle?file=${encodeURIComponent(sub.file)}`}
+            src={apiUrl(`/api/v1/media/${mediaId}/subtitle?file=${encodeURIComponent(sub.file)}`)}
             srcLang={sub.language ?? ''}
             label={sub.label}
           />

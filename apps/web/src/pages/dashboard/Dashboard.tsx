@@ -65,7 +65,9 @@ export default function Dashboard() {
         <h2 className={styles.sectionTitle ?? ''}>Recently Added</h2>
         {recentMedia.length === 0 ? (
           <p className={styles.emptyHint ?? ''}>
-            No media yet. Add a library to get started.
+            No media yet.{' '}
+            <Link to="/admin/libraries" className={styles.emptyLink ?? ''}>Add a library</Link>
+            {' '}to get started.
           </p>
         ) : (
           <div className={styles.grid ?? ''}>

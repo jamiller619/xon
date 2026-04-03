@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { apiFetch } from '../../lib/apiFetch.js'
+import { apiFetch, apiUrl } from '../../lib/apiFetch.js'
 import styles from './GroupDetail.module.css'
 
 interface GroupMemberItem {
@@ -278,7 +278,7 @@ export default function GroupDetail() {
               <div className={styles.memberThumb ?? ''}>
                 {member.thumbnailUrls ? (
                   <img
-                    src={member.thumbnailUrls.small}
+                    src={apiUrl(member.thumbnailUrls.small)}
                     alt=""
                     className={styles.thumbImg ?? ''}
                   />

@@ -1,4 +1,5 @@
 import { Link } from 'react-router-dom'
+import { apiUrl } from '../../lib/apiFetch.js'
 import { useAudioStore } from '../../store/audioStore'
 import styles from './MediaCard.module.css'
 
@@ -108,7 +109,7 @@ export default function MediaCard({
             >
               {item.thumbnailUrls ? (
                 <img
-                  src={item.thumbnailUrls.small}
+                  src={apiUrl(item.thumbnailUrls.small)}
                   alt=""
                   loading="lazy"
                   className={styles.listThumbImg ?? ''}
@@ -129,7 +130,7 @@ export default function MediaCard({
             >
               {item.thumbnailUrls ? (
                 <img
-                  src={item.thumbnailUrls.small}
+                  src={apiUrl(item.thumbnailUrls.small)}
                   alt=""
                   loading="lazy"
                   className={styles.listThumbImg ?? ''}
@@ -190,7 +191,7 @@ export default function MediaCard({
       <div className={styles.thumb ?? ''}>
         {item.thumbnailUrls ? (
           <img
-            src={item.thumbnailUrls.medium}
+            src={apiUrl(item.thumbnailUrls.medium)}
             alt={item.title}
             loading="lazy"
             className={styles.thumbImg ?? ''}

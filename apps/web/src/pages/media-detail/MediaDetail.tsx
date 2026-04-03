@@ -1,6 +1,6 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { apiFetch } from '../../lib/apiFetch.js'
+import { apiFetch, apiUrl } from '../../lib/apiFetch.js'
 import PluginSlot from '../../components/PluginSlot.js'
 import { useAudioStore } from '../../store/audioStore.js'
 import styles from './MediaDetail.module.css'
@@ -379,7 +379,7 @@ export default function MediaDetail() {
               )}
               {item.thumbnailUrls ? (
                 <img
-                  src={item.thumbnailUrls.large}
+                  src={apiUrl(item.thumbnailUrls.large)}
                   alt={item.title ?? item.fileName}
                   loading="lazy"
                   className={`${styles.posterImg ?? ''} ${isImage && !item.drmProtected ? (styles.posterImgClickable ?? '') : ''}`}

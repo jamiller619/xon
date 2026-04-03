@@ -71,7 +71,10 @@ export default function Sidebar({ open }: SidebarProps) {
       </div>
 
       <div className={styles.section ?? ''}>
-        <p className={styles.sectionTitle ?? ''}>Libraries</p>
+        <div className={styles.sectionTitleRow ?? ''}>
+          <p className={styles.sectionTitle ?? ''}>Libraries</p>
+          <NavLink to="/admin/libraries" className={styles.addLibraryBtn ?? ''} title="Add library">+</NavLink>
+        </div>
         {loading ? (
           <p className={styles.loadingLibraries ?? ''}>Loading…</p>
         ) : libraries.length === 0 ? (

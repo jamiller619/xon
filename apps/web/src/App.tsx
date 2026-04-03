@@ -4,6 +4,7 @@ import ErrorBoundary from './components/error-boundary/ErrorBoundary'
 import Layout from './components/layout/Layout'
 import RequireAuth from './components/RequireAuth'
 import ThemeLoader from './components/ThemeLoader'
+import './style/index.css'
 
 // Route-level code splitting — each page is a separate JS chunk
 const AdminAiSettings = lazy(() => import('./pages/admin/ai-settings/AdminAiSettings'))

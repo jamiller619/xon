@@ -3,6 +3,7 @@ import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { dataSources, libraries } from '../db/schema.js'
 import { scanLibrary } from './orchestrator.js'
+import { toLocalPath } from './scanner.js'
 
 // Parse simple cron expressions. Returns interval in milliseconds, or null if unsupported.
 // Supported patterns:
@@ -75,7 +76,7 @@ export async function startScheduler(
 
       try {
         const watcher = watch(
-          source.path,
+          toLocalPath(source.path),
           { recursive: source.recursive },
           () => {
             // Debounce: wait DEBOUNCE_MS after the last change event

@@ -1,8 +1,8 @@
-import { spawn } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
 import { extname } from 'node:path'
 import { gunzipSync } from 'node:zlib'
 import { MediaCategory } from '@xon/shared'
+import { exifTool } from './binaries.js'
 
 const DOCUMENT_CATEGORIES = new Set<string>([MediaCategory.Documents])
 const FONT_CATEGORIES = new Set<string>([MediaCategory.Fonts])
@@ -53,40 +53,15 @@ export type ArchiveMetadata = {
   totalUncompressedSize?: number
 }
 
-// Shared ExifTool runner
-function runExiftool(
+async function runExiftool(
   filePath: string,
 ): Promise<Record<string, unknown> | null> {
-  return new Promise((resolve) => {
-    let stdout = ''
-    const proc = spawn('exiftool', ['-json', '-n', filePath])
-
-    proc.stdout?.on('data', (chunk: Buffer) => {
-      stdout += chunk.toString()
-    })
-
-    proc.on('error', (err: Error) => {
-      console.error(`ExifTool not available: ${err.message}`)
-      resolve(null)
-    })
-
-    proc.on('close', (code: number | null) => {
-      if (code !== 0) {
-        console.error(
-          `ExifTool exited with code ${String(code)} for ${filePath}`,
-        )
-        resolve(null)
-        return
-      }
-      try {
-        const parsed = JSON.parse(stdout) as Record<string, unknown>[]
-        resolve(parsed[0] ?? {})
-      } catch {
-        console.error(`ExifTool JSON parse error for ${filePath}`)
-        resolve(null)
-      }
-    })
-  })
+  try {
+    return (await exifTool.read(filePath)) as Record<string, unknown>
+  } catch (err) {
+    console.error(`ExifTool error for ${filePath}:`, err)
+    return null
+  }
 }
 
 export async function extractDocumentMetadata(

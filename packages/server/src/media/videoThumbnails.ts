@@ -3,6 +3,7 @@ import { mkdir, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { MediaCategory } from '@xon/shared'
 import sharp from 'sharp'
+import { ffmpegPath, ffprobePath } from './binaries.js'
 import type { ThumbnailPaths } from './thumbnails.js'
 
 const VIDEO_CATEGORIES = new Set<string>([
@@ -26,7 +27,7 @@ export function isVideoCategory(category: string | null): boolean {
 function getVideoDuration(filePath: string): Promise<number | null> {
   return new Promise((resolve) => {
     let stdout = ''
-    const proc = spawn('ffprobe', [
+    const proc = spawn(ffprobePath, [
       '-v',
       'quiet',
       '-print_format',
@@ -38,6 +39,8 @@ function getVideoDuration(filePath: string): Promise<number | null> {
     proc.stdout?.on('data', (chunk: Buffer) => {
       stdout += chunk.toString()
     })
+    // Drain stderr to prevent the pipe buffer from filling and hanging the process
+    proc.stderr?.resume()
 
     proc.on('error', () => resolve(null))
 
@@ -63,7 +66,8 @@ function extractFrame(
   outputPath: string,
 ): Promise<boolean> {
   return new Promise((resolve) => {
-    const proc = spawn('ffmpeg', [
+    const proc = spawn(ffmpegPath, [
+      '-nostdin',
       '-ss',
       String(timestamp),
       '-i',
@@ -76,8 +80,25 @@ function extractFrame(
       outputPath,
     ])
 
-    proc.on('error', () => resolve(false))
-    proc.on('close', (code: number | null) => resolve(code === 0))
+    // Drain stdout and capture stderr so the pipe buffer never fills and hangs the process
+    proc.stdout?.resume()
+    let stderr = ''
+    proc.stderr?.on('data', (chunk: Buffer) => {
+      stderr += chunk.toString()
+    })
+
+    proc.on('error', (err) => {
+      console.error(`FFmpeg spawn error (path: ${ffmpegPath}): ${err.message}`)
+      resolve(false)
+    })
+    proc.on('close', (code: number | null) => {
+      if (code !== 0) {
+        console.error(
+          `FFmpeg exited with code ${code} for ${filePath}:\n${stderr.slice(-500)}`,
+        )
+      }
+      resolve(code === 0)
+    })
   })
 }
 

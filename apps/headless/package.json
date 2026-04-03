@@ -8,6 +8,7 @@
   },
   "scripts": {
     "build": "tsc --build",
+    "dev": "node --watch --experimental-transform-types --conditions=development --import=../../scripts/ts-register.mjs src/main.ts",
     "typecheck": "tsc --build --noEmit",
     "start": "node ./dist/main.js"
   },
