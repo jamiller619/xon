@@ -219,6 +219,11 @@
   resolved "https://registry.yarnpkg.com/@borewit/text-codec/-/text-codec-0.2.2.tgz#75025f735c0983b3a871668804a57387e3649375"
   integrity sha512-DDaRehssg1aNrH4+2hnj1B7vnUGEjU6OIlyRdkMd0aUdIUvKXrJfXsy8LVtXAy7DRvYVluWbMspsRhz2lcW0mQ==
 
+"@ctrl/video-filename-parser@^5.4.1":
+  version "5.4.1"
+  resolved "https://registry.yarnpkg.com/@ctrl/video-filename-parser/-/video-filename-parser-5.4.1.tgz#99a5b13d8df1a81920c0c20ad167dbd7e1bbfa57"
+  integrity sha512-NP3LM97WfaxTfsEadKpwleoXk1MPBKqsikA7/HpYo6RO0NcDYYM+01MThhTWICx+mTkJcUSs40Iifr2TG0UnuA==
+
 "@derhuerst/http-basic@^8.2.0":
   version "8.2.4"
   resolved "https://registry.yarnpkg.com/@derhuerst/http-basic/-/http-basic-8.2.4.tgz#d021ebb8f65d54bea681ae6f4a8733ce89e7f59b"

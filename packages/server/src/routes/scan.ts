@@ -26,94 +26,105 @@ const watchSchema = z.object({
   watchEnabled: z.boolean(),
 })
 
+/**
+ * Fire-and-forget scan for the given library.
+ * Returns false if a scan is already running, true if one was started.
+ */
+export function triggerLibraryScan(
+  db: LibSQLDatabase,
+  libraryId: string,
+): boolean {
+  const current = scanRegistry.get(libraryId)
+  if (current?.status === 'running') return false
+
+  const state: ScanState = {
+    status: 'running',
+    startedAt: new Date(),
+    progress: null,
+    summary: null,
+    error: null,
+  }
+  scanRegistry.set(libraryId, state)
+  emitPluginEvent('scan:start', { libraryId })
+
+  const scanStartedAt = Date.now()
+  scanLibrary(db, libraryId, (progress) => {
+    state.progress = progress
+    const percentComplete =
+      progress.totalFiles > 0
+        ? Math.round((progress.processedFiles / progress.totalFiles) * 100)
+        : 0
+    emitEvent({
+      type: 'scan:progress',
+      payload: {
+        libraryId,
+        fileCount: progress.totalFiles,
+        currentFile: progress.currentFile,
+        percentComplete,
+      },
+    })
+  })
+    .then(async (summary) => {
+      const duration = Date.now() - scanStartedAt
+      state.status = 'completed'
+      state.summary = summary
+      await db
+        .update(libraries)
+        .set({
+          lastScanResult: 'completed',
+          lastScanDuration: duration,
+          updatedAt: new Date(),
+        })
+        .where(eq(libraries.id, libraryId))
+      appCache.invalidate(`media:count:${libraryId}`)
+      appCache.invalidate('libraries:all')
+      emitEvent({
+        type: 'scan:complete',
+        payload: {
+          libraryId,
+          newItems: summary.newItems,
+          updatedItems: summary.updatedItems,
+          removedItems: summary.removedItems,
+          totalDiscovered: summary.totalDiscovered,
+        },
+      })
+      emitPluginEvent('scan:complete', {
+        libraryId,
+        itemsFound: summary.totalDiscovered,
+      })
+    })
+    .catch(async (err: unknown) => {
+      const duration = Date.now() - scanStartedAt
+      state.status = 'failed'
+      const errorMessage = err instanceof Error ? err.message : String(err)
+      state.error = errorMessage
+      await db
+        .update(libraries)
+        .set({
+          lastScanResult: 'failed',
+          lastScanDuration: duration,
+          updatedAt: new Date(),
+        })
+        .where(eq(libraries.id, libraryId))
+      emitEvent({
+        type: 'scan:error',
+        payload: { libraryId, error: errorMessage },
+      })
+    })
+
+  return true
+}
+
 export function makeScanRouter(db: LibSQLDatabase): Hono {
   const router = new Hono()
 
   // POST / — trigger scan (mounted at /:libraryId/scan) (manager+)
   router.post('/', requireRole('manager'), (c) => {
     const libraryId = c.req.param('libraryId') as string
-
-    const current = scanRegistry.get(libraryId)
-    if (current?.status === 'running') {
+    const started = triggerLibraryScan(db, libraryId)
+    if (!started) {
       return c.json({ status: 'already_running' }, 409)
     }
-
-    const state: ScanState = {
-      status: 'running',
-      startedAt: new Date(),
-      progress: null,
-      summary: null,
-      error: null,
-    }
-    scanRegistry.set(libraryId, state)
-    emitPluginEvent('scan:start', { libraryId })
-
-    const scanStartedAt = Date.now()
-    scanLibrary(db, libraryId, (progress) => {
-      state.progress = progress
-      const percentComplete =
-        progress.totalFiles > 0
-          ? Math.round((progress.processedFiles / progress.totalFiles) * 100)
-          : 0
-      emitEvent({
-        type: 'scan:progress',
-        payload: {
-          libraryId,
-          fileCount: progress.totalFiles,
-          currentFile: progress.currentFile,
-          percentComplete,
-        },
-      })
-    })
-      .then(async (summary) => {
-        const duration = Date.now() - scanStartedAt
-        state.status = 'completed'
-        state.summary = summary
-        await db
-          .update(libraries)
-          .set({
-            lastScanResult: 'completed',
-            lastScanDuration: duration,
-            updatedAt: new Date(),
-          })
-          .where(eq(libraries.id, libraryId))
-        // Invalidate caches so updated counts and library list are served fresh
-        appCache.invalidate(`media:count:${libraryId}`)
-        appCache.invalidate('libraries:all')
-        emitEvent({
-          type: 'scan:complete',
-          payload: {
-            libraryId,
-            newItems: summary.newItems,
-            updatedItems: summary.updatedItems,
-            removedItems: summary.removedItems,
-            totalDiscovered: summary.totalDiscovered,
-          },
-        })
-        emitPluginEvent('scan:complete', {
-          libraryId,
-          itemsFound: summary.totalDiscovered,
-        })
-      })
-      .catch(async (err: unknown) => {
-        const duration = Date.now() - scanStartedAt
-        state.status = 'failed'
-        const errorMessage = err instanceof Error ? err.message : String(err)
-        state.error = errorMessage
-        await db
-          .update(libraries)
-          .set({
-            lastScanResult: 'failed',
-            lastScanDuration: duration,
-            updatedAt: new Date(),
-          })
-          .where(eq(libraries.id, libraryId))
-        emitEvent({
-          type: 'scan:error',
-          payload: { libraryId, error: errorMessage },
-        })
-      })
-
     return c.json({ status: 'started' }, 202)
   })
 

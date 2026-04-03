@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import { apiFetch } from '../../lib/apiFetch.js'
 import BulkEditDialog from '../../components/group-dialog/BulkEditDialog.js'
 import GroupDialog from '../../components/group-dialog/GroupDialog.js'
-import MediaCard, { type MediaCardItem } from '../../components/media-card/MediaCard.js'
+import MediaCard, {
+  type MediaCardItem,
+} from '../../components/media-card/MediaCard.js'
+import { apiFetch } from '../../lib/apiFetch.js'
 import { useAppStore } from '../../store/appStore.js'
 import styles from './LibraryBrowser.module.css'
 

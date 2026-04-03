@@ -243,7 +243,9 @@ export default function VideoPlayer({
             key={sub.file}
             id={sub.file}
             kind="subtitles"
-            src={apiUrl(`/api/v1/media/${mediaId}/subtitle?file=${encodeURIComponent(sub.file)}`)}
+            src={apiUrl(
+              `/api/v1/media/${mediaId}/subtitle?file=${encodeURIComponent(sub.file)}`,
+            )}
             srcLang={sub.language ?? ''}
             label={sub.label}
           />

@@ -94,11 +94,7 @@ export default function Login() {
             />
           </div>
           {error && <div className={styles.error}>{error}</div>}
-          <button
-            type="submit"
-            className={styles.button}
-            disabled={loading}
-          >
+          <button type="submit" className={styles.button} disabled={loading}>
             {loading ? 'Signing in…' : 'Sign in'}
           </button>
         </form>

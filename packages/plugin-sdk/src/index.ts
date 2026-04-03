@@ -1,6 +1,7 @@
 export { BasePlugin } from './BasePlugin.js'
 export { BackupTargetPlugin } from './BackupTargetPlugin.js'
 export { MediaProviderPlugin } from './MediaProviderPlugin.js'
+export { MetadataSourcePlugin } from './MetadataSourcePlugin.js'
 export type {
   PluginCategory,
   PluginManifest,
@@ -22,4 +23,5 @@ export type {
   WatchCallback,
   MediaProviderConfigField,
   MediaProviderConfigSchema,
+  MatchResult,
 } from './types.js'

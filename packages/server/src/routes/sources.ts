@@ -5,6 +5,7 @@ import { z } from 'zod'
 import { requireRole } from '../auth/rbac.js'
 import { dataSources, libraries } from '../db/schema.js'
 import { validate } from '../http/validate.js'
+import { triggerLibraryScan } from './scan.js'
 
 const createSourceSchema = z.object({
   type: z.enum(['local', 'network', 'plugin']),
@@ -65,6 +66,9 @@ export function makeSourcesRouter(db: LibSQLDatabase): Hono {
         .select()
         .from(dataSources)
         .where(eq(dataSources.id, id))
+
+      triggerLibraryScan(db, libraryId)
+
       return c.json(rows[0], 201)
     },
   )

@@ -73,7 +73,13 @@ export default function Sidebar({ open }: SidebarProps) {
       <div className={styles.section ?? ''}>
         <div className={styles.sectionTitleRow ?? ''}>
           <p className={styles.sectionTitle ?? ''}>Libraries</p>
-          <NavLink to="/admin/libraries" className={styles.addLibraryBtn ?? ''} title="Add library">+</NavLink>
+          <NavLink
+            to="/admin/libraries"
+            className={styles.addLibraryBtn ?? ''}
+            title="Add library"
+          >
+            +
+          </NavLink>
         </div>
         {loading ? (
           <p className={styles.loadingLibraries ?? ''}>Loading…</p>

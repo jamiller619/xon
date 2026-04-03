@@ -245,3 +245,10 @@ export interface PluginContext {
   /** Sandboxed fetch — only allows declared network domains */
   fetch: (url: string, init?: RequestInit) => Promise<Response>
 }
+
+export interface MatchResult {
+  suggestedTitle: string
+  suggestedMetadata: Record<string, unknown>
+  /** Confidence score 0–100 */
+  confidence: number
+}

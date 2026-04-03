@@ -1,6 +1,14 @@
+import { basename, extname } from 'node:path'
+import { filenameParse } from '@ctrl/video-filename-parser'
+import type { MediaCategory } from '@xon/shared'
 import { and, eq, inArray, isNull } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
-import { dataSources, libraries, mediaItems } from '../db/schema.js'
+import {
+  dataSources,
+  libraries,
+  matchingQueue,
+  mediaItems,
+} from '../db/schema.js'
 import { emitEvent } from '../events.js'
 import { autoTagMediaItems } from '../media/autoTag.js'
 import { detectDrm } from '../media/drm.js'
@@ -31,6 +39,7 @@ import {
   generateVideoThumbnails,
   isVideoCategory,
 } from '../media/videoThumbnails.js'
+import { getAllMetadataSourcePlugins } from '../plugins/metadataSourcePluginRegistry.js'
 import { emitPluginEvent } from '../plugins/pluginManager.js'
 import { scanDataSource } from './scanner.js'
 
@@ -49,6 +58,61 @@ export type ScanSummary = {
   totalDiscovered: number
 }
 
+async function tryQueueMatch(
+  db: LibSQLDatabase,
+  mediaItemId: string,
+  fileName: string,
+  mediaCategory: MediaCategory,
+): Promise<void> {
+  const nameWithoutExt = basename(fileName, extname(fileName))
+  const plugins = getAllMetadataSourcePlugins()
+
+  for (const plugin of plugins) {
+    if (!plugin.supportedCategories.includes(mediaCategory)) continue
+    try {
+      const result = await plugin.match(nameWithoutExt, mediaCategory)
+      if (!result) continue
+      await db.insert(matchingQueue).values({
+        id: crypto.randomUUID(),
+        mediaItemId,
+        suggestedTitle: result.suggestedTitle,
+        suggestedMetadata: JSON.stringify(result.suggestedMetadata),
+        confidence: result.confidence,
+        matchSource: 'cloud',
+      })
+      // One match per item is sufficient
+      return
+    } catch (err) {
+      console.error(
+        `Metadata match failed for "${nameWithoutExt}" (${plugin.manifest?.id ?? 'unknown'}): ${String(err)}`,
+      )
+    }
+  }
+
+  // No plugin matched — fall back to local filename parsing so the item still
+  // gets a suggested title the user can review or correct.
+  const parsed = filenameParse(fileName)
+  if (!parsed.title) return
+
+  const suggestedMetadata: Record<string, unknown> = {}
+  if (parsed.year) suggestedMetadata.year = Number.parseInt(parsed.year, 10)
+  if (parsed.resolution) suggestedMetadata.resolution = parsed.resolution
+  if (parsed.sources?.length) suggestedMetadata.sources = parsed.sources
+  if (parsed.videoCodec) suggestedMetadata.videoCodec = parsed.videoCodec
+  if (parsed.edition && Object.keys(parsed.edition).length > 0) {
+    suggestedMetadata.edition = parsed.edition
+  }
+
+  await db.insert(matchingQueue).values({
+    id: crypto.randomUUID(),
+    mediaItemId,
+    suggestedTitle: parsed.title,
+    suggestedMetadata: JSON.stringify(suggestedMetadata),
+    confidence: 60,
+    matchSource: 'local',
+  })
+}
+
 export async function scanLibrary(
   db: LibSQLDatabase,
   libraryId: string,
@@ -63,6 +127,17 @@ export async function scanLibrary(
   if (libraryRows.length === 0) {
     throw new Error(`Library not found: ${libraryId}`)
   }
+
+  // Parse allowed media types — empty array means accept all
+  let allowedMediaTypes: string[] = []
+  try {
+    allowedMediaTypes = JSON.parse(
+      libraryRows[0]?.allowedMediaTypes ?? '[]',
+    ) as string[]
+  } catch {
+    allowedMediaTypes = []
+  }
+  const hasTypeFilter = allowedMediaTypes.length > 0
 
   const sources = await db
     .select()
@@ -83,6 +158,17 @@ export async function scanLibrary(
       .where(eq(mediaItems.dataSourceId, source.id))
 
     const result = await scanDataSource(source, existing)
+
+    // Apply media type filter — changedFiles and newFiles only include matching types
+    if (hasTypeFilter) {
+      result.newFiles = result.newFiles.filter((e) =>
+        allowedMediaTypes.includes(e.mediaCategory),
+      )
+      result.changedFiles = result.changedFiles.filter((e) =>
+        allowedMediaTypes.includes(e.mediaCategory),
+      )
+    }
+
     totalDiscovered += result.discovered.length
 
     const progress: ScanProgress = {
@@ -185,6 +271,12 @@ export async function scanLibrary(
         mediaId: id,
         filePath: entry.filePath,
       })
+      await tryQueueMatch(
+        db,
+        id,
+        entry.fileName,
+        entry.mediaCategory as MediaCategory,
+      )
       progress.processedFiles++
       totalNew++
     }

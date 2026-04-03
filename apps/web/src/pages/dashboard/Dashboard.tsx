@@ -1,8 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { apiFetch } from '../../lib/apiFetch.js'
-import MediaCard, { type MediaCardItem } from '../../components/media-card/MediaCard.js'
 import PluginSlot from '../../components/PluginSlot.js'
+import MediaCard, {
+  type MediaCardItem,
+} from '../../components/media-card/MediaCard.js'
+import { apiFetch } from '../../lib/apiFetch.js'
 import styles from './Dashboard.module.css'
 
 interface Library {
@@ -66,8 +68,10 @@ export default function Dashboard() {
         {recentMedia.length === 0 ? (
           <p className={styles.emptyHint ?? ''}>
             No media yet.{' '}
-            <Link to="/admin/libraries" className={styles.emptyLink ?? ''}>Add a library</Link>
-            {' '}to get started.
+            <Link to="/admin/libraries" className={styles.emptyLink ?? ''}>
+              Add a library
+            </Link>{' '}
+            to get started.
           </p>
         ) : (
           <div className={styles.grid ?? ''}>

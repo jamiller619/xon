@@ -16,12 +16,12 @@ export async function openDatabase(
   }
 
   const db = drizzle(client)
-  
+
   return { client, db }
 }
 
 function getDefaultDbUrl(): string {
   const dataDir = process.env.DATA_DIR ?? './data'
-  
+
   return `file:${join(dataDir, 'xon.db')}`
 }

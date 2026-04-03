@@ -1,4 +1,5 @@
 import { basename, dirname } from 'node:path'
+import { filenameParse } from '@ctrl/video-filename-parser'
 
 export interface MatchCandidate {
   title: string
@@ -115,23 +116,9 @@ export function parseFilenameInfo(fileName: string): {
   title: string
   year?: number
 } {
-  // Remove extension
-  let name = fileName.replace(/\.[^.]+$/, '')
-  // Extract year in parens/brackets (e.g. "(2001)" or "[2001]")
-  const yearMatch = name.match(/[\[(](1[89]\d{2}|20\d{2})[\])]/)
-  const year = yearMatch ? Number.parseInt(yearMatch[1] ?? '0', 10) : undefined
-  // Strip year marker and common quality tags
-  name = name
-    .replace(/[\[(](1[89]\d{2}|20\d{2})[\])].*/g, '')
-    .replace(
-      /\.(1080p|720p|4k|bluray|bdrip|dvdrip|webrip|hdtv|x264|x265|hevc).*/gi,
-      '',
-    )
-    .replace(/[._-]/g, ' ')
-    .replace(/\s+/g, ' ')
-    .trim()
-  const result: { title: string; year?: number } = { title: name }
-  if (year !== undefined) result.year = year
+  const parsed = filenameParse(fileName)
+  const result: { title: string; year?: number } = { title: parsed.title }
+  if (parsed.year) result.year = Number.parseInt(parsed.year, 10)
   return result
 }
 

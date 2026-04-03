@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
+import MediaCard, {
+  type MediaCardItem,
+} from '../../components/media-card/MediaCard.js'
 import { apiFetch } from '../../lib/apiFetch.js'
-import MediaCard, { type MediaCardItem } from '../../components/media-card/MediaCard.js'
 import { useAppStore } from '../../store/appStore.js'
 import styles from './Search.module.css'
 
