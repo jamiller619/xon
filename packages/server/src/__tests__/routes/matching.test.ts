@@ -76,7 +76,7 @@ describe('Matching API', () => {
       suggestedTitle: string
       confidence: number
       status: 'pending' | 'confirmed' | 'rejected'
-      matchSource: 'local' | 'cloud'
+      matchSource: 'cloud'
     }> = {},
   ) {
     const id = overrides.id ?? `q-${Date.now()}-${Math.random()}`
@@ -87,7 +87,7 @@ describe('Matching API', () => {
       suggestedMetadata: JSON.stringify({ year: 2010 }),
       confidence: overrides.confidence ?? 72,
       status: overrides.status ?? 'pending',
-      matchSource: overrides.matchSource ?? 'local',
+      matchSource: overrides.matchSource ?? 'cloud',
     })
     return id
   }

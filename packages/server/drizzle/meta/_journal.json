@@ -218,6 +218,20 @@
       "when": 1775013691641,
       "tag": "0030_lying_violations",
       "breakpoints": true
+    },
+    {
+      "idx": 31,
+      "version": "6",
+      "when": 1743724800000,
+      "tag": "0031_log_level_setting",
+      "breakpoints": true
+    },
+    {
+      "idx": 32,
+      "version": "6",
+      "when": 1775264994735,
+      "tag": "0032_marvelous_groot",
+      "breakpoints": true
     }
   ]
 }

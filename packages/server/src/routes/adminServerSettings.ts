@@ -4,6 +4,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { serverSettings } from '../db/schema.js'
 import { validate } from '../http/validate.js'
+import { setLogLevel, type LogLevel } from '../logger.js'
 
 const SERVER_SETTINGS_ID = 'default'
 
@@ -21,6 +22,7 @@ const updateSchema = z.object({
   acmeEmail: z.string().email().nullable().optional(),
   acmeCertsDir: z.string().nullable().optional(),
   trustProxy: z.boolean().optional(),
+  logLevel: z.enum(['debug', 'info', 'warn', 'error']).optional(),
 })
 
 async function getOrInitSettings(db: LibSQLDatabase) {
@@ -57,6 +59,7 @@ function formatSettings(
     acmeEmail: row.acmeEmail ?? null,
     acmeCertsDir: row.acmeCertsDir ?? null,
     trustProxy: row.trustProxy,
+    logLevel: row.logLevel as LogLevel,
     updatedAt: row.updatedAt,
   }
 }
@@ -121,6 +124,10 @@ export function makeAdminServerSettingsRouter(db: LibSQLDatabase): Hono {
       else update.acmeCertsDir = body.acmeCertsDir
     }
     if (body.trustProxy !== undefined) update.trustProxy = body.trustProxy
+    if (body.logLevel !== undefined) {
+      update.logLevel = body.logLevel
+      setLogLevel(body.logLevel)
+    }
 
     const updated = await db
       .update(serverSettings)

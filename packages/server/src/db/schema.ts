@@ -358,9 +358,9 @@ export const matchingQueue = sqliteTable(
     status: text('status', { enum: ['pending', 'confirmed', 'rejected'] })
       .notNull()
       .default('pending'),
-    matchSource: text('match_source', { enum: ['local', 'cloud'] })
+    matchSource: text('match_source', { enum: ['cloud'] })
       .notNull()
-      .default('local'),
+      .default('cloud'),
     createdAt: integer('created_at', { mode: 'timestamp' })
       .notNull()
       .default(sql`(unixepoch())`),
@@ -711,6 +711,10 @@ export const serverSettings = sqliteTable('server_settings', {
   thumbnailSizes: text('thumbnail_sizes')
     .notNull()
     .default('["small","medium"]'),
+  /** Minimum log level written to console and log files */
+  logLevel: text('log_level', { enum: ['debug', 'info', 'warn', 'error'] })
+    .notNull()
+    .default('info'),
   updatedAt: integer('updated_at', { mode: 'timestamp' })
     .notNull()
     .default(sql`(unixepoch())`),

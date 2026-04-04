@@ -1,9 +1,12 @@
 import { watch } from 'node:fs'
 import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
+import { createLogger } from '../logger.js'
 import { dataSources, libraries } from '../db/schema.js'
 import { scanLibrary } from './orchestrator.js'
 import { toLocalPath } from './scanner.js'
+
+const logger = createLogger('scheduler')
 
 // Parse simple cron expressions. Returns interval in milliseconds, or null if unsupported.
 // Supported patterns:
@@ -48,18 +51,30 @@ export async function startScheduler(
   const fsWatchers: ReturnType<typeof watch>[] = []
 
   const allLibraries = await db.select().from(libraries)
+  logger.log('Scheduler starting', { libraries: allLibraries.length })
 
   for (const lib of allLibraries) {
     // Cron-style scheduled scans
     if (lib.scanSchedule) {
       const interval = parseCronInterval(lib.scanSchedule)
       if (interval !== null) {
+        logger.log(`Cron schedule registered: "${lib.name}"`, {
+          libraryId: lib.id,
+          schedule: lib.scanSchedule,
+          intervalMs: interval,
+        })
         const timer = setInterval(() => {
+          logger.log(`Scheduled scan triggered: "${lib.name}"`, { libraryId: lib.id })
           trigger(db, lib.id).catch((err: unknown) => {
-            console.error(`Scheduled scan failed for library ${lib.id}:`, err)
+            logger.error(`Scheduled scan failed: "${lib.name}"`, { libraryId: lib.id, error: err })
           })
         }, interval)
         intervalTimers.push(timer)
+      } else {
+        logger.warn(`Unsupported cron expression ignored: "${lib.name}"`, {
+          libraryId: lib.id,
+          schedule: lib.scanSchedule,
+        })
       }
     }
 
@@ -75,8 +90,9 @@ export async function startScheduler(
       if (source.type !== 'local' || !source.enabled) continue
 
       try {
+        const watchPath = toLocalPath(source.path)
         const watcher = watch(
-          toLocalPath(source.path),
+          watchPath,
           { recursive: source.recursive },
           () => {
             // Debounce: wait DEBOUNCE_MS after the last change event
@@ -84,25 +100,33 @@ export async function startScheduler(
             if (existing !== undefined) clearTimeout(existing)
             const t = setTimeout(() => {
               debounceTimers.delete(lib.id)
+              logger.log(`Watch-triggered scan: "${lib.name}"`, { libraryId: lib.id, path: watchPath })
               trigger(db, lib.id).catch((err: unknown) => {
-                console.error(
-                  `Watch-triggered scan failed for library ${lib.id}:`,
-                  err,
-                )
+                logger.error(`Watch-triggered scan failed: "${lib.name}"`, { libraryId: lib.id, error: err })
               })
             }, DEBOUNCE_MS)
             debounceTimers.set(lib.id, t)
           },
         )
         fsWatchers.push(watcher)
-      } catch {
-        console.error(`Cannot watch path ${source.path} for library ${lib.id}`)
+        logger.log(`Watching path: ${watchPath}`, { libraryId: lib.id, recursive: source.recursive })
+      } catch (err) {
+        logger.error(`Cannot watch path: ${source.path}`, { libraryId: lib.id, error: err })
       }
     }
   }
 
+  logger.log('Scheduler ready', {
+    cronSchedules: intervalTimers.length,
+    watchers: fsWatchers.length,
+  })
+
   return {
     stop() {
+      logger.log('Scheduler stopping', {
+        cronSchedules: intervalTimers.length,
+        watchers: fsWatchers.length,
+      })
       for (const t of intervalTimers) clearInterval(t)
       for (const t of debounceTimers.values()) clearTimeout(t)
       for (const w of fsWatchers) w.close()

@@ -4,7 +4,10 @@ import { basename, extname, join } from 'node:path'
 import { EXTENSION_TO_MIME, getMediaCategory } from '@xon/media-types'
 import type { MediaCategory } from '@xon/shared'
 import type { MediaItem } from '../db/schema.js'
+import { createLogger } from '../logger.js'
 import { getMediaProviderPlugin } from '../plugins/mediaProviderPluginRegistry.js'
+
+const logger = createLogger('scanner')
 
 export type FileEntry = {
   filePath: string
@@ -32,7 +35,7 @@ async function walkDirectory(
   try {
     dirEntries = await readdir(dirPath, { withFileTypes: true })
   } catch (err) {
-    console.error(`Scanner: cannot read directory ${dirPath}:`, err)
+    logger.error(`Scanner: cannot read directory ${dirPath}:`, err)
     return entries
   }
 
@@ -54,7 +57,7 @@ async function walkDirectory(
       try {
         fileStat = await stat(fullPath)
       } catch (err) {
-        console.error(`Scanner: cannot stat file ${fullPath}:`, err)
+        logger.error(`Scanner: cannot stat file ${fullPath}:`, err)
         continue
       }
 
@@ -78,7 +81,7 @@ async function scanPluginDataSource(
 ): Promise<FileEntry[]> {
   const plugin = getMediaProviderPlugin(pluginId)
   if (!plugin) {
-    console.error(
+    logger.error(
       `Scanner: no MediaProviderPlugin registered for pluginId "${pluginId}"`,
     )
     return []
@@ -88,7 +91,7 @@ async function scanPluginDataSource(
   try {
     providerFiles = await plugin.listFiles(path)
   } catch (err) {
-    console.error(
+    logger.error(
       `Scanner: plugin "${pluginId}" listFiles("${path}") failed:`,
       err,
     )
@@ -135,6 +138,12 @@ export async function scanDataSource(
   },
   existingItems: Pick<MediaItem, 'filePath' | 'fileSize'>[] = [],
 ): Promise<ScanResult> {
+  const sourceLabel =
+    dataSource.type === 'plugin'
+      ? `plugin:${dataSource.pluginId ?? 'unknown'}`
+      : `${dataSource.type ?? 'local'}:${dataSource.path}`
+  logger.log(`Scanning data source: ${sourceLabel}`)
+
   let discovered: FileEntry[]
 
   if (dataSource.type === 'plugin' && dataSource.pluginId) {
@@ -171,6 +180,13 @@ export async function scanDataSource(
   const removedFilePaths = [...existingMap.keys()].filter(
     (p) => !discoveredPaths.has(p),
   )
+
+  logger.log(`Data source scan complete: ${sourceLabel}`, {
+    discovered: discovered.length,
+    new: newFiles.length,
+    changed: changedFiles.length,
+    removed: removedFilePaths.length,
+  })
 
   return { discovered, newFiles, changedFiles, removedFilePaths }
 }

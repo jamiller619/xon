@@ -1,6 +1,9 @@
 import { basename, extname } from 'node:path'
 import { filenameParse } from '@ctrl/video-filename-parser'
 import type { MediaCategory } from '@xon/shared'
+import { createLogger } from '../logger.js'
+
+const logger = createLogger('orchestrator')
 import { and, eq, inArray, isNull } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import {
@@ -80,37 +83,21 @@ async function tryQueueMatch(
         confidence: result.confidence,
         matchSource: 'cloud',
       })
+      logger.log(`Title matched (cloud): "${nameWithoutExt}"`, {
+        suggestedTitle: result.suggestedTitle,
+        confidence: result.confidence,
+        plugin: plugin.manifest?.id ?? 'unknown',
+      })
       // One match per item is sufficient
       return
     } catch (err) {
-      console.error(
+      logger.error(
         `Metadata match failed for "${nameWithoutExt}" (${plugin.manifest?.id ?? 'unknown'}): ${String(err)}`,
       )
     }
   }
 
-  // No plugin matched — fall back to local filename parsing so the item still
-  // gets a suggested title the user can review or correct.
-  const parsed = filenameParse(fileName)
-  if (!parsed.title) return
-
-  const suggestedMetadata: Record<string, unknown> = {}
-  if (parsed.year) suggestedMetadata.year = Number.parseInt(parsed.year, 10)
-  if (parsed.resolution) suggestedMetadata.resolution = parsed.resolution
-  if (parsed.sources?.length) suggestedMetadata.sources = parsed.sources
-  if (parsed.videoCodec) suggestedMetadata.videoCodec = parsed.videoCodec
-  if (parsed.edition && Object.keys(parsed.edition).length > 0) {
-    suggestedMetadata.edition = parsed.edition
-  }
-
-  await db.insert(matchingQueue).values({
-    id: crypto.randomUUID(),
-    mediaItemId,
-    suggestedTitle: parsed.title,
-    suggestedMetadata: JSON.stringify(suggestedMetadata),
-    confidence: 60,
-    matchSource: 'local',
-  })
+  logger.debug(`No plugin match found for: "${nameWithoutExt}"`)
 }
 
 export async function scanLibrary(
@@ -119,6 +106,7 @@ export async function scanLibrary(
   onProgress?: (progress: ScanProgress) => void,
   dataDir?: string,
 ): Promise<ScanSummary> {
+  const scanStart = Date.now()
   const resolvedDataDir = dataDir ?? process.env.DATA_DIR ?? './data'
   const libraryRows = await db
     .select()
@@ -127,6 +115,8 @@ export async function scanLibrary(
   if (libraryRows.length === 0) {
     throw new Error(`Library not found: ${libraryId}`)
   }
+
+  const libraryName = libraryRows[0]?.name ?? libraryId
 
   // Parse allowed media types — empty array means accept all
   let allowedMediaTypes: string[] = []
@@ -146,6 +136,12 @@ export async function scanLibrary(
       and(eq(dataSources.libraryId, libraryId), eq(dataSources.enabled, true)),
     )
 
+  logger.log(`Scan started: "${libraryName}"`, {
+    libraryId,
+    sources: sources.length,
+    typeFilter: hasTypeFilter ? allowedMediaTypes : 'none',
+  })
+
   let totalNew = 0
   let totalUpdated = 0
   let totalRemoved = 0
@@ -161,12 +157,21 @@ export async function scanLibrary(
 
     // Apply media type filter — changedFiles and newFiles only include matching types
     if (hasTypeFilter) {
+      const beforeNew = result.newFiles.length
+      const beforeChanged = result.changedFiles.length
       result.newFiles = result.newFiles.filter((e) =>
         allowedMediaTypes.includes(e.mediaCategory),
       )
       result.changedFiles = result.changedFiles.filter((e) =>
         allowedMediaTypes.includes(e.mediaCategory),
       )
+      const filteredOut =
+        beforeNew - result.newFiles.length + (beforeChanged - result.changedFiles.length)
+      if (filteredOut > 0) {
+        logger.log(
+          `Type filter excluded ${filteredOut} file(s) not matching: ${allowedMediaTypes.join(', ')}`,
+        )
+      }
     }
 
     totalDiscovered += result.discovered.length
@@ -183,6 +188,11 @@ export async function scanLibrary(
     for (const entry of result.newFiles) {
       progress.currentFile = entry.filePath
       onProgress?.(progress)
+
+      logger.log(`Processing new file: ${entry.filePath}`, {
+        category: entry.mediaCategory,
+        size: entry.fileSize,
+      })
 
       let metadata = '{}'
       if (isMusicCategory(entry.mediaCategory)) {
@@ -224,6 +234,9 @@ export async function scanLibrary(
 
       const id = crypto.randomUUID()
       const drmProtected = await detectDrm(entry.filePath)
+      if (drmProtected) {
+        logger.warn(`DRM detected: ${entry.filePath}`)
+      }
 
       let thumbnailPaths: string | null = null
       if (isImageCategory(entry.mediaCategory)) {
@@ -234,6 +247,8 @@ export async function scanLibrary(
         )
         if (thumbs) {
           thumbnailPaths = JSON.stringify(thumbs)
+        } else {
+          logger.warn(`Thumbnail generation failed: ${entry.filePath}`)
         }
       } else if (isVideoCategory(entry.mediaCategory)) {
         const thumbs = await generateVideoThumbnails(
@@ -243,8 +258,12 @@ export async function scanLibrary(
         )
         if (thumbs) {
           thumbnailPaths = JSON.stringify(thumbs)
+        } else {
+          logger.warn(`Video thumbnail generation failed: ${entry.filePath}`)
         }
       }
+
+      const parsedTitle = filenameParse(entry.fileName).title || null
 
       await db.insert(mediaItems).values({
         id,
@@ -255,6 +274,7 @@ export async function scanLibrary(
         fileSize: entry.fileSize,
         mimeType: entry.mimeType ?? null,
         mediaCategory: entry.mediaCategory,
+        title: parsedTitle,
         metadata,
         thumbnailPaths,
         drmProtected,
@@ -284,6 +304,10 @@ export async function scanLibrary(
     for (const entry of result.changedFiles) {
       progress.currentFile = entry.filePath
       onProgress?.(progress)
+
+      logger.log(`Processing changed file: ${entry.filePath}`, {
+        category: entry.mediaCategory,
+      })
 
       const existingRows = await db
         .select({ id: mediaItems.id })
@@ -328,6 +352,8 @@ export async function scanLibrary(
         )
         if (thumbs) {
           updateFields.thumbnailPaths = JSON.stringify(thumbs)
+        } else {
+          logger.warn(`Thumbnail generation failed: ${entry.filePath}`)
         }
       } else if (isVideoCategory(entry.mediaCategory)) {
         const thumbs = await generateVideoThumbnails(
@@ -337,6 +363,8 @@ export async function scanLibrary(
         )
         if (thumbs) {
           updateFields.thumbnailPaths = JSON.stringify(thumbs)
+        } else {
+          logger.warn(`Video thumbnail generation failed: ${entry.filePath}`)
         }
       } else if (isDocumentCategory(entry.mediaCategory)) {
         const docMeta = await extractDocumentMetadata(entry.filePath)
@@ -379,6 +407,7 @@ export async function scanLibrary(
     }
 
     if (result.removedFilePaths.length > 0) {
+      logger.log(`Removing ${result.removedFilePaths.length} deleted file(s)`)
       const removedRows = await db
         .select({ id: mediaItems.id, filePath: mediaItems.filePath })
         .from(mediaItems)
@@ -426,35 +455,49 @@ export async function scanLibrary(
       ),
     )
 
-  for (const item of missingThumbs) {
-    let thumbs = null
-    if (isVideoCategory(item.mediaCategory)) {
-      thumbs = await generateVideoThumbnails(
-        item.filePath,
-        item.id,
-        resolvedDataDir,
-      )
-    } else if (isImageCategory(item.mediaCategory)) {
-      thumbs = await generateThumbnails(item.filePath, item.id, resolvedDataDir)
+  if (missingThumbs.length > 0) {
+    logger.log(`Backfilling thumbnails for ${missingThumbs.length} item(s)`)
+    let backfilled = 0
+    for (const item of missingThumbs) {
+      let thumbs = null
+      if (isVideoCategory(item.mediaCategory)) {
+        thumbs = await generateVideoThumbnails(
+          item.filePath,
+          item.id,
+          resolvedDataDir,
+        )
+      } else if (isImageCategory(item.mediaCategory)) {
+        thumbs = await generateThumbnails(item.filePath, item.id, resolvedDataDir)
+      }
+      if (thumbs) {
+        await db
+          .update(mediaItems)
+          .set({ thumbnailPaths: JSON.stringify(thumbs), updatedAt: new Date() })
+          .where(eq(mediaItems.id, item.id))
+        backfilled++
+      } else if (isVideoCategory(item.mediaCategory) || isImageCategory(item.mediaCategory)) {
+        logger.warn(`Backfill thumbnail failed: ${item.filePath}`)
+      }
     }
-    if (thumbs) {
-      await db
-        .update(mediaItems)
-        .set({ thumbnailPaths: JSON.stringify(thumbs), updatedAt: new Date() })
-        .where(eq(mediaItems.id, item.id))
-    }
+    logger.log(`Thumbnail backfill complete: ${backfilled}/${missingThumbs.length} succeeded`)
   }
 
-  // Auto-group TV episodes into series and season groups
+  logger.log('Running post-scan grouping')
   await groupTvEpisodes(db, libraryId)
-  // Auto-group music tracks into artist and album groups
   await groupMusicTracks(db, libraryId)
-  // Auto-group audiobook chapters into book and series groups
   await groupAudiobooks(db, libraryId)
-  // Auto-group photos by date and GPS location
   await groupPhotos(db, libraryId)
-  // Auto-tag images and documents with AI-generated tags
+  logger.log('Running auto-tagging')
   await autoTagMediaItems(db, libraryId)
+
+  const duration = Date.now() - scanStart
+  logger.log(`Scan complete: "${libraryName}"`, {
+    durationMs: duration,
+    discovered: totalDiscovered,
+    new: totalNew,
+    updated: totalUpdated,
+    removed: totalRemoved,
+  })
 
   return {
     libraryId,

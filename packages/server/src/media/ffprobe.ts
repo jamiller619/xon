@@ -1,6 +1,9 @@
 import { spawn } from 'node:child_process'
 import { MediaCategory } from '@xon/shared'
+import { createLogger } from '../logger.js'
 import { ffprobePath } from './binaries.js'
+
+const logger = createLogger('ffprobe')
 
 const VIDEO_CATEGORIES = new Set<string>([
   MediaCategory.Movies,
@@ -107,6 +110,8 @@ export async function extractStreamTracks(
 export async function extractFfprobeMetadata(
   filePath: string,
 ): Promise<FfprobeMetadata | null> {
+  logger.debug(`Extracting metadata: ${filePath}`)
+
   return new Promise((resolve) => {
     let stdout = ''
 
@@ -125,15 +130,13 @@ export async function extractFfprobeMetadata(
     })
 
     proc.on('error', (err: Error) => {
-      console.error(`FFprobe not available: ${err.message}`)
+      logger.error(`FFprobe not available: ${err.message}`)
       resolve(null)
     })
 
     proc.on('close', (code: number | null) => {
       if (code !== 0) {
-        console.error(
-          `FFprobe exited with code ${String(code)} for ${filePath}`,
-        )
+        logger.error(`FFprobe exited with code ${String(code)}`, { filePath })
         resolve(null)
         return
       }
@@ -174,9 +177,16 @@ export async function extractFfprobeMetadata(
           }
         }
 
+        logger.debug(`Metadata extracted: ${filePath}`, {
+          duration: result.duration,
+          codec: result.codec,
+          audioCodec: result.audioCodec,
+          resolution: result.resolution,
+        })
+
         resolve(result)
       } catch {
-        console.error(`FFprobe JSON parse error for ${filePath}`)
+        logger.error(`FFprobe JSON parse error`, { filePath })
         resolve(null)
       }
     })

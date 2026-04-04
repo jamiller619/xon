@@ -16,6 +16,7 @@ import {
   groupMembers,
   groups,
   libraryAccess,
+  matchingQueue,
   mediaItems,
   mediaProgress,
   readingPositions,
@@ -163,6 +164,44 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
     c.header('ETag', etag)
     return c.json(itemWithUrls)
+  })
+
+  // GET /media/:id/match — get pending match for a media item
+  router.get('/:id/match', async (c) => {
+    const id = c.req.param('id')
+    const user = c.get('user')
+
+    const rows = await db
+      .select({ libraryId: mediaItems.libraryId })
+      .from(mediaItems)
+      .where(eq(mediaItems.id, id))
+    const item = rows[0]
+    if (!item) return c.json({ error: 'Not found' }, 404)
+
+    const accessibleIds = await getAccessibleLibraryIds(user.id, user.role)
+    if (accessibleIds !== null && !accessibleIds.includes(item.libraryId)) {
+      return c.json({ error: 'Not found' }, 404)
+    }
+
+    const matchRows = await db
+      .select()
+      .from(matchingQueue)
+      .where(and(eq(matchingQueue.mediaItemId, id), eq(matchingQueue.status, 'pending')))
+      .limit(1)
+
+    const match = matchRows[0]
+    if (!match) return c.json(null)
+
+    return c.json({
+      ...match,
+      suggestedMetadata: (() => {
+        try {
+          return JSON.parse(match.suggestedMetadata) as Record<string, unknown>
+        } catch {
+          return {}
+        }
+      })(),
+    })
   })
 
   const updateMediaSchema = z.object({

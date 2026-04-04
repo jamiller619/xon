@@ -3,8 +3,11 @@ import { mkdir, unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { MediaCategory } from '@xon/shared'
 import sharp from 'sharp'
+import { createLogger } from '../logger.js'
 import { ffmpegPath, ffprobePath } from './binaries.js'
 import type { ThumbnailPaths } from './thumbnails.js'
+
+const logger = createLogger('video-thumbnails')
 
 const VIDEO_CATEGORIES = new Set<string>([
   MediaCategory.Movies,
@@ -88,14 +91,16 @@ function extractFrame(
     })
 
     proc.on('error', (err) => {
-      console.error(`FFmpeg spawn error (path: ${ffmpegPath}): ${err.message}`)
+      logger.error(`FFmpeg spawn error`, { ffmpegPath, error: err.message })
       resolve(false)
     })
     proc.on('close', (code: number | null) => {
       if (code !== 0) {
-        console.error(
-          `FFmpeg exited with code ${code} for ${filePath}:\n${stderr.slice(-500)}`,
-        )
+        logger.error(`FFmpeg frame extraction failed`, {
+          filePath,
+          exitCode: code,
+          stderr: stderr.slice(-500),
+        })
       }
       resolve(code === 0)
     })
@@ -107,21 +112,26 @@ export async function generateVideoThumbnails(
   mediaItemId: string,
   dataDir: string,
 ): Promise<ThumbnailPaths | null> {
+  logger.debug(`Generating thumbnails: ${filePath}`)
+
   const thumbnailDir = join(dataDir, 'thumbnails')
   try {
     await mkdir(thumbnailDir, { recursive: true })
   } catch {
-    console.error(`Failed to create thumbnails directory: ${thumbnailDir}`)
+    logger.error(`Failed to create thumbnails directory`, { thumbnailDir })
     return null
   }
 
   const duration = await getVideoDuration(filePath)
+  if (duration === null) {
+    logger.debug(`Could not determine video duration: ${filePath}`)
+  }
   const timestamp = duration !== null ? duration * 0.1 : 0
+  logger.debug(`Extracting frame at ${timestamp.toFixed(1)}s: ${filePath}`)
 
   const tmpPath = join(thumbnailDir, `${mediaItemId}_tmp.jpg`)
   const frameExtracted = await extractFrame(filePath, timestamp, tmpPath)
   if (!frameExtracted) {
-    console.error(`FFmpeg frame extraction failed for ${filePath}`)
     return null
   }
 
@@ -160,9 +170,7 @@ export async function generateVideoThumbnails(
         .toFile(paths.large),
     ])
   } catch (err) {
-    console.error(
-      `Video thumbnail resize failed for ${filePath}: ${String(err)}`,
-    )
+    logger.error(`Thumbnail resize failed`, { filePath, error: String(err) })
     try {
       await unlink(tmpPath)
     } catch {}
@@ -173,5 +181,6 @@ export async function generateVideoThumbnails(
     await unlink(tmpPath)
   } catch {}
 
+  logger.debug(`Thumbnails generated: ${filePath}`)
   return paths
 }

@@ -1,5 +1,8 @@
 import { MediaCategory } from '@xon/shared'
+import { createLogger } from '../logger.js'
 import { exifTool } from './binaries.js'
+
+const logger = createLogger('exiftool')
 
 const IMAGE_CATEGORIES = new Set<string>([
   MediaCategory.Pictures,
@@ -26,6 +29,8 @@ export function isImageCategory(category: string | null): boolean {
 export async function extractExiftoolMetadata(
   filePath: string,
 ): Promise<ExiftoolMetadata | null> {
+  logger.debug(`Extracting metadata: ${filePath}`)
+
   try {
     const tags = await exifTool.read(filePath)
 
@@ -43,9 +48,16 @@ export async function extractExiftoolMetadata(
     if (dateTaken) result.dateTaken = String(dateTaken)
     if (tags.Orientation != null) result.orientation = String(tags.Orientation)
 
+    logger.debug(`Metadata extracted: ${filePath}`, {
+      width: result.width,
+      height: result.height,
+      cameraModel: result.cameraModel,
+      hasGps: result.gpsLatitude != null,
+    })
+
     return result
   } catch (err) {
-    console.error(`ExifTool error for ${filePath}:`, err)
+    logger.error(`ExifTool error`, { filePath, error: err })
     return null
   }
 }

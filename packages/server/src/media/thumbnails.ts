@@ -1,7 +1,10 @@
 import { mkdir } from 'node:fs/promises'
 import { join } from 'node:path'
 import sharp from 'sharp'
+import { createLogger } from '../logger.js'
 import { convertRawToJpeg, isRawImage } from './raw.js'
+
+const logger = createLogger('thumbnails')
 
 export type ThumbnailPaths = {
   small: string
@@ -20,11 +23,13 @@ export async function generateThumbnails(
   mediaItemId: string,
   dataDir: string,
 ): Promise<ThumbnailPaths | null> {
+  logger.debug(`Generating thumbnails: ${filePath}`)
+
   const thumbnailDir = join(dataDir, 'thumbnails')
   try {
     await mkdir(thumbnailDir, { recursive: true })
   } catch {
-    console.error(`Failed to create thumbnails directory: ${thumbnailDir}`)
+    logger.error(`Failed to create thumbnails directory`, { thumbnailDir })
     return null
   }
 
@@ -37,6 +42,7 @@ export async function generateThumbnails(
   try {
     let img: ReturnType<typeof sharp>
     if (isRawImage(filePath)) {
+      logger.debug(`Converting RAW image: ${filePath}`)
       const rawBuffer = await convertRawToJpeg(filePath)
       img = sharp(rawBuffer)
     } else {
@@ -68,9 +74,10 @@ export async function generateThumbnails(
         .jpeg({ quality: 80 })
         .toFile(paths.large),
     ])
+    logger.debug(`Thumbnails generated: ${filePath}`)
     return paths
   } catch (err) {
-    console.error(`Thumbnail generation failed for ${filePath}: ${String(err)}`)
+    logger.error(`Thumbnail generation failed`, { filePath, error: String(err) })
     return null
   }
 }

@@ -24,6 +24,16 @@ interface ImageSibling {
   title: string
 }
 
+interface PendingMatch {
+  id: string
+  mediaItemId: string
+  suggestedTitle: string
+  suggestedMetadata: Record<string, unknown>
+  confidence: number
+  status: string
+  matchSource: string | null
+}
+
 interface MediaDetailItem {
   id: string
   title: string | null
@@ -78,6 +88,9 @@ export default function MediaDetail() {
   const [showArchiveViewer, setShowArchiveViewer] = useState(false)
   const [imageSiblings, setImageSiblings] = useState<ImageSibling[]>([])
 
+  const [pendingMatch, setPendingMatch] = useState<PendingMatch | null>(null)
+  const [matchActionLoading, setMatchActionLoading] = useState(false)
+
   const [isFavorited, setIsFavorited] = useState(false)
   const [isWatchlisted, setIsWatchlisted] = useState(false)
 
@@ -109,6 +122,48 @@ export default function MediaDetail() {
         setLoading(false)
       })
   }, [id])
+
+  // Load pending match
+  useEffect(() => {
+    if (!id) return
+    apiFetch(`/api/v1/media/${id}/match`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data: unknown) => {
+        setPendingMatch(data as PendingMatch | null)
+      })
+      .catch(() => {})
+  }, [id])
+
+  async function confirmMatch() {
+    if (!pendingMatch) return
+    setMatchActionLoading(true)
+    const res = await apiFetch(`/api/v1/matching/${pendingMatch.id}/confirm`, {
+      method: 'PUT',
+    }).catch(() => null)
+    if (res?.ok) {
+      setPendingMatch(null)
+      // Refresh media item to pick up updated title/metadata
+      if (id) {
+        apiFetch(`/api/v1/media/${id}`)
+          .then((r) => (r.ok ? r.json() : null))
+          .then((data: unknown) => {
+            if (data) setItem(data as MediaDetailItem)
+          })
+          .catch(() => {})
+      }
+    }
+    setMatchActionLoading(false)
+  }
+
+  async function rejectMatch() {
+    if (!pendingMatch) return
+    setMatchActionLoading(true)
+    const res = await apiFetch(`/api/v1/matching/${pendingMatch.id}/reject`, {
+      method: 'PUT',
+    }).catch(() => null)
+    if (res?.ok) setPendingMatch(null)
+    setMatchActionLoading(false)
+  }
 
   // Load favorite/watchlist state
   useEffect(() => {
@@ -792,6 +847,67 @@ export default function MediaDetail() {
           )}
         </div>
       </div>
+
+      {/* Suggested match banner */}
+      {pendingMatch && (
+        <section className={styles.matchBanner ?? ''}>
+          <div className={styles.matchHeader ?? ''}>
+            <span className={styles.matchBadge ?? ''}>Suggested Match</span>
+            {pendingMatch.matchSource && (
+              <span className={styles.matchSource ?? ''}>{pendingMatch.matchSource}</span>
+            )}
+            <span className={styles.matchConfidence ?? ''}>{pendingMatch.confidence}% confidence</span>
+          </div>
+          <div className={styles.matchBody ?? ''}>
+            <div className={styles.matchFields ?? ''}>
+              <div className={styles.matchField ?? ''}>
+                <span className={styles.matchFieldLabel ?? ''}>Title</span>
+                <span className={styles.matchFieldValue ?? ''}>{pendingMatch.suggestedTitle}</span>
+              </div>
+              {pendingMatch.suggestedMetadata.year != null && (
+                <div className={styles.matchField ?? ''}>
+                  <span className={styles.matchFieldLabel ?? ''}>Year</span>
+                  <span className={styles.matchFieldValue ?? ''}>{String(pendingMatch.suggestedMetadata.year)}</span>
+                </div>
+              )}
+              {Object.entries(pendingMatch.suggestedMetadata)
+                .filter(([k, v]) => k !== 'year' && v != null && v !== '' && !Array.isArray(v))
+                .map(([k, v]) => (
+                  <div key={k} className={styles.matchField ?? ''}>
+                    <span className={styles.matchFieldLabel ?? ''}>{k}</span>
+                    <span className={styles.matchFieldValue ?? ''}>{String(v)}</span>
+                  </div>
+                ))}
+              {Object.entries(pendingMatch.suggestedMetadata)
+                .filter(([, v]) => Array.isArray(v) && (v as unknown[]).length > 0)
+                .map(([k, v]) => (
+                  <div key={k} className={styles.matchField ?? ''}>
+                    <span className={styles.matchFieldLabel ?? ''}>{k}</span>
+                    <span className={styles.matchFieldValue ?? ''}>{(v as unknown[]).join(', ')}</span>
+                  </div>
+                ))}
+            </div>
+            <div className={styles.matchActions ?? ''}>
+              <button
+                type="button"
+                className={styles.btnConfirm ?? ''}
+                disabled={matchActionLoading}
+                onClick={confirmMatch}
+              >
+                Confirm
+              </button>
+              <button
+                type="button"
+                className={styles.btnReject ?? ''}
+                disabled={matchActionLoading}
+                onClick={rejectMatch}
+              >
+                Reject
+              </button>
+            </div>
+          </div>
+        </section>
+      )}
 
       {/* Plugin-injected detail panels */}
       <PluginSlot
