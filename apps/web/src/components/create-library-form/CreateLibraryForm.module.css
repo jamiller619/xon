@@ -1,96 +1,150 @@
-.form {
-  display: flex;
-  flex-direction: column;
-  gap: 0.875rem;
-}
-
-.fieldLabel {
-  display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
-  font-size: 0.8rem;
-  color: var(--color-text-muted, #888);
-}
-
-.input {
-  padding: 0.4rem 0.6rem;
-  background: var(--color-bg, #0a0a0a);
-  border: 1px solid var(--color-border, #333);
-  border-radius: 0.25rem;
-  color: var(--color-text, #e0e0e0);
-  font-size: 0.875rem;
-  width: 100%;
-  box-sizing: border-box;
-}
-
-.input:focus {
-  outline: none;
-  border-color: var(--color-accent, #6366f1);
-}
-
-.mediaTypeGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
-  gap: 0.4rem;
-  margin-top: 0.5rem;
-}
-
-.mediaTypeCheckbox {
+.folderRow {
   display: flex;
   align-items: center;
-  gap: 0.4rem;
-  font-size: 0.8rem;
+  gap: var(--space-3);
+}
+
+.selectedPath {
+  font-size: var(--font-size-1);
+  color: var(--color-gray-11);
+  font-family: var(--font-mono);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 260px;
+}
+
+/* File browser inside the dialog */
+.browser {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-3);
+  min-width: 400px;
+  max-width: 560px;
+}
+
+.breadcrumb {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0;
+  background: var(--color-gray-2);
+  border-radius: var(--border-radius-2);
+  padding: var(--space-2) var(--space-3);
+  font-size: var(--font-size-1);
+  font-family: var(--font-mono);
+}
+
+.breadcrumbItem {
+  display: flex;
+  align-items: center;
+}
+
+.breadcrumbSep {
+  color: var(--color-gray-8);
+  padding: 0 2px;
+}
+
+.breadcrumbBtn {
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  color: var(--color-accent-9);
   cursor: pointer;
-  color: var(--color-text, #e0e0e0);
+  border-radius: var(--border-radius-1);
+  font-family: inherit;
+  font-size: inherit;
+
+  &:hover {
+    background: var(--color-accent-3);
+  }
 }
 
-.error {
-  padding: 0.5rem 0.75rem;
-  background: rgba(239, 68, 68, 0.1);
-  border: 1px solid rgba(239, 68, 68, 0.4);
-  border-radius: 0.25rem;
-  color: #f87171;
-  font-size: 0.8rem;
+.entryList {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-height: 280px;
+  overflow-y: auto;
+  border: 1px solid var(--color-gray-6);
+  border-radius: var(--border-radius-2);
+  padding: var(--space-2);
 }
 
-.actions {
+.entry {
+  display: flex;
+  align-items: center;
+  gap: var(--space-2);
+  width: 100%;
+  text-align: left;
+  background: none;
+  border: none;
+  padding: var(--space-2) var(--space-3);
+  border-radius: var(--border-radius-2);
+  cursor: pointer;
+  color: var(--color-gray-12);
+  font-size: var(--font-size-2);
+
+  &:hover {
+    background: var(--color-gray-4);
+  }
+}
+
+.entryIcon {
+  font-size: var(--font-size-3);
+  flex-shrink: 0;
+}
+
+.hint {
+  padding: var(--space-3);
+  color: var(--color-gray-9);
+  font-size: var(--font-size-1);
+  text-align: center;
+  margin: 0;
+}
+
+.browserError {
+  padding: var(--space-3);
+  color: var(--color-red-9);
+  font-size: var(--font-size-1);
+  text-align: center;
+  margin: 0;
+}
+
+.browserActions {
   display: flex;
   justify-content: flex-end;
-  gap: 0.75rem;
-  margin-top: 0.25rem;
 }
 
-.submitBtn {
-  padding: 0.4rem 1.25rem;
-  border: 1px solid var(--color-accent, #6366f1);
-  border-radius: 0.25rem;
-  background: var(--color-accent, #6366f1);
-  color: #fff;
+.selectBtn {
+  background: var(--color-accent-9);
+  color: var(--color-accent-contrast);
+  border: none;
+  padding: var(--space-2) var(--space-4);
+  border-radius: var(--border-radius-2);
   cursor: pointer;
-  font-size: 0.875rem;
+  font-size: var(--font-size-2);
   font-weight: 500;
+
+  &:hover {
+    background: var(--color-accent-10);
+  }
 }
 
-.submitBtn:hover:not(:disabled) {
-  opacity: 0.9;
+.well {
+  display: grid;
+  grid-template-columns: 1fr 1fr 1fr;
+  /* gap: var(--space-1); */
+  padding: var(--space-4);
 }
 
-.submitBtn:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-}
+.checkbox {
+  padding: var(--space-3);
+  border-radius: var(--border-radius-2);
+  /* biome-ignore lint/correctness/noUnknownProperty: <explanation> */
+  corner-shape: var(--corner-shape);
 
-.cancelBtn {
-  padding: 0.4rem 1.25rem;
-  border: 1px solid var(--color-border, #333);
-  border-radius: 0.25rem;
-  background: transparent;
-  color: var(--color-text-muted, #888);
-  cursor: pointer;
-  font-size: 0.875rem;
-}
-
-.cancelBtn:hover {
-  border-color: var(--color-text-muted, #888);
-  color: var(--color-text, #e0e0e0);
+  &:hover {
+    background: var(--color-gray-5);
+  }
 }

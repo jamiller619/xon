@@ -1,0 +1,15 @@
+.surface {
+  background: var(--color-gray-2);
+  border-radius: var(--border-radius-6);
+  /* biome-ignore lint/correctness/noUnknownProperty: this is valid */
+  corner-shape: var(--corner-shape);
+
+  .surface {
+    background: var(--color-gray-3);
+    border-radius: var(--border-radius-5);
+
+    .surface {
+      background: var(--color-gray-4);
+    }
+  }
+}

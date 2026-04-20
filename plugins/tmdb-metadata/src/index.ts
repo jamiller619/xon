@@ -20,11 +20,11 @@ export class TmdbMetadataPlugin extends BasePlugin {
     },
   }
 
-  private client: TmdbClient | null = null
-  private ctx: PluginContext | null = null
+  #client: TmdbClient | null = null
+  #ctx: PluginContext | null = null
 
   override async init(context: PluginContext): Promise<void> {
-    this.ctx = context
+    this.#ctx = context
 
     const apiKey = process.env.TMDB_API_KEY
     if (!apiKey) {
@@ -34,7 +34,7 @@ export class TmdbMetadataPlugin extends BasePlugin {
       return
     }
 
-    this.client = new TmdbClient(apiKey, context.fetch)
+    this.#client = new TmdbClient(apiKey, context.fetch)
 
     // Create plugin-scoped tables
     await context.db.query(`
@@ -81,11 +81,11 @@ export class TmdbMetadataPlugin extends BasePlugin {
 
     // Enrich on media create/update events
     context.on('media:created', async ({ mediaId, filePath }) => {
-      await this.enrichMedia(mediaId, filePath)
+      await this.#enrichMedia(mediaId, filePath)
     })
 
     context.on('media:updated', async ({ mediaId, filePath }) => {
-      await this.enrichMedia(mediaId, filePath)
+      await this.#enrichMedia(mediaId, filePath)
     })
 
     // Route: GET /api/v1/plugins/tmdb-metadata/metadata/:mediaId
@@ -101,25 +101,41 @@ export class TmdbMetadataPlugin extends BasePlugin {
         return c.json(metadata)
       },
     })
+
+    context.registerMediaMetadataProvider(async (mediaId: string) => {
+      const stored = await this.getStoredMetadata(mediaId)
+      if (stored) return stored as Record<string, unknown>
+
+      // No stored data — look up the file path and enrich lazily
+      const rows = await context.db.query(
+        'SELECT file_path FROM media_items WHERE id = ?',
+        [mediaId],
+      )
+      const row = rows[0] as { file_path?: string } | undefined
+      if (!row?.file_path) return null
+
+      await this.#enrichMedia(mediaId, row.file_path)
+      return (await this.getStoredMetadata(mediaId)) as Record<string, unknown> | null
+    })
   }
 
-  private async enrichMedia(mediaId: string, filePath: string): Promise<void> {
-    if (!this.client || !this.ctx) return
+  async #enrichMedia(mediaId: string, filePath: string): Promise<void> {
+    if (!this.#client || !this.#ctx) return
 
     const parsed = parseMediaTitle(filePath)
     const now = Date.now()
 
     try {
       if (parsed.type === 'movie') {
-        const meta = await this.client.fetchMovieMetadata(
+        const meta = await this.#client.fetchMovieMetadata(
           parsed.title,
           parsed.year,
         )
         if (!meta) {
-          this.ctx.logger.warn(`TMDb: no movie match for "${parsed.title}"`)
+          this.#ctx.logger.warn(`TMDb: no movie match for "${parsed.title}"`)
           return
         }
-        await this.ctx.db.query(
+        await this.#ctx.db.query(
           `INSERT OR REPLACE INTO plugin_tmdb_metadata_movies
             (media_id, tmdb_id, title, original_title, overview, poster_path, backdrop_path,
              release_date, vote_average, genres, cast_data, crew_data, fetched_at)
@@ -140,20 +156,20 @@ export class TmdbMetadataPlugin extends BasePlugin {
             now,
           ],
         )
-        this.ctx.logger.info(
+        this.#ctx.logger.info(
           `TMDb: enriched movie "${meta.title}" for ${mediaId}`,
         )
       } else {
-        const meta = await this.client.fetchTvMetadata(
+        const meta = await this.#client.fetchTvMetadata(
           parsed.seriesTitle,
           parsed.season,
           parsed.episode,
         )
         if (!meta) {
-          this.ctx.logger.warn(`TMDb: no TV match for "${parsed.seriesTitle}"`)
+          this.#ctx.logger.warn(`TMDb: no TV match for "${parsed.seriesTitle}"`)
           return
         }
-        await this.ctx.db.query(
+        await this.#ctx.db.query(
           `INSERT OR REPLACE INTO plugin_tmdb_metadata_tv
             (media_id, tmdb_id, series_id, title, original_title, overview, poster_path,
              backdrop_path, first_air_date, vote_average, genres, cast_data, crew_data,
@@ -182,21 +198,21 @@ export class TmdbMetadataPlugin extends BasePlugin {
             now,
           ],
         )
-        this.ctx.logger.info(
+        this.#ctx.logger.info(
           `TMDb: enriched TV "${meta.title}" S${meta.seasonNumber}E${meta.episodeNumber} for ${mediaId}`,
         )
       }
     } catch (err) {
-      this.ctx.logger.error(
+      this.#ctx.logger.error(
         `TMDb: enrichment failed for ${mediaId}: ${err instanceof Error ? err.message : String(err)}`,
       )
     }
   }
 
   private async getStoredMetadata(mediaId: string): Promise<unknown> {
-    if (!this.ctx) return null
+    if (!this.#ctx) return null
 
-    const movieRows = await this.ctx.db.query(
+    const movieRows = await this.#ctx.db.query(
       'SELECT * FROM plugin_tmdb_metadata_movies WHERE media_id = ?',
       [mediaId],
     )
@@ -211,7 +227,7 @@ export class TmdbMetadataPlugin extends BasePlugin {
       }
     }
 
-    const tvRows = await this.ctx.db.query(
+    const tvRows = await this.#ctx.db.query(
       'SELECT * FROM plugin_tmdb_metadata_tv WHERE media_id = ?',
       [mediaId],
     )
@@ -230,9 +246,9 @@ export class TmdbMetadataPlugin extends BasePlugin {
   }
 
   override async deactivate(): Promise<void> {
-    this.client?.clearCache()
-    this.client = null
-    this.ctx = null
+    this.#client?.clearCache()
+    this.#client = null
+    this.#ctx = null
   }
 }
 

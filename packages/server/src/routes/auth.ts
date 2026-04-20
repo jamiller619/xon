@@ -242,15 +242,14 @@ export function makeAuthRouter(db: LibSQLDatabase): Hono {
   })
 
   // POST /setup — unauthenticated, creates the first admin account
+  // Accepts a 4-digit PIN which is used as the account password.
   // Returns 409 if users already exist (setup already done)
   router.post(
     '/setup',
     validate(
       'json',
       z.object({
-        username: z.string().min(1).max(64),
-        password: z.string().min(8),
-        displayName: z.string().min(1).max(128),
+        pin: z.string().regex(/^\d{4}$/),
       }),
     ),
     async (c) => {
@@ -259,9 +258,11 @@ export function makeAuthRouter(db: LibSQLDatabase): Hono {
         return c.json({ error: 'Setup already complete' }, 409)
       }
 
-      const { username, password, displayName } = c.req.valid('json')
-      const email = `${username}@localhost`
-      const passwordHash = await hashPassword(password)
+      const { pin } = c.req.valid('json')
+      const username = 'admin'
+      const displayName = 'Admin'
+      const email = 'admin@localhost'
+      const passwordHash = await hashPassword(pin)
       const userId = crypto.randomUUID()
 
       await db.insert(users).values({

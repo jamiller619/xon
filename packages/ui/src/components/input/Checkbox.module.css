@@ -1,0 +1,27 @@
+.label {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: var(--space-3);
+  cursor: pointer;
+}
+
+.checkbox {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: var(--border-radius-1);
+  width: var(--space-4);
+  height: var(--space-4);
+  border: 1px solid var(--color-gray-7);
+
+  &[data-unchecked] {
+    background-color: transparent;
+  }
+
+  &[data-checked] {
+    background-color: var(--color-accent-10);
+    border-color: var(--color-accent-10);
+    color: var(--color-gray-1);
+  }
+}

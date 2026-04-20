@@ -22,6 +22,10 @@ interface PluginHookEntry {
 
 export type PluginStatus = 'loaded' | 'active' | 'inactive'
 
+type MediaMetadataProvider = (
+  mediaId: string,
+) => Promise<Record<string, unknown> | null>
+
 export interface PluginEntry {
   manifest: PluginManifest
   pluginDir: string
@@ -30,6 +34,7 @@ export interface PluginEntry {
   hooks: PluginHookEntry[]
   routes: RouteDefinition[]
   uiComponents: UIComponent[]
+  metadataProviders: MediaMetadataProvider[]
 }
 
 /** Registry of all loaded plugins, keyed by plugin id */
@@ -46,6 +51,9 @@ export const pluginErrors = new Map<string, PluginErrorEntry>()
 
 /** Per-event handler sets for plugin event hooks */
 const pluginEventHandlers = new Map<PluginEvent, Set<AnyPluginEventHandler>>()
+
+/** Media metadata providers registered by plugins, keyed by plugin id */
+const mediaMetadataProviders = new Map<string, MediaMetadataProvider>()
 
 /** Optional raw libSQL client for scoped plugin database access */
 let _pluginClient: Client | undefined
@@ -112,6 +120,10 @@ function buildContext(entry: PluginEntry): PluginContext {
     registerUI(component: UIComponent): void {
       entry.uiComponents.push(component)
     },
+    registerMediaMetadataProvider(provider: MediaMetadataProvider): void {
+      entry.metadataProviders.push(provider)
+      mediaMetadataProviders.set(entry.manifest.id, provider)
+    },
     logger: {
       info: (msg: string) =>
         console.log(`[plugin:${entry.manifest.id}] ${msg}`),
@@ -134,6 +146,8 @@ function cleanupHooksAndRoutes(entry: PluginEntry): void {
   entry.hooks = []
   entry.routes = []
   entry.uiComponents = []
+  mediaMetadataProviders.delete(entry.manifest.id)
+  entry.metadataProviders = []
 }
 
 /**
@@ -200,6 +214,7 @@ export async function loadPlugin(
     hooks: [],
     routes: [],
     uiComponents: [],
+    metadataProviders: [],
   })
 }
 
@@ -305,5 +320,25 @@ export function _resetForTesting(): void {
   registry.clear()
   pluginEventHandlers.clear()
   pluginErrors.clear()
+  mediaMetadataProviders.clear()
   _pluginClient = undefined
+}
+
+/**
+ * Collect plugin-provided metadata for a single media item.
+ * Returns an object keyed by plugin id.
+ */
+export async function getPluginMetadataForItem(
+  mediaId: string,
+): Promise<Record<string, Record<string, unknown>>> {
+  const result: Record<string, Record<string, unknown>> = {}
+  for (const [pluginId, provider] of mediaMetadataProviders) {
+    try {
+      const data = await provider(mediaId)
+      if (data) result[pluginId] = data
+    } catch {
+      // provider errors are non-fatal
+    }
+  }
+  return result
 }

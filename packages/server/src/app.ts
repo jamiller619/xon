@@ -26,6 +26,7 @@ import { makeAdminUsersRouter } from './routes/adminUsers.js'
 import { makeAiRouter } from './routes/ai.js'
 import { makeAuthRouter } from './routes/auth.js'
 import { makeDocsRouter } from './routes/docs.js'
+import { makeFsRouter } from './routes/fs.js'
 import { makeGroupsRouter } from './routes/groups.js'
 import { makeLibrariesRouter } from './routes/libraries.js'
 import { makeMatchingRouter } from './routes/matching.js'
@@ -122,6 +123,7 @@ export function createApp(
 
   if (db) {
     app.route('/auth', makeAuthRouter(db))
+    app.route('/fs', makeFsRouter())
     app.route('/libraries', makeLibrariesRouter(db))
     app.route('/groups', makeGroupsRouter(db))
     app.route('/ai', makeAiRouter(db))

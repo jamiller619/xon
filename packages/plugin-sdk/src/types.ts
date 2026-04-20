@@ -223,6 +223,14 @@ export interface PluginContext {
   registerRoute: (route: RouteDefinition) => void
   /** Register a UI component injection */
   registerUI: (component: UIComponent) => void
+  /**
+   * Register a media metadata provider.
+   * Called when a media item is fetched via the API; the returned object is
+   * merged into the response under `pluginMetadata[pluginId]`.
+   */
+  registerMediaMetadataProvider: (
+    provider: (mediaId: string) => Promise<Record<string, unknown> | null>,
+  ) => void
   /** Logger scoped to this plugin */
   logger: {
     info: (message: string) => void

@@ -1,23 +1,23 @@
-import { type FormEvent, useEffect, useState } from 'react'
+import { Flex, Surface } from '@xon/ui'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { CreateLibraryForm } from '../../components/create-library-form/CreateLibraryForm.js'
+import Logo from '../../components/logo/Logo.js'
 import { useAuthStore } from '../../store/authStore.js'
 import styles from './Setup.module.css'
-
-type Step = 1 | 2 | 3
+import CreatePin from './steps/CreatePin.js'
 
 export default function Setup() {
   const navigate = useNavigate()
   const setAuth = useAuthStore((s) => s.setAuth)
   const accessToken = useAuthStore((s) => s.accessToken)
 
-  // Step 1 state
-  const [username, setUsername] = useState('')
-  const [password, setPassword] = useState('')
-  const [displayName, setDisplayName] = useState('')
+  // const [username, setUsername] = useState('')
+  // const [password, setPassword] = useState('')
+  // const [displayName, setDisplayName] = useState('')
 
   // Wizard state
-  const [step, setStep] = useState<Step>(1)
+  const [step, setStep] = useState<number>(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [libraryId, setLibraryId] = useState<string | null>(null)
@@ -34,40 +34,6 @@ export default function Setup() {
       })
       .catch(() => {})
   }, [navigate])
-
-  async function handleStep1(e: FormEvent) {
-    e.preventDefault()
-    setError(null)
-    setLoading(true)
-    try {
-      const res = await fetch('/api/v1/auth/setup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, password, displayName }),
-      })
-      if (!res.ok) {
-        const body = (await res.json()) as { error?: string }
-        if (res.status === 409) {
-          navigate('/login', { replace: true })
-          return
-        }
-        setError(body.error ?? 'Setup failed')
-        return
-      }
-      const body = (await res.json()) as { accessToken: string }
-      const [, payloadB64] = body.accessToken.split('.')
-      const payload = JSON.parse(atob(payloadB64 ?? '')) as {
-        username: string
-        role: string
-      }
-      setAuth(body.accessToken, payload.username, payload.role)
-      setStep(2)
-    } catch {
-      setError('Network error — please try again')
-    } finally {
-      setLoading(false)
-    }
-  }
 
   async function handleScan() {
     if (!libraryId) return
@@ -96,161 +62,113 @@ export default function Setup() {
   }
 
   return (
-    <div className={styles.page ?? ''}>
-      <div className={styles.card ?? ''}>
-        <div className={styles.logo ?? ''}>
-          <span className={styles.logoText ?? ''}>xon</span>
-        </div>
-        <div className={styles.steps ?? ''}>
-          {([1, 2, 3] as Step[]).map((s) => (
-            <div
-              key={s}
-              className={`${styles.stepDot ?? ''} ${step === s ? (styles.active ?? '') : ''} ${step > s ? (styles.done ?? '') : ''}`}
-            >
-              {s}
-            </div>
-          ))}
-        </div>
-
-        {step === 1 && (
-          <>
-            <h1 className={styles.heading ?? ''}>Welcome to Xon</h1>
-            <p className={styles.subtitle ?? ''}>
-              Create your admin account to get started.
-            </p>
-            <form className={styles.form ?? ''} onSubmit={handleStep1}>
-              <div className={styles.field ?? ''}>
-                <label htmlFor="displayName" className={styles.label ?? ''}>
-                  Display Name
-                </label>
-                <input
-                  id="displayName"
-                  type="text"
-                  value={displayName}
-                  onChange={(e) => setDisplayName(e.target.value)}
-                  className={styles.input ?? ''}
-                  required
-                />
-              </div>
-              <div className={styles.field ?? ''}>
-                <label htmlFor="username" className={styles.label ?? ''}>
-                  Username
-                </label>
-                <input
-                  id="username"
-                  type="text"
-                  autoComplete="username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
-                  className={styles.input ?? ''}
-                  required
-                />
-              </div>
-              <div className={styles.field ?? ''}>
-                <label htmlFor="password" className={styles.label ?? ''}>
-                  Password
-                </label>
-                <input
-                  id="password"
-                  type="password"
-                  autoComplete="new-password"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  className={styles.input ?? ''}
-                  required
-                  minLength={8}
-                />
-              </div>
-              {error && <div className={styles.error ?? ''}>{error}</div>}
-              <button
-                type="submit"
-                className={styles.button ?? ''}
-                disabled={loading}
+    <Flex align="center" justify="center" className={styles.page}>
+      <Surface className={styles.card}>
+        <Flex gap="5" dir="col" align="center" justify="center">
+          <div className={styles.logo}>
+            <Logo />
+          </div>
+          <div className={styles.steps}>
+            {([1, 2, 3] as number[]).map((s) => (
+              <div
+                key={s}
+                className={`${styles.stepDot} ${step === s ? styles.active : ''} ${step > s ? styles.done : ''}`}
               >
-                {loading ? 'Creating account…' : 'Create Admin Account'}
-              </button>
-            </form>
-          </>
-        )}
+                {s}
+              </div>
+            ))}
+          </div>
 
-        {step === 2 && (
-          <>
-            <h1 className={styles.heading ?? ''}>Create Your First Library</h1>
-            <p className={styles.subtitle ?? ''}>
-              Set up a media library to organize your content.
-            </p>
-            <CreateLibraryForm
-              onSuccess={(id) => {
-                setLibraryId(id)
-                setStep(3)
-              }}
-              onCancel={() => setStep(3)}
-              cancelLabel="Skip"
+          {step === 1 && (
+            <CreatePin
+              setStep={setStep}
+              isLoading={loading}
+              setLoading={setLoading}
+              hasError={error}
+              setError={setError}
             />
-          </>
-        )}
+          )}
 
-        {step === 3 && (
-          <>
-            <h1 className={styles.heading ?? ''}>
-              {scanStarted ? 'Setup Complete!' : 'Scan Your Library'}
-            </h1>
-            {scanStarted ? (
-              <>
-                <p className={styles.subtitle ?? ''}>
-                  Your library scan is running in the background. Xon is ready
-                  to use.
-                </p>
-                {error && <div className={styles.error ?? ''}>{error}</div>}
-                <button
-                  type="button"
-                  className={styles.button ?? ''}
-                  onClick={handleFinish}
-                >
-                  Go to Dashboard
-                </button>
-              </>
-            ) : (
-              <>
-                <p className={styles.subtitle ?? ''}>
-                  {libraryId
-                    ? 'Start an initial scan to index your media files.'
-                    : 'Your admin account is ready. You can add libraries and scan media from the admin panel.'}
-                </p>
-                {error && <div className={styles.error ?? ''}>{error}</div>}
-                <div className={styles.buttonRow ?? ''}>
+          {step === 2 && (
+            <>
+              <h1 className={styles.heading}>Create Your First Library</h1>
+              <p className={styles.subtitle}>
+                Set up a media library to organize your content.
+              </p>
+              <CreateLibraryForm
+                onSuccess={(id) => {
+                  setLibraryId(id)
+                  setStep(3)
+                }}
+                onCancel={() => setStep(3)}
+                cancelLabel="Skip"
+                formClassName={styles.form}
+              />
+            </>
+          )}
+
+          {step === 3 && (
+            <>
+              <h1 className={styles.heading}>
+                {scanStarted ? 'Setup Complete!' : 'Scan Your Library'}
+              </h1>
+              {scanStarted ? (
+                <>
+                  <p className={styles.subtitle}>
+                    Your library scan is running in the background. Xon is ready
+                    to use.
+                  </p>
+                  {error && <div className={styles.error}>{error}</div>}
                   <button
                     type="button"
-                    className={styles.buttonSecondary ?? ''}
+                    className={styles.button}
                     onClick={handleFinish}
                   >
-                    Skip
+                    Go to Dashboard
                   </button>
-                  {libraryId && (
+                </>
+              ) : (
+                <>
+                  <p className={styles.subtitle}>
+                    {libraryId
+                      ? 'Start an initial scan to index your media files.'
+                      : 'Your admin account is ready. You can add libraries and scan media from the admin panel.'}
+                  </p>
+                  {error && <div className={styles.error}>{error}</div>}
+                  <div className={styles.buttonRow}>
                     <button
                       type="button"
-                      className={styles.button ?? ''}
-                      disabled={loading}
-                      onClick={handleScan}
-                    >
-                      {loading ? 'Starting scan…' : 'Start Scan'}
-                    </button>
-                  )}
-                  {!libraryId && (
-                    <button
-                      type="button"
-                      className={styles.button ?? ''}
+                      className={styles.buttonSecondary}
                       onClick={handleFinish}
                     >
-                      Go to Dashboard
+                      Skip
                     </button>
-                  )}
-                </div>
-              </>
-            )}
-          </>
-        )}
-      </div>
-    </div>
+                    {libraryId && (
+                      <button
+                        type="button"
+                        className={styles.button}
+                        disabled={loading}
+                        onClick={handleScan}
+                      >
+                        {loading ? 'Starting scan…' : 'Start Scan'}
+                      </button>
+                    )}
+                    {!libraryId && (
+                      <button
+                        type="button"
+                        className={styles.button}
+                        onClick={handleFinish}
+                      >
+                        Go to Dashboard
+                      </button>
+                    )}
+                  </div>
+                </>
+              )}
+            </>
+          )}
+        </Flex>
+      </Surface>
+    </Flex>
   )
 }

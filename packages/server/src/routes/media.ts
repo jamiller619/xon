@@ -25,6 +25,7 @@ import {
 } from '../db/schema.js'
 import { validate } from '../http/validate.js'
 import { listArchiveContents } from '../media/archive.js'
+import { getPluginMetadataForItem } from '../plugins/pluginManager.js'
 import {
   extractFfprobeMetadata,
   extractStreamTracks,
@@ -160,10 +161,11 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     }
 
     const itemWithUrls = withThumbnailUrls(item)
+    const pluginMetadata = await getPluginMetadataForItem(id)
     const etag = `"${item.updatedAt.getTime()}"`
     if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
     c.header('ETag', etag)
-    return c.json(itemWithUrls)
+    return c.json({ ...itemWithUrls, pluginMetadata })
   })
 
   // GET /media/:id/match — get pending match for a media item

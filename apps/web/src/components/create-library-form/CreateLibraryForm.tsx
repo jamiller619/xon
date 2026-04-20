@@ -1,4 +1,6 @@
-import { type FormEvent, useState } from 'react'
+import { Dialog as BaseDialog } from '@base-ui/react'
+import { Button, Checkbox, Dialog, Label, Surface, Textbox } from '@xon/ui'
+import { type FormEvent, useEffect, useState } from 'react'
 import { apiFetch } from '../../lib/apiFetch.js'
 import styles from './CreateLibraryForm.module.css'
 
@@ -30,6 +32,7 @@ interface CreateLibraryFormProps {
   onCancel?: () => void
   submitLabel?: string
   cancelLabel?: string
+  formClassName?: string | undefined
 }
 
 export function CreateLibraryForm({
@@ -37,6 +40,7 @@ export function CreateLibraryForm({
   onCancel,
   submitLabel = 'Create Library',
   cancelLabel = 'Cancel',
+  formClassName,
 }: CreateLibraryFormProps) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
@@ -98,81 +102,148 @@ export function CreateLibraryForm({
   }
 
   return (
-    <form className={styles.form ?? ''} onSubmit={handleSubmit}>
-      <label className={styles.fieldLabel ?? ''}>
+    <form className={formClassName ?? ''} onSubmit={handleSubmit}>
+      <Label>
         Library Name
-        <input
-          type="text"
-          className={styles.input ?? ''}
+        <Textbox
           value={name}
           onChange={(e) => setName(e.target.value)}
           required
           placeholder="e.g. Movies, Music, Photos"
         />
-      </label>
-
-      <label className={styles.fieldLabel ?? ''}>
+      </Label>
+      <Label>
         Description
-        <input
-          type="text"
-          className={styles.input ?? ''}
+        <Textbox
+          className={styles.input}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Optional description"
         />
-      </label>
-
-      <div>
-        <p className={styles.fieldLabel ?? ''}>
-          Allowed Media Types (leave empty for all)
-        </p>
-        <div className={styles.mediaTypeGrid ?? ''}>
-          {ALL_MEDIA_TYPES.map(({ label, emoji }) => (
-            <label key={label} className={styles.mediaTypeCheckbox ?? ''}>
-              <input
-                type="checkbox"
-                checked={mediaTypes.includes(label)}
-                onChange={() => toggleMediaType(label)}
-              />
-              <span>{emoji}</span>
-              {label}
-            </label>
-          ))}
-        </div>
-      </div>
-
-      <label className={styles.fieldLabel ?? ''}>
-        Media Folder Path
-        <input
-          type="text"
-          className={styles.input ?? ''}
-          value={sourcePath}
-          onChange={(e) => setSourcePath(e.target.value)}
-          placeholder="/mnt/media or C:\Media (optional)"
-        />
-      </label>
-
-      {error && <div className={styles.error ?? ''}>{error}</div>}
-
-      <div className={styles.actions ?? ''}>
-        {onCancel && (
-          <button
-            type="button"
-            className={styles.cancelBtn ?? ''}
-            onClick={onCancel}
-            disabled={loading}
-          >
-            {cancelLabel}
-          </button>
+      </Label>
+      <Label>Media Types (leave empty for all)</Label>
+      <Surface className={styles.well}>
+        {ALL_MEDIA_TYPES.map(({ label, emoji }) => (
+          <Checkbox
+            className={styles.checkbox}
+            key={label}
+            label={
+              <>
+                <span>{emoji}</span> {label}
+              </>
+            }
+            checked={mediaTypes.includes(label)}
+            onChange={() => toggleMediaType(label)}
+          />
+        ))}
+      </Surface>
+      <Label>Media Folder Path</Label>
+      <div className={styles.folderRow}>
+        {sourcePath && (
+          <span className={styles.selectedPath} title={sourcePath}>
+            {sourcePath}
+          </span>
         )}
-        <button
-          type="submit"
-          className={styles.submitBtn ?? ''}
-          disabled={loading}
-        >
-          {loading ? 'Creating…' : submitLabel}
-        </button>
+        <Dialog trigger="Browse…" title="Select Media Folder">
+          <MediaFolderBrowser onSelect={setSourcePath} />
+        </Dialog>
       </div>
+      {error && <div className={styles.error}>{error}</div>}
+      <Button type="submit" disabled={loading}>
+        {loading ? 'Creating…' : submitLabel}
+      </Button>
     </form>
   )
+}
+
+interface BrowseResult {
+  path: string
+  entries: { name: string; path: string }[]
+}
+
+function MediaFolderBrowser({ onSelect }: { onSelect: (path: string) => void }) {
+  const [currentPath, setCurrentPath] = useState('/')
+  const [entries, setEntries] = useState<{ name: string; path: string }[]>([])
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    setLoading(true)
+    setError(null)
+    apiFetch(`/api/v1/fs/browse?path=${encodeURIComponent(currentPath)}`)
+      .then((r) => r.json())
+      .then((data: BrowseResult | { error: string }) => {
+        if ('error' in data) {
+          setError(data.error)
+          setEntries([])
+        } else {
+          setCurrentPath(data.path)
+          setEntries(data.entries)
+        }
+      })
+      .catch(() => setError('Network error — please try again'))
+      .finally(() => setLoading(false))
+  }, [currentPath])
+
+  const breadcrumbs = buildBreadcrumbs(currentPath)
+
+  return (
+    <div className={styles.browser}>
+      <div className={styles.breadcrumb}>
+        {breadcrumbs.map((crumb, i) => (
+          <span key={crumb.path} className={styles.breadcrumbItem}>
+            {i > 0 && <span className={styles.breadcrumbSep}>/</span>}
+            <button
+              type="button"
+              className={styles.breadcrumbBtn}
+              onClick={() => setCurrentPath(crumb.path)}
+            >
+              {crumb.label || '/'}
+            </button>
+          </span>
+        ))}
+      </div>
+
+      <div className={styles.entryList}>
+        {loading && <p className={styles.hint}>Loading…</p>}
+        {!loading && error && <p className={styles.browserError}>{error}</p>}
+        {!loading && !error && entries.length === 0 && (
+          <p className={styles.hint}>No subfolders found.</p>
+        )}
+        {!loading &&
+          entries.map((entry) => (
+            <button
+              type="button"
+              key={entry.path}
+              className={styles.entry}
+              onClick={() => setCurrentPath(entry.path)}
+            >
+              <span className={styles.entryIcon}>📁</span>
+              {entry.name}
+            </button>
+          ))}
+      </div>
+
+      <div className={styles.browserActions}>
+        <BaseDialog.Close
+          className={styles.selectBtn}
+          onClick={() => onSelect(currentPath)}
+        >
+          Select This Folder
+        </BaseDialog.Close>
+      </div>
+    </div>
+  )
+}
+
+function buildBreadcrumbs(fullPath: string) {
+  const parts = fullPath.split('/').filter(Boolean)
+  const crumbs = [{ label: '', path: '/' }]
+  for (let i = 0; i < parts.length; i++) {
+    crumbs.push({
+      label: parts[i] ?? '',
+      path: `/${parts.slice(0, i + 1).join('/')}`,
+    })
+  }
+  return crumbs
 }

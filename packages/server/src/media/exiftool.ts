@@ -57,7 +57,7 @@ export async function extractExiftoolMetadata(
 
     return result
   } catch (err) {
-    logger.error(`ExifTool error`, { filePath, error: err })
+    logger.error('ExifTool error', { filePath, error: err })
     return null
   }
 }

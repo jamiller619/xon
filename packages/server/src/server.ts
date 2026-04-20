@@ -1,4 +1,5 @@
 import { createServer as createHttpsServer } from 'node:https'
+import { fileURLToPath } from 'node:url'
 import { serve } from '@hono/node-server'
 import { DEFAULT_PORT } from '@xon/shared'
 import { eq } from 'drizzle-orm'
@@ -16,12 +17,24 @@ import {
   type LogLevel,
 } from './logger.js'
 
+process.loadEnvFile('./.env')
+
 const logger = createLogger('server')
-import { emitPluginEvent, setPluginDatabase } from './plugins/pluginManager.js'
+import {
+  discoverAndActivatePlugins,
+  emitPluginEvent,
+  setPluginDatabase,
+} from './plugins/pluginManager.js'
 import { WS_PATH, createWsServer } from './routes/ws.js'
 import { startScheduler } from './scanner/scheduler.js'
 import { ensureAdminUser } from './userInit.js'
 import path from 'node:path'
+
+// Bundled plugins ship alongside the server package, two levels up from packages/server/
+const BUNDLED_PLUGINS_DIR = path.join(
+  path.dirname(fileURLToPath(import.meta.url)),
+  '../../../plugins',
+)
 
 const SERVER_SETTINGS_ID = 'default'
 
@@ -67,6 +80,13 @@ export async function boot(): Promise<void> {
 
     setPluginDatabase(client)
     logger.log('Plugin database configured')
+
+    logger.log(`Loading bundled plugins from ${BUNDLED_PLUGINS_DIR}`)
+    await discoverAndActivatePlugins(BUNDLED_PLUGINS_DIR)
+
+    const userPluginsDir = path.join(dataDir, 'plugins')
+    logger.log(`Loading user plugins from ${userPluginsDir}`)
+    await discoverAndActivatePlugins(userPluginsDir)
 
     // Load server settings (HTTPS config, log level, etc.)
     const settingsRows = await db

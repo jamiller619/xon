@@ -1,0 +1,17 @@
+@import "./colors.css";
+@import "./variables.css";
+
+* {
+  box-sizing: border-box;
+}
+
+#root {
+  isolation: isolate;
+}
+
+body {
+  margin: 0;
+  background: var(--color-gray-1);
+  color: var(--color-gray-12);
+  position: relative;
+}

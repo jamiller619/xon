@@ -1,0 +1,11 @@
+.textbox {
+  background: var(--color-gray-5);
+  border: none;
+  font: inherit;
+  border-radius: var(--border-radius-3);
+  /* biome-ignore lint/correctness/noUnknownProperty: <explanation> */
+  corner-shape: var(--corner-shape);
+  padding: var(--space-3) var(--space-4);
+  color: currentColor;
+  outline: none;
+}

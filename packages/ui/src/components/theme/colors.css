@@ -1,0 +1,50 @@
+/** We would otherwise be importing @radix-ui/colors here,
+ * directly, but because they have that dumb class
+ * requirement to apply dark mode, I'm copying the values
+ * from the installed module for each mode */
+
+/* Assume light mode by default */
+@import "./colors-light.css" screen;
+/* Supersede dark mode when applicable */
+@import "./colors-dark.css" screen and (prefers-color-scheme: dark);
+
+:root {
+  /* --color-surface: var(--mauve-2);
+  --color-surface-hover: var(--mauve-3);
+  --color-surface-active: var(--mauve-4);
+  --color-text: var(--mauve-12);
+  --color-text-muted: var(--mauve-9);
+  --color-accent: var(--violet-10);
+  --color-text-on-accent: var(--mauve-1);
+  --color-accent-hover: var(--violet-9);
+  --color-accent-active: var(--violet-11); */
+
+  --color-gray-1: var(--mauve-1);
+  --color-gray-2: var(--mauve-2);
+  --color-gray-3: var(--mauve-3);
+  --color-gray-4: var(--mauve-4);
+  --color-gray-5: var(--mauve-5);
+  --color-gray-6: var(--mauve-6);
+  --color-gray-7: var(--mauve-7);
+  --color-gray-8: var(--mauve-8);
+  --color-gray-9: var(--mauve-9);
+  --color-gray-10: var(--mauve-10);
+  --color-gray-11: var(--mauve-11);
+  --color-gray-12: var(--mauve-12);
+
+  --color-accent-1: var(--violet-1);
+  --color-accent-2: var(--violet-2);
+  --color-accent-3: var(--violet-3);
+  --color-accent-4: var(--violet-4);
+  --color-accent-5: var(--violet-5);
+  --color-accent-6: var(--violet-6);
+  --color-accent-7: var(--violet-7);
+  --color-accent-8: var(--violet-8);
+  --color-accent-9: var(--violet-9);
+  --color-accent-10: var(--violet-10);
+  --color-accent-11: var(--violet-11);
+  --color-accent-12: var(--violet-12);
+
+  /* --color-surface: var(--mauve-2);
+  --color-text: var(--mauve-12); */
+}

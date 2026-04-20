@@ -1,0 +1,48 @@
+.button {
+  padding: var(--space-4) var(--space-5);
+  background: var(--color-gray-5);
+  border-radius: var(--border-radius-3);
+  /* biome-ignore lint/correctness/noUnknownProperty: valid */
+  corner-shape: var(--corner-shape);
+  border: none;
+  color: var(--color-text);
+  font: inherit;
+
+  letter-spacing: 0.05em;
+  cursor: pointer;
+  user-select: none;
+
+  &:hover:not([data-disabled]) {
+    background: var(--color-gray-4);
+  }
+
+  &:active:not([data-disabled]) {
+    background: var(--color-gray-3);
+  }
+
+  &[data-disabled] {
+    opacity: 0.5;
+    filter: grayscale(50%);
+    cursor: not-allowed;
+  }
+
+  &:focus-visible {
+    outline: 2px solid var(--color-accent-10);
+    outline-offset: -1px;
+  }
+
+  &.primary,
+  &[type="submit"] {
+    background: var(--color-accent-10);
+    color: var(--color-gray-1);
+    font-weight: 500;
+
+    &:hover:not([data-disabled]) {
+      background: var(--color-accent-9);
+    }
+  }
+
+  &.small {
+    padding: var(--space-3) var(--space-4);
+  }
+}

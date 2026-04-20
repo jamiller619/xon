@@ -117,36 +117,36 @@ const KEY_JOBS = new Set([
 ])
 
 export class TmdbClient {
-  private readonly apiKey: string
-  private readonly fetchFn: FetchFn
-  private readonly cache = new Map<string, CacheEntry<unknown>>()
+  readonly #apiKey: string
+  readonly #fetchFn: FetchFn
+  readonly #cache = new Map<string, CacheEntry<unknown>>()
 
   constructor(apiKey: string, fetchFn: FetchFn) {
-    this.apiKey = apiKey
-    this.fetchFn = fetchFn
+    this.#apiKey = apiKey
+    this.#fetchFn = fetchFn
   }
 
-  private async get<T>(
+  async #get<T>(
     path: string,
     params: Record<string, string> = {},
   ): Promise<T | null> {
     const cacheKey = `${path}|${JSON.stringify(params)}`
-    const cached = this.cache.get(cacheKey) as CacheEntry<T> | undefined
+    const cached = this.#cache.get(cacheKey) as CacheEntry<T> | undefined
     if (cached !== undefined && Date.now() < cached.expiresAt) {
       return cached.data
     }
 
     const url = new URL(`${TMDB_BASE}${path}`)
-    url.searchParams.set('api_key', this.apiKey)
+    url.searchParams.set('api_key', this.#apiKey)
     for (const [k, v] of Object.entries(params)) {
       url.searchParams.set(k, v)
     }
 
-    const res = await this.fetchFn(url.toString())
+    const res = await this.#fetchFn(url.toString())
     if (!res.ok) return null
 
     const data = (await res.json()) as T
-    this.cache.set(cacheKey, { data, expiresAt: Date.now() + CACHE_TTL_MS })
+    this.#cache.set(cacheKey, { data, expiresAt: Date.now() + CACHE_TTL_MS })
     return data
   }
 
@@ -157,14 +157,14 @@ export class TmdbClient {
     const params: Record<string, string> = { query: title }
     if (year !== undefined) params.year = String(year)
 
-    const search = await this.get<SearchResponse<TmdbMovieSearchResult>>(
+    const search = await this.#get<SearchResponse<TmdbMovieSearchResult>>(
       '/search/movie',
       params,
     )
     const first = search?.results[0]
     if (!first) return null
 
-    const details = await this.get<TmdbMovieDetailsResult>(
+    const details = await this.#get<TmdbMovieDetailsResult>(
       `/movie/${first.id}`,
       {
         append_to_response: 'credits',
@@ -204,7 +204,7 @@ export class TmdbClient {
     season: number,
     episode: number,
   ): Promise<TmdbTvMetadata | null> {
-    const search = await this.get<SearchResponse<TmdbTvSearchResult>>(
+    const search = await this.#get<SearchResponse<TmdbTvSearchResult>>(
       '/search/tv',
       {
         query: seriesTitle,
@@ -213,12 +213,12 @@ export class TmdbClient {
     const first = search?.results[0]
     if (!first) return null
 
-    const details = await this.get<TmdbTvDetailsResult>(`/tv/${first.id}`, {
+    const details = await this.#get<TmdbTvDetailsResult>(`/tv/${first.id}`, {
       append_to_response: 'credits',
     })
     if (!details) return null
 
-    const episodeDetails = await this.get<TmdbEpisodeResult>(
+    const episodeDetails = await this.#get<TmdbEpisodeResult>(
       `/tv/${first.id}/season/${season}/episode/${episode}`,
     )
 
@@ -266,6 +266,6 @@ export class TmdbClient {
   }
 
   clearCache(): void {
-    this.cache.clear()
+    this.#cache.clear()
   }
 }
