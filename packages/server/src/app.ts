@@ -123,7 +123,7 @@ export function createApp(
 
   if (db) {
     app.route('/auth', makeAuthRouter(db))
-    app.route('/fs', makeFsRouter())
+    app.route('/fs', makeFsRouter(db))
     app.route('/libraries', makeLibrariesRouter(db))
     app.route('/groups', makeGroupsRouter(db))
     app.route('/ai', makeAiRouter(db))

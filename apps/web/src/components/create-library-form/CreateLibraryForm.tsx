@@ -1,6 +1,15 @@
 import { Dialog as BaseDialog } from '@base-ui/react'
-import { Button, Checkbox, Dialog, Label, Surface, Textbox } from '@xon/ui'
-import { type FormEvent, useEffect, useState } from 'react'
+import {
+  Button,
+  Checkbox,
+  Dialog,
+  Flex,
+  Label,
+  ScrollArea,
+  Surface,
+  Textbox,
+} from '@xon/ui'
+import { type SubmitEvent, useEffect, useState } from 'react'
 import { apiFetch } from '../../lib/apiFetch.js'
 import styles from './CreateLibraryForm.module.css'
 
@@ -29,17 +38,13 @@ const ALL_MEDIA_TYPES: { label: string; emoji: string }[] = [
 
 interface CreateLibraryFormProps {
   onSuccess: (libraryId: string) => void
-  onCancel?: () => void
   submitLabel?: string
-  cancelLabel?: string
   formClassName?: string | undefined
 }
 
 export function CreateLibraryForm({
   onSuccess,
-  onCancel,
   submitLabel = 'Create Library',
-  cancelLabel = 'Cancel',
   formClassName,
 }: CreateLibraryFormProps) {
   const [name, setName] = useState('')
@@ -55,10 +60,11 @@ export function CreateLibraryForm({
     )
   }
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: SubmitEvent) {
     e.preventDefault()
     setError(null)
     setLoading(true)
+
     try {
       const libRes = await apiFetch('/api/v1/libraries', {
         method: 'POST',
@@ -69,11 +75,13 @@ export function CreateLibraryForm({
           allowedMediaTypes: mediaTypes,
         }),
       })
+
       if (!libRes.ok) {
         const body = (await libRes.json()) as { error?: string }
         setError(body.error ?? 'Failed to create library')
         return
       }
+
       const lib = (await libRes.json()) as { id: string }
 
       if (sourcePath.trim()) {
@@ -86,6 +94,7 @@ export function CreateLibraryForm({
             recursive: true,
           }),
         })
+
         if (!srcRes.ok) {
           const body = (await srcRes.json()) as { error?: string }
           setError(body.error ?? 'Failed to add data source')
@@ -121,7 +130,7 @@ export function CreateLibraryForm({
           placeholder="Optional description"
         />
       </Label>
-      <Label>Media Types (leave empty for all)</Label>
+      <span>Media Types (leave empty for all)</span>
       <Surface className={styles.well}>
         {ALL_MEDIA_TYPES.map(({ label, emoji }) => (
           <Checkbox
@@ -137,20 +146,23 @@ export function CreateLibraryForm({
           />
         ))}
       </Surface>
-      <Label>Media Folder Path</Label>
+      <Flex justify="between" align="center" gap="3">
+        <Label>Path to Media Files</Label>
+        <Textbox
+          value={sourcePath}
+          required
+          onChange={(e) => setSourcePath(e.target.value)}
+          style={{ flex: 1 }}
+        />
+      </Flex>
       <div className={styles.folderRow}>
-        {sourcePath && (
-          <span className={styles.selectedPath} title={sourcePath}>
-            {sourcePath}
-          </span>
-        )}
-        <Dialog trigger="Browse…" title="Select Media Folder">
+        <Dialog trigger="Browse..." title="Select Media Folder">
           <MediaFolderBrowser onSelect={setSourcePath} />
         </Dialog>
       </div>
       {error && <div className={styles.error}>{error}</div>}
-      <Button type="submit" disabled={loading}>
-        {loading ? 'Creating…' : submitLabel}
+      <Button type="submit" disabled={loading || !name.trim() || !sourcePath.trim()}>
+        {loading ? 'Creating...' : submitLabel}
       </Button>
     </form>
   )
@@ -161,7 +173,9 @@ interface BrowseResult {
   entries: { name: string; path: string }[]
 }
 
-function MediaFolderBrowser({ onSelect }: { onSelect: (path: string) => void }) {
+function MediaFolderBrowser({
+  onSelect,
+}: { onSelect: (path: string) => void }) {
   const [currentPath, setCurrentPath] = useState('/')
   const [entries, setEntries] = useState<{ name: string; path: string }[]>([])
   const [loading, setLoading] = useState(false)
@@ -185,26 +199,22 @@ function MediaFolderBrowser({ onSelect }: { onSelect: (path: string) => void }) 
       .finally(() => setLoading(false))
   }, [currentPath])
 
-  const breadcrumbs = buildBreadcrumbs(currentPath)
-
   return (
     <div className={styles.browser}>
-      <div className={styles.breadcrumb}>
-        {breadcrumbs.map((crumb, i) => (
-          <span key={crumb.path} className={styles.breadcrumbItem}>
-            {i > 0 && <span className={styles.breadcrumbSep}>/</span>}
-            <button
-              type="button"
-              className={styles.breadcrumbBtn}
-              onClick={() => setCurrentPath(crumb.path)}
-            >
-              {crumb.label || '/'}
-            </button>
-          </span>
-        ))}
-      </div>
+      <Flex align="center" gap="3">
+        <button
+          type="button"
+          className={styles.upBtn}
+          disabled={currentPath === '/'}
+          onClick={() => setCurrentPath(parentPath(currentPath))}
+          title="Go up"
+        >
+          ⮤
+        </button>
+        <Textbox value={currentPath} />
+      </Flex>
 
-      <div className={styles.entryList}>
+      <ScrollArea className={styles.entryList}>
         {loading && <p className={styles.hint}>Loading…</p>}
         {!loading && error && <p className={styles.browserError}>{error}</p>}
         {!loading && !error && entries.length === 0 && (
@@ -218,16 +228,22 @@ function MediaFolderBrowser({ onSelect }: { onSelect: (path: string) => void }) 
               className={styles.entry}
               onClick={() => setCurrentPath(entry.path)}
             >
-              <span className={styles.entryIcon}>📁</span>
+              <span>📁</span>
               {entry.name}
             </button>
           ))}
-      </div>
-
+      </ScrollArea>
       <div className={styles.browserActions}>
         <BaseDialog.Close
-          className={styles.selectBtn}
           onClick={() => onSelect(currentPath)}
+          render={(props) => (
+            <Button
+              {...props}
+              size="small"
+              variant="primary"
+              style={{ flex: 1 }}
+            />
+          )}
         >
           Select This Folder
         </BaseDialog.Close>
@@ -236,14 +252,8 @@ function MediaFolderBrowser({ onSelect }: { onSelect: (path: string) => void }) 
   )
 }
 
-function buildBreadcrumbs(fullPath: string) {
-  const parts = fullPath.split('/').filter(Boolean)
-  const crumbs = [{ label: '', path: '/' }]
-  for (let i = 0; i < parts.length; i++) {
-    crumbs.push({
-      label: parts[i] ?? '',
-      path: `/${parts.slice(0, i + 1).join('/')}`,
-    })
-  }
-  return crumbs
+function parentPath(p: string): string {
+  const trimmed = p.endsWith('/') ? p.slice(0, -1) : p
+  const idx = trimmed.lastIndexOf('/')
+  return idx <= 0 ? '/' : trimmed.slice(0, idx)
 }

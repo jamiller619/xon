@@ -1,15 +1,21 @@
 import clsx from 'clsx'
-import styles from './Flex.module.css'
 import {
-  createElement,
   type ElementType,
   type HTMLAttributes,
   type ReactElement,
   type ReactNode,
+  createElement,
 } from 'react'
+import styles from './Flex.module.css'
 
 type FlexDirection = 'row' | 'col'
-type FlexAlign = 'start' | 'center' | 'end' | 'stretch'
+type FlexAlign =
+  | 'start'
+  | 'center'
+  | 'end'
+  | 'stretch'
+  | 'baseline'
+  | 'anchor-center'
 type FlexJustify = 'start' | 'center' | 'end' | 'between' | 'around' | 'evenly'
 
 type FlexProps = React.HTMLAttributes<HTMLDivElement> & {

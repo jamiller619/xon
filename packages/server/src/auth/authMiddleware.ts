@@ -1,9 +1,11 @@
-import { eq } from 'drizzle-orm'
+import { eq, sql } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import type { Context, Next } from 'hono'
 import { apiTokens, users } from '../db/schema.js'
 import { verifyAccessToken } from '../routes/auth.js'
 import { hashApiToken } from '../routes/users.js'
+
+const SETUP_USER: AuthUser = { id: 'setup', username: 'setup', role: 'admin' }
 
 export interface AuthUser {
   id: string
@@ -25,14 +27,27 @@ declare module 'hono' {
 export function makeAuthMiddleware(db?: LibSQLDatabase) {
   return async function authMiddleware(c: Context, next: Next) {
     const path = c.req.path
-    // Skip auth, health, and docs endpoints
+    // Skip auth, health, docs, and fs endpoints.
+    // /fs enforces its own auth when setup is complete.
     if (
       path.startsWith('/api/v1/auth/') ||
+      path.startsWith('/api/v1/fs/') ||
       path === '/api/v1/health' ||
       path === '/api/v1/docs' ||
       path.startsWith('/api/v1/docs/')
     ) {
       return next()
+    }
+
+    // Before any users exist (setup mode), grant open admin access
+    if (db) {
+      const [row] = await db
+        .select({ count: sql<number>`count(*)` })
+        .from(users)
+      if ((row?.count ?? 0) === 0) {
+        c.set('user', SETUP_USER)
+        return next()
+      }
     }
 
     const authHeader = c.req.header('Authorization')

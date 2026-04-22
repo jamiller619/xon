@@ -1,5 +1,6 @@
 import { Button as UIButton } from '@base-ui/react'
 import clsx from 'clsx'
+import type { ReactNode } from 'react'
 import styles from './Button.module.css'
 
 export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
@@ -23,4 +24,12 @@ export default function Button({
       })}
     />
   )
+}
+
+type IconButtonProps = ButtonProps & {
+  children: ReactNode
+}
+
+export function IconButton({ children, ...props }: IconButtonProps) {
+  return <Button {...props}>{children}</Button>
 }
