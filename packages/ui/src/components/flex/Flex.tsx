@@ -3,7 +3,6 @@ import {
   type ElementType,
   type HTMLAttributes,
   type ReactElement,
-  type ReactNode,
   createElement,
 } from 'react'
 import styles from './Flex.module.css'
@@ -31,6 +30,7 @@ export default function Flex({
   gap,
   align,
   justify,
+  style,
   className,
   children,
   as,
@@ -41,7 +41,7 @@ export default function Flex({
       as,
       {
         className: clsx(styles.flex, className),
-        style: resolveStyle(dir, gap, align, justify),
+        style: resolveStyle({ ...style }, dir, gap, align, justify),
         ...props,
       },
       children,
@@ -51,7 +51,7 @@ export default function Flex({
   return (
     <div
       className={clsx(styles.flex, className)}
-      style={resolveStyle(dir, gap, align, justify)}
+      style={resolveStyle({ ...style }, dir, gap, align, justify)}
       {...props}
     >
       {children}
@@ -60,12 +60,13 @@ export default function Flex({
 }
 
 function resolveStyle(
+  styleProp?: React.CSSProperties,
   dir?: FlexDirection,
   gap?: number | string,
   align?: FlexAlign,
   justify?: FlexJustify,
 ): React.CSSProperties {
-  const style: React.CSSProperties = {}
+  const style: React.CSSProperties = styleProp ?? {}
 
   if (dir) {
     style.flexDirection = dir === 'row' ? 'row' : 'column'

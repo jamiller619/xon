@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
-import { CreateLibraryForm } from '../../../components/create-library-form/CreateLibraryForm.js'
-import { apiFetch } from '../../../lib/apiFetch.js'
+import { CreateLibraryForm } from '~/components/create-library-form/CreateLibraryForm'
+import { apiFetch } from '~/lib/apiFetch'
 import styles from './AdminLibraries.module.css'
 
 const ALL_MEDIA_TYPES = [

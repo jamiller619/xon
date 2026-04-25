@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { apiFetch } from '../../../lib/apiFetch.js'
+import { apiFetch } from '~/lib/apiFetch'
 import styles from './AdminUsers.module.css'
 
 interface Library {

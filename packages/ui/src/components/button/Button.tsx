@@ -1,10 +1,11 @@
 import { Button as UIButton } from '@base-ui/react'
 import clsx from 'clsx'
 import type { ReactNode } from 'react'
+import type { Variant } from '../types.js'
 import styles from './Button.module.css'
 
 export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: 'primary' | 'ghost'
+  variant?: Variant
   size?: 'small'
 }
 
@@ -30,6 +31,25 @@ type IconButtonProps = ButtonProps & {
   children: ReactNode
 }
 
-export function IconButton({ children, ...props }: IconButtonProps) {
-  return <Button {...props}>{children}</Button>
+export function IconButton({
+  children,
+  className,
+  variant,
+  ...props
+}: IconButtonProps) {
+  return (
+    <Button
+      {...props}
+      className={clsx(
+        styles.iconButton,
+        className,
+        variant &&
+          styles[variant] && {
+            [styles[variant]]: true,
+          },
+      )}
+    >
+      {children}
+    </Button>
+  )
 }

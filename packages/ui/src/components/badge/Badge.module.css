@@ -1,0 +1,17 @@
+.badge {
+  display: inline-block;
+  padding: 1px 6px;
+  /* background: rgba(108, 99, 255, 0.2);
+  border: 1px solid rgba(108, 99, 255, 0.4); */
+  background: var(--color-gray-5);
+  border-radius: 4px;
+  font-size: 0.7rem;
+  color: #a09bff;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+
+  &.primary {
+    background: var(--color-accent-5);
+  }
+}

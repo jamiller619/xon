@@ -1,6 +1,6 @@
 import { useEffect } from 'react'
-import { apiFetch } from '../lib/apiFetch.js'
-import { useThemeStore } from '../store/themeStore.js'
+import { apiFetch } from '~/lib/apiFetch'
+import { useThemeStore } from '~/store/themeStore'
 
 interface ThemeInfo {
   id: string

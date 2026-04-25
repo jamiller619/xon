@@ -1,7 +1,7 @@
 import * as pdfjsLib from 'pdfjs-dist'
 import type { PDFDocumentProxy, PDFPageProxy, RenderTask } from 'pdfjs-dist'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { apiFetch } from '../../lib/apiFetch.js'
+import { apiFetch } from '~/lib/apiFetch'
 import styles from './PdfViewer.module.css'
 
 // Configure worker

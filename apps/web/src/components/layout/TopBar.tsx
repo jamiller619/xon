@@ -1,6 +1,7 @@
+import { IconButton, Textbox } from '@xon/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { apiFetch, apiUrl } from '../../lib/apiFetch.js'
+import { apiFetch, apiUrl } from '~/lib/apiFetch'
 import styles from './TopBar.module.css'
 
 const HISTORY_KEY = 'xon:searchHistory'
@@ -28,11 +29,7 @@ function saveHistory(query: string) {
   localStorage.setItem(HISTORY_KEY, JSON.stringify(next))
 }
 
-interface TopBarProps {
-  onMenuClick: () => void
-}
-
-export default function TopBar({ onMenuClick }: TopBarProps) {
+export default function TopBar() {
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [suggestions, setSuggestions] = useState<SuggestionItem[]>([])
@@ -128,18 +125,17 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
   const showSuggestions = open && query.trim().length > 0
 
   return (
-    <header className={styles.topBar ?? ''}>
-      <button
+    <header className={styles.topBar}>
+      {/* <button
         type="button"
-        className={styles.menuButton ?? ''}
+        className={styles.menuButton}
         onClick={onMenuClick}
         aria-label="Toggle sidebar"
       >
         ☰
-      </button>
-      <div className={styles.searchWrapper ?? ''} ref={wrapperRef}>
-        <input
-          className={styles.searchInput ?? ''}
+      </button> */}
+      <div className={styles.searchWrapper} ref={wrapperRef}>
+        <Textbox
           type="search"
           placeholder="Search media..."
           aria-label="Search"
@@ -150,27 +146,23 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
           autoComplete="off"
         />
         {(showHistory || showSuggestions) && (
-          <div className={styles.dropdown ?? ''}>
+          <div className={styles.dropdown}>
             {showHistory && (
               <>
-                <div className={styles.dropdownLabel ?? ''}>
-                  Recent searches
-                </div>
+                <div className={styles.dropdownLabel}>Recent searches</div>
                 {history.map((item, i) => (
                   <button
                     key={item}
                     type="button"
                     aria-selected={i === highlightIdx}
-                    className={`${styles.dropdownItem ?? ''} ${i === highlightIdx ? (styles.dropdownItemActive ?? '') : ''}`}
+                    className={`${styles.dropdownItem} ${i === highlightIdx ? styles.dropdownItemActive : ''}`}
                     onClick={() => navigate2search(item)}
                   >
-                    <span className={styles.historyIcon ?? ''}>↵</span>
-                    <span className={styles.dropdownItemText ?? ''}>
-                      {item}
-                    </span>
+                    <span className={styles.historyIcon}>↵</span>
+                    <span className={styles.dropdownItemText}>{item}</span>
                     <button
                       type="button"
-                      className={styles.removeHistory ?? ''}
+                      className={styles.removeHistory}
                       onClick={(e) => removeHistoryItem(e, item)}
                       aria-label={`Remove ${item} from history`}
                     >
@@ -182,33 +174,31 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
             )}
             {showSuggestions && suggestions.length > 0 && (
               <>
-                <div className={styles.dropdownLabel ?? ''}>Suggestions</div>
+                <div className={styles.dropdownLabel}>Suggestions</div>
                 {suggestions.map((item, i) => (
                   <button
                     key={item.id}
                     type="button"
                     aria-selected={i === highlightIdx}
-                    className={`${styles.dropdownItem ?? ''} ${i === highlightIdx ? (styles.dropdownItemActive ?? '') : ''}`}
+                    className={`${styles.dropdownItem} ${i === highlightIdx ? styles.dropdownItemActive : ''}`}
                     onClick={() => navigate2search(item.title ?? item.id)}
                   >
                     {item.thumbnailUrls ? (
                       <img
-                        className={styles.suggestionThumb ?? ''}
+                        className={styles.suggestionThumb}
                         src={apiUrl(item.thumbnailUrls.small)}
                         alt=""
                         loading="lazy"
                       />
                     ) : (
-                      <span
-                        className={styles.suggestionThumbPlaceholder ?? ''}
-                      />
+                      <span className={styles.suggestionThumbPlaceholder} />
                     )}
-                    <span className={styles.dropdownItemText ?? ''}>
-                      <span className={styles.suggestionTitle ?? ''}>
+                    <span className={styles.dropdownItemText}>
+                      <span className={styles.suggestionTitle}>
                         {item.title ?? item.id}
                       </span>
                       {item.mediaCategory && (
-                        <span className={styles.suggestionCategory ?? ''}>
+                        <span className={styles.suggestionCategory}>
                           {item.mediaCategory}
                         </span>
                       )}
@@ -218,18 +208,14 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
               </>
             )}
             {showSuggestions && suggestions.length === 0 && (
-              <div className={styles.dropdownEmpty ?? ''}>No suggestions</div>
+              <div className={styles.dropdownEmpty}>No suggestions</div>
             )}
           </div>
         )}
       </div>
-      <span className={styles.spacer ?? ''} />
-      <button
-        type="button"
-        className={styles.userMenu ?? ''}
-        aria-label="User menu"
-      >
-        <span className={styles.avatar ?? ''}>U</span>
+      <span className={styles.spacer} />
+      <button type="button" className={styles.userMenu} aria-label="User menu">
+        <span className={styles.avatar}>U</span>
         <span>User</span>
       </button>
     </header>

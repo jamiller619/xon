@@ -7,7 +7,7 @@ import { verifyAccessToken } from '../routes/auth.js'
 import { users } from '../db/schema.js'
 import { validate } from '../http/validate.js'
 
-const ROLE_RANK: Record<string, number> = {
+const ROLE_RANK = {
   guest: 0,
   user: 1,
   manager: 2,
@@ -38,7 +38,8 @@ export function makeFsRouter(db: LibSQLDatabase): Hono {
           ? authHeader.slice(7)
           : (c.req.query('token') ?? '')
         const payload = token ? await verifyAccessToken(token) : null
-        if ((ROLE_RANK[payload?.role ?? ''] ?? -1) < ROLE_RANK['manager']) {
+        const rank = (ROLE_RANK as Record<string, number>)[payload?.role ?? ''] ?? -1
+        if (rank < ROLE_RANK.manager) {
           return c.json({ error: 'Unauthorized' }, 401)
         }
       }

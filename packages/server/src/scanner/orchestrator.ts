@@ -290,6 +290,8 @@ export async function scanLibrary(
       emitPluginEvent('media:created', {
         mediaId: id,
         filePath: entry.filePath,
+        mediaCategory: entry.mediaCategory as MediaCategory,
+        libraryId,
       })
       await tryQueueMatch(
         db,
@@ -401,6 +403,8 @@ export async function scanLibrary(
       emitPluginEvent('media:updated', {
         mediaId: existingId,
         filePath: entry.filePath,
+        mediaCategory: entry.mediaCategory as MediaCategory,
+        libraryId,
       })
       progress.processedFiles++
       totalUpdated++
@@ -409,7 +413,7 @@ export async function scanLibrary(
     if (result.removedFilePaths.length > 0) {
       logger.log(`Removing ${result.removedFilePaths.length} deleted file(s)`)
       const removedRows = await db
-        .select({ id: mediaItems.id, filePath: mediaItems.filePath })
+        .select({ id: mediaItems.id, filePath: mediaItems.filePath, mediaCategory: mediaItems.mediaCategory })
         .from(mediaItems)
         .where(
           and(
@@ -433,6 +437,8 @@ export async function scanLibrary(
         emitPluginEvent('media:deleted', {
           mediaId: row.id,
           filePath: row.filePath,
+          mediaCategory: row.mediaCategory as MediaCategory,
+          libraryId,
         })
       }
       totalRemoved += result.removedFilePaths.length

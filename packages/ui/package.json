@@ -5,11 +5,11 @@
   "exports": {
     ".": {
       "development": "./src/index.ts",
-      "import": "./dist/index.js",
+      "import": "./dist/xon.ui.js",
       "types": "./dist/index.d.ts"
     }
   },
-  "main": "./dist/index.js",
+  "main": "./dist/xon.ui.js",
   "types": "./dist/index.d.ts",
   "files": [
     "dist"

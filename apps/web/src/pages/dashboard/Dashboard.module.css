@@ -1,8 +1,9 @@
 .dashboard {
-  padding: 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 32px;
+  padding: var(--space-5);
+  /* display: grid;
+  grid-template-columns: repeat(5, [col-start] fit-content(220px)); */
+  /* grid-template-rows: repeat(5, fit-content(220px)); */
+  /* gap: var(--space-5); */
 }
 
 .loading {
@@ -14,9 +15,17 @@
 }
 
 .section {
+  overflow: hidden;
+}
+
+.cards {
   display: flex;
-  flex-direction: column;
-  gap: 12px;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+
+  .card {
+    max-width: 220px;
+  }
 }
 
 .sectionHeader {
@@ -27,14 +36,12 @@
 
 .sectionTitle {
   margin: 0;
-  font-size: 1.1rem;
-  font-weight: 600;
-  color: #e0e0f0;
+  font-weight: 500;
 }
 
 .seeAll {
-  font-size: 0.8rem;
-  color: #6c63ff;
+  font-size: var(--font-size-3);
+  color: var(--color-accent-11);
   text-decoration: none;
 }
 
@@ -42,20 +49,20 @@
   text-decoration: underline;
 }
 
-.grid {
+/* .grid {
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
   gap: 12px;
-}
+} */
 
 .emptyHint {
   margin: 0;
-  color: #666;
-  font-size: 0.875rem;
+  color: var(--color-gray-10);
+  font-size: var(--font-size-4);
 }
 
 .emptyLink {
-  color: #6c63ff;
+  /* color: #6c63ff; */
   text-decoration: none;
 }
 

@@ -45,4 +45,17 @@
   &.small {
     padding: var(--space-3) var(--space-4);
   }
+
+  &.ghost {
+    background: none;
+  }
+}
+
+.iconButton {
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }

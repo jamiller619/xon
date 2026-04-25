@@ -10,7 +10,7 @@ import {
   Textbox,
 } from '@xon/ui'
 import { type SubmitEvent, useEffect, useState } from 'react'
-import { apiFetch } from '../../lib/apiFetch.js'
+import { apiFetch } from '~/lib/apiFetch'
 import styles from './CreateLibraryForm.module.css'
 
 const ALL_MEDIA_TYPES: { label: string; emoji: string }[] = [
@@ -161,7 +161,10 @@ export function CreateLibraryForm({
         </Dialog>
       </div>
       {error && <div className={styles.error}>{error}</div>}
-      <Button type="submit" disabled={loading || !name.trim() || !sourcePath.trim()}>
+      <Button
+        type="submit"
+        disabled={loading || !name.trim() || !sourcePath.trim()}
+      >
         {loading ? 'Creating...' : submitLabel}
       </Button>
     </form>
@@ -211,7 +214,7 @@ function MediaFolderBrowser({
         >
           ⮤
         </button>
-        <Textbox value={currentPath} />
+        <Textbox value={currentPath} style={{ flex: 1 }} />
       </Flex>
 
       <ScrollArea className={styles.entryList}>

@@ -1,6 +1,6 @@
 import { type FormEvent, useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useAuthStore } from '../../store/authStore.js'
+import { useAuthStore } from '~/store/authStore'
 import styles from './Login.module.css'
 
 export default function Login() {

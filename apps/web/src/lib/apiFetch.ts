@@ -1,4 +1,4 @@
-import { useAuthStore } from '../store/authStore.js'
+import { useAuthStore } from '~/store/authStore'
 
 /**
  * fetch wrapper that injects the current access token as a Bearer header.

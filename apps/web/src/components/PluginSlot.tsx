@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { apiFetch } from '../lib/apiFetch.js'
+import { apiFetch } from '~/lib/apiFetch'
 
 export type UIInjectionPoint =
   | 'dashboard-widget'

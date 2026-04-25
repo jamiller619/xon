@@ -1,8 +1,8 @@
 import { Button, Pin } from '@xon/ui'
-import { type FormEvent, useState } from 'react'
-import { useAuthStore } from '../../../store/authStore.js'
-import type { StepProps } from '../@types'
-import styles from '../Setup.module.css'
+import { type SubmitEvent, useState } from 'react'
+import type { StepProps } from '~/pages/setup/@types'
+import styles from '~/pages/setup/Setup.module.css'
+import { useAuthStore } from '~/store/authStore'
 
 export default function CreatePin({
   setStep,
@@ -14,7 +14,7 @@ export default function CreatePin({
   const [pin, setPin] = useState('')
   const setAuth = useAuthStore((s) => s.setAuth)
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: SubmitEvent) {
     e.preventDefault()
     setError(null)
     setLoading(true)
@@ -49,20 +49,20 @@ export default function CreatePin({
   }
 
   return (
-    <>
-      <h1 className={styles.heading}>Secure Your Server</h1>
-      <p className={styles.subtitle}>Set a PIN to protect your server.</p>
-      <form className={styles.form} onSubmit={handleSubmit}>
-        <Pin className={styles.pin} value={pin} onChange={setPin} />
-        {hasError && <div className={styles.error}>{hasError}</div>}
-        <Button type="submit" disabled={isLoading || pin.length !== 4}>
-          Next
-        </Button>
-        <p>If you don't need to secure this server, you can skip this step.</p>
-        <Button disabled={isLoading} onClick={() => setStep(2)}>
-          Skip
-        </Button>
-      </form>
-    </>
+    <form className={styles.form} onSubmit={handleSubmit}>
+      <Pin id="pin" className={styles.pin} value={pin} onChange={setPin} />
+      {hasError && <div className={styles.error}>{hasError}</div>}
+      <Button
+        type="submit"
+        disabled={isLoading || pin.length !== 4}
+        style={{ marginBlockStart: 'var(--space-5)' }}
+      >
+        Next
+      </Button>
+      <p>If you don't need to secure this server, you can skip this step.</p>
+      <Button disabled={isLoading} onClick={() => setStep(2)}>
+        Skip
+      </Button>
+    </form>
   )
 }

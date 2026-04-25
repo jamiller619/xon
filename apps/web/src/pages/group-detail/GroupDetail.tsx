@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
-import { apiFetch, apiUrl } from '../../lib/apiFetch.js'
+import { apiFetch, apiUrl } from '~/lib/apiFetch'
 import styles from './GroupDetail.module.css'
 
 interface GroupMemberItem {

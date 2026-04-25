@@ -1,34 +1,34 @@
-import { OTPInput, type SlotProps } from 'input-otp'
+import { OTPFieldPreview as OTPField } from '@base-ui/react'
 import Flex from '../flex/Flex.jsx'
+import Textbox from '../input/Textbox.jsx'
 import styles from './Pin.module.css'
 
 export type PinProps = {
+  id: string
   value?: string | undefined
   className?: string | undefined
   onChange?: (value: string) => void
 }
 
-export default function Pin({ value, className, onChange }: PinProps) {
+export default function Pin({ id, value, className, onChange }: PinProps) {
   return (
-    <OTPInput
-      maxLength={4}
+    <OTPField.Root
+      id={id}
+      length={4}
       value={value ?? ''}
-      {...(onChange && { onChange })}
-      {...(className && { containerClassName: className })}
-      render={({ slots }) => (
-        <Flex gap="2" justify="center">
-          {slots.map((slot, i) => (
+      {...(onChange && { onValueChange: onChange })}
+      {...(className && { className })}
+    >
+      <Flex gap="3">
+        {Array.from({ length: 4 }, (_, index) => (
+          <OTPField.Input
             // biome-ignore lint/suspicious/noArrayIndexKey: <explanation>
-            <Slot key={i} {...slot} placeholderChar="•" />
-          ))}
-        </Flex>
-      )}
-    />
-  )
-}
-
-function Slot(props: SlotProps) {
-  return (
-    <div className={styles.slot}>{props.char ?? props.placeholderChar}</div>
+            key={index}
+            className={styles.slot}
+            render={(props) => <Textbox {...props} />}
+          />
+        ))}
+      </Flex>
+    </OTPField.Root>
   )
 }

@@ -1,7 +1,7 @@
 import Hls from 'hls.js'
 import { useEffect, useRef, useState } from 'react'
-import { apiFetch, apiUrl } from '../../lib/apiFetch.js'
-import { useAuthStore } from '../../store/authStore.js'
+import { apiFetch, apiUrl } from '~/lib/apiFetch'
+import { useAuthStore } from '~/store/authStore'
 import styles from './VideoPlayer.module.css'
 
 type AudioTrack = {

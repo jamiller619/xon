@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
-import { apiFetch } from '../../lib/apiFetch.js'
-import type { QueueItem } from '../../store/audioStore'
-import { useAudioStore } from '../../store/audioStore'
+import { apiFetch } from '~/lib/apiFetch'
+import type { QueueItem } from '~/store/audioStore'
+import { useAudioStore } from '~/store/audioStore'
 import styles from './AudioPlayer.module.css'
 
 export default function AudioPlayer() {

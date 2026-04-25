@@ -1,7 +1,17 @@
+import {
+  Glance20Filled as DashboardIcon,
+  CircleSmall20Filled as LibraryIcon,
+  PlugDisconnected20Filled as PluginsIcon,
+  Settings20Filled as SettingsIcon,
+  PersonCircle20Filled as UsersIcon,
+} from '@fluentui/react-icons'
+import { Navigation20Filled as MenuIcon } from '@fluentui/react-icons'
+import { Flex, IconButton } from '@xon/ui'
 import { useEffect, useState } from 'react'
 import { NavLink } from 'react-router-dom'
-import { apiFetch } from '../../lib/apiFetch.js'
-import PluginSlot from '../PluginSlot.js'
+import PluginSlot from '~/components/PluginSlot'
+import Logo from '~/components/logo/Logo'
+import { apiFetch } from '~/lib/apiFetch'
 import styles from './Sidebar.module.css'
 
 interface Library {
@@ -11,9 +21,10 @@ interface Library {
 
 interface SidebarProps {
   open: boolean
+  onMenuClick: () => void
 }
 
-export default function Sidebar({ open }: SidebarProps) {
+export default function Sidebar({ open, onMenuClick }: SidebarProps) {
   const [libraries, setLibraries] = useState<Library[]>([])
   const [loading, setLoading] = useState(true)
 
@@ -26,78 +37,73 @@ export default function Sidebar({ open }: SidebarProps) {
   }, [])
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
-    `${styles.navLink ?? ''}${isActive ? ` ${styles.active ?? ''}` : ''}`
-
-  const libClass = ({ isActive }: { isActive: boolean }) =>
-    `${styles.libraryLink ?? ''}${isActive ? ` ${styles.active ?? ''}` : ''}`
+    `${styles.navLink}${isActive ? ` ${styles.active}` : ''}`
 
   return (
     <nav
-      className={`${styles.sidebar ?? ''}${open ? ` ${styles.open ?? ''}` : ''}`}
+      className={`${styles.sidebar}${open ? ` ${styles.open}` : ''}`}
       aria-label="Main navigation"
     >
-      <NavLink to="/" className={styles.logo ?? ''}>
-        <span className={styles.logoIcon ?? ''}>▶</span>
-        <span>Xon</span>
-      </NavLink>
+      <Flex justify="between" className={styles.header}>
+        <NavLink to="/" className={styles.logo as string}>
+          <Logo />
+        </NavLink>
+        {/* <IconButton onClick={onMenuClick} variant="ghost">
+          <MenuIcon />
+        </IconButton> */}
+      </Flex>
 
-      <div className={styles.section ?? ''}>
-        <p className={styles.sectionTitle ?? ''}>Navigation</p>
+      <Section>
         <NavLink to="/" end className={navClass}>
-          <span className={styles.navIcon ?? ''}>⊞</span>
-          Dashboard
-        </NavLink>
-        <NavLink to="/search" className={navClass}>
-          <span className={styles.navIcon ?? ''}>⌕</span>
-          Search
-        </NavLink>
-        <NavLink to="/settings" className={navClass}>
-          <span className={styles.navIcon ?? ''}>⚙</span>
-          Settings
+          <DashboardIcon />
+          <span>Dashboard</span>
         </NavLink>
         <NavLink to="/admin/plugins" className={navClass}>
-          <span className={styles.navIcon ?? ''}>⊛</span>
-          Plugins
+          <PluginsIcon />
+          <span>Plugins</span>
         </NavLink>
         <NavLink to="/admin/users" className={navClass}>
-          <span className={styles.navIcon ?? ''}>👥</span>
-          Users
+          <UsersIcon />
+          <span>Users</span>
         </NavLink>
-        <NavLink to="/admin/library-access" className={navClass}>
-          <span className={styles.navIcon ?? ''}>🔑</span>
-          Library Access
+        <NavLink to="/settings" className={navClass}>
+          <SettingsIcon />
+          <span>Settings</span>
         </NavLink>
         <PluginSlot injectionPoint="nav-item" />
-      </div>
+      </Section>
 
-      <div className={styles.section ?? ''}>
-        <div className={styles.sectionTitleRow ?? ''}>
-          <p className={styles.sectionTitle ?? ''}>Libraries</p>
-          <NavLink
-            to="/admin/libraries"
-            className={styles.addLibraryBtn ?? ''}
-            title="Add library"
-          >
-            +
-          </NavLink>
-        </div>
+      <Section>
+        <div className={styles.sectionTitle}>Libraries</div>
         {loading ? (
-          <p className={styles.loadingLibraries ?? ''}>Loading…</p>
+          <p className={styles.loadingLibraries}>Loading…</p>
         ) : libraries.length === 0 ? (
-          <p className={styles.emptyLibraries ?? ''}>No libraries yet</p>
+          <p className={styles.emptyLibraries}>No libraries yet</p>
         ) : (
-          <ul className={styles.librariesList ?? ''}>
-            {libraries.map((lib) => (
-              <li key={lib.id}>
-                <NavLink to={`/libraries/${lib.id}`} className={libClass}>
-                  <span className={styles.libraryDot ?? ''} />
-                  {lib.name}
-                </NavLink>
-              </li>
-            ))}
-          </ul>
+          libraries.map((lib) => (
+            <NavLink
+              key={lib.id}
+              to={`/libraries/${lib.id}`}
+              className={navClass}
+            >
+              <LibraryIcon />
+              {lib.name}
+            </NavLink>
+          ))
         )}
-      </div>
+      </Section>
+
+      <Section>
+        <div className={styles.sectionTitle}>Collections</div>
+      </Section>
     </nav>
+  )
+}
+
+function Section({ children }: { children: React.ReactNode }) {
+  return (
+    <Flex dir="col" gap="2" className={styles.section}>
+      {children}
+    </Flex>
   )
 }

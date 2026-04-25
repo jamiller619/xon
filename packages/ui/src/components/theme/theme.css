@@ -1,12 +1,12 @@
 @import "./colors.css";
 @import "./variables.css";
 
-* {
-  box-sizing: border-box;
+:root {
+  color-scheme: light dark;
 }
 
-#root {
-  isolation: isolate;
+* {
+  box-sizing: border-box;
 }
 
 body {
@@ -14,4 +14,8 @@ body {
   background: var(--color-gray-1);
   color: var(--color-gray-12);
   position: relative;
+}
+
+#root {
+  isolation: isolate;
 }

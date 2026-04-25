@@ -1,8 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
-import PluginSlot from '../../components/PluginSlot.js'
-import { apiFetch } from '../../lib/apiFetch.js'
-import { useAppStore } from '../../store/appStore.js'
-import { useThemeStore } from '../../store/themeStore.js'
+import PluginSlot from '~/components/PluginSlot'
+import { apiFetch } from '~/lib/apiFetch'
+import { useAppStore } from '~/store/appStore'
+import { useThemeStore } from '~/store/themeStore'
 import styles from './Settings.module.css'
 
 interface ThemeInfo {

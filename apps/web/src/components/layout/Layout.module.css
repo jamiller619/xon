@@ -1,9 +1,10 @@
+:root {
+  --header-height: 64px;
+}
+
 .shell {
   display: flex;
   height: 100vh;
-  background: #0f0f1a;
-  color: #e0e0e0;
-  font-family: system-ui, -apple-system, sans-serif;
   overflow: hidden;
 }
 
@@ -26,7 +27,6 @@
 .content {
   flex: 1;
   overflow-y: auto;
-  padding: 24px;
 }
 
 .contentWithPlayer {

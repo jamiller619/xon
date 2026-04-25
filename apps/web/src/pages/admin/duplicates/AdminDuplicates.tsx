@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { apiFetch } from '../../../lib/apiFetch.js'
+import { apiFetch } from '~/lib/apiFetch'
 import styles from './AdminDuplicates.module.css'
 
 interface MediaItemInfo {

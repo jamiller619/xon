@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import MediaCard, {
   type MediaCardItem,
-} from '../../components/media-card/MediaCard.js'
-import { apiFetch } from '../../lib/apiFetch.js'
-import { useAppStore } from '../../store/appStore.js'
+} from '~/components/media-card/MediaCard'
+import { apiFetch } from '~/lib/apiFetch'
+import { useAppStore } from '~/store/appStore'
 import styles from './Search.module.css'
 
 const MEDIA_CATEGORIES = [

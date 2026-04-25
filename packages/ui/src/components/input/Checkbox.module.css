@@ -7,12 +7,15 @@
 }
 
 .checkbox {
+  --size: var(--space-4);
   display: flex;
   align-items: center;
   justify-content: center;
   border-radius: var(--border-radius-1);
-  width: var(--space-4);
-  height: var(--space-4);
+  width: var(--size);
+  height: var(--size);
+  min-width: var(--size);
+  max-width: var(--size);
   border: 1px solid var(--color-gray-7);
 
   &[data-unchecked] {

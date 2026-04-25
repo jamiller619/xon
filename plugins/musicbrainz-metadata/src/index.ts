@@ -46,11 +46,13 @@ export class MusicBrainzMetadataPlugin extends BasePlugin {
       )
     `)
 
-    context.on('media:created', async ({ mediaId, filePath }) => {
+    context.on('media:created', async ({ mediaId, filePath, mediaCategory }) => {
+      if (!this.manifest.mediaCategories?.includes(mediaCategory)) return
       await this.enrichMedia(mediaId, filePath)
     })
 
-    context.on('media:updated', async ({ mediaId, filePath }) => {
+    context.on('media:updated', async ({ mediaId, filePath, mediaCategory }) => {
+      if (!this.manifest.mediaCategories?.includes(mediaCategory)) return
       await this.enrichMedia(mediaId, filePath)
     })
 

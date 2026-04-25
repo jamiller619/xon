@@ -2,12 +2,16 @@
   width: var(--space-7);
   height: var(--space-8);
   background: var(--mauve-5);
-  border-radius: var(--border-radius-3);
+  border-radius: var(--border-radius-2);
+  border: none;
   /* biome-ignore lint/correctness/noUnknownProperty: <explanation> */
   corner-shape: var(--corner-shape);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--font-size-8);
+  font-size: var(--font-size-9);
   font-family: monospace;
+  font-weight: 100;
+  color: currentColor;
+  text-align: center;
 }

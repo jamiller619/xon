@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react'
-import PluginSlot from '../../../components/PluginSlot.js'
-import { apiFetch } from '../../../lib/apiFetch.js'
+import PluginSlot from '~/components/PluginSlot'
+import { apiFetch } from '~/lib/apiFetch'
 import styles from './AdminPlugins.module.css'
 
 interface PluginInfo {

@@ -1,22 +1,22 @@
 import { Suspense, lazy, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
-import PluginSlot from '../../components/PluginSlot.js'
-import { apiFetch, apiUrl } from '../../lib/apiFetch.js'
-import { useAudioStore } from '../../store/audioStore.js'
+import PluginSlot from '~/components/PluginSlot'
+import { apiFetch, apiUrl } from '~/lib/apiFetch'
+import { useAudioStore } from '~/store/audioStore'
 import styles from './MediaDetail.module.css'
 
 // Player/viewer components loaded on demand — separate JS chunks
 const ArchiveViewer = lazy(
-  () => import('../../components/viewers/ArchiveViewer.js'),
+  () => import('~/components/viewers/ArchiveViewer'),
 )
-const EpubViewer = lazy(() => import('../../components/viewers/EpubViewer.js'))
-const FontViewer = lazy(() => import('../../components/viewers/FontViewer.js'))
+const EpubViewer = lazy(() => import('~/components/viewers/EpubViewer'))
+const FontViewer = lazy(() => import('~/components/viewers/FontViewer'))
 const ImageViewer = lazy(
-  () => import('../../components/viewers/ImageViewer.js'),
+  () => import('~/components/viewers/ImageViewer'),
 )
-const PdfViewer = lazy(() => import('../../components/viewers/PdfViewer.js'))
+const PdfViewer = lazy(() => import('~/components/viewers/PdfViewer'))
 const VideoPlayer = lazy(
-  () => import('../../components/viewers/VideoPlayer.js'),
+  () => import('~/components/viewers/VideoPlayer'),
 )
 
 interface ImageSibling {

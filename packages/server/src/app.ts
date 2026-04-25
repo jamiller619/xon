@@ -6,6 +6,7 @@ import { makeAuthMiddleware } from './auth/authMiddleware.js'
 import { requireRole } from './auth/rbac.js'
 import { serverSettings } from './db/schema.js'
 import { onError, onNotFound } from './http/errorMiddleware.js'
+import { makeLoggingMiddleware } from './http/loggingMiddleware.js'
 import { makeRateLimitMiddleware } from './http/rateLimitMiddleware.js'
 import { makeSecurityHeadersMiddleware } from './http/securityHeadersMiddleware.js'
 import { pluginRouteDispatcher } from './plugins/pluginRoutes.js'
@@ -49,6 +50,9 @@ export function createApp(
   app.onError(onError)
   // 404 handler: returns consistent JSON for unknown routes
   app.notFound(onNotFound)
+
+  // Request logging
+  app.use('/*', makeLoggingMiddleware())
 
   // Security headers on all responses
   app.use(

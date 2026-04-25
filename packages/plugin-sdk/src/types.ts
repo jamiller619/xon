@@ -53,9 +53,9 @@ export type PluginEvent =
 export interface PluginEventPayloads {
   'scan:start': { libraryId: string }
   'scan:complete': { libraryId: string; itemsFound: number }
-  'media:created': { mediaId: string; filePath: string }
-  'media:updated': { mediaId: string; filePath: string }
-  'media:deleted': { mediaId: string; filePath: string }
+  'media:created': { mediaId: string; filePath: string; mediaCategory: MediaCategory; libraryId: string }
+  'media:updated': { mediaId: string; filePath: string; mediaCategory: MediaCategory; libraryId: string }
+  'media:deleted': { mediaId: string; filePath: string; mediaCategory: MediaCategory; libraryId: string }
   'server:boot': Record<string, never>
   'server:shutdown': Record<string, never>
 }

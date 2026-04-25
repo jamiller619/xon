@@ -1,7 +1,7 @@
 .card {
   display: flex;
   flex-direction: column;
-  background: #1a1a2e;
+  background: var(--color-gray-3);
   border-radius: 8px;
   overflow: hidden;
   text-decoration: none;
@@ -10,13 +10,14 @@
 }
 
 .card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 16px rgba(108, 99, 255, 0.25);
+  transform: scale(1.05);
+  /* transform: translateY(-2px); */
+  /* box-shadow: 0 4px 16px rgba(108, 99, 255, 0.25); */
 }
 
 .thumb {
   aspect-ratio: 16 / 9;
-  background: #0f0f1a;
+  background: var(--color-gray-1);
   overflow: hidden;
   position: relative;
 }
@@ -33,7 +34,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #444;
+  /* color: #444; */
   font-size: 1.5rem;
 }
 
@@ -51,7 +52,6 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  color: #e0e0f0;
 }
 
 .meta {
@@ -64,8 +64,8 @@
 .badge {
   display: inline-block;
   padding: 1px 6px;
-  background: rgba(108, 99, 255, 0.2);
-  border: 1px solid rgba(108, 99, 255, 0.4);
+  /* background: rgba(108, 99, 255, 0.2);
+  border: 1px solid rgba(108, 99, 255, 0.4); */
   border-radius: 4px;
   font-size: 0.7rem;
   color: #a09bff;

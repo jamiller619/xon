@@ -3,7 +3,7 @@ import type { Book } from 'epubjs'
 import type { Location, Rendition } from 'epubjs'
 import type { NavItem } from 'epubjs'
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { apiFetch } from '../../lib/apiFetch.js'
+import { apiFetch } from '~/lib/apiFetch'
 import styles from './EpubViewer.module.css'
 
 interface Props {

@@ -1,19 +1,13 @@
 import { Flex, Surface } from '@xon/ui'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { CreateLibraryForm } from '../../components/create-library-form/CreateLibraryForm.js'
-import Logo from '../../components/logo/Logo.js'
-import { useAuthStore } from '../../store/authStore.js'
+import { CreateLibraryForm } from '~/components/create-library-form/CreateLibraryForm'
+import Logo from '~/components/logo/Logo'
+import CreatePin from './CreatePin'
 import styles from './Setup.module.css'
-import CreatePin from './steps/CreatePin.js'
 
 export default function Setup() {
   const navigate = useNavigate()
-  const setAuth = useAuthStore((s) => s.setAuth)
-
-  // const [username, setUsername] = useState('')
-  // const [password, setPassword] = useState('')
-  // const [displayName, setDisplayName] = useState('')
 
   // Wizard state
   const [step, setStep] = useState<number>(1)
@@ -51,13 +45,19 @@ export default function Setup() {
           </div>
 
           {step === 1 && (
-            <CreatePin
-              setStep={setStep}
-              isLoading={loading}
-              setLoading={setLoading}
-              hasError={error}
-              setError={setError}
-            />
+            <>
+              <h1 className={styles.heading}>Secure Your Server</h1>
+              <p className={styles.subtitle}>
+                Create a PIN to protect your server.
+              </p>
+              <CreatePin
+                setStep={setStep}
+                isLoading={loading}
+                setLoading={setLoading}
+                hasError={error}
+                setError={setError}
+              />
+            </>
           )}
 
           {step === 2 && (
@@ -72,7 +72,6 @@ export default function Setup() {
               />
             </>
           )}
-
         </Flex>
       </Surface>
     </Flex>
