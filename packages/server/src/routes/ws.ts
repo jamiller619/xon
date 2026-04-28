@@ -1,14 +1,19 @@
 import type { IncomingMessage } from 'node:http'
 import type { Duplex } from 'node:stream'
 import { WebSocketServer } from 'ws'
-import type { XonEvent } from '../events.js'
-import { eventBus } from '../events.js'
+import { type XonEvent, eventBus } from '../events.js'
 
 export const WS_PATH = '/api/v1/ws'
 
+type UpgradeHandler = (
+  req: IncomingMessage,
+  socket: Duplex,
+  head: Buffer,
+) => void
+
 export function createWsServer(): {
   wss: WebSocketServer
-  handleUpgrade: (req: IncomingMessage, socket: Duplex, head: Buffer) => void
+  handleUpgrade: UpgradeHandler
 } {
   const wss = new WebSocketServer({ noServer: true })
 

@@ -11,15 +11,16 @@ import { serverSettings } from './db/schema.js'
 import { acquireAcmeCert, loadManualCerts } from './http/httpsManager.js'
 import { makeStaticMiddleware } from './http/staticFiles.js'
 import {
+  type LogLevel,
   createLogger,
   initLogger,
   setLogLevel,
-  type LogLevel,
 } from './logger.js'
 
 process.loadEnvFile('./.env')
 
 const logger = createLogger('server')
+import path from 'node:path'
 import {
   discoverAndActivatePlugins,
   emitPluginEvent,
@@ -27,8 +28,7 @@ import {
 } from './plugins/pluginManager.js'
 import { WS_PATH, createWsServer } from './routes/ws.js'
 import { startScheduler } from './scanner/scheduler.js'
-import { ensureAdminUser } from './userInit.js'
-import path from 'node:path'
+// import { ensureAdminUser } from './userInit.js'
 
 // Bundled plugins ship alongside the server package, two levels up from packages/server/
 const BUNDLED_PLUGINS_DIR = path.join(
@@ -75,8 +75,8 @@ export async function boot(): Promise<void> {
     await migrateDatabase(db)
     logger.log('Migrations complete')
 
-    await ensureAdminUser(db)
-    logger.log('Admin user verified')
+    // await ensureAdminUser(db)
+    // logger.log('Admin user verified')
 
     setPluginDatabase(client)
     logger.log('Plugin database configured')
@@ -205,12 +205,4 @@ export async function boot(): Promise<void> {
     logger.error('Failed to start server:', err)
     process.exit(1)
   }
-
-  // openDatabase()
-  //   .then(async ({ client, db }) => {
-
-  //   })
-  //   .catch((err: unknown) => {
-
-  //   })
 }

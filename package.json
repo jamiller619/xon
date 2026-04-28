@@ -10,8 +10,8 @@
     "format": "biome format .",
     "check": "biome check .",
     "build": "yarn workspaces run build",
-    "db:reset": "node scripts/db-reset.mjs",
-    "db:seed": "node scripts/db-seed.mjs"
+    "db:reset": "DATA_DIR=apps/headless/.data node scripts/db-reset.mjs",
+    "db:seed": "DATA_DIR=apps/headless/.data node scripts/db-seed.mjs"
   },
   "devDependencies": {
     "@biomejs/biome": "^1.9.4",

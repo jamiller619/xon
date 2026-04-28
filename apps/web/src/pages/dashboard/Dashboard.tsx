@@ -1,3 +1,4 @@
+import clsx from 'clsx'
 import { useEffect, useState } from 'react'
 import ReactGridLayout, { useContainerWidth } from 'react-grid-layout'
 import { Link } from 'react-router-dom'
@@ -7,9 +8,6 @@ import MediaCard, {
 } from '~/components/media-card/MediaCard'
 import { apiFetch } from '~/lib/apiFetch'
 import styles from './Dashboard.module.css'
-import 'react-grid-layout/css/styles.css'
-import 'react-resizable/css/styles.css'
-import clsx from 'clsx'
 
 interface Library {
   id: string
@@ -23,7 +21,6 @@ export default function Dashboard() {
     Record<string, MediaCardItem[]>
   >({})
   const [loading, setLoading] = useState(true)
-  const { width, containerRef, mounted } = useContainerWidth()
 
   useEffect(() => {
     const fetchData = async () => {
@@ -55,13 +52,6 @@ export default function Dashboard() {
     fetchData().catch(() => setLoading(false))
   }, [])
 
-  const layout = [
-    { i: 'featured', x: 0, y: 0, w: 12, h: 2 },
-    { i: 'a', x: 0, y: 3, w: 12, h: 1 },
-    { i: 'b', x: 0, y: 4, w: 6, h: 2 },
-    { i: 'c', x: 7, y: 4, w: 6, h: 2 },
-  ]
-
   if (loading) {
     return (
       <div className={styles.loading ?? ''}>
@@ -70,10 +60,8 @@ export default function Dashboard() {
     )
   }
 
-  console.log(width)
-
   return (
-    <div className={styles.dashboard} ref={containerRef}>
+    <div className={styles.dashboard}>
       <PluginSlot injectionPoint="dashboard-widget" />
       {/* {mounted && (
         <ReactGridLayout

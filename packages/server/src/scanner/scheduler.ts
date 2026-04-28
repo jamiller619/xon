@@ -1,8 +1,8 @@
 import { watch } from 'node:fs'
 import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
-import { createLogger } from '../logger.js'
 import { dataSources, libraries } from '../db/schema.js'
+import { createLogger } from '../logger.js'
 import { scanLibrary } from './orchestrator.js'
 import { toLocalPath } from './scanner.js'
 
@@ -64,9 +64,14 @@ export async function startScheduler(
           intervalMs: interval,
         })
         const timer = setInterval(() => {
-          logger.log(`Scheduled scan triggered: "${lib.name}"`, { libraryId: lib.id })
+          logger.log(`Scheduled scan triggered: "${lib.name}"`, {
+            libraryId: lib.id,
+          })
           trigger(db, lib.id).catch((err: unknown) => {
-            logger.error(`Scheduled scan failed: "${lib.name}"`, { libraryId: lib.id, error: err })
+            logger.error(`Scheduled scan failed: "${lib.name}"`, {
+              libraryId: lib.id,
+              error: err,
+            })
           })
         }, interval)
         intervalTimers.push(timer)
@@ -100,18 +105,42 @@ export async function startScheduler(
             if (existing !== undefined) clearTimeout(existing)
             const t = setTimeout(() => {
               debounceTimers.delete(lib.id)
-              logger.log(`Watch-triggered scan: "${lib.name}"`, { libraryId: lib.id, path: watchPath })
+              logger.log(`Watch-triggered scan: "${lib.name}"`, {
+                libraryId: lib.id,
+                path: watchPath,
+              })
               trigger(db, lib.id).catch((err: unknown) => {
-                logger.error(`Watch-triggered scan failed: "${lib.name}"`, { libraryId: lib.id, error: err })
+                logger.error(`Watch-triggered scan failed: "${lib.name}"`, {
+                  libraryId: lib.id,
+                  error: err,
+                })
               })
             }, DEBOUNCE_MS)
             debounceTimers.set(lib.id, t)
           },
         )
         fsWatchers.push(watcher)
-        logger.log(`Watching path: ${watchPath}`, { libraryId: lib.id, recursive: source.recursive })
+        logger.log(`Watching path: ${watchPath}`, {
+          libraryId: lib.id,
+          recursive: source.recursive,
+        })
       } catch (err) {
-        logger.error(`Cannot watch path: ${source.path}`, { libraryId: lib.id, error: err })
+        if (
+          err &&
+          typeof err === 'object' &&
+          'code' in err &&
+          err.code === 'ENOENT'
+        ) {
+          logger.warn(`Watch path does not exist: ${source.path}`, {
+            libraryId: lib.id,
+          })
+          continue
+        }
+
+        logger.error(`Cannot watch path: ${source.path}`, {
+          libraryId: lib.id,
+          error: err,
+        })
       }
     }
   }
