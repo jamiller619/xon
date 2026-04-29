@@ -35,7 +35,7 @@ describe('Matching API', () => {
     await db.insert(libraries).values({
       id: libraryId,
       name: 'Test Library',
-      allowedMediaTypes: '[]',
+      mediaTypes: '[]',
       createdAt: now,
       updatedAt: now,
     })

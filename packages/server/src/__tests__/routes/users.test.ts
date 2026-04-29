@@ -95,16 +95,16 @@ describe('Users API', () => {
       expect(body.avatarUrl).toBe('https://example.com/avatar.png')
     })
 
-    it('updates maxContentRating and hideDrmItems', async () => {
+    it('updates maxContentRating and hideDRMItems', async () => {
       const res = await app.request('/api/v1/users/me', {
         method: 'PUT',
         headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ maxContentRating: 'PG-13', hideDrmItems: true }),
+        body: JSON.stringify({ maxContentRating: 'PG-13', hideDRMItems: true }),
       })
       expect(res.status).toBe(200)
       const body = await res.json()
       expect(body.maxContentRating).toBe('PG-13')
-      expect(body.hideDrmItems).toBe(true)
+      expect(body.hideDRMItems).toBe(true)
     })
 
     it('returns 400 for invalid email', async () => {

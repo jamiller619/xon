@@ -254,7 +254,7 @@ describe('Admin Backup Media API', () => {
       await db.insert(libraries).values({
         id: libId,
         name: 'Movies',
-        allowedMediaTypes: '[]',
+        mediaTypes: '[]',
         createdAt: new Date(),
         updatedAt: new Date(),
       })
@@ -320,14 +320,14 @@ describe('Admin Backup Media API', () => {
         {
           id: lib1Id,
           name: 'Lib1',
-          allowedMediaTypes: '[]',
+          mediaTypes: '[]',
           createdAt: new Date(),
           updatedAt: new Date(),
         },
         {
           id: lib2Id,
           name: 'Lib2',
-          allowedMediaTypes: '[]',
+          mediaTypes: '[]',
           createdAt: new Date(),
           updatedAt: new Date(),
         },
@@ -408,7 +408,7 @@ describe('Admin Backup Media API', () => {
       await db.insert(libraries).values({
         id: libId,
         name: 'Lib',
-        allowedMediaTypes: '[]',
+        mediaTypes: '[]',
         createdAt: new Date(),
         updatedAt: new Date(),
       })

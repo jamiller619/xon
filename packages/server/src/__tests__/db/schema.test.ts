@@ -25,7 +25,7 @@ describe('schema', () => {
         id: 'lib-1',
         name: 'My Movies',
         description: 'Movie collection',
-        allowedMediaTypes: '["Movies"]',
+        mediaTypes: '["Movies"]',
       })
 
       const rows = await db.select().from(libraries)
@@ -33,14 +33,14 @@ describe('schema', () => {
       expect(rows[0]?.id).toBe('lib-1')
       expect(rows[0]?.name).toBe('My Movies')
       expect(rows[0]?.description).toBe('Movie collection')
-      expect(rows[0]?.allowedMediaTypes).toBe('["Movies"]')
+      expect(rows[0]?.mediaTypes).toBe('["Movies"]')
     })
 
-    it('uses empty array as default for allowedMediaTypes', async () => {
+    it('uses empty array as default for mediaTypes', async () => {
       await db.insert(libraries).values({ id: 'lib-2', name: 'Empty Library' })
 
       const rows = await db.select().from(libraries)
-      expect(rows[0]?.allowedMediaTypes).toBe('[]')
+      expect(rows[0]?.mediaTypes).toBe('[]')
     })
 
     it('populates createdAt and updatedAt with defaults', async () => {

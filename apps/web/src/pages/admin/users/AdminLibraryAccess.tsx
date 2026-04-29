@@ -5,7 +5,7 @@ import styles from './AdminUsers.module.css'
 interface Library {
   id: string
   name: string
-  hideDrmItems: boolean
+  hideDRMItems: boolean
 }
 
 interface UserInfo {
@@ -98,11 +98,11 @@ export default function AdminLibraryAccess() {
       await apiFetch(`/api/v1/libraries/${selectedLibraryId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ hideDrmItems: value }),
+        body: JSON.stringify({ hideDRMItems: value }),
       })
       setLibraries((prev) =>
         prev.map((lib) =>
-          lib.id === selectedLibraryId ? { ...lib, hideDrmItems: value } : lib,
+          lib.id === selectedLibraryId ? { ...lib, hideDRMItems: value } : lib,
         ),
       )
     } finally {
@@ -169,7 +169,7 @@ export default function AdminLibraryAccess() {
                 type="checkbox"
                 checked={
                   libraries.find((l) => l.id === selectedLibraryId)
-                    ?.hideDrmItems ?? false
+                    ?.hideDRMItems ?? false
                 }
                 onChange={(e) => handleToggleHideDrm(e.target.checked)}
                 disabled={savingLibSettings}

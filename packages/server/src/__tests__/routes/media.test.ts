@@ -76,7 +76,7 @@ describe('Media API - Detail endpoint', () => {
     await db.insert(libraries).values({
       id: libId,
       name: 'Test Library',
-      allowedMediaTypes: '[]',
+      mediaTypes: '[]',
       createdAt: now,
       updatedAt: now,
     })
@@ -183,7 +183,7 @@ describe('Media API - PUT /api/v1/media/:id', () => {
     await db.insert(libraries).values({
       id: libId,
       name: 'Test Library',
-      allowedMediaTypes: '[]',
+      mediaTypes: '[]',
       createdAt: now,
       updatedAt: now,
     })
@@ -296,7 +296,7 @@ describe('Media API - Thumbnail endpoint', () => {
     await db.insert(libraries).values({
       id: libId,
       name: 'Test Library',
-      allowedMediaTypes: '[]',
+      mediaTypes: '[]',
       createdAt: now,
       updatedAt: now,
     })
@@ -496,7 +496,7 @@ describe('Media API - Stream endpoint', () => {
     await db.insert(libraries).values({
       id: libId,
       name: 'Test Library',
-      allowedMediaTypes: '[]',
+      mediaTypes: '[]',
       createdAt: now,
       updatedAt: now,
     })
@@ -623,7 +623,7 @@ describe('Media API - Tracks endpoint', () => {
     await db.insert(libraries).values({
       id: libId,
       name: 'Test Library',
-      allowedMediaTypes: '[]',
+      mediaTypes: '[]',
       createdAt: now,
       updatedAt: now,
     })
@@ -787,7 +787,7 @@ describe('Media API - Subtitle endpoint', () => {
     await db.insert(libraries).values({
       id: libId,
       name: 'Test Library',
-      allowedMediaTypes: '[]',
+      mediaTypes: '[]',
       createdAt: now,
       updatedAt: now,
     })
@@ -929,7 +929,7 @@ describe('Media API - HLS transcoding endpoints', () => {
     await db.insert(libraries).values({
       id: libId,
       name: 'Test Library',
-      allowedMediaTypes: '[]',
+      mediaTypes: '[]',
       createdAt: now,
       updatedAt: now,
     })
@@ -1138,7 +1138,7 @@ describe('Media API - RAW image stream endpoint', () => {
     await db.insert(libraries).values({
       id: libId,
       name: 'Test Library',
-      allowedMediaTypes: '[]',
+      mediaTypes: '[]',
       createdAt: now,
       updatedAt: now,
     })
@@ -1240,7 +1240,7 @@ describe('Media API - POST /api/v1/media/bulk', () => {
     await db.insert(libraries).values({
       id: libId,
       name: 'Bulk Test Library',
-      allowedMediaTypes: '[]',
+      mediaTypes: '[]',
       createdAt: now,
       updatedAt: now,
     })

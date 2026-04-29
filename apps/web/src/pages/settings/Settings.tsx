@@ -19,7 +19,7 @@ interface UserProfile {
   email: string
   avatarUrl: string | null
   maxContentRating: string
-  hideDrmItems: boolean
+  hideDRMItems: boolean
 }
 
 const CONTENT_RATINGS = ['none', 'G', 'PG', 'PG-13', 'R', 'unrated'] as const
@@ -45,7 +45,7 @@ export default function Settings() {
     email: '',
     avatarUrl: null,
     maxContentRating: 'none',
-    hideDrmItems: false,
+    hideDRMItems: false,
   })
   const [profileSaving, setProfileSaving] = useState(false)
   const [profileMsg, setProfileMsg] = useState<string | null>(null)
@@ -66,7 +66,7 @@ export default function Settings() {
           email: d.email ?? '',
           avatarUrl: d.avatarUrl ?? null,
           maxContentRating: d.maxContentRating ?? 'none',
-          hideDrmItems: d.hideDrmItems ?? false,
+          hideDRMItems: d.hideDRMItems ?? false,
         })
       })
       .catch(() => {})
@@ -93,7 +93,7 @@ export default function Settings() {
           email: profile.email,
           avatarUrl: profile.avatarUrl || null,
           maxContentRating: profile.maxContentRating,
-          hideDrmItems: profile.hideDrmItems,
+          hideDRMItems: profile.hideDRMItems,
         }),
       })
       if (res.ok) {
@@ -235,9 +235,9 @@ export default function Settings() {
         <label className={styles.prefOption ?? ''}>
           <input
             type="checkbox"
-            checked={profile.hideDrmItems}
+            checked={profile.hideDRMItems}
             onChange={(e) =>
-              setProfile((p) => ({ ...p, hideDrmItems: e.target.checked }))
+              setProfile((p) => ({ ...p, hideDRMItems: e.target.checked }))
             }
           />
           <span className={styles.prefLabel ?? ''}>

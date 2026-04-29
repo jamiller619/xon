@@ -1,3 +1,4 @@
+import { type MPARating, MPARatings } from '@xon/shared'
 import { useEffect, useState } from 'react'
 import { apiFetch } from '~/lib/apiFetch'
 import styles from './AdminUsers.module.css'
@@ -14,15 +15,15 @@ interface UserInfo {
 
 type UserRole = 'admin' | 'manager' | 'user' | 'guest'
 const ROLES: UserRole[] = ['admin', 'manager', 'user', 'guest']
-type ContentRatingMax = 'G' | 'PG' | 'PG-13' | 'R' | 'unrated' | 'none'
-const CONTENT_RATINGS: ContentRatingMax[] = [
-  'G',
-  'PG',
-  'PG-13',
-  'R',
-  'unrated',
-  'none',
-]
+// type ContentRatingMax = 'G' | 'PG' | 'PG-13' | 'R' | 'unrated' | 'none'
+// const CONTENT_RATINGS: ContentRatingMax[] = [
+//   'G',
+//   'PG',
+//   'PG-13',
+//   'R',
+//   'unrated',
+//   'none',
+// ]
 
 interface CreateForm {
   username: string
@@ -36,7 +37,7 @@ interface EditForm {
   displayName: string
   email: string
   role: UserRole
-  maxContentRating: ContentRatingMax
+  maxContentRating: MPARating | 'none' | 'unrated'
   password: string
 }
 
@@ -339,11 +340,11 @@ export default function AdminUsers() {
                       onChange={(e) =>
                         setEditForm((f) => ({
                           ...f,
-                          maxContentRating: e.target.value as ContentRatingMax,
+                          maxContentRating: e.target.value as MPARating,
                         }))
                       }
                     >
-                      {CONTENT_RATINGS.map((r) => (
+                      {[...MPARatings, 'none'].map((r) => (
                         <option key={r} value={r}>
                           {r === 'none' ? 'No restriction' : r}
                         </option>

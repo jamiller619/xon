@@ -13,7 +13,7 @@ import {
   watchlist,
 } from '../db/schema.js'
 import { validate } from '../http/validate.js'
-import { withThumbnailUrls } from './media.js'
+// import { withThumbnailUrls } from './media.js'
 
 export function hashApiToken(token: string): string {
   return createHash('sha256').update(token).digest('hex')
@@ -34,7 +34,7 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
         avatarUrl: users.avatarUrl,
         role: users.role,
         maxContentRating: users.maxContentRating,
-        hideDrmItems: users.hideDrmItems,
+        hideDRMItems: users.hideDRMItems,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
       })
@@ -48,15 +48,15 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
   // PATCH /users/me — update current user preferences (legacy, kept for backwards compat)
   router.patch(
     '/me',
-    validate('json', z.object({ hideDrmItems: z.boolean().optional() })),
+    validate('json', z.object({ hideDRMItems: z.boolean().optional() })),
     async (c) => {
       const user = c.get('user')
       const body = c.req.valid('json')
       const updates: Partial<typeof users.$inferInsert> = {
         updatedAt: new Date(),
       }
-      if (body.hideDrmItems !== undefined)
-        updates.hideDrmItems = body.hideDrmItems
+      if (body.hideDRMItems !== undefined)
+        updates.hideDRMItems = body.hideDRMItems
       await db.update(users).set(updates).where(eq(users.id, user.id))
       const rows = await db
         .select({
@@ -67,7 +67,7 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
           avatarUrl: users.avatarUrl,
           role: users.role,
           maxContentRating: users.maxContentRating,
-          hideDrmItems: users.hideDrmItems,
+          hideDRMItems: users.hideDRMItems,
           createdAt: users.createdAt,
           updatedAt: users.updatedAt,
         })
@@ -85,7 +85,7 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
     maxContentRating: z
       .enum(['G', 'PG', 'PG-13', 'R', 'unrated', 'none'])
       .optional(),
-    hideDrmItems: z.boolean().optional(),
+    hideDRMItems: z.boolean().optional(),
   })
 
   // PUT /users/me — update full profile and preferences
@@ -101,8 +101,8 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
       updates.avatarUrl = body.avatarUrl ?? undefined
     if (body.maxContentRating !== undefined)
       updates.maxContentRating = body.maxContentRating
-    if (body.hideDrmItems !== undefined)
-      updates.hideDrmItems = body.hideDrmItems
+    if (body.hideDRMItems !== undefined)
+      updates.hideDRMItems = body.hideDRMItems
     await db.update(users).set(updates).where(eq(users.id, user.id))
     const rows = await db
       .select({
@@ -113,7 +113,7 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
         avatarUrl: users.avatarUrl,
         role: users.role,
         maxContentRating: users.maxContentRating,
-        hideDrmItems: users.hideDrmItems,
+        hideDRMItems: users.hideDRMItems,
         createdAt: users.createdAt,
         updatedAt: users.updatedAt,
       })
@@ -192,7 +192,8 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
         duration: r.duration,
         completed: r.completed,
         updatedAt: r.updatedAt,
-        mediaItem: withThumbnailUrls(r.mediaItem),
+        // mediaItem: withThumbnailUrls(r.mediaItem),
+        mediaItem: r.mediaItem,
       })),
     )
   })
@@ -206,7 +207,9 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
       .innerJoin(mediaItems, eq(favorites.mediaItemId, mediaItems.id))
       .where(eq(favorites.userId, user.id))
       .orderBy(desc(favorites.createdAt))
-    return c.json(rows.map((r) => withThumbnailUrls(r.mediaItem)))
+    // return c.json(rows.map((r) =>
+    // withThumbnailUrls(r.mediaItem)))
+    return c.json(rows)
   })
 
   // GET /users/me/watchlist — list watchlist items for the current user
@@ -218,7 +221,9 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
       .innerJoin(mediaItems, eq(watchlist.mediaItemId, mediaItems.id))
       .where(eq(watchlist.userId, user.id))
       .orderBy(desc(watchlist.createdAt))
-    return c.json(rows.map((r) => withThumbnailUrls(r.mediaItem)))
+    // return c.json(rows.map((r) =>
+    // withThumbnailUrls(r.mediaItem)))
+    return c.json(rows)
   })
 
   // POST /users/me/tokens — generate a new API token (returned once)

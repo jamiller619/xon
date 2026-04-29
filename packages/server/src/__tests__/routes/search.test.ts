@@ -29,8 +29,8 @@ describe('Search API - GET /api/v1/search', () => {
 
     // Create libraries
     await db.insert(libraries).values([
-      { id: 'lib-1', name: 'Movies', allowedMediaTypes: '[]' },
-      { id: 'lib-2', name: 'Music', allowedMediaTypes: '[]' },
+      { id: 'lib-1', name: 'Movies', mediaTypes: '[]' },
+      { id: 'lib-2', name: 'Music', mediaTypes: '[]' },
     ])
 
     // Create data sources

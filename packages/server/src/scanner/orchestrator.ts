@@ -119,27 +119,26 @@ export async function scanLibrary(
   const libraryName = libraryRows[0]?.name ?? libraryId
 
   // Parse allowed media types — empty array means accept all
-  let allowedMediaTypes: string[] = []
+  let mediaTypes: string[] = []
   try {
-    allowedMediaTypes = JSON.parse(
-      libraryRows[0]?.allowedMediaTypes ?? '[]',
-    ) as string[]
+    mediaTypes = libraryRows[0]?.mediaTypes ?? []
   } catch {
-    allowedMediaTypes = []
+    mediaTypes = []
   }
-  const hasTypeFilter = allowedMediaTypes.length > 0
+  const hasTypeFilter = mediaTypes.length > 0
 
   const sources = await db
     .select()
     .from(dataSources)
-    .where(
-      and(eq(dataSources.libraryId, libraryId), eq(dataSources.enabled, true)),
-    )
+    .where(eq(dataSources.libraryId, libraryId))
+  // .where(
+  //   and(eq(dataSources.libraryId, libraryId), eq(dataSources.enabled, true)),
+  // )
 
   logger.log(`Scan started: "${libraryName}"`, {
     libraryId,
     sources: sources.length,
-    typeFilter: hasTypeFilter ? allowedMediaTypes : 'none',
+    typeFilter: hasTypeFilter ? mediaTypes : 'none',
   })
 
   let totalNew = 0
@@ -151,7 +150,7 @@ export async function scanLibrary(
     const existing = await db
       .select({ filePath: mediaItems.filePath, fileSize: mediaItems.fileSize })
       .from(mediaItems)
-      .where(eq(mediaItems.dataSourceId, source.id))
+      .where(eq(mediaItems.libraryId, source.libraryId))
 
     const result = await scanDataSource(source, existing)
 
@@ -160,16 +159,18 @@ export async function scanLibrary(
       const beforeNew = result.newFiles.length
       const beforeChanged = result.changedFiles.length
       result.newFiles = result.newFiles.filter((e) =>
-        allowedMediaTypes.includes(e.mediaCategory),
+        mediaTypes.includes(e.mediaCategory),
       )
       result.changedFiles = result.changedFiles.filter((e) =>
-        allowedMediaTypes.includes(e.mediaCategory),
+        mediaTypes.includes(e.mediaCategory),
       )
       const filteredOut =
-        beforeNew - result.newFiles.length + (beforeChanged - result.changedFiles.length)
+        beforeNew -
+        result.newFiles.length +
+        (beforeChanged - result.changedFiles.length)
       if (filteredOut > 0) {
         logger.log(
-          `Type filter excluded ${filteredOut} file(s) not matching: ${allowedMediaTypes.join(', ')}`,
+          `Type filter excluded ${filteredOut} file(s) not matching: ${mediaTypes.join(', ')}`,
         )
       }
     }
@@ -268,7 +269,6 @@ export async function scanLibrary(
       await db.insert(mediaItems).values({
         id,
         libraryId,
-        dataSourceId: source.id,
         filePath: entry.filePath,
         fileName: entry.fileName,
         fileSize: entry.fileSize,
@@ -276,7 +276,7 @@ export async function scanLibrary(
         mediaCategory: entry.mediaCategory,
         title: parsedTitle,
         metadata,
-        thumbnailPaths,
+        // thumbnailPaths,
         drmProtected,
         createdAt: now,
         updatedAt: now,
@@ -316,7 +316,7 @@ export async function scanLibrary(
         .from(mediaItems)
         .where(
           and(
-            eq(mediaItems.dataSourceId, source.id),
+            eq(mediaItems.libraryId, source.libraryId),
             eq(mediaItems.filePath, entry.filePath),
           ),
         )
@@ -395,7 +395,7 @@ export async function scanLibrary(
         .set(updateFields)
         .where(
           and(
-            eq(mediaItems.dataSourceId, source.id),
+            eq(mediaItems.libraryId, source.libraryId),
             eq(mediaItems.filePath, entry.filePath),
           ),
         )
@@ -413,11 +413,15 @@ export async function scanLibrary(
     if (result.removedFilePaths.length > 0) {
       logger.log(`Removing ${result.removedFilePaths.length} deleted file(s)`)
       const removedRows = await db
-        .select({ id: mediaItems.id, filePath: mediaItems.filePath, mediaCategory: mediaItems.mediaCategory })
+        .select({
+          id: mediaItems.id,
+          filePath: mediaItems.filePath,
+          mediaCategory: mediaItems.mediaCategory,
+        })
         .from(mediaItems)
         .where(
           and(
-            eq(mediaItems.dataSourceId, source.id),
+            eq(mediaItems.libraryId, source.libraryId),
             inArray(mediaItems.filePath, result.removedFilePaths),
           ),
         )
@@ -425,7 +429,7 @@ export async function scanLibrary(
         .delete(mediaItems)
         .where(
           and(
-            eq(mediaItems.dataSourceId, source.id),
+            eq(mediaItems.libraryId, source.libraryId),
             inArray(mediaItems.filePath, result.removedFilePaths),
           ),
         )
@@ -447,46 +451,58 @@ export async function scanLibrary(
 
   // Backfill thumbnails for video/image items that were scanned before
   // thumbnail generation was implemented (thumbnailPaths IS NULL).
-  const missingThumbs = await db
-    .select({
-      id: mediaItems.id,
-      filePath: mediaItems.filePath,
-      mediaCategory: mediaItems.mediaCategory,
-    })
-    .from(mediaItems)
-    .where(
-      and(
-        eq(mediaItems.libraryId, libraryId),
-        isNull(mediaItems.thumbnailPaths),
-      ),
-    )
+  // const missingThumbs = await db
+  //   .select({
+  //     id: mediaItems.id,
+  //     filePath: mediaItems.filePath,
+  //     mediaCategory: mediaItems.mediaCategory,
+  //   })
+  //   .from(mediaItems)
+  //   .where(
+  //     and(
+  //       eq(mediaItems.libraryId, libraryId),
+  //       isNull(mediaItems.thumbnailPaths),
+  //     ),
+  //   )
 
-  if (missingThumbs.length > 0) {
-    logger.log(`Backfilling thumbnails for ${missingThumbs.length} item(s)`)
-    let backfilled = 0
-    for (const item of missingThumbs) {
-      let thumbs = null
-      if (isVideoCategory(item.mediaCategory)) {
-        thumbs = await generateVideoThumbnails(
-          item.filePath,
-          item.id,
-          resolvedDataDir,
-        )
-      } else if (isImageCategory(item.mediaCategory)) {
-        thumbs = await generateThumbnails(item.filePath, item.id, resolvedDataDir)
-      }
-      if (thumbs) {
-        await db
-          .update(mediaItems)
-          .set({ thumbnailPaths: JSON.stringify(thumbs), updatedAt: new Date() })
-          .where(eq(mediaItems.id, item.id))
-        backfilled++
-      } else if (isVideoCategory(item.mediaCategory) || isImageCategory(item.mediaCategory)) {
-        logger.warn(`Backfill thumbnail failed: ${item.filePath}`)
-      }
-    }
-    logger.log(`Thumbnail backfill complete: ${backfilled}/${missingThumbs.length} succeeded`)
-  }
+  // if (missingThumbs.length > 0) {
+  //   logger.log(`Backfilling thumbnails for ${missingThumbs.length} item(s)`)
+  //   let backfilled = 0
+  //   for (const item of missingThumbs) {
+  //     let thumbs = null
+  //     if (isVideoCategory(item.mediaCategory)) {
+  //       thumbs = await generateVideoThumbnails(
+  //         item.filePath,
+  //         item.id,
+  //         resolvedDataDir,
+  //       )
+  //     } else if (isImageCategory(item.mediaCategory)) {
+  //       thumbs = await generateThumbnails(
+  //         item.filePath,
+  //         item.id,
+  //         resolvedDataDir,
+  //       )
+  //     }
+  //     if (thumbs) {
+  //       await db
+  //         .update(mediaItems)
+  //         .set({
+  //           thumbnailPaths: JSON.stringify(thumbs),
+  //           updatedAt: new Date(),
+  //         })
+  //         .where(eq(mediaItems.id, item.id))
+  //       backfilled++
+  //     } else if (
+  //       isVideoCategory(item.mediaCategory) ||
+  //       isImageCategory(item.mediaCategory)
+  //     ) {
+  //       logger.warn(`Backfill thumbnail failed: ${item.filePath}`)
+  //     }
+  //   }
+  //   logger.log(
+  //     `Thumbnail backfill complete: ${backfilled}/${missingThumbs.length} succeeded`,
+  //   )
+  // }
 
   logger.log('Running post-scan grouping')
   await groupTvEpisodes(db, libraryId)

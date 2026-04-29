@@ -1,79 +1,56 @@
+import {
+  type MPARating,
+  MPARatings,
+  type MediaImageType,
+  MediaImageTypes,
+} from '@xon/shared'
 import { sql } from 'drizzle-orm'
 import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
-import { dataSources, libraries } from './libraries.js'
-
-export const CONTENT_RATINGS = [
-  'G',
-  'PG',
-  'PG-13',
-  'R',
-  'unrated',
-  'none',
-] as const
-export type ContentRatingMax = (typeof CONTENT_RATINGS)[number]
-
-export const MEDIA_CONTENT_RATINGS = [
-  'G',
-  'PG',
-  'PG-13',
-  'R',
-  'unrated',
-] as const
-export type MediaContentRating = (typeof MEDIA_CONTENT_RATINGS)[number]
-
-// Rating order index: G=0, PG=1, PG-13=2, R=3, unrated=4. "none" = no restriction.
-export const RATING_ORDER: MediaContentRating[] = [
-  'G',
-  'PG',
-  'PG-13',
-  'R',
-  'unrated',
-]
+import { libraries } from './libraries.js'
+import { keys, timestamps } from './shared.js'
 
 /**
  * Returns an array of allowed content ratings for the given maxContentRating,
  * or null if there is no restriction (maxContentRating === "none").
  */
 export function getAllowedRatings(
-  maxContentRating: ContentRatingMax,
-): MediaContentRating[] | null {
+  maxContentRating: MPARating | 'none' | 'unrated',
+): MPARating[] | null {
   if (maxContentRating === 'none') return null
-  const idx = RATING_ORDER.indexOf(maxContentRating as MediaContentRating)
+  const idx = MPARatings.indexOf(maxContentRating as MPARating)
   if (idx === -1) return null
-  return RATING_ORDER.slice(0, idx + 1)
+
+  return MPARatings.slice(0, idx + 1)
 }
 
 export const mediaItems = sqliteTable(
   'media_items',
   {
-    id: text('id').primaryKey(),
+    ...keys,
+    ...timestamps,
     libraryId: text('library_id')
       .notNull()
       .references(() => libraries.id, { onDelete: 'cascade' }),
-    dataSourceId: text('data_source_id')
-      .notNull()
-      .references(() => dataSources.id, { onDelete: 'cascade' }),
+    // dataSourceId: text('data_source_id')
+    //   .notNull()
+    //   .references(() => dataSources.id, { onDelete: 'cascade' }),
     filePath: text('file_path').notNull(),
     fileName: text('file_name').notNull(),
     fileSize: integer('file_size').notNull(),
     mimeType: text('mime_type'),
+    // TODO: Rename to "category"
     mediaCategory: text('media_category'),
-    contentRating: text('content_rating', {
-      enum: ['G', 'PG', 'PG-13', 'R', 'unrated'],
-    }),
+    // TODO: Rename to "rating"
+    // contentRating: text('content_rating', {
+    //   enum: ['G', 'PG', 'PG-13', 'R', 'unrated'],
+    // }),
     title: text('title'),
     description: text('description'),
     metadata: text('metadata').notNull().default('{}'),
-    thumbnailPaths: text('thumbnail_paths'),
+    // thumbnailPaths: text('thumbnail_paths'),
     drmProtected: integer('drm_protected', { mode: 'boolean' })
       .notNull()
       .default(false),
-    createdAt: integer('created_at', { mode: 'timestamp' })
-      .notNull()
-      .default(sql`(unixepoch())`),
-    updatedAt: integer('updated_at', { mode: 'timestamp' })
-      .notNull()
-      .default(sql`(unixepoch())`),
     scannedAt: integer('scanned_at', { mode: 'timestamp' }),
   },
   (table) => [
@@ -83,8 +60,20 @@ export const mediaItems = sqliteTable(
   ],
 )
 
+export const mediaImages = sqliteTable('media_images', {
+  ...keys,
+  ...timestamps,
+  mediaItemId: text('media_item_id')
+    .notNull()
+    .references(() => mediaItems.id, { onDelete: 'cascade' }),
+  url: text('url').notNull(),
+  type: text('type', { enum: MediaImageTypes })
+    .$type<MediaImageType>()
+    .notNull(),
+})
+
 export const readingPositions = sqliteTable('reading_positions', {
-  id: text('id').primaryKey(),
+  ...keys,
   mediaItemId: text('media_item_id')
     .notNull()
     .unique()
@@ -98,5 +87,7 @@ export const readingPositions = sqliteTable('reading_positions', {
 
 export type MediaItem = typeof mediaItems.$inferSelect
 export type NewMediaItem = typeof mediaItems.$inferInsert
+export type MediaImage = typeof mediaImages.$inferSelect
+export type NewMediaImage = typeof mediaImages.$inferInsert
 export type ReadingPosition = typeof readingPositions.$inferSelect
 export type NewReadingPosition = typeof readingPositions.$inferInsert

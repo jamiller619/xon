@@ -42,13 +42,13 @@ describe('Admin Library Access API', () => {
     await db.insert(libraries).values({
       id: 'lib-1',
       name: 'Movies',
-      allowedMediaTypes: '[]',
+      mediaTypes: '[]',
     })
 
     await db.insert(libraries).values({
       id: 'lib-2',
       name: 'Music',
-      allowedMediaTypes: '[]',
+      mediaTypes: '[]',
     })
   })
 

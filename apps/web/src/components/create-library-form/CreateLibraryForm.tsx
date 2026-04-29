@@ -72,7 +72,7 @@ export function CreateLibraryForm({
         body: JSON.stringify({
           name,
           description: description.trim() || undefined,
-          allowedMediaTypes: mediaTypes,
+          mediaTypes,
         }),
       })
 

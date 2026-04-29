@@ -1,3 +1,4 @@
+import type { DataSource, Library } from '@xon/shared/'
 import { useCallback, useEffect, useState } from 'react'
 import { CreateLibraryForm } from '~/components/create-library-form/CreateLibraryForm'
 import { apiFetch } from '~/lib/apiFetch'
@@ -64,44 +65,44 @@ function formatDuration(ms: number | null): string {
   return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`
 }
 
-interface DataSource {
-  id: string
-  libraryId: string
-  type: 'local' | 'network' | 'plugin'
-  path: string
-  pluginId: string | null
-  recursive: boolean
-  enabled: boolean
-}
+// interface DataSource {
+//   id: string
+//   libraryId: string
+//   type: 'local' | 'network' | 'plugin'
+//   path: string
+//   pluginId: string | null
+//   recursive: boolean
+//   enabled: boolean
+// }
 
-interface Library {
-  id: string
-  name: string
-  description: string | null
-  allowedMediaTypes: string
-  scanSchedule: string | null
-  watchEnabled: boolean
-  lastScanResult: string | null
-  lastScanDuration: number | null
-  hideDrmItems: boolean
-  createdAt: number
-  updatedAt: number
-  dataSources?: DataSource[]
-}
+// interface Library {
+//   id: string
+//   name: string
+//   description: string | null
+//   mediaTypes: string
+//   scanSchedule: string | null
+//   watchEnabled: boolean
+//   lastScanResult: string | null
+//   lastScanDuration: number | null
+//   hideDRMItems: boolean
+//   createdAt: number
+//   updatedAt: number
+//   dataSources?: DataSource[]
+// }
 
-interface LibraryWithSources extends Library {
-  dataSources: DataSource[]
-}
+// interface LibraryWithSources extends Library {
+//   dataSources: DataSource[]
+// }
 
-function parseAllowedMediaTypes(raw: string): string[] {
-  try {
-    const parsed = JSON.parse(raw)
-    if (Array.isArray(parsed)) return parsed as string[]
-  } catch {
-    // ignore
-  }
-  return []
-}
+// function parseAllowedMediaTypes(raw: string): string[] {
+//   try {
+//     const parsed = JSON.parse(raw)
+//     if (Array.isArray(parsed)) return parsed as string[]
+//   } catch {
+//     // ignore
+//   }
+//   return []
+// }
 
 export default function AdminLibraries() {
   const [libraries, setLibraries] = useState<Library[]>([])
@@ -110,8 +111,7 @@ export default function AdminLibraries() {
 
   // Create/edit form state
   const [showCreateForm, setShowCreateForm] = useState(false)
-  const [editingLibrary, setEditingLibrary] =
-    useState<LibraryWithSources | null>(null)
+  const [editingLibrary, setEditingLibrary] = useState<Library | null>(null)
   const [formName, setFormName] = useState('')
   const [formDescription, setFormDescription] = useState('')
   const [formMediaTypes, setFormMediaTypes] = useState<string[]>([])
@@ -172,13 +172,13 @@ export default function AdminLibraries() {
     // Fetch data sources
     try {
       const res = await apiFetch(`/api/v1/libraries/${lib.id}`)
-      const data = (await res.json()) as LibraryWithSources
+      const data = (await res.json()) as Library
       setEditingLibrary(data)
       setFormName(data.name)
       setFormDescription(data.description ?? '')
-      setFormMediaTypes(parseAllowedMediaTypes(data.allowedMediaTypes))
-      setScheduleValue(data.scanSchedule)
-      setWatchEnabled(data.watchEnabled)
+      setFormMediaTypes(data.mediaTypes)
+      // setScheduleValue(data.scanSchedule)
+      // setWatchEnabled(data.watchEnabled)
       setShowCreateForm(false)
     } catch {
       setError('Failed to load library details')
@@ -203,7 +203,7 @@ export default function AdminLibraries() {
         body: JSON.stringify({
           name: formName,
           description: formDescription || undefined,
-          allowedMediaTypes: formMediaTypes,
+          mediaTypes: formMediaTypes,
         }),
       })
       if (!res.ok) {
@@ -259,7 +259,7 @@ export default function AdminLibraries() {
         const newSource = (await res.json()) as DataSource
         setEditingLibrary({
           ...editingLibrary,
-          dataSources: [...editingLibrary.dataSources, newSource],
+          dataSources: [...(editingLibrary.dataSources || []), newSource],
         })
         setNewSourcePath('')
         setNewSourceType('local')
@@ -272,30 +272,30 @@ export default function AdminLibraries() {
     }
   }
 
-  async function handleToggleSource(source: DataSource) {
-    if (!editingLibrary) return
-    try {
-      const res = await apiFetch(
-        `/api/v1/libraries/${editingLibrary.id}/sources/${source.id}`,
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ enabled: !source.enabled }),
-        },
-      )
-      if (res.ok) {
-        const updated = (await res.json()) as DataSource
-        setEditingLibrary({
-          ...editingLibrary,
-          dataSources: editingLibrary.dataSources.map((s) =>
-            s.id === source.id ? updated : s,
-          ),
-        })
-      }
-    } catch {
-      // ignore
-    }
-  }
+  // async function handleToggleSource(source: DataSource) {
+  //   if (!editingLibrary) return
+  //   try {
+  //     const res = await apiFetch(
+  //       `/api/v1/libraries/${editingLibrary.id}/sources/${source.id}`,
+  //       {
+  //         method: 'PUT',
+  //         headers: { 'Content-Type': 'application/json' },
+  //         body: JSON.stringify({ enabled: !source.enabled }),
+  //       },
+  //     )
+  //     if (res.ok) {
+  //       const updated = (await res.json()) as DataSource
+  //       setEditingLibrary({
+  //         ...editingLibrary,
+  //         dataSources: editingLibrary.dataSources?.map((s) =>
+  //           s.id === source.id ? updated : s,
+  //         ) ?? [],
+  //       })
+  //     }
+  //   } catch {
+  //     // ignore
+  //   }
+  // }
 
   async function handleDeleteSource(sourceId: string) {
     if (!editingLibrary) return
@@ -308,9 +308,8 @@ export default function AdminLibraries() {
       )
       setEditingLibrary({
         ...editingLibrary,
-        dataSources: editingLibrary.dataSources.filter(
-          (s) => s.id !== sourceId,
-        ),
+        dataSources:
+          editingLibrary.dataSources?.filter((s) => s.id !== sourceId) ?? [],
       })
     } catch {
       setSourceError('Failed to remove data source')
@@ -418,7 +417,7 @@ export default function AdminLibraries() {
               setShowCreateForm(false)
               void fetchLibraries()
             }}
-            onCancel={() => setShowCreateForm(false)}
+            // onCancel={() => setShowCreateForm(false)}
           />
         </div>
       )}
@@ -537,22 +536,22 @@ export default function AdminLibraries() {
           {/* Data sources section */}
           <div className={styles.sourcesSection ?? ''}>
             <h3 className={styles.sourcesSectionHeading ?? ''}>Data Sources</h3>
-            {editingLibrary.dataSources.length === 0 && (
+            {editingLibrary.dataSources?.length === 0 && (
               <p className={styles.emptyMsg ?? ''}>
                 No data sources added yet.
               </p>
             )}
-            {editingLibrary.dataSources.map((source) => (
+            {editingLibrary.dataSources?.map((source) => (
               <div key={source.id} className={styles.sourceRow ?? ''}>
                 <div className={styles.sourceInfo ?? ''}>
                   <span className={styles.sourceType ?? ''}>{source.type}</span>
                   <span className={styles.sourcePath ?? ''}>{source.path}</span>
-                  <span className={styles.sourceMeta ?? ''}>
+                  {/* <span className={styles.sourceMeta ?? ''}>
                     {source.recursive ? 'recursive' : 'non-recursive'}
-                  </span>
+                  </span> */}
                 </div>
                 <div className={styles.sourceActions ?? ''}>
-                  <button
+                  {/* <button
                     type="button"
                     className={
                       source.enabled
@@ -562,7 +561,7 @@ export default function AdminLibraries() {
                     onClick={() => handleToggleSource(source)}
                   >
                     {source.enabled ? 'Disable' : 'Enable'}
-                  </button>
+                  </button> */}
                   <button
                     type="button"
                     className={styles.deleteSourceBtn ?? ''}
@@ -640,8 +639,7 @@ export default function AdminLibraries() {
                   </p>
                 )}
                 <p className={styles.libraryMeta ?? ''}>
-                  {parseAllowedMediaTypes(lib.allowedMediaTypes).join(', ') ||
-                    'All media types'}
+                  {lib.mediaTypes.join(', ') || 'All media types'}
                 </p>
                 <div className={styles.libraryScanMeta ?? ''}>
                   {lib.scanSchedule && (

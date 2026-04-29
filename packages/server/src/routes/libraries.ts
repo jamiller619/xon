@@ -14,7 +14,7 @@ import {
   users,
 } from '../db/schema.js'
 import { validate } from '../http/validate.js'
-import { withThumbnailUrls } from './media.js'
+// import { withThumbnailUrls } from './media.js'
 import { makeScanRouter } from './scan.js'
 import { makeSourcesRouter } from './sources.js'
 
@@ -37,24 +37,24 @@ async function getAccessibleLibraryIds(
 }
 
 /** Builds a Drizzle WHERE condition restricting media items by the user's maxContentRating. */
-async function getContentRatingCondition(db: LibSQLDatabase, userId: string) {
-  const userRows = await db
-    .select({ maxContentRating: users.maxContentRating })
-    .from(users)
-    .where(eq(users.id, userId))
-  const maxRating = userRows[0]?.maxContentRating ?? 'none'
-  const allowed = getAllowedRatings(maxRating)
-  if (allowed === null) return null // no restriction
-  if (allowed.length === 0) return isNull(mediaItems.contentRating)
-  const unratedAllowed = (allowed as string[]).includes('unrated')
-  if (unratedAllowed) {
-    return or(
-      isNull(mediaItems.contentRating),
-      inArray(mediaItems.contentRating, allowed),
-    ) as SQL<unknown>
-  }
-  return inArray(mediaItems.contentRating, allowed)
-}
+// async function getContentRatingCondition(db: LibSQLDatabase, userId: string) {
+//   const userRows = await db
+//     .select({ maxContentRating: users.maxContentRating })
+//     .from(users)
+//     .where(eq(users.id, userId))
+//   const maxRating = userRows[0]?.maxContentRating ?? 'none'
+//   const allowed = getAllowedRatings(maxRating)
+//   if (allowed === null) return null // no restriction
+//   if (allowed.length === 0) return isNull(mediaItems.contentRating)
+//   const unratedAllowed = (allowed as string[]).includes('unrated')
+//   if (unratedAllowed) {
+//     return or(
+//       isNull(mediaItems.contentRating),
+//       inArray(mediaItems.contentRating, allowed),
+//     ) as SQL<unknown>
+//   }
+//   return inArray(mediaItems.contentRating, allowed)
+// }
 
 const libraryMediaQuerySchema = z.object({
   mediaCategory: z.string().optional(),
@@ -71,14 +71,14 @@ const libraryMediaQuerySchema = z.object({
 const createLibrarySchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  allowedMediaTypes: z.array(z.string()).optional().default([]),
+  mediaTypes: z.array(z.string()).optional().default([]),
 })
 
 const updateLibrarySchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
-  allowedMediaTypes: z.array(z.string()).optional(),
-  hideDrmItems: z.boolean().optional(),
+  mediaTypes: z.array(z.string()).optional(),
+  hideDRMItems: z.boolean().optional(),
 })
 
 export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
@@ -97,7 +97,7 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
         id,
         name: body.name,
         description: body.description,
-        allowedMediaTypes: JSON.stringify(body.allowedMediaTypes),
+        mediaTypes: body.mediaTypes,
         createdAt: now,
         updatedAt: now,
       })
@@ -180,11 +180,11 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
       }
       if (body.name !== undefined) updates.name = body.name
       if (body.description !== undefined) updates.description = body.description
-      if (body.allowedMediaTypes !== undefined) {
-        updates.allowedMediaTypes = JSON.stringify(body.allowedMediaTypes)
+      if (body.mediaTypes !== undefined) {
+        updates.mediaTypes = body.mediaTypes
       }
-      if (body.hideDrmItems !== undefined)
-        updates.hideDrmItems = body.hideDrmItems
+      if (body.hideDRMItems !== undefined)
+        updates.hideDRMItems = body.hideDRMItems
 
       await db.update(libraries).set(updates).where(eq(libraries.id, id))
       appCache.invalidate(LIBRARIES_ALL_KEY)
@@ -246,16 +246,16 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
       const limitNum = limit
       const offset = (pageNum - 1) * limitNum
 
-      const ratingCond = await getContentRatingCondition(db, user.id)
+      // const ratingCond = await getContentRatingCondition(db, user.id)
 
       // Check if DRM items should be hidden (per library or per user preference)
       const userRows = await db
-        .select({ hideDrmItems: users.hideDrmItems })
+        .select({ hideDRMItems: users.hideDRMItems })
         .from(users)
         .where(eq(users.id, user.id))
         .limit(1)
-      const userHidesDrm = userRows[0]?.hideDrmItems ?? false
-      const libHidesDrm = lib[0]?.hideDrmItems ?? false
+      const userHidesDrm = userRows[0]?.hideDRMItems ?? false
+      const libHidesDrm = lib[0]?.hideDRMItems ?? false
 
       const conditions = [eq(mediaItems.libraryId, libraryId)]
       if (mediaCategory)
@@ -266,7 +266,7 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
       } else if (userHidesDrm || libHidesDrm) {
         conditions.push(eq(mediaItems.drmProtected, false))
       }
-      if (ratingCond !== null) conditions.push(ratingCond)
+      // if (ratingCond !== null) conditions.push(ratingCond)
 
       const sortDir = order === 'desc' ? desc : asc
       const orderExpr =
@@ -303,7 +303,8 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
       }
       c.header('X-Total-Count', String(totalCount))
 
-      const items = rows.map(withThumbnailUrls)
+      // const items = rows.map(withThumbnailUrls)
+      const items = rows
       const etag = computeETag(items)
       if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
       c.header('ETag', etag)

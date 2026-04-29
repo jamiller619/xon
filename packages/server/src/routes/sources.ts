@@ -57,8 +57,8 @@ export function makeSourcesRouter(db: LibSQLDatabase): Hono {
         type: body.type,
         path: body.path,
         pluginId: body.pluginId ?? null,
-        recursive: body.recursive,
-        enabled: body.enabled,
+        // recursive: body.recursive,
+        // enabled: body.enabled,
         createdAt: now,
         updatedAt: now,
       })
@@ -125,8 +125,8 @@ export function makeSourcesRouter(db: LibSQLDatabase): Hono {
       if (body.type !== undefined) updates.type = body.type
       if (body.path !== undefined) updates.path = body.path
       if (body.pluginId !== undefined) updates.pluginId = body.pluginId
-      if (body.recursive !== undefined) updates.recursive = body.recursive
-      if (body.enabled !== undefined) updates.enabled = body.enabled
+      // if (body.recursive !== undefined) updates.recursive = body.recursive
+      // if (body.enabled !== undefined) updates.enabled = body.enabled
 
       await db
         .update(dataSources)

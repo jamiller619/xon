@@ -48,7 +48,7 @@ describe('Favorites and Watchlist API', () => {
 
     await db
       .insert(libraries)
-      .values({ id: 'lib-1', name: 'Movies', allowedMediaTypes: '[]' })
+      .values({ id: 'lib-1', name: 'Movies', mediaTypes: '[]' })
 
     await db.insert(dataSources).values({
       id: 'ds-1',

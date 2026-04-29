@@ -92,13 +92,15 @@ export async function startScheduler(
     if (!lib.watchEnabled) continue
 
     for (const source of sources) {
-      if (source.type !== 'local' || !source.enabled) continue
+      if (source.type !== 'local') continue
+      // if (source.type !== 'local' || !source.enabled) continue
 
       try {
         const watchPath = toLocalPath(source.path)
         const watcher = watch(
           watchPath,
-          { recursive: source.recursive },
+          // { recursive: source.recursive },
+          { recursive: true },
           () => {
             // Debounce: wait DEBOUNCE_MS after the last change event
             const existing = debounceTimers.get(lib.id)
@@ -122,7 +124,8 @@ export async function startScheduler(
         fsWatchers.push(watcher)
         logger.log(`Watching path: ${watchPath}`, {
           libraryId: lib.id,
-          recursive: source.recursive,
+          recursive: true,
+          // recursive: source.recursive,
         })
       } catch (err) {
         if (

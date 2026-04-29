@@ -134,7 +134,7 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
         mimeType: mediaItems.mimeType,
         fileSize: mediaItems.fileSize,
         createdAt: mediaItems.createdAt,
-        thumbnailPaths: mediaItems.thumbnailPaths,
+        // thumbnailPaths: mediaItems.thumbnailPaths,
       })
       .from(groupMembers)
       .innerJoin(mediaItems, eq(groupMembers.mediaItemId, mediaItems.id))
@@ -142,29 +142,29 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
       .orderBy(asc(groupMembers.sortOrder))
 
     const membersWithThumbs = members.map((m) => {
-      let thumbnailUrls: {
+      const thumbnailUrls: {
         small: string
         medium: string
         large: string
       } | null = null
-      if (m.thumbnailPaths) {
-        try {
-          const paths = JSON.parse(m.thumbnailPaths) as {
-            small?: string
-            medium?: string
-            large?: string
-          }
-          if (paths.small && paths.medium && paths.large) {
-            thumbnailUrls = {
-              small: `/api/v1/media/${m.mediaItemId}/thumbnail/small`,
-              medium: `/api/v1/media/${m.mediaItemId}/thumbnail/medium`,
-              large: `/api/v1/media/${m.mediaItemId}/thumbnail/large`,
-            }
-          }
-        } catch {
-          // ignore
-        }
-      }
+      // if (m.thumbnailPaths) {
+      //   try {
+      //     const paths = JSON.parse(m.thumbnailPaths) as {
+      //       small?: string
+      //       medium?: string
+      //       large?: string
+      //     }
+      //     if (paths.small && paths.medium && paths.large) {
+      //       thumbnailUrls = {
+      //         small: `/api/v1/media/${m.mediaItemId}/thumbnail/small`,
+      //         medium: `/api/v1/media/${m.mediaItemId}/thumbnail/medium`,
+      //         large: `/api/v1/media/${m.mediaItemId}/thumbnail/large`,
+      //       }
+      //     }
+      //   } catch {
+      //     // ignore
+      //   }
+      // }
       return { ...m, thumbnailUrls, thumbnailPaths: undefined }
     })
 

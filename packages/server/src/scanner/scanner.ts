@@ -2,7 +2,7 @@ import type { Dirent, Stats } from 'node:fs'
 import { readdir, stat } from 'node:fs/promises'
 import { basename, extname, join } from 'node:path'
 import { EXTENSION_TO_MIME, getMediaCategory } from '@xon/media-types'
-import type { MediaCategory } from '@xon/shared'
+import type { DataSource, MediaCategory } from '@xon/shared'
 import type { MediaItem } from '../db/schema.js'
 import { createLogger } from '../logger.js'
 import { getMediaProviderPlugin } from '../plugins/mediaProviderPluginRegistry.js'
@@ -27,7 +27,7 @@ export type ScanResult = {
 
 async function walkDirectory(
   dirPath: string,
-  recursive: boolean,
+  recursive = true,
 ): Promise<FileEntry[]> {
   const entries: FileEntry[] = []
 
@@ -130,12 +130,7 @@ export function toLocalPath(inputPath: string): string {
 }
 
 export async function scanDataSource(
-  dataSource: {
-    type?: string
-    path: string
-    recursive: boolean
-    pluginId?: string | null
-  },
+  dataSource: DataSource,
   existingItems: Pick<MediaItem, 'filePath' | 'fileSize'>[] = [],
 ): Promise<ScanResult> {
   const sourceLabel =
@@ -152,10 +147,7 @@ export async function scanDataSource(
       dataSource.path,
     )
   } else {
-    discovered = await walkDirectory(
-      toLocalPath(dataSource.path),
-      dataSource.recursive,
-    )
+    discovered = await walkDirectory(toLocalPath(dataSource.path))
   }
 
   const existingMap = new Map<string, number>()

@@ -257,7 +257,7 @@ describe('runMediaBackupJob — plugin type', () => {
       .values({
         id: 'lib1',
         name: 'Movies',
-        allowedMediaTypes: '[]',
+        mediaTypes: '[]',
         createdAt: new Date(),
         updatedAt: new Date(),
       })
@@ -331,7 +331,7 @@ describe('runMediaBackupJob — plugin type', () => {
     await db.insert(libraries).values({
       id: 'lib1',
       name: 'Movies',
-      allowedMediaTypes: '[]',
+      mediaTypes: '[]',
       createdAt: new Date(),
       updatedAt: new Date(),
     })

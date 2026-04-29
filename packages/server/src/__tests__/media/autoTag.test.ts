@@ -252,7 +252,7 @@ describe('autoTagMediaItems', () => {
 
     await db
       .insert(libraries)
-      .values({ id: 'lib-1', name: 'Photos', allowedMediaTypes: '[]' })
+      .values({ id: 'lib-1', name: 'Photos', mediaTypes: '[]' })
     await db.insert(dataSources).values({
       id: 'ds-1',
       libraryId: 'lib-1',
@@ -408,7 +408,7 @@ describe('autoTagMediaItems', () => {
   it('only tags items belonging to the specified library', async () => {
     await db
       .insert(libraries)
-      .values({ id: 'lib-2', name: 'Other', allowedMediaTypes: '[]' })
+      .values({ id: 'lib-2', name: 'Other', mediaTypes: '[]' })
     await db.insert(dataSources).values({
       id: 'ds-2',
       libraryId: 'lib-2',

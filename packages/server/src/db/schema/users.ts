@@ -17,7 +17,7 @@ export const users = sqliteTable('users', {
   })
     .notNull()
     .default('none'),
-  hideDrmItems: integer('hide_drm_items', { mode: 'boolean' })
+  hideDRMItems: integer('hide_drm_items', { mode: 'boolean' })
     .notNull()
     .default(false),
   createdAt: integer('created_at', { mode: 'timestamp' })

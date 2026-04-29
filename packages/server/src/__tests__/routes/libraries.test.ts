@@ -29,7 +29,7 @@ describe('Libraries CRUD API', () => {
     data: {
       name: string
       description?: string
-      allowedMediaTypes?: string[]
+      mediaTypes?: string[]
     } = {
       name: 'Test Library',
     },
@@ -46,14 +46,14 @@ describe('Libraries CRUD API', () => {
       const res = await createLibrary({
         name: 'My Movies',
         description: 'Movie collection',
-        allowedMediaTypes: ['Movies'],
+        mediaTypes: ['Movies'],
       })
       expect(res.status).toBe(201)
       const body = await res.json()
       expect(body).toMatchObject({
         name: 'My Movies',
         description: 'Movie collection',
-        allowedMediaTypes: '["Movies"]',
+        mediaTypes: '["Movies"]',
       })
       expect(body).toHaveProperty('id')
       expect(body).toHaveProperty('createdAt')
@@ -64,7 +64,7 @@ describe('Libraries CRUD API', () => {
       expect(res.status).toBe(201)
       const body = await res.json()
       expect(body.name).toBe('Minimal Library')
-      expect(body.allowedMediaTypes).toBe('[]')
+      expect(body.mediaTypes).toBe('[]')
       expect(body.description).toBeNull()
     })
 
@@ -147,16 +147,16 @@ describe('Libraries CRUD API', () => {
       expect(body.name).toBe('New Name')
     })
 
-    it('updates allowedMediaTypes', async () => {
+    it('updates mediaTypes', async () => {
       const created = await (await createLibrary({ name: 'Library' })).json()
       const res = await app.request(`/api/v1/libraries/${created.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: AUTH },
-        body: JSON.stringify({ allowedMediaTypes: ['Movies', 'TV Shows'] }),
+        body: JSON.stringify({ mediaTypes: ['Movies', 'TV Shows'] }),
       })
       expect(res.status).toBe(200)
       const body = await res.json()
-      expect(body.allowedMediaTypes).toBe('["Movies","TV Shows"]')
+      expect(body.mediaTypes).toBe('["Movies","TV Shows"]')
     })
 
     it('returns 404 for unknown id', async () => {
@@ -220,7 +220,7 @@ describe('Libraries Media List API', () => {
     await db.insert(libraries).values({
       id: libId,
       name: 'Test Library',
-      allowedMediaTypes: '[]',
+      mediaTypes: '[]',
       createdAt: now,
       updatedAt: now,
     })
@@ -377,7 +377,7 @@ describe('Libraries Media List API', () => {
       await db.insert(libraries).values({
         id: emptyLibId,
         name: 'Empty Library',
-        allowedMediaTypes: '[]',
+        mediaTypes: '[]',
         createdAt: now,
         updatedAt: now,
       })

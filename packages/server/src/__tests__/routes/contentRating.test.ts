@@ -69,7 +69,7 @@ describe('Content rating filtering', () => {
     await db.insert(libraries).values({
       id: libId,
       name: 'Test Library',
-      allowedMediaTypes: '[]',
+      mediaTypes: '[]',
       createdAt: now,
       updatedAt: now,
     })

@@ -74,7 +74,7 @@ describe('Incremental backup support', () => {
     await db.insert(libraries).values({
       id: libId,
       name: 'Lib',
-      allowedMediaTypes: '[]',
+      mediaTypes: '[]',
       createdAt: new Date(),
       updatedAt: new Date(),
     })

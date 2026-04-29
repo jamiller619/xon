@@ -4,7 +4,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { libraryAccess, matchingQueue, mediaItems } from '../db/schema.js'
 import { validate } from '../http/validate.js'
-import { withThumbnailUrls } from './media.js'
+// import { withThumbnailUrls } from './media.js'
 
 const PRIVILEGED_ROLES = ['admin', 'manager'] as const
 
@@ -70,7 +70,8 @@ export function makeMatchingRouter(db: LibSQLDatabase): Hono {
           return {}
         }
       })(),
-      mediaItem: withThumbnailUrls(mediaItem),
+      mediaItem,
+      // mediaItem: withThumbnailUrls(mediaItem),
     }))
 
     return c.json({ items, limit: limitNum, offset: offsetNum })

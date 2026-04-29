@@ -15,7 +15,7 @@ describe('FTS5 full-text search index', () => {
 
     await db
       .insert(libraries)
-      .values({ id: 'lib-1', name: 'Movies', allowedMediaTypes: '[]' })
+      .values({ id: 'lib-1', name: 'Movies', mediaTypes: '[]' })
     await db.insert(dataSources).values({
       id: 'ds-1',
       libraryId: 'lib-1',

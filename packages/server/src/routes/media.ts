@@ -25,7 +25,6 @@ import {
 } from '../db/schema.js'
 import { validate } from '../http/validate.js'
 import { listArchiveContents } from '../media/archive.js'
-import { getPluginMetadataForItem } from '../plugins/pluginManager.js'
 import {
   extractFfprobeMetadata,
   extractStreamTracks,
@@ -38,20 +37,21 @@ import {
   needsTranscoding,
   spawnTranscodeSegment,
 } from '../media/transcode.js'
+import { getPluginMetadataForItem } from '../plugins/pluginManager.js'
 
 const VALID_SIZES = ['small', 'medium', 'large'] as const
 type ThumbnailSize = (typeof VALID_SIZES)[number]
 
-export function withThumbnailUrls(item: MediaItem) {
-  const thumbnailUrls = item.thumbnailPaths
-    ? {
-        small: `/api/v1/media/${item.id}/thumbnail?size=small`,
-        medium: `/api/v1/media/${item.id}/thumbnail?size=medium`,
-        large: `/api/v1/media/${item.id}/thumbnail?size=large`,
-      }
-    : null
-  return { ...item, thumbnailUrls }
-}
+// export function withThumbnailUrls(item: MediaItem) {
+//   const thumbnailUrls = item.thumbnailPaths
+//     ? {
+//         small: `/api/v1/media/${item.id}/thumbnail?size=small`,
+//         medium: `/api/v1/media/${item.id}/thumbnail?size=medium`,
+//         large: `/api/v1/media/${item.id}/thumbnail?size=large`,
+//       }
+//     : null
+//   return { ...item, thumbnailUrls }
+// }
 
 export function makeMediaRouter(db: LibSQLDatabase): Hono {
   const router = new Hono()
@@ -71,28 +71,28 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
   }
 
   /** Builds a Drizzle WHERE condition restricting items by the user's maxContentRating. */
-  async function getContentRatingCondition(userId: string) {
-    const userRows = await db
-      .select({ maxContentRating: users.maxContentRating })
-      .from(users)
-      .where(eq(users.id, userId))
-    const maxRating = userRows[0]?.maxContentRating ?? 'none'
-    const allowed = getAllowedRatings(maxRating)
-    if (allowed === null) return null // no restriction
-    if (allowed.length === 0) {
-      // Only unrated items with null contentRating are visible
-      return isNull(mediaItems.contentRating)
-    }
-    // Items with null contentRating are treated as unrated; include them if "unrated" is allowed
-    const unratedAllowed = (allowed as string[]).includes('unrated')
-    if (unratedAllowed) {
-      return or(
-        isNull(mediaItems.contentRating),
-        inArray(mediaItems.contentRating, allowed),
-      ) as SQL<unknown>
-    }
-    return inArray(mediaItems.contentRating, allowed)
-  }
+  // async function getContentRatingCondition(userId: string) {
+  //   const userRows = await db
+  //     .select({ maxContentRating: users.maxContentRating })
+  //     .from(users)
+  //     .where(eq(users.id, userId))
+  //   const maxRating = userRows[0]?.maxContentRating ?? 'none'
+  //   const allowed = getAllowedRatings(maxRating)
+  //   if (allowed === null) return null // no restriction
+  //   if (allowed.length === 0) {
+  //     // Only unrated items with null contentRating are visible
+  //     return isNull(mediaItems.contentRating)
+  //   }
+  //   // Items with null contentRating are treated as unrated; include them if "unrated" is allowed
+  //   const unratedAllowed = (allowed as string[]).includes('unrated')
+  //   if (unratedAllowed) {
+  //     return or(
+  //       isNull(mediaItems.contentRating),
+  //       inArray(mediaItems.contentRating, allowed),
+  //     ) as SQL<unknown>
+  //   }
+  //   return inArray(mediaItems.contentRating, allowed)
+  // }
 
   // GET /media — list media items scoped to accessible libraries
   router.get('/', async (c) => {
@@ -115,13 +115,14 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       return c.json([])
     }
 
-    const ratingCond = await getContentRatingCondition(user.id)
+    // const ratingCond = await getContentRatingCondition(user.id)
 
     const libraryFilter =
       accessibleIds !== null
         ? inArray(mediaItems.libraryId, accessibleIds)
         : undefined
-    const whereClause = and(libraryFilter, ratingCond ?? undefined)
+    // const whereClause = and(libraryFilter, ratingCond ?? undefined)
+    const whereClause = and(libraryFilter, undefined)
 
     const baseQuery = db.select().from(mediaItems)
     const scopedQuery = whereClause ? baseQuery.where(whereClause) : baseQuery
@@ -130,7 +131,8 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       .limit(limitNum)
       .offset(offset)
 
-    const items = rows.map(withThumbnailUrls)
+    // const items = rows.map(withThumbnailUrls)
+    const items = rows
     const etag = computeETag(items)
     if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
     c.header('ETag', etag)
@@ -150,22 +152,23 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       return c.json({ error: 'Not found' }, 404)
     }
 
-    const ratingCond = await getContentRatingCondition(user.id)
-    if (ratingCond !== null) {
-      // Check if this item passes the content rating filter
-      const allowed = await db
-        .select({ id: mediaItems.id })
-        .from(mediaItems)
-        .where(and(eq(mediaItems.id, id), ratingCond))
-      if (allowed.length === 0) return c.json({ error: 'Not found' }, 404)
-    }
+    // const ratingCond = await getContentRatingCondition(user.id)
+    // if (ratingCond !== null) {
+    //   // Check if this item passes the content rating filter
+    //   const allowed = await db
+    //     .select({ id: mediaItems.id })
+    //     .from(mediaItems)
+    //     .where(and(eq(mediaItems.id, id), ratingCond))
+    //   if (allowed.length === 0) return c.json({ error: 'Not found' }, 404)
+    // }
 
-    const itemWithUrls = withThumbnailUrls(item)
+    // const itemWithUrls = withThumbnailUrls(item)
     const pluginMetadata = await getPluginMetadataForItem(id)
-    const etag = `"${item.updatedAt.getTime()}"`
+    const etag = `"${item.updatedAt?.getTime()}"`
     if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
     c.header('ETag', etag)
-    return c.json({ ...itemWithUrls, pluginMetadata })
+    // return c.json({ ...itemWithUrls, pluginMetadata })
+    return c.json({ ...item, pluginMetadata })
   })
 
   // GET /media/:id/match — get pending match for a media item
@@ -188,7 +191,12 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     const matchRows = await db
       .select()
       .from(matchingQueue)
-      .where(and(eq(matchingQueue.mediaItemId, id), eq(matchingQueue.status, 'pending')))
+      .where(
+        and(
+          eq(matchingQueue.mediaItemId, id),
+          eq(matchingQueue.status, 'pending'),
+        ),
+      )
       .limit(1)
 
     const match = matchRows[0]
@@ -242,7 +250,10 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       .select()
       .from(mediaItems)
       .where(eq(mediaItems.id, id))
-    return c.json(withThumbnailUrls(updated[0] as MediaItem))
+    // return c.json(withThumbnailUrls(updated[0] as
+    // MediaItem))
+
+    return c.json(updated[0] as MediaItem)
   })
 
   const aiTagsSchema = z.object({
@@ -307,7 +318,10 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       .select()
       .from(mediaItems)
       .where(eq(mediaItems.id, id))
-    return c.json(withThumbnailUrls(updated[0] as MediaItem))
+    // return c.json(withThumbnailUrls(updated[0] as
+    // MediaItem))
+
+    return c.json(updated[0] as MediaItem)
   })
 
   const bulkSchema = z.object({
@@ -373,9 +387,9 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
           updatedAt: new Date(),
         }
 
-        if (upd.contentRating !== undefined) {
-          updates.contentRating = upd.contentRating
-        }
+        // if (upd.contentRating !== undefined) {
+        //   updates.contentRating = upd.contentRating
+        // }
 
         if (upd.genre !== undefined || upd.tags !== undefined) {
           let meta: Record<string, unknown> = {}
@@ -664,46 +678,46 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
   })
 
   // GET /media/:id/thumbnail?size=small|medium|large
-  router.get('/:id/thumbnail', async (c) => {
-    const id = c.req.param('id')
-    const sizeParam = c.req.query('size') ?? 'medium'
+  // router.get('/:id/thumbnail', async (c) => {
+  //   const id = c.req.param('id')
+  //   const sizeParam = c.req.query('size') ?? 'medium'
 
-    if (!VALID_SIZES.includes(sizeParam as ThumbnailSize)) {
-      return c.json(
-        { error: 'Invalid size. Must be small, medium, or large.' },
-        400,
-      )
-    }
-    const size = sizeParam as ThumbnailSize
+  //   if (!VALID_SIZES.includes(sizeParam as ThumbnailSize)) {
+  //     return c.json(
+  //       { error: 'Invalid size. Must be small, medium, or large.' },
+  //       400,
+  //     )
+  //   }
+  //   const size = sizeParam as ThumbnailSize
 
-    const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
-    const item = rows[0]
-    if (!item) return c.json({ error: 'Not found' }, 404)
-    if (!item.thumbnailPaths)
-      return c.json({ error: 'No thumbnail available' }, 404)
+  //   const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
+  //   const item = rows[0]
+  //   if (!item) return c.json({ error: 'Not found' }, 404)
+  //   if (!item.thumbnailPaths)
+  //     return c.json({ error: 'No thumbnail available' }, 404)
 
-    let paths: ThumbnailPaths
-    try {
-      paths = JSON.parse(item.thumbnailPaths) as ThumbnailPaths
-    } catch {
-      return c.json({ error: 'No thumbnail available' }, 404)
-    }
+  //   let paths: ThumbnailPaths
+  //   try {
+  //     paths = JSON.parse(item.thumbnailPaths) as ThumbnailPaths
+  //   } catch {
+  //     return c.json({ error: 'No thumbnail available' }, 404)
+  //   }
 
-    const filePath = paths[size]
-    if (!filePath) return c.json({ error: 'No thumbnail available' }, 404)
+  //   const filePath = paths[size]
+  //   if (!filePath) return c.json({ error: 'No thumbnail available' }, 404)
 
-    let buffer: Buffer
-    try {
-      buffer = await readFile(filePath)
-    } catch {
-      return c.json({ error: 'No thumbnail available' }, 404)
-    }
+  //   let buffer: Buffer
+  //   try {
+  //     buffer = await readFile(filePath)
+  //   } catch {
+  //     return c.json({ error: 'No thumbnail available' }, 404)
+  //   }
 
-    return c.body(new Uint8Array(buffer), 200, {
-      'Content-Type': 'image/jpeg',
-      'Cache-Control': 'public, max-age=86400, immutable',
-    })
-  })
+  //   return c.body(new Uint8Array(buffer), 200, {
+  //     'Content-Type': 'image/jpeg',
+  //     'Cache-Control': 'public, max-age=86400, immutable',
+  //   })
+  // })
 
   // GET /media/:id/epub — serve EPUB file (or convert MOBI to EPUB)
   router.get('/:id/epub', async (c) => {

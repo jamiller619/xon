@@ -110,7 +110,7 @@ describe('groupTvEpisodes', () => {
 
     await db
       .insert(libraries)
-      .values({ id: 'lib-1', name: 'TV Shows', allowedMediaTypes: '[]' })
+      .values({ id: 'lib-1', name: 'TV Shows', mediaTypes: '[]' })
     await db.insert(dataSources).values({
       id: 'ds-1',
       libraryId: 'lib-1',
@@ -301,7 +301,7 @@ describe('groupMusicTracks', () => {
 
     await db
       .insert(libraries)
-      .values({ id: 'lib-1', name: 'Music', allowedMediaTypes: '[]' })
+      .values({ id: 'lib-1', name: 'Music', mediaTypes: '[]' })
     await db.insert(dataSources).values({
       id: 'ds-1',
       libraryId: 'lib-1',
@@ -652,7 +652,7 @@ describe('groupAudiobooks', () => {
 
     await db
       .insert(libraries)
-      .values({ id: 'lib-1', name: 'Audiobooks', allowedMediaTypes: '[]' })
+      .values({ id: 'lib-1', name: 'Audiobooks', mediaTypes: '[]' })
     await db.insert(dataSources).values({
       id: 'ds-1',
       libraryId: 'lib-1',
@@ -969,7 +969,7 @@ describe('groupPhotos', () => {
 
     await db
       .insert(libraries)
-      .values({ id: 'lib-1', name: 'Photos', allowedMediaTypes: '[]' })
+      .values({ id: 'lib-1', name: 'Photos', mediaTypes: '[]' })
     await db.insert(dataSources).values({
       id: 'ds-1',
       libraryId: 'lib-1',

@@ -15,7 +15,7 @@ import {
   acceptSuggestedGroup,
   scanLibraryForSmartGroups,
 } from '../media/smartGrouping.js'
-import { withThumbnailUrls } from './media.js'
+// import { withThumbnailUrls } from './media.js'
 
 const PRIVILEGED_ROLES = ['admin', 'manager'] as const
 
@@ -86,9 +86,9 @@ export function makeAiRouter(db: LibSQLDatabase): Hono {
           metadata: mediaItems.metadata,
           libraryId: mediaItems.libraryId,
           drmProtected: mediaItems.drmProtected,
-          dataSourceId: mediaItems.dataSourceId,
+          // dataSourceId: mediaItems.dataSourceId,
           description: mediaItems.description,
-          contentRating: mediaItems.contentRating,
+          // contentRating: mediaItems.contentRating,
           scannedAt: mediaItems.scannedAt,
           createdAt: mediaItems.createdAt,
           updatedAt: mediaItems.updatedAt,
@@ -121,8 +121,10 @@ export function makeAiRouter(db: LibSQLDatabase): Hono {
       const item2 = item2Map.get(candidate.mediaItemId2)
       return {
         ...candidate,
-        mediaItem1: withThumbnailUrls(item1 as typeof mediaItems.$inferSelect),
-        mediaItem2: item2 ? withThumbnailUrls(item2) : null,
+        mediaItem1: item1,
+        mediaItem2: item2,
+        // mediaItem1: withThumbnailUrls(item1 as typeof mediaItems.$inferSelect),
+        // mediaItem2: item2 ? withThumbnailUrls(item2) : null,
       }
     })
 
