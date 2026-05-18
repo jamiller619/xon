@@ -1,10 +1,9 @@
-import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
 import { makeAuthMiddleware } from './auth/authMiddleware.js'
 import { requireRole } from './auth/rbac.js'
-import { serverSettings } from './db/schema.js'
+import config from './config.ts'
 import { onError, onNotFound } from './http/errorMiddleware.js'
 import { makeLoggingMiddleware } from './http/loggingMiddleware.js'
 import { makeRateLimitMiddleware } from './http/rateLimitMiddleware.js'
@@ -34,6 +33,7 @@ import { makeMatchingRouter } from './routes/matching.js'
 import { makeMediaRouter } from './routes/media.js'
 import { makePluginsRouter } from './routes/plugins.js'
 import { makeSearchRouter } from './routes/search.js'
+import { makeStatsRouter } from './routes/stats.ts'
 import { makeSyncRouter } from './routes/sync.js'
 import { makeThemesRouter } from './routes/themes.js'
 import { makeUsersRouter } from './routes/users.js'
@@ -61,28 +61,24 @@ export function createApp(
   )
 
   // CORS middleware (dynamic, reads from server settings)
-  if (db) {
-    app.use(
-      '/*',
-      cors({
-        origin: async (origin) => {
-          if (!origin) return null
-          const rows = await db
-            .select()
-            .from(serverSettings)
-            .where(eq(serverSettings.id, SERVER_SETTINGS_ID))
-          const settings = rows[0]
-          if (!settings || !settings.corsEnabled) return null
-          const allowed = JSON.parse(settings.corsAllowedOrigins) as string[]
-          if (allowed.includes('*')) return origin
-          return allowed.includes(origin) ? origin : null
-        },
-        allowHeaders: ['Authorization', 'Content-Type'],
-        allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-        credentials: true,
-      }),
-    )
+  app.use(
+    '/*',
+    cors({
+      origin: async (origin) => {
+        if (!origin) return null
+        if (!config.get('network.security.corsEnabled')) return null
+        const allowed = config.get('network.security.corsAllowedOrigins') ?? []
 
+        if (allowed.includes('*')) return origin
+        return allowed.includes(origin) ? origin : null
+      },
+      allowHeaders: ['Authorization', 'Content-Type'],
+      allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+      credentials: true,
+    }),
+  )
+
+  if (db) {
     // Rate limiting: auth endpoints (strict), general API
     app.use('/auth/*', makeRateLimitMiddleware(db, 'auth'))
     app.use('/*', makeRateLimitMiddleware(db, 'general'))
@@ -90,29 +86,29 @@ export function createApp(
 
   // Reverse proxy: expose X-Forwarded-Proto via a response header so clients can
   // detect whether the upstream connection was HTTPS when behind a trusted proxy.
-  if (db) {
-    app.use('/*', async (c, next) => {
-      const rows = await db
-        .select()
-        .from(serverSettings)
-        .where(eq(serverSettings.id, SERVER_SETTINGS_ID))
-      const settings = rows[0]
-      if (settings?.trustProxy) {
-        const proto = c.req.header('x-forwarded-proto')
-        if (proto) {
-          c.header('X-Forwarded-Proto', proto)
-        }
-        const forwardedFor = c.req.header('x-forwarded-for')
-        if (forwardedFor) {
-          c.set(
-            'clientIp' as never,
-            forwardedFor.split(',')[0]?.trim() ?? 'unknown',
-          )
-        }
-      }
-      return next()
-    })
-  }
+  // if (db) {
+  //   app.use('/*', async (c, next) => {
+  // const rows = await db
+  //   .select()
+  //   .from(serverSettings)
+  //   .where(eq(serverSettings.id, SERVER_SETTINGS_ID))
+  // const settings = rows[0]
+  // if (settings?.trustProxy) {
+  //   const proto = c.req.header('x-forwarded-proto')
+  //   if (proto) {
+  //     c.header('X-Forwarded-Proto', proto)
+  //   }
+  //   const forwardedFor = c.req.header('x-forwarded-for')
+  //   if (forwardedFor) {
+  //     c.set(
+  //       'clientIp' as never,
+  //       forwardedFor.split(',')[0]?.trim() ?? 'unknown',
+  //     )
+  //   }
+  // }
+  // return next()
+  //   })
+  // }
 
   // Auth middleware on all routes (skips /api/v1/auth/* internally)
   // Passes db so API tokens can be verified alongside JWT access tokens
@@ -136,6 +132,7 @@ export function createApp(
     app.route('/search', makeSearchRouter(db))
     app.route('/users', makeUsersRouter(db))
     app.route('/sync/profiles', makeSyncRouter(db))
+    app.route('/stats', makeStatsRouter())
   }
 
   // Admin-only: require admin role for all /admin/* routes
@@ -151,8 +148,8 @@ export function createApp(
     app.route('/admin/backup/targets', makeAdminBackupTargetsRouter(db))
     app.route('/admin/backup/media', makeAdminBackupMediaRouter(db))
     app.route('/admin/backup/verify', makeAdminBackupVerifyRouter(db))
-    app.route('/admin/server-settings', makeAdminServerSettingsRouter(db))
-    app.route('/admin/settings', makeAdminSettingsRouter(db))
+    app.route('/admin/server-settings', makeAdminServerSettingsRouter())
+    app.route('/admin/settings', makeAdminSettingsRouter())
     app.route('/admin/health', makeAdminHealthRouter(db))
   }
 

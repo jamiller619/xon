@@ -1,22 +1,16 @@
-import type { Dirent, Stats } from 'node:fs'
-import { readdir, stat } from 'node:fs/promises'
-import { basename, extname, join } from 'node:path'
-import { EXTENSION_TO_MIME, getMediaCategory } from '@xon/media-types'
-import type { DataSource, MediaCategory } from '@xon/shared'
-import type { MediaItem } from '../db/schema.js'
+import path, { extname } from 'node:path'
+import {
+  CATEGORY_DEFINITIONS,
+  type DataSource,
+  type MediaCategory,
+} from '@xon/shared'
+import fileEntryCache from 'file-entry-cache'
+import klaw from 'klaw'
 import { createLogger } from '../logger.js'
 import { getMediaProviderPlugin } from '../plugins/mediaProviderPluginRegistry.js'
+import { type FileEntry, createFileEntry } from './fileEntry.js'
 
 const logger = createLogger('scanner')
-
-export type FileEntry = {
-  filePath: string
-  fileName: string
-  fileSize: number
-  extension: string
-  mimeType: string | undefined
-  mediaCategory: MediaCategory
-}
 
 export type ScanResult = {
   discovered: FileEntry[]
@@ -25,95 +19,131 @@ export type ScanResult = {
   removedFilePaths: string[]
 }
 
-async function walkDirectory(
-  dirPath: string,
-  recursive = true,
-): Promise<FileEntry[]> {
-  const entries: FileEntry[] = []
+async function* pluginSource(
+  pluginId: string,
+  dataSourcePath: string,
+): AsyncGenerator<FileEntry> {
+  const plugin = getMediaProviderPlugin(pluginId)
 
-  let dirEntries: Dirent[]
-  try {
-    dirEntries = await readdir(dirPath, { withFileTypes: true })
-  } catch (err) {
-    logger.error(`Scanner: cannot read directory ${dirPath}:`, err)
-    return entries
+  if (!plugin) return
+
+  const files = await plugin.listFiles(dataSourcePath)
+
+  for (const file of files) {
+    const entry = await createFileEntry(file)
+
+    if (entry) yield entry
+  }
+}
+
+async function* localSource(
+  dir: string,
+  extSet: Set<string>,
+): AsyncGenerator<FileEntry> {
+  for await (const file of klaw(dir)) {
+    const ext = extname(file.path).toLowerCase()
+    if (!extSet.has(ext)) continue
+
+    const entry = await createFileEntry({
+      path: file.path,
+      size: file.stats.size,
+    })
+
+    if (entry) yield entry
+  }
+}
+
+function createScannerCache(cacheId: string) {
+  const cache = fileEntryCache.create(
+    cacheId,
+    // biome-ignore lint/style/noNonNullAssertion: <explanation>
+    path.join(process.env.DATA_DIR!, 'cache', 'scanner'),
+    {
+      useAbsolutePathAsKey: true,
+      restrictAccessToCwd: false,
+      useCheckSum: true,
+    },
+  )
+
+  const previous = new Set(cache.cache.keys())
+
+  return {
+    isNewOrChanged(filePath: string) {
+      const { changedFiles } = cache.analyzeFiles([filePath])
+      return changedFiles.includes(filePath)
+    },
+    wasSeen(filePath: string) {
+      return previous.has(filePath)
+    },
+    finalize(currentPaths: Set<string>) {
+      const removed = [...previous].filter((p) => !currentPaths.has(p))
+      cache.reconcile()
+      return removed
+    },
+  }
+}
+
+export async function scanDataSource(
+  dataSource: DataSource,
+  mediaCategories: MediaCategory[],
+): Promise<ScanResult> {
+  const sourceLabel =
+    dataSource.type === 'plugin'
+      ? `plugin:${dataSource.pluginId ?? 'unknown'}`
+      : `${dataSource.type ?? 'local'}:${dataSource.path}`
+
+  logger.log(`Scanning data source: ${sourceLabel}`)
+
+  const exts = mediaCategories.flatMap((c) =>
+    Object.keys(CATEGORY_DEFINITIONS[c]),
+  )
+  const extSet = new Set(exts)
+
+  const source =
+    dataSource.type === 'plugin' && dataSource.pluginId
+      ? pluginSource(dataSource.pluginId, dataSource.path)
+      : localSource(toLocalPath(dataSource.path), extSet)
+
+  const discovered: FileEntry[] = []
+  const newFiles: FileEntry[] = []
+  const changedFiles: FileEntry[] = []
+  let removedFilePaths: string[] = []
+
+  let cache: ReturnType<typeof createScannerCache> | null = null
+  const currentPaths = new Set<string>()
+
+  if (dataSource.type !== 'plugin') {
+    const cacheId = `${dataSource.libraryId}-${dataSource.id}`
+    cache = createScannerCache(cacheId)
   }
 
-  for (const entry of dirEntries) {
-    const fullPath = join(dirPath, entry.name)
+  for await (const entry of source) {
+    discovered.push(entry)
+    currentPaths.add(entry.filePath)
 
-    if (entry.isDirectory()) {
-      if (recursive) {
-        const subEntries = await walkDirectory(fullPath, recursive)
-        entries.push(...subEntries)
-      }
-    } else if (entry.isFile()) {
-      const ext = extname(entry.name).toLowerCase()
-      const mediaCategory = getMediaCategory(fullPath)
+    if (!cache) continue
 
-      if (!mediaCategory) continue
+    if (!cache.isNewOrChanged(entry.filePath)) continue
 
-      let fileStat: Stats
-      try {
-        fileStat = await stat(fullPath)
-      } catch (err) {
-        logger.error(`Scanner: cannot stat file ${fullPath}:`, err)
-        continue
-      }
-
-      entries.push({
-        filePath: fullPath,
-        fileName: basename(fullPath),
-        fileSize: fileStat.size,
-        extension: ext,
-        mimeType: EXTENSION_TO_MIME[ext],
-        mediaCategory,
-      })
+    if (cache.wasSeen(entry.filePath)) {
+      changedFiles.push(entry)
+    } else {
+      newFiles.push(entry)
     }
   }
 
-  return entries
-}
-
-async function scanPluginDataSource(
-  pluginId: string,
-  path: string,
-): Promise<FileEntry[]> {
-  const plugin = getMediaProviderPlugin(pluginId)
-  if (!plugin) {
-    logger.error(
-      `Scanner: no MediaProviderPlugin registered for pluginId "${pluginId}"`,
-    )
-    return []
+  if (cache) {
+    removedFilePaths = cache.finalize(currentPaths)
   }
 
-  let providerFiles: Awaited<ReturnType<typeof plugin.listFiles>>
-  try {
-    providerFiles = await plugin.listFiles(path)
-  } catch (err) {
-    logger.error(
-      `Scanner: plugin "${pluginId}" listFiles("${path}") failed:`,
-      err,
-    )
-    return []
-  }
+  logger.log(`Data source scan complete: ${sourceLabel}`, {
+    discovered: discovered.length,
+    new: newFiles.length,
+    changed: changedFiles.length,
+    removed: removedFilePaths.length,
+  })
 
-  const entries: FileEntry[] = []
-  for (const file of providerFiles) {
-    const mediaCategory = getMediaCategory(file.name)
-    if (!mediaCategory) continue
-
-    const ext = extname(file.name).toLowerCase()
-    entries.push({
-      filePath: file.path,
-      fileName: file.name,
-      fileSize: file.size,
-      extension: ext,
-      mimeType: file.mimeType ?? EXTENSION_TO_MIME[ext],
-      mediaCategory,
-    })
-  }
-  return entries
+  return { discovered, newFiles, changedFiles, removedFilePaths }
 }
 
 // Converts a Windows-style path to its WSL mount equivalent.
@@ -127,58 +157,4 @@ export function toLocalPath(inputPath: string): string {
     return `/mnt/${drive}/${rest}`
   }
   return inputPath
-}
-
-export async function scanDataSource(
-  dataSource: DataSource,
-  existingItems: Pick<MediaItem, 'filePath' | 'fileSize'>[] = [],
-): Promise<ScanResult> {
-  const sourceLabel =
-    dataSource.type === 'plugin'
-      ? `plugin:${dataSource.pluginId ?? 'unknown'}`
-      : `${dataSource.type ?? 'local'}:${dataSource.path}`
-  logger.log(`Scanning data source: ${sourceLabel}`)
-
-  let discovered: FileEntry[]
-
-  if (dataSource.type === 'plugin' && dataSource.pluginId) {
-    discovered = await scanPluginDataSource(
-      dataSource.pluginId,
-      dataSource.path,
-    )
-  } else {
-    discovered = await walkDirectory(toLocalPath(dataSource.path))
-  }
-
-  const existingMap = new Map<string, number>()
-  for (const item of existingItems) {
-    existingMap.set(item.filePath, item.fileSize)
-  }
-
-  const discoveredPaths = new Set(discovered.map((e) => e.filePath))
-
-  const newFiles: FileEntry[] = []
-  const changedFiles: FileEntry[] = []
-
-  for (const entry of discovered) {
-    const existingSize = existingMap.get(entry.filePath)
-    if (existingSize === undefined) {
-      newFiles.push(entry)
-    } else if (existingSize !== entry.fileSize) {
-      changedFiles.push(entry)
-    }
-  }
-
-  const removedFilePaths = [...existingMap.keys()].filter(
-    (p) => !discoveredPaths.has(p),
-  )
-
-  logger.log(`Data source scan complete: ${sourceLabel}`, {
-    discovered: discovered.length,
-    new: newFiles.length,
-    changed: changedFiles.length,
-    removed: removedFilePaths.length,
-  })
-
-  return { discovered, newFiles, changedFiles, removedFilePaths }
 }

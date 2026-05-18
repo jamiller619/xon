@@ -1,3 +1,4 @@
+import type { MediaItem } from '@xon/shared'
 import { useEffect, useRef, useState } from 'react'
 import { apiFetch } from '~/lib/apiFetch'
 
@@ -21,12 +22,13 @@ interface PluginUIComponent {
 }
 
 export interface PluginComponentProps {
-  mediaItem?: {
-    id: string
-    title: string | null
-    mediaCategory: string | null
-    libraryId: string | null
-  }
+  // mediaItem?: {
+  //   id: string
+  //   title: string | null
+  //   mediaCategory: string | null
+  //   libraryId: string | null
+  // }
+  mediaItem?: Partial<MediaItem>
   libraryId?: string
 }
 

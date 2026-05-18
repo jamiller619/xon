@@ -1,10 +1,13 @@
-import { BasePlugin } from '@xon/plugin-sdk'
-import type { PluginContext, PluginManifest } from '@xon/plugin-sdk'
+import {
+  MetadataSourcePlugin,
+  type PluginContext,
+  type PluginManifest,
+} from '@xon/plugin-sdk'
 import { MediaCategory } from '@xon/shared'
 import { parseMediaTitle } from './titleParser.js'
 import { TmdbClient } from './tmdbClient.js'
 
-export class TmdbMetadataPlugin extends BasePlugin {
+export default class TmdbMetadataPlugin extends MetadataSourcePlugin {
   override readonly manifest: PluginManifest = {
     id: 'tmdb-metadata',
     name: 'TMDb Metadata',
@@ -27,6 +30,7 @@ export class TmdbMetadataPlugin extends BasePlugin {
     this.#ctx = context
 
     const apiKey = process.env.TMDB_API_KEY
+
     if (!apiKey) {
       context.logger.warn(
         'TMDB_API_KEY not set — TMDb metadata enrichment disabled',
@@ -35,221 +39,27 @@ export class TmdbMetadataPlugin extends BasePlugin {
     }
 
     this.#client = new TmdbClient(apiKey, context.fetch)
-
-    // Create plugin-scoped tables
-    await context.db.query(`
-      CREATE TABLE IF NOT EXISTS plugin_tmdb_metadata_movies (
-        media_id TEXT PRIMARY KEY,
-        tmdb_id INTEGER,
-        title TEXT,
-        original_title TEXT,
-        overview TEXT,
-        poster_path TEXT,
-        backdrop_path TEXT,
-        release_date TEXT,
-        vote_average REAL,
-        genres TEXT,
-        cast_data TEXT,
-        crew_data TEXT,
-        fetched_at INTEGER NOT NULL
-      )
-    `)
-
-    await context.db.query(`
-      CREATE TABLE IF NOT EXISTS plugin_tmdb_metadata_tv (
-        media_id TEXT PRIMARY KEY,
-        tmdb_id INTEGER,
-        series_id INTEGER,
-        title TEXT,
-        original_title TEXT,
-        overview TEXT,
-        poster_path TEXT,
-        backdrop_path TEXT,
-        first_air_date TEXT,
-        vote_average REAL,
-        genres TEXT,
-        cast_data TEXT,
-        crew_data TEXT,
-        season_number INTEGER,
-        episode_number INTEGER,
-        episode_title TEXT,
-        episode_overview TEXT,
-        episode_still_path TEXT,
-        fetched_at INTEGER NOT NULL
-      )
-    `)
-
-    // Enrich on media create/update events
-    context.on('media:created', async ({ mediaId, filePath }) => {
-      await this.#enrichMedia(mediaId, filePath)
-    })
-
-    context.on('media:updated', async ({ mediaId, filePath }) => {
-      await this.#enrichMedia(mediaId, filePath)
-    })
-
-    // Route: GET /api/v1/plugins/tmdb-metadata/metadata/:mediaId
-    context.registerRoute({
-      method: 'GET',
-      path: '/metadata/:mediaId',
-      handler: async (c) => {
-        const mediaId = c.req.param('mediaId')
-        const metadata = await this.getStoredMetadata(mediaId)
-        if (!metadata) {
-          return c.json({ error: 'No metadata found' }, 404)
-        }
-        return c.json(metadata)
-      },
-    })
-
-    context.registerMediaMetadataProvider(async (mediaId: string) => {
-      const stored = await this.getStoredMetadata(mediaId)
-      if (stored) return stored as Record<string, unknown>
-
-      // No stored data — look up the file path and enrich lazily
-      const rows = await context.db.query(
-        'SELECT file_path FROM media_items WHERE id = ?',
-        [mediaId],
-      )
-      const row = rows[0] as { file_path?: string } | undefined
-      if (!row?.file_path) return null
-
-      await this.#enrichMedia(mediaId, row.file_path)
-      return (await this.getStoredMetadata(mediaId)) as Record<string, unknown> | null
-    })
   }
 
-  async #enrichMedia(mediaId: string, filePath: string): Promise<void> {
-    if (!this.#client || !this.#ctx) return
-
+  override async enrich(filePath: string, category: MediaCategory) {
     const parsed = parseMediaTitle(filePath)
-    const now = Date.now()
 
     try {
-      if (parsed.type === 'movie') {
-        const meta = await this.#client.fetchMovieMetadata(
-          parsed.title,
-          parsed.year,
-        )
-        if (!meta) {
-          this.#ctx.logger.warn(`TMDb: no movie match for "${parsed.title}"`)
-          return
-        }
-        await this.#ctx.db.query(
-          `INSERT OR REPLACE INTO plugin_tmdb_metadata_movies
-            (media_id, tmdb_id, title, original_title, overview, poster_path, backdrop_path,
-             release_date, vote_average, genres, cast_data, crew_data, fetched_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            mediaId,
-            meta.tmdbId,
-            meta.title,
-            meta.originalTitle,
-            meta.overview,
-            meta.posterPath,
-            meta.backdropPath,
-            meta.releaseDate,
-            meta.voteAverage,
-            JSON.stringify(meta.genres),
-            JSON.stringify(meta.cast),
-            JSON.stringify(meta.crew),
-            now,
-          ],
-        )
-        this.#ctx.logger.info(
-          `TMDb: enriched movie "${meta.title}" for ${mediaId}`,
-        )
-      } else {
-        const meta = await this.#client.fetchTvMetadata(
+      if (parsed.type === 'movie' && category === MediaCategory.Movies) {
+        return this.#client?.fetchMovieMetadata(parsed.title, parsed.year)
+      }
+
+      if (parsed.type === 'tv' && category === MediaCategory.TVShows) {
+        return this.#client?.fetchTvMetadata(
           parsed.seriesTitle,
           parsed.season,
           parsed.episode,
         )
-        if (!meta) {
-          this.#ctx.logger.warn(`TMDb: no TV match for "${parsed.seriesTitle}"`)
-          return
-        }
-        await this.#ctx.db.query(
-          `INSERT OR REPLACE INTO plugin_tmdb_metadata_tv
-            (media_id, tmdb_id, series_id, title, original_title, overview, poster_path,
-             backdrop_path, first_air_date, vote_average, genres, cast_data, crew_data,
-             season_number, episode_number, episode_title, episode_overview,
-             episode_still_path, fetched_at)
-           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
-          [
-            mediaId,
-            meta.tmdbId,
-            meta.seriesId,
-            meta.title,
-            meta.originalTitle,
-            meta.overview,
-            meta.posterPath,
-            meta.backdropPath,
-            meta.firstAirDate,
-            meta.voteAverage,
-            JSON.stringify(meta.genres),
-            JSON.stringify(meta.cast),
-            JSON.stringify(meta.crew),
-            meta.seasonNumber,
-            meta.episodeNumber,
-            meta.episodeTitle ?? null,
-            meta.episodeOverview ?? null,
-            meta.episodeStillPath ?? null,
-            now,
-          ],
-        )
-        this.#ctx.logger.info(
-          `TMDb: enriched TV "${meta.title}" S${meta.seasonNumber}E${meta.episodeNumber} for ${mediaId}`,
-        )
       }
     } catch (err) {
-      this.#ctx.logger.error(
-        `TMDb: enrichment failed for ${mediaId}: ${err instanceof Error ? err.message : String(err)}`,
+      this.#ctx?.logger.error(
+        `TMDb: enrichment failed for ${filePath}: ${err instanceof Error ? err.message : String(err)}`,
       )
     }
   }
-
-  private async getStoredMetadata(mediaId: string): Promise<unknown> {
-    if (!this.#ctx) return null
-
-    const movieRows = await this.#ctx.db.query(
-      'SELECT * FROM plugin_tmdb_metadata_movies WHERE media_id = ?',
-      [mediaId],
-    )
-    if (movieRows.length > 0) {
-      const row = movieRows[0] as Record<string, unknown>
-      return {
-        type: 'movie',
-        ...row,
-        genres: JSON.parse((row.genres as string | null) ?? '[]'),
-        cast: JSON.parse((row.cast_data as string | null) ?? '[]'),
-        crew: JSON.parse((row.crew_data as string | null) ?? '[]'),
-      }
-    }
-
-    const tvRows = await this.#ctx.db.query(
-      'SELECT * FROM plugin_tmdb_metadata_tv WHERE media_id = ?',
-      [mediaId],
-    )
-    if (tvRows.length > 0) {
-      const row = tvRows[0] as Record<string, unknown>
-      return {
-        type: 'tv',
-        ...row,
-        genres: JSON.parse((row.genres as string | null) ?? '[]'),
-        cast: JSON.parse((row.cast_data as string | null) ?? '[]'),
-        crew: JSON.parse((row.crew_data as string | null) ?? '[]'),
-      }
-    }
-
-    return null
-  }
-
-  override async deactivate(): Promise<void> {
-    this.#client?.clearCache()
-    this.#client = null
-    this.#ctx = null
-  }
 }
-
-export default TmdbMetadataPlugin

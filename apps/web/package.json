@@ -12,10 +12,16 @@
   },
   "dependencies": {
     "@fluentui/react-icons": "^2.0.324",
+    "@number-flow/react": "^0.6.0",
     "@xon/ui": "*",
+    "boneyard-js": "^1.8.1",
     "epubjs": "^0.3.93",
     "hls.js": "^1.0.0",
+    "humanize-duration": "^3.33.2",
+    "motion": "^12.38.0",
     "pdfjs-dist": "^5.5.207",
+    "pretty-bytes": "^7.1.0",
+    "pretty-ms": "^9.3.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0",
     "react-grid-layout": "^2.2.3",
@@ -23,6 +29,7 @@
     "zustand": "^5.0.0"
   },
   "devDependencies": {
+    "@types/humanize-duration": "^3.27.4",
     "@types/react": "^19.0.0",
     "@types/react-dom": "^19.0.0",
     "@vitejs/plugin-react": "^4.0.0",

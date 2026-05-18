@@ -20,7 +20,6 @@
   },
   "references": [
     { "path": "./packages/shared" },
-    { "path": "./packages/media-types" },
     { "path": "./packages/server" },
     { "path": "./packages/plugin-sdk" },
     { "path": "./apps/desktop" },

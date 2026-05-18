@@ -3,9 +3,9 @@ import path from 'node:path'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { verifyAccessToken } from '../routes/auth.js'
 import { users } from '../db/schema.js'
 import { validate } from '../http/validate.js'
+import { verifyAccessToken } from '../routes/auth.js'
 
 const ROLE_RANK = {
   guest: 0,
@@ -38,7 +38,8 @@ export function makeFsRouter(db: LibSQLDatabase): Hono {
           ? authHeader.slice(7)
           : (c.req.query('token') ?? '')
         const payload = token ? await verifyAccessToken(token) : null
-        const rank = (ROLE_RANK as Record<string, number>)[payload?.role ?? ''] ?? -1
+        const rank =
+          (ROLE_RANK as Record<string, number>)[payload?.role ?? ''] ?? -1
         if (rank < ROLE_RANK.manager) {
           return c.json({ error: 'Unauthorized' }, 401)
         }

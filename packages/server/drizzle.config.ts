@@ -1,7 +1,10 @@
 import { join } from 'node:path'
+import { loadEnvFile } from 'node:process'
 import { defineConfig } from 'drizzle-kit'
 
-const dataDir = process.env.DATA_DIR ?? './data'
+loadEnvFile()
+
+const dataDir = process.env.DATA_DIR ?? './.data'
 
 export default defineConfig({
   schema: './src/db/schema.ts',

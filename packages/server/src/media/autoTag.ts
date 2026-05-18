@@ -1,9 +1,9 @@
 import { basename, extname } from 'node:path'
 import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
-import { mediaItems } from '../db/schema.js'
+import { libraries, mediaItems } from '../db/schema.js'
 import { isImageCategory } from './exiftool.js'
-import { isDocumentCategory } from './miscmeta.js'
+// import { isDocumentCategory } from './miscmeta.js'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -382,20 +382,21 @@ export async function autoTagMediaItems(
   libraryId: string,
 ): Promise<void> {
   const rows = await db
-    .select({
-      id: mediaItems.id,
-      filePath: mediaItems.filePath,
-      fileName: mediaItems.fileName,
-      mediaCategory: mediaItems.mediaCategory,
-      metadata: mediaItems.metadata,
-    })
+    // .select({
+    //   id: mediaItems.id,
+    //   filePath: mediaItems.filePath,
+    //   // mediaCategory: mediaItems.media,
+    //   metadata: mediaItems.metadata,
+    // })
+    .select()
     .from(mediaItems)
+    .leftJoin(libraries, eq(libraries.id, libraryId))
     .where(eq(mediaItems.libraryId, libraryId))
 
   // Filter to supported categories
   const supported = rows.filter(
-    (r) =>
-      isImageCategory(r.mediaCategory) || isDocumentCategory(r.mediaCategory),
+    (r) => isImageCategory(...(r.libraries?.mediaCategories ?? [])),
+    // isImageCategory(...(r.libraries?.mediaCategories ?? [])) || isDocumentCategory(r.mediaCategory),
   )
 
   const now = new Date()
@@ -403,40 +404,38 @@ export async function autoTagMediaItems(
   const metadataMap = new Map<string, string>()
 
   for (const row of supported) {
-    let meta: Record<string, unknown> = {}
-    try {
-      meta = JSON.parse(row.metadata) as Record<string, unknown>
-    } catch {
-      // empty metadata
-    }
-
+    // const meta = row.metadata
+    // let meta: Record<string, unknown> = {}
+    // try {
+    //   meta = JSON.parse(row.metadata) as Record<string, unknown>
+    // } catch {
+    //   // empty metadata
+    // }
     // Skip if aiTags already set (idempotent)
-    if (Array.isArray(meta.aiTags) && (meta.aiTags as unknown[]).length > 0) {
-      continue
-    }
-
-    let aiTags: AutoTag[] = []
-    if (isImageCategory(row.mediaCategory)) {
-      aiTags = await computeImageTags(row.filePath, meta)
-    } else if (isDocumentCategory(row.mediaCategory)) {
-      aiTags = await computeDocumentTags(row.filePath, meta)
-    }
-
-    if (aiTags.length > 0) {
-      meta.aiTags = aiTags
-      idsToUpdate.push(row.id)
-      metadataMap.set(row.id, JSON.stringify(meta))
-    }
+    // if (Array.isArray(meta.aiTags) && (meta.aiTags as unknown[]).length > 0) {
+    //   continue
+    // }
+    // let aiTags: AutoTag[] = []
+    // if (isImageCategory(row.mediaCategory)) {
+    //   aiTags = await computeImageTags(row.filePath, meta)
+    // } else if (isDocumentCategory(row.mediaCategory)) {
+    //   aiTags = await computeDocumentTags(row.filePath, meta)
+    // }
+    // if (aiTags.length > 0) {
+    //   meta.aiTags = aiTags
+    //   idsToUpdate.push(row.id)
+    //   metadataMap.set(row.id, JSON.stringify(meta))
+    // }
   }
 
   // Batch update — one per item to preserve existing metadata
-  for (const id of idsToUpdate) {
-    const newMetadata = metadataMap.get(id)
-    if (newMetadata !== undefined) {
-      await db
-        .update(mediaItems)
-        .set({ metadata: newMetadata, updatedAt: now })
-        .where(eq(mediaItems.id, id))
-    }
-  }
+  // for (const id of idsToUpdate) {
+  //   const newMetadata = metadataMap.get(id)
+  //   if (newMetadata !== undefined) {
+  //     await db
+  //       .update(mediaItems)
+  //       .set({ metadata: newMetadata, updatedAt: now })
+  //       .where(eq(mediaItems.id, id))
+  //   }
+  // }
 }

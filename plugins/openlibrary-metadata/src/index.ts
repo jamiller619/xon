@@ -12,7 +12,7 @@ export class OpenLibraryMetadataPlugin extends BasePlugin {
     description: 'Fetches book and document metadata from OpenLibrary',
     author: 'Xon',
     category: 'MetadataSource',
-    mediaCategories: [MediaCategory.Documents],
+    // mediaCategories: [MediaCategory.Documents],
     main: 'dist/index.js',
     permissions: {
       network: ['openlibrary.org', 'covers.openlibrary.org'],

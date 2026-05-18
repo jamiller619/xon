@@ -1,26 +1,19 @@
 import { spawn } from 'node:child_process'
-import { mkdir, unlink } from 'node:fs/promises'
+import { unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { MediaCategory } from '@xon/shared'
-import sharp from 'sharp'
 import { createLogger } from '../logger.js'
 import { ffmpegPath, ffprobePath } from './binaries.js'
-import type { ThumbnailPaths } from './thumbnails.js'
+import { type ThumbnailPaths, writeThumbnailImages } from './images.js'
 
 const logger = createLogger('video-thumbnails')
 
 const VIDEO_CATEGORIES = new Set<string>([
   MediaCategory.Movies,
   MediaCategory.TVShows,
-  MediaCategory.Clips,
+  // MediaCategory.Clips,
   MediaCategory.HomeVideos,
 ])
-
-const THUMBNAIL_SIZES = {
-  small: 150,
-  medium: 300,
-  large: 600,
-} as const
 
 export function isVideoCategory(category: string | null): boolean {
   if (!category) return false
@@ -91,12 +84,12 @@ function extractFrame(
     })
 
     proc.on('error', (err) => {
-      logger.error(`FFmpeg spawn error`, { ffmpegPath, error: err.message })
+      logger.error('FFmpeg spawn error', { ffmpegPath, error: err.message })
       resolve(false)
     })
     proc.on('close', (code: number | null) => {
       if (code !== 0) {
-        logger.error(`FFmpeg frame extraction failed`, {
+        logger.error('FFmpeg frame extraction failed', {
           filePath,
           exitCode: code,
           stderr: stderr.slice(-500),
@@ -110,17 +103,8 @@ function extractFrame(
 export async function generateVideoThumbnails(
   filePath: string,
   mediaItemId: string,
-  dataDir: string,
-): Promise<ThumbnailPaths | null> {
+): Promise<ThumbnailPaths | undefined> {
   logger.debug(`Generating thumbnails: ${filePath}`)
-
-  const thumbnailDir = join(dataDir, 'thumbnails')
-  try {
-    await mkdir(thumbnailDir, { recursive: true })
-  } catch {
-    logger.error(`Failed to create thumbnails directory`, { thumbnailDir })
-    return null
-  }
 
   const duration = await getVideoDuration(filePath)
   if (duration === null) {
@@ -129,58 +113,23 @@ export async function generateVideoThumbnails(
   const timestamp = duration !== null ? duration * 0.1 : 0
   logger.debug(`Extracting frame at ${timestamp.toFixed(1)}s: ${filePath}`)
 
-  const tmpPath = join(thumbnailDir, `${mediaItemId}_tmp.jpg`)
+  if (!process.env.DATA_DIR) {
+    throw new Error('DATA_DIR environment variable not set')
+  }
+
+  const tmpPath = join(process.env.DATA_DIR, '.tmp', `${mediaItemId}_tmp.jpg`)
   const frameExtracted = await extractFrame(filePath, timestamp, tmpPath)
   if (!frameExtracted) {
-    return null
+    return undefined
   }
 
-  const paths: ThumbnailPaths = {
-    small: join(thumbnailDir, `${mediaItemId}_small.jpg`),
-    medium: join(thumbnailDir, `${mediaItemId}_medium.jpg`),
-    large: join(thumbnailDir, `${mediaItemId}_large.jpg`),
-  }
-
-  try {
-    const img = sharp(tmpPath)
-    await Promise.all([
-      img
-        .clone()
-        .resize(THUMBNAIL_SIZES.small, THUMBNAIL_SIZES.small, {
-          fit: 'inside',
-          withoutEnlargement: true,
-        })
-        .jpeg({ quality: 80 })
-        .toFile(paths.small),
-      img
-        .clone()
-        .resize(THUMBNAIL_SIZES.medium, THUMBNAIL_SIZES.medium, {
-          fit: 'inside',
-          withoutEnlargement: true,
-        })
-        .jpeg({ quality: 80 })
-        .toFile(paths.medium),
-      img
-        .clone()
-        .resize(THUMBNAIL_SIZES.large, THUMBNAIL_SIZES.large, {
-          fit: 'inside',
-          withoutEnlargement: true,
-        })
-        .jpeg({ quality: 80 })
-        .toFile(paths.large),
-    ])
-  } catch (err) {
-    logger.error(`Thumbnail resize failed`, { filePath, error: String(err) })
-    try {
-      await unlink(tmpPath)
-    } catch {}
-    return null
-  }
+  const paths = await writeThumbnailImages(mediaItemId, tmpPath, logger)
 
   try {
     await unlink(tmpPath)
   } catch {}
 
   logger.debug(`Thumbnails generated: ${filePath}`)
+
   return paths
 }

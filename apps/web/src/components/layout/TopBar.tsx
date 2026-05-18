@@ -1,4 +1,5 @@
-import { IconButton, Textbox } from '@xon/ui'
+import { Search20Filled as SearchIcon } from '@fluentui/react-icons'
+import { Textbox } from '@xon/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiFetch, apiUrl } from '~/lib/apiFetch'
@@ -125,7 +126,8 @@ export default function TopBar() {
   const showSuggestions = open && query.trim().length > 0
 
   return (
-    <header className={styles.topBar}>
+    <header className={styles.header}>
+      <span></span>
       {/* <button
         type="button"
         className={styles.menuButton}
@@ -144,6 +146,7 @@ export default function TopBar() {
           onFocus={handleFocus}
           onKeyDown={handleKeyDown}
           autoComplete="off"
+          startIcon={<SearchIcon />}
         />
         {(showHistory || showSuggestions) && (
           <div className={styles.dropdown}>
@@ -151,12 +154,11 @@ export default function TopBar() {
               <>
                 <div className={styles.dropdownLabel}>Recent searches</div>
                 {history.map((item, i) => (
-                  <button
+                  <div
                     key={item}
-                    type="button"
-                    aria-selected={i === highlightIdx}
+                    // aria-selected={i === highlightIdx}
                     className={`${styles.dropdownItem} ${i === highlightIdx ? styles.dropdownItemActive : ''}`}
-                    onClick={() => navigate2search(item)}
+                    // onKeyDown={() => navigate2search(item)}
                   >
                     <span className={styles.historyIcon}>↵</span>
                     <span className={styles.dropdownItemText}>{item}</span>
@@ -168,7 +170,7 @@ export default function TopBar() {
                     >
                       ×
                     </button>
-                  </button>
+                  </div>
                 ))}
               </>
             )}
@@ -179,7 +181,7 @@ export default function TopBar() {
                   <button
                     key={item.id}
                     type="button"
-                    aria-selected={i === highlightIdx}
+                    // aria-selected={i === highlightIdx}
                     className={`${styles.dropdownItem} ${i === highlightIdx ? styles.dropdownItemActive : ''}`}
                     onClick={() => navigate2search(item.title ?? item.id)}
                   >
@@ -213,7 +215,6 @@ export default function TopBar() {
           </div>
         )}
       </div>
-      <span className={styles.spacer} />
       <button type="button" className={styles.userMenu} aria-label="User menu">
         <span className={styles.avatar}>U</span>
         <span>User</span>

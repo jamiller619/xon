@@ -8,15 +8,15 @@ const logger = createLogger('ffprobe')
 const VIDEO_CATEGORIES = new Set<string>([
   MediaCategory.Movies,
   MediaCategory.TVShows,
-  MediaCategory.Clips,
+  // MediaCategory.Clips,
   MediaCategory.HomeVideos,
 ])
 
 const AUDIO_CATEGORIES = new Set<string>([
   MediaCategory.Music,
-  MediaCategory.Audiobooks,
-  MediaCategory.AudioClips,
-  MediaCategory.Podcasts,
+  // MediaCategory.Audiobooks,
+  // MediaCategory.AudioClips,
+  // MediaCategory.Podcasts,
 ])
 
 export type FfprobeMetadata = {
@@ -186,7 +186,7 @@ export async function extractFfprobeMetadata(
 
         resolve(result)
       } catch {
-        logger.error(`FFprobe JSON parse error`, { filePath })
+        logger.error('FFprobe JSON parse error', { filePath })
         resolve(null)
       }
     })

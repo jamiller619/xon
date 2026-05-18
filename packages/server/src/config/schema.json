@@ -1,0 +1,122 @@
+{
+  "$schema": "https://json-schema.org/draft-07/schema#",
+  "title": "Xon Config Schema",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "app.locale",
+    "log.level",
+    "log.retentionDays",
+    "appdata.path",
+    "appdata.dbPath",
+    "appdata.cachePath",
+    "appdata.logsPath",
+    "appdata.pluginsPath",
+    "network.httpPort"
+  ],
+  "properties": {
+    "app.locale": {
+      "title": "Application Locale",
+      "type": "string",
+      "default": "en-US",
+      "description": "A [BCP 47 language tag](https://en.wikipedia.org/wiki/IETF_language_tag#List_of_major_primary_language_subtags) used throughout the application."
+    },
+    "log.level": {
+      "title": "Logging Level",
+      "oneOf": [
+        {
+          "enum": ["debug", "info", "warn", "error"]
+        }
+      ],
+      "default": "info",
+      "description": "The level of detail recorded by the logger."
+    },
+    "log.retentionDays": {
+      "title": "Logging Retention Days",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 365,
+      "default": 7,
+      "description": "The number of days to retain log files."
+    },
+    "appdata.path": {
+      "title": "Application Data Path",
+      "type": "string",
+      "description": "The file system path where application data is stored. This makes Xon highly portable across systems."
+    },
+    "appdata.dbPath": {
+      "title": "Application Database Path",
+      "type": "string",
+      "description": "The file system path where application databases are stored.",
+      "alias": ["db.path"]
+    },
+    "appdata.cachePath": {
+      "title": "Application Cache Path",
+      "type": "string",
+      "description": "The file system path where application cache is stored.",
+      "alias": ["cache.path"]
+    },
+    "appdata.logsPath": {
+      "title": "Application Logs Path",
+      "type": "string",
+      "description": "The file system path where application logs are stored.",
+      "alias": ["logs.path"]
+    },
+    "appdata.pluginsPath": {
+      "title": "Application Plugins Path",
+      "type": "string",
+      "description": "The file system path where application plugins are stored."
+    },
+    "server.port": {
+      "title": "Server Port",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 65535,
+      "default": 6018
+    },
+    "server.storageLimit": {
+      "title": "Storage Limit",
+      "type": "integer",
+      "minimum": 0,
+      "default": 0
+    },
+    "network.httpPort": {
+      "title": "HTTP Port",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 65535,
+      "default": 6019
+    },
+    "network.httpsPort": {
+      "title": "HTTPS Port",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 65535,
+      "default": 6020
+    },
+    "network.sslPath": {
+      "title": "SSL Certificates Path",
+      "type": "string",
+      "description": "The file system path where SSL certificates are stored.",
+      "alias": ["certs.path"]
+    },
+    "network.remoteEnabled": {
+      "title": "Enable Remote Access",
+      "type": "boolean",
+      "default": true
+    },
+    "network.security.corsEnabled": {
+      "title": "Enable CORS",
+      "type": "boolean",
+      "default": false
+    },
+    "network.security.corsAllowedOrigins": {
+      "title": "CORS Allowed Origins",
+      "type": "array",
+      "items": {
+        "type": "string"
+      },
+      "default": ["*"]
+    }
+  }
+}

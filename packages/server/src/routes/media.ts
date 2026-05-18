@@ -2,11 +2,10 @@ import { createReadStream } from 'node:fs'
 import { readFile, readdir, stat } from 'node:fs/promises'
 import { basename, dirname, extname, join } from 'node:path'
 import { Readable } from 'node:stream'
-import { and, asc, desc, eq, inArray, isNull, or } from 'drizzle-orm'
-import type { SQL } from 'drizzle-orm'
+import { and, asc, desc, eq, inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
-import { parse as parseFont } from 'opentype.js'
+// import { parse as parseFont } from 'opentype.js'
 import { z } from 'zod'
 import { computeETag } from '../cache.js'
 import type { MediaItem } from '../db/schema.js'
@@ -31,7 +30,6 @@ import {
 } from '../media/ffprobe.js'
 import { convertMobiToEpub } from '../media/mobi.js'
 import { convertRawToJpeg, isRawImage } from '../media/raw.js'
-import type { ThumbnailPaths } from '../media/thumbnails.js'
 import {
   generateHlsPlaylist,
   needsTranscoding,
@@ -235,14 +233,11 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     if (body.title !== undefined) updates.title = body.title
     if (body.description !== undefined) updates.description = body.description
     if (body.tags !== undefined) {
-      let meta: Record<string, unknown> = {}
-      try {
-        meta = JSON.parse(item.metadata) as Record<string, unknown>
-      } catch {
-        // ignore
-      }
+      const meta = item.metadata
+
       meta.tags = body.tags
-      updates.metadata = JSON.stringify(meta)
+
+      updates.metadata = meta
     }
 
     await db.update(mediaItems).set(updates).where(eq(mediaItems.id, id))
@@ -270,12 +265,7 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     const item = rows[0]
     if (!item) return c.json({ error: 'Not found' }, 404)
 
-    let meta: Record<string, unknown> = {}
-    try {
-      meta = JSON.parse(item.metadata) as Record<string, unknown>
-    } catch {
-      // ignore
-    }
+    const meta = item.metadata
 
     interface AiTagEntry {
       text: string
@@ -311,7 +301,7 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
 
     await db
       .update(mediaItems)
-      .set({ metadata: JSON.stringify(meta), updatedAt: new Date() })
+      .set({ metadata: meta, updatedAt: new Date() })
       .where(eq(mediaItems.id, id))
 
     const updated = await db
@@ -392,15 +382,12 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
         // }
 
         if (upd.genre !== undefined || upd.tags !== undefined) {
-          let meta: Record<string, unknown> = {}
-          try {
-            meta = JSON.parse(row.metadata) as Record<string, unknown>
-          } catch {
-            // ignore
-          }
+          const meta = row.metadata
+
           if (upd.genre !== undefined) meta.genre = upd.genre
           if (upd.tags !== undefined) meta.tags = upd.tags
-          updates.metadata = JSON.stringify(meta)
+
+          updates.metadata = meta
         }
 
         await db
@@ -764,50 +751,50 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
   })
 
   // GET /media/:id/font-metadata — parse font file and return name/weight/style/glyph count
-  router.get('/:id/font-metadata', async (c) => {
-    const id = c.req.param('id')
-    const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
-    const item = rows[0]
-    if (!item) return c.json({ error: 'Not found' }, 404)
+  // router.get('/:id/font-metadata', async (c) => {
+  //   const id = c.req.param('id')
+  //   const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
+  //   const item = rows[0]
+  //   if (!item) return c.json({ error: 'Not found' }, 404)
 
-    const ext = extname(item.filePath).toLowerCase()
-    const fontExts = ['.ttf', '.otf', '.woff', '.woff2', '.eot']
-    if (!fontExts.includes(ext)) {
-      return c.json({ error: 'Not a font file' }, 400)
-    }
+  //   const ext = extname(item.filePath).toLowerCase()
+  //   const fontExts = ['.ttf', '.otf', '.woff', '.woff2', '.eot']
+  //   if (!fontExts.includes(ext)) {
+  //     return c.json({ error: 'Not a font file' }, 400)
+  //   }
 
-    let buffer: Buffer
-    try {
-      buffer = await readFile(item.filePath)
-    } catch {
-      return c.json({ error: 'File not accessible' }, 404)
-    }
+  //   let buffer: Buffer
+  //   try {
+  //     buffer = await readFile(item.filePath)
+  //   } catch {
+  //     return c.json({ error: 'File not accessible' }, 404)
+  //   }
 
-    try {
-      const font = parseFont(buffer.buffer as ArrayBuffer)
-      const names = font.names
-      const family =
-        names.fontFamily?.en ??
-        Object.values(names.fontFamily ?? {})[0] ??
-        basename(item.filePath, ext)
-      const subfamily =
-        names.fontSubfamily?.en ??
-        Object.values(names.fontSubfamily ?? {})[0] ??
-        'Regular'
-      const glyphCount = font.glyphs.length
-      const unitsPerEm = font.unitsPerEm
-      return c.json({ family, subfamily, glyphCount, unitsPerEm })
-    } catch {
-      // WOFF2 or unsupported format — return what we can from the filename
-      const family = basename(item.filePath, ext)
-      return c.json({
-        family,
-        subfamily: 'Unknown',
-        glyphCount: null,
-        unitsPerEm: null,
-      })
-    }
-  })
+  //   try {
+  //     const font = parseFont(buffer.buffer as ArrayBuffer)
+  //     const names = font.names
+  //     const family =
+  //       names.fontFamily?.en ??
+  //       Object.values(names.fontFamily ?? {})[0] ??
+  //       basename(item.filePath, ext)
+  //     const subfamily =
+  //       names.fontSubfamily?.en ??
+  //       Object.values(names.fontSubfamily ?? {})[0] ??
+  //       'Regular'
+  //     const glyphCount = font.glyphs.length
+  //     const unitsPerEm = font.unitsPerEm
+  //     return c.json({ family, subfamily, glyphCount, unitsPerEm })
+  //   } catch {
+  //     // WOFF2 or unsupported format — return what we can from the filename
+  //     const family = basename(item.filePath, ext)
+  //     return c.json({
+  //       family,
+  //       subfamily: 'Unknown',
+  //       glyphCount: null,
+  //       unitsPerEm: null,
+  //     })
+  //   }
+  // })
 
   // GET /media/:id/archive-contents — list files inside a ZIP, TAR, or 7z archive
   router.get('/:id/archive-contents', async (c) => {

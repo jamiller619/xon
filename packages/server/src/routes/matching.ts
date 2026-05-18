@@ -125,12 +125,7 @@ export function makeMatchingRouter(db: LibSQLDatabase): Hono {
     }
 
     // Merge suggested metadata into existing metadata
-    let existingMeta: Record<string, unknown> = {}
-    try {
-      existingMeta = JSON.parse(mediaRow.metadata) as Record<string, unknown>
-    } catch {
-      // keep empty
-    }
+    const existingMeta = mediaRow.metadata
     let suggestedMeta: Record<string, unknown> = {}
     try {
       suggestedMeta = JSON.parse(queueItem.suggestedMetadata) as Record<
@@ -140,10 +135,10 @@ export function makeMatchingRouter(db: LibSQLDatabase): Hono {
     } catch {
       // keep empty
     }
-    const mergedMetadata = JSON.stringify({
+    const mergedMetadata = {
       ...existingMeta,
       ...suggestedMeta,
-    })
+    }
 
     // Update media item
     await db

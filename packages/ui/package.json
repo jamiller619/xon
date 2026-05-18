@@ -19,6 +19,7 @@
     "typecheck": "tsc"
   },
   "peerDependencies": {
+    "motion": "^12.38.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"
   },
@@ -34,6 +35,6 @@
     "@base-ui/react": "^1.4.0",
     "@radix-ui/colors": "^3.0.0",
     "clsx": "^2.1.1",
-    "input-otp": "^1.4.2"
+    "react-sparklines": "^1.7.0"
   }
 }

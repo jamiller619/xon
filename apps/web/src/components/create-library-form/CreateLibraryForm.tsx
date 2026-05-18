@@ -1,4 +1,5 @@
 import { Dialog as BaseDialog } from '@base-ui/react'
+import { MediaCategory } from '@xon/shared'
 import {
   Button,
   Checkbox,
@@ -9,31 +10,32 @@ import {
   Surface,
   Textbox,
 } from '@xon/ui'
+import clsx from 'clsx'
 import { type SubmitEvent, useEffect, useState } from 'react'
 import { apiFetch } from '~/lib/apiFetch'
 import styles from './CreateLibraryForm.module.css'
 
-const ALL_MEDIA_TYPES: { label: string; emoji: string }[] = [
-  { label: 'Movies', emoji: '🎬' },
-  { label: 'TV Shows', emoji: '📺' },
-  { label: 'Clips', emoji: '🎞️' },
-  { label: 'Music', emoji: '🎵' },
-  { label: 'Audiobooks', emoji: '🎧' },
-  { label: 'Audio Clips', emoji: '🔊' },
-  { label: 'Podcasts', emoji: '🎙️' },
-  { label: 'Pictures', emoji: '🖼️' },
-  { label: 'Images', emoji: '📷' },
-  { label: 'Textures', emoji: '🎨' },
-  { label: 'Home Videos', emoji: '📹' },
-  { label: 'Games', emoji: '🎮' },
-  { label: 'Interactive Media', emoji: '💻' },
-  { label: 'Documents', emoji: '📄' },
-  { label: 'Web Media', emoji: '🌐' },
-  { label: 'Design Files', emoji: '✏️' },
-  { label: '3D Models', emoji: '🧊' },
-  { label: 'Archives', emoji: '🗜️' },
-  { label: 'Fonts', emoji: '🔤' },
-  { label: 'Icons', emoji: '🔷' },
+const ALL_MEDIA_TYPES: { label: MediaCategory; emoji: string }[] = [
+  { label: MediaCategory.Movies, emoji: '🎬' },
+  { label: MediaCategory.TVShows, emoji: '📺' },
+  // { label: 'Clips', emoji: '🎞️' },
+  { label: MediaCategory.Music, emoji: '🎵' },
+  // { label: 'Audiobooks', emoji: '🎧' },
+  // { label: 'Audio Clips', emoji: '🔊' },
+  // { label: 'Podcasts', emoji: '🎙️' },
+  { label: MediaCategory.Pictures, emoji: '🖼️' },
+  // { label: 'Images', emoji: '📷' },
+  // { label: 'Textures', emoji: '🎨' },
+  { label: MediaCategory.HomeVideos, emoji: '📹' },
+  // { label: 'Games', emoji: '🎮' },
+  // { label: 'Interactive Media', emoji: '💻' },
+  // { label: 'Documents', emoji: '📄' },
+  // { label: 'Web Media', emoji: '🌐' },
+  // { label: 'Design Files', emoji: '✏️' },
+  // { label: '3D Models', emoji: '🧊' },
+  // { label: 'Archives', emoji: '🗜️' },
+  // { label: 'Fonts', emoji: '🔤' },
+  // { label: 'Icons', emoji: '🔷' },
 ]
 
 interface CreateLibraryFormProps {
@@ -111,7 +113,7 @@ export function CreateLibraryForm({
   }
 
   return (
-    <form className={formClassName ?? ''} onSubmit={handleSubmit}>
+    <form className={clsx(styles.form, formClassName)} onSubmit={handleSubmit}>
       <Label>
         Library Name
         <Textbox
@@ -155,14 +157,17 @@ export function CreateLibraryForm({
           style={{ flex: 1 }}
         />
       </Flex>
-      <div className={styles.folderRow}>
-        <Dialog trigger="Browse..." title="Select Media Folder">
-          <MediaFolderBrowser onSelect={setSourcePath} />
-        </Dialog>
-      </div>
+      <Dialog
+        trigger="Browse..."
+        buttonVariant="block"
+        title="Select Media Folder"
+      >
+        <MediaFolderBrowser onSelect={setSourcePath} />
+      </Dialog>
       {error && <div className={styles.error}>{error}</div>}
       <Button
         type="submit"
+        variant="block"
         disabled={loading || !name.trim() || !sourcePath.trim()}
       >
         {loading ? 'Creating...' : submitLabel}

@@ -3,7 +3,8 @@ import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { dataSources, libraries } from '../db/schema.js'
 import { createLogger } from '../logger.js'
-import { scanLibrary } from './orchestrator.js'
+import { scanLibrary } from './orchestrator.ts'
+// import { scanLibrary } from './orchestrator.old.js'
 import { toLocalPath } from './scanner.js'
 
 const logger = createLogger('scheduler')

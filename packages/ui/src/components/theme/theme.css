@@ -14,8 +14,18 @@ body {
   background: var(--color-gray-1);
   color: var(--color-gray-12);
   position: relative;
+  /* overflow: hidden; */
 }
 
 #root {
   isolation: isolate;
+}
+
+a {
+  color: var(--color-accent-10);
+  text-decoration: none;
+
+  &:hover {
+    text-decoration: underline;
+  }
 }

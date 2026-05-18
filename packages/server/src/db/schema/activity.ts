@@ -1,7 +1,7 @@
 import { sql } from 'drizzle-orm'
 import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
-import { mediaItems } from './media.js'
-import { users } from './users.js'
+import { mediaItems } from './media.ts'
+import { users } from './users.ts'
 
 export const mediaProgress = sqliteTable(
   'media_progress',

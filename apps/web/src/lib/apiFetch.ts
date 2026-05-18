@@ -18,9 +18,22 @@ export function apiFetch(url: string, init?: RequestInit): Promise<Response> {
  * Use this for <img src>, <video src>, <track src>, and other browser-native
  * requests that cannot send custom headers.
  */
-export function apiUrl(url: string): string {
+export function apiUrl(url: string | string[]): string {
+  const resolvedURL = Array.isArray(url) ? url[0] : url
+
+  if (!resolvedURL) throw new Error('Invalid API URL')
+
   const token = useAuthStore.getState().accessToken
-  if (!token) return url
+
+  if (!token) return resolvedURL
+
   const sep = url.includes('?') ? '&' : '?'
+
   return `${url}${sep}token=${token}`
+}
+
+function resolveUrl(url: string | string[]): string {
+  if (typeof url === 'string') return url
+
+  return url.join('/')
 }

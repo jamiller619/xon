@@ -1,7 +1,12 @@
 import { sql } from 'drizzle-orm'
-import { index, integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
-import { libraries } from './libraries.js'
-import { mediaItems } from './media.js'
+import {
+  index,
+  integer,
+  primaryKey,
+  sqliteTable,
+  text,
+} from 'drizzle-orm/sqlite-core'
+import { mediaItems } from './media.ts'
 
 export const GROUP_TYPES = [
   'series',
@@ -20,9 +25,6 @@ export const groups = sqliteTable(
   'groups',
   {
     id: text('id').primaryKey(),
-    libraryId: text('library_id')
-      .notNull()
-      .references(() => libraries.id, { onDelete: 'cascade' }),
     type: text('type').notNull(),
     title: text('title').notNull(),
     parentGroupId: text('parent_group_id'),
@@ -31,10 +33,7 @@ export const groups = sqliteTable(
       .notNull()
       .default(sql`(unixepoch())`),
   },
-  (table) => [
-    index('groups_library_id_idx').on(table.libraryId),
-    index('groups_parent_group_id_idx').on(table.parentGroupId),
-  ],
+  (table) => [index('groups_parent_group_id_idx').on(table.parentGroupId)],
 )
 
 export const groupMembers = sqliteTable(

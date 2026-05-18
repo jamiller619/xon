@@ -7,7 +7,7 @@ export default defineConfig({
   server: {
     proxy: {
       '/api': {
-        target: 'http://localhost:32400',
+        target: 'http://localhost:6019',
         ws: true,
         configure: (proxy) => {
           proxy.on('error', (_err, _req, res) => {

@@ -1,7 +1,6 @@
 import { Dialog as UIDialog } from '@base-ui/react'
 import type { ReactNode } from 'react'
-import Button, { IconButton } from '../button/Button.jsx'
-import Flex from '../flex/Flex.jsx'
+import { Button, type ButtonVariant, Flex, IconButton } from '../../index.js'
 import styles from './Dialog.module.css'
 
 type DialogProps = Omit<UIDialog.Root.Props, 'children'> & {
@@ -9,6 +8,7 @@ type DialogProps = Omit<UIDialog.Root.Props, 'children'> & {
   title: string
   description?: string
   children: ReactNode
+  buttonVariant?: ButtonVariant
 }
 
 export default function Dialog({
@@ -16,10 +16,13 @@ export default function Dialog({
   title,
   description,
   children,
+  buttonVariant,
 }: DialogProps) {
   return (
     <UIDialog.Root>
-      <UIDialog.Trigger render={(props) => <Button {...props} />}>
+      <UIDialog.Trigger
+        render={(props) => <Button variant={buttonVariant} {...props} />}
+      >
         {trigger}
       </UIDialog.Trigger>
       <UIDialog.Portal>

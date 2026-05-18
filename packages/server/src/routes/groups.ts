@@ -130,7 +130,7 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
         mediaItemId: groupMembers.mediaItemId,
         sortOrder: groupMembers.sortOrder,
         title: mediaItems.title,
-        mediaCategory: mediaItems.mediaCategory,
+        // mediaCategory: mediaItems.mediaCategory,
         mimeType: mediaItems.mimeType,
         fileSize: mediaItems.fileSize,
         createdAt: mediaItems.createdAt,

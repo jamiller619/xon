@@ -1,8 +1,12 @@
-import { basename, dirname, extname } from 'node:path'
-import { MediaCategory } from '@xon/shared'
+import path, { basename, dirname, extname } from 'node:path'
+import {
+  MediaCategory,
+  getExtensionsForCategory,
+  getMimeTypesForCategory,
+} from '@xon/shared'
 import { and, eq, inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
-import { groupMembers, groups, mediaItems } from '../db/schema.js'
+import { groupMembers, groups, libraries, mediaItems } from '../db/schema.js'
 
 export interface TvEpisodeInfo {
   seriesName: string | null
@@ -99,7 +103,7 @@ export async function groupTvEpisodes(
     .select({
       id: mediaItems.id,
       filePath: mediaItems.filePath,
-      fileName: mediaItems.fileName,
+      // fileName: mediaItems.fileName,
     })
     .from(mediaItems)
     .where(eq(mediaItems.libraryId, libraryId))
@@ -114,12 +118,13 @@ export async function groupTvEpisodes(
   }> = []
 
   for (const item of tvItems) {
-    const info = parseTvEpisode(item.fileName)
+    const fileName = path.basename(item.filePath)
+    const info = parseTvEpisode(fileName)
     if (info) {
       episodes.push({
         id: item.id,
         filePath: item.filePath,
-        fileName: item.fileName,
+        fileName,
         info,
         seriesName: resolveSeriesName(item.filePath, info),
       })
@@ -300,160 +305,6 @@ export function resolveAudiobookInfo(
   return { bookTitle, seriesName }
 }
 
-/**
- * Auto-creates book and series groups for Audiobook media items in a library,
- * then assigns each chapter to its book group sorted by track number.
- * Narrator metadata is stored on the book group.
- * Idempotent: safe to call after every scan.
- */
-export async function groupAudiobooks(
-  db: LibSQLDatabase,
-  libraryId: string,
-): Promise<void> {
-  const audiobookItems = await db
-    .select({
-      id: mediaItems.id,
-      filePath: mediaItems.filePath,
-      fileName: mediaItems.fileName,
-      metadata: mediaItems.metadata,
-    })
-    .from(mediaItems)
-    .where(
-      and(
-        eq(mediaItems.libraryId, libraryId),
-        eq(mediaItems.mediaCategory, MediaCategory.Audiobooks),
-      ),
-    )
-
-  if (audiobookItems.length === 0) return
-
-  const chapters: AudiobookChapterData[] = []
-  for (const item of audiobookItems) {
-    let tags: Record<string, unknown> = {}
-    try {
-      tags = JSON.parse(item.metadata ?? '{}')
-    } catch {
-      // ignore parse errors
-    }
-
-    const { bookTitle, seriesName } = resolveAudiobookInfo(item.filePath, tags)
-    const narrator =
-      typeof tags.artist === 'string' && tags.artist.length > 0
-        ? tags.artist
-        : null
-    const trackNumber =
-      typeof tags.trackNumber === 'number' ? tags.trackNumber : 0
-
-    chapters.push({
-      id: item.id,
-      bookTitle,
-      narrator,
-      seriesName,
-      trackNumber,
-      fileName: item.fileName,
-    })
-  }
-
-  if (chapters.length === 0) return
-
-  // Build unique book group entries
-  const bookMap = new Map<
-    string,
-    { bookTitle: string; narrator: string | null; seriesName: string | null }
-  >()
-  for (const ch of chapters) {
-    const bookGroupId = makeAudiobookBookGroupId(libraryId, ch.bookTitle)
-    if (!bookMap.has(bookGroupId)) {
-      bookMap.set(bookGroupId, {
-        bookTitle: ch.bookTitle,
-        narrator: ch.narrator,
-        seriesName: ch.seriesName,
-      })
-    }
-  }
-
-  // Build unique series group entries
-  const seriesMap = new Map<string, string>() // seriesGroupId → seriesTitle
-  for (const [, { seriesName }] of bookMap) {
-    if (seriesName) {
-      const seriesGroupId = makeAudiobookSeriesGroupId(libraryId, seriesName)
-      if (!seriesMap.has(seriesGroupId)) {
-        seriesMap.set(seriesGroupId, seriesName)
-      }
-    }
-  }
-
-  // Fetch existing groups to avoid duplicates
-  const allGroupIds = [...bookMap.keys(), ...seriesMap.keys()]
-  const existingGroups = await db
-    .select({ id: groups.id })
-    .from(groups)
-    .where(inArray(groups.id, allGroupIds))
-  const existingGroupIdSet = new Set(existingGroups.map((g) => g.id))
-
-  // Insert missing series groups first (books reference them as parents)
-  const seriesInserts: Array<typeof groups.$inferInsert> = []
-  for (const [seriesGroupId, seriesTitle] of seriesMap) {
-    if (!existingGroupIdSet.has(seriesGroupId)) {
-      seriesInserts.push({
-        id: seriesGroupId,
-        libraryId,
-        type: 'audiobook-series',
-        title: seriesTitle,
-        parentGroupId: null,
-        metadata: '{}',
-      })
-    }
-  }
-  if (seriesInserts.length > 0) {
-    await db.insert(groups).values(seriesInserts)
-  }
-
-  // Insert missing book groups
-  const bookInserts: Array<typeof groups.$inferInsert> = []
-  for (const [bookGroupId, { bookTitle, narrator, seriesName }] of bookMap) {
-    if (!existingGroupIdSet.has(bookGroupId)) {
-      const parentGroupId = seriesName
-        ? makeAudiobookSeriesGroupId(libraryId, seriesName)
-        : null
-      bookInserts.push({
-        id: bookGroupId,
-        libraryId,
-        type: 'book',
-        title: bookTitle,
-        parentGroupId,
-        metadata: JSON.stringify({ narrator }),
-      })
-    }
-  }
-  if (bookInserts.length > 0) {
-    await db.insert(groups).values(bookInserts)
-  }
-
-  // Fetch existing members to avoid duplicates
-  const chapterIds = chapters.map((c) => c.id)
-  const existingMembers = await db
-    .select({ mediaItemId: groupMembers.mediaItemId })
-    .from(groupMembers)
-    .where(inArray(groupMembers.mediaItemId, chapterIds))
-  const existingMemberSet = new Set(existingMembers.map((m) => m.mediaItemId))
-
-  // Insert missing chapter memberships sorted by trackNumber
-  const memberInserts: Array<typeof groupMembers.$inferInsert> = []
-  for (const ch of chapters) {
-    if (!existingMemberSet.has(ch.id)) {
-      memberInserts.push({
-        groupId: makeAudiobookBookGroupId(libraryId, ch.bookTitle),
-        mediaItemId: ch.id,
-        sortOrder: ch.trackNumber,
-      })
-    }
-  }
-  if (memberInserts.length > 0) {
-    await db.insert(groupMembers).values(memberInserts)
-  }
-}
-
 function makeMusicArtistGroupId(libraryId: string, artistName: string): string {
   return `grp:artist:${libraryId}:${artistName}`
 }
@@ -491,7 +342,10 @@ export async function groupMusicTracks(
     .where(
       and(
         eq(mediaItems.libraryId, libraryId),
-        eq(mediaItems.mediaCategory, MediaCategory.Music),
+        inArray(
+          mediaItems.mimeType,
+          getMimeTypesForCategory(MediaCategory.Music),
+        ),
       ),
     )
 
@@ -500,12 +354,8 @@ export async function groupMusicTracks(
   // Parse tags and collect tracks that have album metadata
   const tracks: MusicTrackData[] = []
   for (const item of musicItems) {
-    let tags: Record<string, unknown> = {}
-    try {
-      tags = JSON.parse(item.metadata ?? '{}')
-    } catch {
-      // ignore parse errors
-    }
+    const tags = item.metadata
+
     if (typeof tags.album === 'string' && tags.album.length > 0) {
       tracks.push({
         id: item.id,
@@ -713,10 +563,10 @@ export async function groupPhotos(
     .where(
       and(
         eq(mediaItems.libraryId, libraryId),
-        inArray(mediaItems.mediaCategory, [
-          MediaCategory.Pictures,
-          MediaCategory.Images,
-        ]),
+        // inArray(mediaItems.mediaCategory, [
+        //   MediaCategory.Pictures,
+        //   MediaCategory.Images,
+        // ]),
       ),
     )
 
@@ -724,12 +574,7 @@ export async function groupPhotos(
 
   const photos: PhotoData[] = []
   for (const item of photoItems) {
-    let meta: Record<string, unknown> = {}
-    try {
-      meta = JSON.parse(item.metadata ?? '{}')
-    } catch {
-      // ignore parse errors
-    }
+    const meta = item.metadata
 
     const dateTaken = typeof meta.dateTaken === 'string' ? meta.dateTaken : null
     const dateStr = dateTaken ? parseExifDate(dateTaken) : null

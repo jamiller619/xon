@@ -1,13 +1,15 @@
-import type { DataSourceType } from '@xon/shared'
+import type { DataSourceType, MediaCategory } from '@xon/shared'
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
-import { keys, timestamps } from './shared.js'
+import { keys, timestamps } from './shared.ts'
 
 export const libraries = sqliteTable('libraries', {
   ...keys,
   ...timestamps,
   name: text('name').notNull(),
   description: text('description'),
-  mediaTypes: text('media_types', { mode: 'json' }).$type<string[]>().notNull(),
+  mediaCategories: text('media_categories', { mode: 'json' })
+    .$type<MediaCategory[]>()
+    .notNull(),
   scanSchedule: text('scan_schedule'),
   watchEnabled: integer('watch_enabled', { mode: 'boolean' })
     .notNull()

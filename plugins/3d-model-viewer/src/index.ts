@@ -10,7 +10,7 @@ export class ModelViewerPlugin extends BasePlugin {
     description: 'WebGL viewer for OBJ, glTF, and GLB 3D models using Three.js',
     author: 'Xon',
     category: 'FormatHandler',
-    mediaCategories: [MediaCategory.Models3D],
+    // mediaCategories: [MediaCategory.Models3D],
     main: 'dist/index.js',
   }
 

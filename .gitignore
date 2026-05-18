@@ -14,6 +14,7 @@ build/
 
 .data/
 prd.json
+packages/server/src/config/schema.ts
 
 *.db
 

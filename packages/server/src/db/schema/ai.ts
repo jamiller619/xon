@@ -1,7 +1,13 @@
 import { sql } from 'drizzle-orm'
-import { index, integer, sqliteTable, text, uniqueIndex } from 'drizzle-orm/sqlite-core'
-import { libraries } from './libraries.js'
-import { mediaItems } from './media.js'
+import {
+  index,
+  integer,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core'
+import { libraries } from './libraries.ts'
+import { mediaItems } from './media.ts'
 
 export const imageHashes = sqliteTable(
   'image_hashes',

@@ -8,8 +8,8 @@ export type ScanState = {
   error: string | null
 }
 
-/**
- * Shared singleton registry of scan states keyed by libraryId.
- * Shared between the scan router and the admin health endpoint.
- */
+// /**
+//  * Shared singleton registry of scan states keyed by libraryId.
+//  * Shared between the scan router and the admin health endpoint.
+//  */
 export const scanRegistry = new Map<string, ScanState>()

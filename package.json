@@ -2,9 +2,13 @@
   "name": "xon",
   "version": "0.0.0",
   "private": true,
-  "workspaces": ["apps/*", "packages/*", "plugins/*"],
+  "workspaces": [
+    "apps/*",
+    "packages/*",
+    "plugins/*"
+  ],
   "scripts": {
-    "dev": "yarn workspace @xon/headless dev & node scripts/wait-port.mjs 32400 && yarn workspace @xon/web dev",
+    "dev": "yarn workspace @xon/headless dev & node scripts/wait-port.mjs 6019 && yarn workspace @xon/web dev",
     "typecheck": "tsc --build",
     "lint": "biome lint .",
     "format": "biome format .",
@@ -14,7 +18,7 @@
     "db:seed": "DATA_DIR=apps/headless/.data node scripts/db-seed.mjs"
   },
   "devDependencies": {
-    "@biomejs/biome": "^1.9.4",
+    "@biomejs/biome": "^2.4.15",
     "typescript": "^5.7.3"
   }
 }

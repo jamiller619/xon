@@ -5,6 +5,7 @@ import RequireAuth from '~/components/RequireAuth'
 import ThemeLoader from '~/components/ThemeLoader'
 import ErrorBoundary from '~/components/error-boundary/ErrorBoundary'
 import Layout from '~/components/layout/Layout'
+// import '../../../bones/registry.ts'
 
 // Route-level code splitting — each page is a separate JS chunk
 const AdminAiSettings = lazy(
@@ -65,7 +66,7 @@ export default function App() {
             >
               <Route path="/" element={<Dashboard />} />
               <Route path="/libraries/:id" element={<LibraryBrowser />} />
-              <Route path="/media/:id" element={<MediaDetail />} />
+              <Route path="/media/:title/:id" element={<MediaDetail />} />
               <Route path="/groups/:id" element={<GroupDetail />} />
               <Route path="/search" element={<Search />} />
               <Route path="/admin/libraries" element={<AdminLibraries />} />

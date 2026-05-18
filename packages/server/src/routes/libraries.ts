@@ -1,5 +1,5 @@
-import { and, asc, desc, eq, inArray, isNull, or, sql } from 'drizzle-orm'
-import type { SQL } from 'drizzle-orm'
+import type { MediaCategory } from '@xon/shared'
+import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
@@ -15,6 +15,7 @@ import {
 } from '../db/schema.js'
 import { validate } from '../http/validate.js'
 // import { withThumbnailUrls } from './media.js'
+import { makeLibraryThumbnailRouter } from './libraryThumbnail.js'
 import { makeScanRouter } from './scan.js'
 import { makeSourcesRouter } from './sources.js'
 
@@ -93,11 +94,14 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
       const body = c.req.valid('json')
       const id = crypto.randomUUID()
       const now = new Date()
+
       await db.insert(libraries).values({
         id,
         name: body.name,
         description: body.description,
-        mediaTypes: body.mediaTypes,
+        mediaCategories: body.mediaTypes as MediaCategory[],
+        lastScanDuration: null,
+        lastScanResult: null,
         createdAt: now,
         updatedAt: now,
       })
@@ -181,7 +185,7 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
       if (body.name !== undefined) updates.name = body.name
       if (body.description !== undefined) updates.description = body.description
       if (body.mediaTypes !== undefined) {
-        updates.mediaTypes = body.mediaTypes
+        updates.mediaCategories = body.mediaTypes as MediaCategory[]
       }
       if (body.hideDRMItems !== undefined)
         updates.hideDRMItems = body.hideDRMItems
@@ -259,8 +263,9 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
 
       const conditions = [eq(mediaItems.libraryId, libraryId)]
       if (mediaCategory)
-        conditions.push(eq(mediaItems.mediaCategory, mediaCategory))
-      if (mimeType) conditions.push(eq(mediaItems.mimeType, mimeType))
+        if (mimeType)
+          // conditions.push(eq(mediaItems.mediaCategory, mediaCategory))
+          conditions.push(eq(mediaItems.mimeType, mimeType))
       if (drmProtected !== undefined) {
         conditions.push(eq(mediaItems.drmProtected, drmProtected === 'true'))
       } else if (userHidesDrm || libHidesDrm) {
@@ -312,6 +317,7 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
     },
   )
 
+  router.route('/', makeLibraryThumbnailRouter(db))
   router.route('/:libraryId/sources', makeSourcesRouter(db))
   router.route('/:libraryId/scan', makeScanRouter(db))
 

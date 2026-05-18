@@ -1,11 +1,39 @@
+.container {
+  --padding: calc(var(--space-3) + var(--space-2));
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
 .textbox {
   background: var(--color-gray-5);
   border: none;
   font: inherit;
   border-radius: var(--border-radius-3);
-  /* biome-ignore lint/correctness/noUnknownProperty: <explanation> */
   corner-shape: var(--corner-shape);
-  padding: var(--space-3) var(--space-4);
+  padding: var(--padding);
   color: currentColor;
   outline: none;
+
+  &[type="search"] {
+    corner-shape: round;
+  }
+}
+
+.icon {
+  position: absolute;
+  left: calc(var(--padding) / 2);
+  pointer-events: none;
+  color: var(--color-gray-10);
+  height: 20px;
+
+  &.focused {
+    color: var(--color-gray-12);
+  }
+}
+
+.start {
+  input {
+    padding-left: var(--space-6);
+  }
 }

@@ -1,32 +1,42 @@
-export enum MediaCategory {
-  Movies = 'Movies',
-  TVShows = 'TV Shows',
-  Clips = 'Clips',
-  Music = 'Music',
-  Audiobooks = 'Audiobooks',
-  AudioClips = 'Audio Clips',
-  Podcasts = 'Podcasts',
-  Pictures = 'Pictures',
-  Images = 'Images',
-  Textures = 'Textures',
-  HomeVideos = 'Home Videos',
-  Games = 'Games',
-  InteractiveMedia = 'Interactive Media',
-  Documents = 'Documents',
-  WebMedia = 'Web Media',
-  DesignFiles = 'Design Files',
-  Models3D = '3D Models',
-  Archives = 'Archives',
-  Fonts = 'Fonts',
-  Icons = 'Icons',
+import type { MediaCategory } from './mediaCategories.js'
+
+export type StatsPayload = {
+  cpu: number
+  memory: {
+    used: number
+    total: number
+    free: number
+  }
+  disk: {
+    fs: string
+    used: number
+    size: number
+  }[]
+  network: {
+    iface: string
+    rx: number
+    rxSec: number
+    tx: number
+    txSec: number
+  }[]
+  timestamp: number
+  uptime: number
+  system: {
+    model: string
+    manufacturer: string
+    platform: string
+    release: string
+    hostname: string
+  }
 }
+
 export interface Library {
   id: string
   createdAt: Date
   updatedAt: Date | null
   name: string
   description: string | null
-  mediaTypes: MediaCategory[]
+  mediaCategories: MediaCategory[]
   scanSchedule: string | null
   watchEnabled: boolean
   lastScanResult: string | null
@@ -43,8 +53,6 @@ export interface DataSource {
   pluginId: string | null
   type: DataSourceType
   path: string
-  // recursive: boolean
-  // enabled: boolean
   createdAt: Date
   updatedAt: Date | null
 }
@@ -53,14 +61,13 @@ export const MPARatings = ['G', 'PG', 'PG-13', 'R', 'NC-17', 'NR'] as const
 
 export type MPARating = (typeof MPARatings)[number]
 
-export const MediaImageTypes = ['poster', 'backdrop', 'thumbnail'] as const
-
-export type MediaImageType = (typeof MediaImageTypes)[number]
-
-export type MediaImage = {
-  url: string
-  type: MediaImageType
-  mediaItemId: string
+// biome-ignore lint/suspicious/noExplicitAny: We want <any>
+export type Metadata<T = Record<string, any>> = T & {
+  images?: {
+    backdrop?: string[] | string
+    poster?: string[] | string
+    thumbnail?: string[] | string
+  }
 }
 
 export interface MediaItem {
@@ -68,18 +75,14 @@ export interface MediaItem {
   createdAt: Date
   updatedAt: Date | null
   libraryId: string
-  // dataSourceId: string
   filePath: string
-  fileName: string
   fileSize: number
   mimeType: string
-  mediaCategory: MediaCategory
-  title: string | null
+  title: string
   description: string | null
-  metadata: Record<string, unknown>
+  metadata: Metadata
   drmProtected: boolean
   scannedAt: Date
-  images?: MediaImage[]
 }
 
 export enum UserRole {

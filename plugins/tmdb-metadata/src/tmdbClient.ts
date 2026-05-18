@@ -1,3 +1,6 @@
+import type { Metadata } from '@xon/shared'
+import { backdropSizes, posterSizes, secureBaseURL } from './config.js'
+
 const TMDB_BASE = 'https://api.themoviedb.org/3'
 const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
 
@@ -68,6 +71,8 @@ interface TmdbMovieSearchResult {
 }
 
 interface TmdbMovieDetailsResult extends TmdbMovieSearchResult {
+  adult: boolean
+  imdb_id: string
   overview: string
   genres: Array<{ id: number; name: string }>
   credits: {
@@ -106,6 +111,20 @@ interface TmdbEpisodeResult {
 
 interface SearchResponse<T> {
   results: T[]
+}
+
+interface TmdbPersonImage {
+  file_path: string
+  aspect_ratio: number
+  width: number
+  height: number
+  iso_639_1: string
+  vote_average: number
+  vote_count: number
+}
+
+interface TmdbPersonImagesResult {
+  profiles: TmdbPersonImage[]
 }
 
 const KEY_JOBS = new Set([
@@ -150,17 +169,28 @@ export class TmdbClient {
     return data
   }
 
-  async fetchMovieMetadata(
+  async fetchPersonImages(personId: number) {
+    return this.#get<TmdbPersonImagesResult>(`/person/${personId}/images`)
+  }
+
+  async searchMovies(
     title: string,
     year?: number,
-  ): Promise<TmdbMovieMetadata | null> {
+  ): Promise<SearchResponse<TmdbMovieSearchResult> | null> {
     const params: Record<string, string> = { query: title }
     if (year !== undefined) params.year = String(year)
 
-    const search = await this.#get<SearchResponse<TmdbMovieSearchResult>>(
+    return this.#get<SearchResponse<TmdbMovieSearchResult>>(
       '/search/movie',
       params,
     )
+  }
+
+  async fetchMovieMetadata(
+    title: string,
+    year?: number,
+  ): Promise<Metadata | null> {
+    const search = await this.searchMovies(title, year)
     const first = search?.results[0]
     if (!first) return null
 
@@ -170,15 +200,16 @@ export class TmdbClient {
         append_to_response: 'credits',
       },
     )
+
     if (!details) return null
 
-    return {
+    const data: Metadata = {
+      adult: details.adult,
       tmdbId: details.id,
+      imdbId: details.imdb_id,
       title: details.title,
       originalTitle: details.original_title,
       overview: details.overview,
-      posterPath: details.poster_path,
-      backdropPath: details.backdrop_path,
       releaseDate: details.release_date,
       voteAverage: details.vote_average,
       genres: details.genres.map((g) => g.name),
@@ -197,13 +228,28 @@ export class TmdbClient {
           department: c.department,
         })),
     }
+
+    if (details.backdrop_path) {
+      data.images ??= {}
+      data.images.backdrop = constructURL(
+        backdropSizes.large,
+        details.backdrop_path,
+      )
+    }
+
+    if (details.poster_path) {
+      data.images ??= {}
+      data.images.poster = constructURL(posterSizes.xlarge, details.poster_path)
+    }
+
+    return data
   }
 
   async fetchTvMetadata(
     seriesTitle: string,
     season: number,
     episode: number,
-  ): Promise<TmdbTvMetadata | null> {
+  ): Promise<Metadata | null> {
     const search = await this.#get<SearchResponse<TmdbTvSearchResult>>(
       '/search/tv',
       {
@@ -225,14 +271,12 @@ export class TmdbClient {
     const cast = details.credits?.cast ?? []
     const crew = details.credits?.crew ?? []
 
-    const metadata: TmdbTvMetadata = {
+    const metadata: Metadata = {
       tmdbId: first.id,
       seriesId: first.id,
       title: details.name,
       originalTitle: details.original_name,
       overview: details.overview,
-      posterPath: details.poster_path,
-      backdropPath: details.backdrop_path,
       firstAirDate: details.first_air_date,
       voteAverage: details.vote_average,
       genres: details.genres.map((g) => g.name),
@@ -254,6 +298,22 @@ export class TmdbClient {
       episodeNumber: episode,
     }
 
+    if (details.poster_path) {
+      metadata.images ??= {}
+      metadata.images.poster = constructURL(
+        posterSizes.xlarge,
+        details.poster_path,
+      )
+    }
+
+    if (details.backdrop_path) {
+      metadata.images ??= {}
+      metadata.images.backdrop = constructURL(
+        backdropSizes.large,
+        details.backdrop_path,
+      )
+    }
+
     if (episodeDetails) {
       metadata.episodeTitle = episodeDetails.name
       metadata.episodeOverview = episodeDetails.overview
@@ -268,4 +328,8 @@ export class TmdbClient {
   clearCache(): void {
     this.#cache.clear()
   }
+}
+
+function constructURL(size: string, imagePath: string) {
+  return new URL(`${size}${imagePath}`, secureBaseURL).href
 }

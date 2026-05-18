@@ -1,1 +1,0 @@
-ALTER TABLE `media_items` ADD `thumbnail_paths` text;

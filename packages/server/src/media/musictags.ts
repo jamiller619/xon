@@ -3,7 +3,7 @@ import { parseFile } from 'music-metadata'
 
 const MUSIC_CATEGORIES = new Set<string>([
   MediaCategory.Music,
-  MediaCategory.Audiobooks,
+  // MediaCategory.Audiobooks,
 ])
 
 export type MusicTagsMetadata = {

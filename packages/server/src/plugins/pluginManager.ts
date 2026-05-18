@@ -2,6 +2,7 @@ import { basename, join } from 'node:path'
 import type { Client } from '@libsql/client'
 import { BasePlugin } from '@xon/plugin-sdk'
 import type {
+  PluginCategory,
   PluginContext,
   PluginEvent,
   PluginEventPayloads,
@@ -26,10 +27,10 @@ type MediaMetadataProvider = (
   mediaId: string,
 ) => Promise<Record<string, unknown> | null>
 
-export interface PluginEntry {
+export interface PluginEntry<T extends BasePlugin = BasePlugin> {
   manifest: PluginManifest
   pluginDir: string
-  instance: BasePlugin
+  instance: T
   status: PluginStatus
   hooks: PluginHookEntry[]
   routes: RouteDefinition[]
@@ -39,6 +40,14 @@ export interface PluginEntry {
 
 /** Registry of all loaded plugins, keyed by plugin id */
 export const registry = new Map<string, PluginEntry>()
+
+export function getPluginsByCategory<T extends BasePlugin = BasePlugin>(
+  category: PluginCategory,
+) {
+  return Array.from(registry.values()).filter(
+    (plugin) => plugin.manifest.category === category,
+  ) as PluginEntry<T>[]
+}
 
 export interface PluginErrorEntry {
   pluginDir: string
@@ -67,14 +76,14 @@ export function setPluginDatabase(client: Client): void {
 }
 
 /** Emit a plugin event to all registered hooks. Errors in hooks are logged, not thrown. */
-export function emitPluginEvent<E extends PluginEvent>(
+export async function emitPluginEvent<E extends PluginEvent>(
   event: E,
   payload: PluginEventPayloads[E],
-): void {
+): Promise<void> {
   const handlers = pluginEventHandlers.get(event)
   if (!handlers) return
-  for (const handler of handlers) {
-    Promise.resolve(handler(payload)).catch((err: unknown) => {
+  for await (const handler of handlers) {
+    await Promise.resolve(handler(payload)).catch((err: unknown) => {
       console.error(`[plugin-manager] Hook error on "${event}":`, err)
     })
   }

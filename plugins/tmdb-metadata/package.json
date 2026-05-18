@@ -1,21 +1,10 @@
 {
   "name": "@xon/plugin-tmdb-metadata",
+  "description": "Fetches movie and TV show metadata from The Movie Database (TMDb)",
   "version": "1.0.0",
-  "private": true,
   "type": "module",
-  "xon": {
-    "id": "tmdb-metadata",
-    "name": "TMDb Metadata",
-    "version": "1.0.0",
-    "description": "Fetches movie and TV show metadata from The Movie Database (TMDb)",
-    "author": "Xon",
-    "category": "MetadataSource",
-    "mediaCategories": ["Movies", "TV Shows"],
-    "main": "dist/index.js",
-    "permissions": {
-      "network": ["api.themoviedb.org"]
-    }
-  },
+  "main": "dist/index.js",
+  "author": "Xon",
   "scripts": {
     "build": "tsc --build",
     "typecheck": "tsc --build --noEmit",
@@ -29,5 +18,13 @@
     "@types/node": "^22.0.0",
     "typescript": "*",
     "vitest": "^2.1.0"
+  },
+  "xon": {
+    "displayName": "TMDb Metadata",
+    "category": "MetadataSource",
+    "mediaCategories": ["Movies", "TV Shows"],
+    "permissions": {
+      "network": ["api.themoviedb.org"]
+    }
   }
 }

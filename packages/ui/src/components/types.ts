@@ -1,1 +1,1 @@
-export type Variant = 'primary' | 'ghost'
+export type Variant = 'primary' | 'ghost' | 'danger' | 'success' | 'warning'

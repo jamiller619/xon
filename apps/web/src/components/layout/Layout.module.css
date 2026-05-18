@@ -1,11 +1,12 @@
 :root {
   --header-height: 64px;
+  --sidebar-width: 240px;
 }
 
 .shell {
   display: flex;
   height: 100vh;
-  overflow: hidden;
+  /* overflow: hidden; */
 }
 
 .overlay {
@@ -16,17 +17,21 @@
   z-index: 199;
 }
 
+.sidebar {
+  width: var(--sidebar-width);
+}
+
 .main {
   flex: 1;
   display: flex;
   flex-direction: column;
   min-width: 0;
-  overflow: hidden;
+  margin-left: var(--sidebar-width);
+  /* overflow: hidden; */
 }
 
 .content {
   flex: 1;
-  overflow-y: auto;
 }
 
 .contentWithPlayer {

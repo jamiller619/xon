@@ -1,5 +1,5 @@
 import { copyFile, mkdir, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import path, { join } from 'node:path'
 import { and, desc, eq, inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
@@ -88,7 +88,7 @@ export async function runSyncJob(
         filters.push(inArray(mediaItems.libraryId, scope.libraryIds))
       }
       if (scope.mediaTypes && scope.mediaTypes.length > 0) {
-        filters.push(inArray(mediaItems.mediaCategory, scope.mediaTypes))
+        // filters.push(inArray(mediaItems.mediaCategory, scope.mediaTypes))
       }
       if (scope.itemIds && scope.itemIds.length > 0) {
         filters.push(inArray(mediaItems.id, scope.itemIds))
@@ -120,7 +120,7 @@ export async function runSyncJob(
       await mkdir(mediaDir, { recursive: true })
       for (const item of items) {
         try {
-          const dest = join(mediaDir, item.fileName)
+          const dest = join(mediaDir, path.basename(item.filePath))
           await copyFile(item.filePath, dest)
           synced++
         } catch (err) {

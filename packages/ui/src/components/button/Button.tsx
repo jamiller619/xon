@@ -1,13 +1,35 @@
 import { Button as UIButton } from '@base-ui/react'
 import clsx from 'clsx'
-import type { ReactNode } from 'react'
+import { motion } from 'motion/react'
+import type {
+  ComponentPropsWithoutRef,
+  PropsWithChildren,
+  ReactNode,
+} from 'react'
 import type { Variant } from '../types.js'
 import styles from './Button.module.css'
 
-export type ButtonProps = React.ButtonHTMLAttributes<HTMLButtonElement> & {
-  variant?: Variant
+export type ButtonVariant = Variant | 'block'
+
+export type ButtonProps = ComponentPropsWithoutRef<'button'> & {
+  variant?: ButtonVariant
   size?: 'small'
 }
+
+const CustomButton = ({
+  children,
+  ref,
+  ...props
+}: PropsWithChildren<UIButton.Props>) => {
+  return (
+    <UIButton ref={ref} {...props}>
+      {children}
+    </UIButton>
+  )
+}
+
+// biome-ignore lint/suspicious/noExplicitAny: <explanation>
+const AnimatedButton = motion.create(CustomButton as any)
 
 export default function Button({
   className,
@@ -16,8 +38,10 @@ export default function Button({
   ...props
 }: ButtonProps) {
   return (
-    <UIButton
+    <AnimatedButton
       type="button"
+      whileTap={{ scale: 0.95 }}
+      whileHover={{ scale: 1.05 }}
       {...props}
       className={clsx(styles.button, className, variant && styles[variant], {
         // biome-ignore lint/style/noNonNullAssertion: <explanation>

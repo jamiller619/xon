@@ -1,7 +1,7 @@
 import { mkdir } from 'node:fs/promises'
 import { hostname } from 'node:os'
-import { join } from 'node:path'
 import { createStream, type RotatingFileStream } from 'rotating-file-stream'
+import config from './config.ts'
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 
@@ -115,20 +115,20 @@ export function createLogger(component: string): Logger {
 
 /**
  * Initialise the logger. Must be called once at server startup.
- * - Reads LOG_LEVEL env var (overrides the default 'info').
- * - Reads LOG_RETENTION_DAYS env var to control how many daily log files are kept (default 5).
- * - Creates DATA_DIR/logs/ and patches all console methods.
+ * - Creates logs directory.
  */
-export async function initLogger(dataDir: string): Promise<void> {
-  const logsDir = join(dataDir, 'logs')
+export async function initLogger(): Promise<void> {
+  const logsDir = config.get('appdata.logsPath')
+
   await mkdir(logsDir, { recursive: true })
 
-  const envLevel = process.env.LOG_LEVEL?.toLowerCase() as LogLevel | undefined
+  const envLevel = config.get('log.level')
+
   if (envLevel && envLevel in LEVEL_RANK) {
     currentLevel = envLevel
   }
 
-  const retentionDays = Number(process.env.LOG_RETENTION_DAYS ?? 5)
+  const retentionDays = config.get('log.retentionDays')
 
   stream = createStream(
     (time: number | Date | null) => {
@@ -147,10 +147,4 @@ export async function initLogger(dataDir: string): Promise<void> {
   stream.on('error', (err) => {
     origError('Logger stream error:', err)
   })
-
-  console.log = makeHandler(origLog, 'info')
-  console.debug = makeHandler(origDebug, 'debug')
-  console.info = makeHandler(origInfo, 'info')
-  console.warn = makeHandler(origWarn, 'warn')
-  console.error = makeHandler(origError, 'error')
 }

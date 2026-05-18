@@ -159,7 +159,7 @@ export async function runMediaBackupJob(
     filters.push(inArray(mediaItems.libraryId, scope.libraryIds))
   }
   if (scope.mediaTypes && scope.mediaTypes.length > 0) {
-    filters.push(inArray(mediaItems.mediaCategory, scope.mediaTypes))
+    // filters.push(inArray(mediaItems.mediaCategory, scope.mediaTypes))
   }
   if (scope.itemIds && scope.itemIds.length > 0) {
     filters.push(inArray(mediaItems.id, scope.itemIds))

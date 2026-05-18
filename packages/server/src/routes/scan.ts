@@ -8,7 +8,7 @@ import { libraries } from '../db/schema.js'
 import { emitEvent } from '../events.js'
 import { validate } from '../http/validate.js'
 import { emitPluginEvent } from '../plugins/pluginManager.js'
-import { scanLibrary } from '../scanner/orchestrator.js'
+import { scanLibrary } from '../scanner/orchestrator.ts'
 import { type ScanState, scanRegistry } from '../scanner/scanRegistry.js'
 import { parseCronInterval } from '../scanner/scheduler.js'
 
@@ -48,6 +48,7 @@ export function triggerLibraryScan(
   emitPluginEvent('scan:start', { libraryId })
 
   const scanStartedAt = Date.now()
+
   scanLibrary(db, libraryId, (progress) => {
     state.progress = progress
     const percentComplete =
@@ -68,6 +69,7 @@ export function triggerLibraryScan(
       const duration = Date.now() - scanStartedAt
       state.status = 'completed'
       state.summary = summary
+
       await db
         .update(libraries)
         .set({
@@ -76,8 +78,10 @@ export function triggerLibraryScan(
           updatedAt: new Date(),
         })
         .where(eq(libraries.id, libraryId))
+
       appCache.invalidate(`media:count:${libraryId}`)
       appCache.invalidate('libraries:all')
+
       emitEvent({
         type: 'scan:complete',
         payload: {

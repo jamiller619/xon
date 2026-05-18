@@ -1,4 +1,4 @@
-import { MediaCategory } from '@xon/shared'
+import { CATEGORY_DEFINITIONS, MediaCategory } from '@xon/shared'
 import { createLogger } from '../logger.js'
 import { exifTool } from './binaries.js'
 
@@ -6,8 +6,8 @@ const logger = createLogger('exiftool')
 
 const IMAGE_CATEGORIES = new Set<string>([
   MediaCategory.Pictures,
-  MediaCategory.Images,
-  MediaCategory.DesignFiles,
+  // MediaCategory.Images,
+  // MediaCategory.DesignFiles,
 ])
 
 export type ExiftoolMetadata = {
@@ -21,9 +21,20 @@ export type ExiftoolMetadata = {
   orientation?: string
 }
 
-export function isImageCategory(category: string | null): boolean {
-  if (!category) return false
-  return IMAGE_CATEGORIES.has(category)
+const IMAGE_MIME_TYPES = new Set<string>(
+  ...Object.values(CATEGORY_DEFINITIONS[MediaCategory.Pictures]),
+)
+
+export function isImage(mimeType: string | null): boolean {
+  if (!mimeType) return false
+
+  return IMAGE_MIME_TYPES.has(mimeType)
+}
+
+export function isImageCategory(...categories: string[]): boolean {
+  if (!categories.length) return false
+
+  return categories.some((c) => IMAGE_CATEGORIES.has(c))
 }
 
 export async function extractExiftoolMetadata(

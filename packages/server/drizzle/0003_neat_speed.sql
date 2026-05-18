@@ -1,1 +1,0 @@
-ALTER TABLE `libraries` ADD `scan_schedule` text;

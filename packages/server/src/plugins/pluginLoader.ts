@@ -21,42 +21,82 @@ function validateManifest(data: unknown, source: string): PluginManifest {
   if (typeof data !== 'object' || data === null) {
     throw new Error(`${source}: manifest must be an object`)
   }
-  const d = data as Record<string, unknown>
+
+  const resp = {} as PluginManifest
+
+  // @ts-expect-error: this works
+  const id = data.id ?? data.xon?.id ?? data.name
+
+  if (typeof id !== 'string' || (id as string).trim() === '') {
+    throw new Error(`${source}: missing or invalid id field`)
+  }
+
+  resp.id = id
 
   const required: Array<keyof PluginManifest> = [
-    'id',
     'name',
     'version',
     'description',
     'author',
     'category',
   ]
+
+  const optional: Array<keyof PluginManifest> = [
+    'displayName',
+    'mediaCategories',
+    'minServerVersion',
+    'main',
+    'themeAssets',
+    'permissions',
+  ]
+
   for (const field of required) {
-    if (typeof d[field] !== 'string' || (d[field] as string).trim() === '') {
+    const value =
+      (data as Record<string, unknown>)[field] ??
+      ('xon' in data && (data.xon as Record<string, unknown>)[field])
+
+    if (typeof value !== 'string' || (value as string).trim() === '') {
       throw new Error(`${source}: missing or invalid required field "${field}"`)
+    }
+
+    // @ts-expect-error: this works
+    resp[field] = value
+  }
+
+  for (const field of optional) {
+    const value =
+      (data as Record<string, unknown>)[field] ??
+      ('xon' in data && (data.xon as Record<string, unknown>)[field])
+
+    if (value != null) {
+      // @ts-expect-error: this works
+      resp[field] = value
     }
   }
 
-  if (!VALID_CATEGORIES.has(d.category as string)) {
+  if (!VALID_CATEGORIES.has(resp.category as string)) {
     throw new Error(
-      `${source}: invalid category "${d.category}". Must be one of: ${[...VALID_CATEGORIES].join(', ')}`,
+      `${source}: invalid category "${resp.category}". Must be one of: ${[...VALID_CATEGORIES].join(', ')}`,
     )
   }
 
-  if (d.mediaCategories !== undefined && !Array.isArray(d.mediaCategories)) {
+  if (
+    resp.mediaCategories !== undefined &&
+    !Array.isArray(resp.mediaCategories)
+  ) {
     throw new Error(`${source}: "mediaCategories" must be an array`)
   }
   if (
-    d.minServerVersion !== undefined &&
-    typeof d.minServerVersion !== 'string'
+    resp.minServerVersion !== undefined &&
+    typeof resp.minServerVersion !== 'string'
   ) {
     throw new Error(`${source}: "minServerVersion" must be a string`)
   }
-  if (d.main !== undefined && typeof d.main !== 'string') {
+  if (resp.main !== undefined && typeof resp.main !== 'string') {
     throw new Error(`${source}: "main" must be a string`)
   }
 
-  return d as unknown as PluginManifest
+  return resp as unknown as PluginManifest
 }
 
 async function loadManifestFromDir(pluginDir: string): Promise<PluginManifest> {
@@ -65,9 +105,8 @@ async function loadManifestFromDir(pluginDir: string): Promise<PluginManifest> {
   try {
     const raw = await readFile(pkgPath, 'utf-8')
     const pkg = JSON.parse(raw) as Record<string, unknown>
-    if (pkg.xon !== undefined) {
-      return validateManifest(pkg.xon, `${pluginDir}/package.json#xon`)
-    }
+
+    return validateManifest(pkg, `${pluginDir}/package.json`)
   } catch (err) {
     // package.json missing or not valid JSON — fall through to next option
     if ((err as NodeJS.ErrnoException).code !== 'ENOENT') {
@@ -109,7 +148,7 @@ async function loadManifestFromDir(pluginDir: string): Promise<PluginManifest> {
   }
 
   throw new Error(
-    `No plugin manifest found in ${pluginDir} (tried package.json#xon, xon.config.json, xon.config.ts)`,
+    `No plugin manifest found in ${pluginDir} (tried package.json, xon.config.json, xon.config.ts)`,
   )
 }
 

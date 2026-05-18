@@ -79,7 +79,7 @@ export {
   resolveSeriesName,
   groupTvEpisodes,
   groupMusicTracks,
-  groupAudiobooks,
+  // groupAudiobooks,
   resolveAudiobookInfo,
   groupPhotos,
   parseExifDate,
@@ -123,8 +123,8 @@ export {
   scanLibraryForSmartGroups,
   acceptSuggestedGroup,
   detectMultiDiscAlbums,
-  detectBookSeries,
-  detectSupplementaryMaterials,
+  // detectBookSeries,
+  // detectSupplementaryMaterials,
   type SmartGroupCandidate,
 } from './media/smartGrouping.js'
 export { hashPassword, verifyPassword } from './auth/password.js'
@@ -168,31 +168,30 @@ export {
   extractFontMetadata,
   extract3DModelMetadata,
   extractArchiveMetadata,
-  isDocumentCategory,
-  isFontCategory,
-  is3DModelCategory,
-  isArchiveCategory,
+  // isDocumentCategory,
+  // isFontCategory,
+  // is3DModelCategory,
+  // isArchiveCategory,
   type DocumentMetadata,
   type FontMetadata,
   type Model3DMetadata,
   type ArchiveMetadata,
 } from './media/miscmeta.js'
 export { detectDrm } from './media/drm.js'
-export { generateThumbnails, type ThumbnailPaths } from './media/thumbnails.js'
+export { generateThumbnails } from './media/thumbnails.js'
 export {
   generateVideoThumbnails,
   isVideoCategory,
 } from './media/videoThumbnails.js'
 export {
   scanDataSource,
-  type FileEntry,
   type ScanResult,
 } from './scanner/scanner.js'
-export {
-  scanLibrary,
-  type ScanProgress,
-  type ScanSummary,
-} from './scanner/orchestrator.js'
+// export {
+//   scanLibrary,
+//   type ScanProgress,
+//   type ScanSummary,
+// } from './scanner/orchestrator.old.js'
 export { boot } from './server.js'
 export {
   startScheduler,

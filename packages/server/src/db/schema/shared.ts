@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { integer, text } from 'drizzle-orm/sqlite-core'
 
 export const timestamps = {
@@ -8,5 +9,7 @@ export const timestamps = {
 }
 
 export const keys = {
-  id: text('id').primaryKey(),
+  id: text('id')
+    .primaryKey()
+    .$defaultFn(() => randomUUID()),
 }

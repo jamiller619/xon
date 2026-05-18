@@ -39,7 +39,7 @@ export type PluginBackupConfig = z.infer<typeof pluginConfigSchema>
 const createSchema = z.object({
   name: z.string().min(1),
   type: z.enum(['local', 'network', 'plugin']).default('local'),
-  config: z.record(z.unknown()).default({}),
+  // config: z.record(z.unknown()).default({}),
   enabled: z.boolean().default(true),
   removeDeleted: z.boolean().default(false),
 })
@@ -47,7 +47,7 @@ const createSchema = z.object({
 const updateSchema = z.object({
   name: z.string().min(1).optional(),
   type: z.enum(['local', 'network', 'plugin']).optional(),
-  config: z.record(z.unknown()).optional(),
+  // config: z.record(z.unknown()).optional(),
   enabled: z.boolean().optional(),
   removeDeleted: z.boolean().optional(),
 })
@@ -204,7 +204,7 @@ export function makeAdminBackupTargetsRouter(db: LibSQLDatabase): Hono {
         id,
         name: body.name,
         type: body.type,
-        config: JSON.stringify(body.config),
+        // config: JSON.stringify(body.config),
         enabled: body.enabled,
         removeDeleted: body.removeDeleted,
         createdAt: now,
@@ -229,7 +229,7 @@ export function makeAdminBackupTargetsRouter(db: LibSQLDatabase): Hono {
     const update: Partial<typeof backupTargets.$inferInsert> = {}
     if (body.name !== undefined) update.name = body.name
     if (body.type !== undefined) update.type = body.type
-    if (body.config !== undefined) update.config = JSON.stringify(body.config)
+    // if (body.config !== undefined) update.config = JSON.stringify(body.config)
     if (body.enabled !== undefined) update.enabled = body.enabled
     if (body.removeDeleted !== undefined)
       update.removeDeleted = body.removeDeleted

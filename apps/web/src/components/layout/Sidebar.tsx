@@ -1,56 +1,47 @@
 import {
   Glance20Filled as DashboardIcon,
   CircleSmall20Filled as LibraryIcon,
+  Navigation20Filled as MenuIcon,
   PlugDisconnected20Filled as PluginsIcon,
   Settings20Filled as SettingsIcon,
   PersonCircle20Filled as UsersIcon,
 } from '@fluentui/react-icons'
-import { Navigation20Filled as MenuIcon } from '@fluentui/react-icons'
-import { Flex, IconButton } from '@xon/ui'
-import { useEffect, useState } from 'react'
+import { Button, Flex } from '@xon/ui'
+import clsx from 'clsx'
 import { NavLink } from 'react-router-dom'
-import PluginSlot from '~/components/PluginSlot'
 import Logo from '~/components/logo/Logo'
-import { apiFetch } from '~/lib/apiFetch'
+import PluginSlot from '~/components/PluginSlot'
+import useLibraries from '~/hooks/useLibraries'
 import styles from './Sidebar.module.css'
 
-interface Library {
-  id: string
-  name: string
-}
-
 interface SidebarProps {
+  className?: string | undefined
   open: boolean
   onMenuClick: () => void
 }
 
-export default function Sidebar({ open, onMenuClick }: SidebarProps) {
-  const [libraries, setLibraries] = useState<Library[]>([])
-  const [loading, setLoading] = useState(true)
-
-  useEffect(() => {
-    apiFetch('/api/v1/libraries')
-      .then((r) => r.json())
-      .then((data: Library[]) => setLibraries(data))
-      .catch(() => setLibraries([]))
-      .finally(() => setLoading(false))
-  }, [])
+export default function Sidebar({
+  open,
+  className,
+  onMenuClick,
+}: SidebarProps) {
+  const { libraries, isLoading } = useLibraries()
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
     `${styles.navLink}${isActive ? ` ${styles.active}` : ''}`
 
   return (
     <nav
-      className={`${styles.sidebar}${open ? ` ${styles.open}` : ''}`}
+      className={clsx(styles.sidebar, className, open && styles.open)}
       aria-label="Main navigation"
     >
-      <Flex justify="between" className={styles.header}>
-        <NavLink to="/" className={styles.logo as string}>
-          <Logo />
-        </NavLink>
+      <Flex align="center" gap="4" className={styles.header}>
         {/* <IconButton onClick={onMenuClick} variant="ghost">
           <MenuIcon />
         </IconButton> */}
+        <NavLink to="/" className={styles.logo ?? ''}>
+          <Logo />
+        </NavLink>
       </Flex>
 
       <Section>
@@ -75,8 +66,8 @@ export default function Sidebar({ open, onMenuClick }: SidebarProps) {
 
       <Section>
         <div className={styles.sectionTitle}>Libraries</div>
-        {loading ? (
-          <p className={styles.loadingLibraries}>Loading…</p>
+        {isLoading ? (
+          <p className={styles.loadingLibraries}>Loading...</p>
         ) : libraries.length === 0 ? (
           <p className={styles.emptyLibraries}>No libraries yet</p>
         ) : (
@@ -91,6 +82,7 @@ export default function Sidebar({ open, onMenuClick }: SidebarProps) {
             </NavLink>
           ))
         )}
+        {/* <Button>Add New Library</Button> */}
       </Section>
 
       <Section>

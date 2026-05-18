@@ -2,7 +2,7 @@ import { eq, inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import sharp from 'sharp'
 import { duplicateCandidates, imageHashes, mediaItems } from '../db/schema.js'
-import { isImageCategory } from './exiftool.js'
+import { isImage, isImageCategory } from './exiftool.js'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -151,7 +151,7 @@ export async function scanLibraryForDuplicates(
     .from(mediaItems)
     .where(eq(mediaItems.libraryId, libraryId))
 
-  const imageItems = items.filter((item) => isImageCategory(item.mediaCategory))
+  const imageItems = items.filter((item) => isImage(item.mimeType))
   if (imageItems.length === 0) return 0
 
   const itemIds = imageItems.map((i) => i.id)

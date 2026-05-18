@@ -31,13 +31,8 @@ const DISC_PATTERN = /\b(?:disc|disk|cd|vol(?:ume)?|part|pt)\s*(\d+)\b/i
  * uses the grandparent directory instead.
  */
 function getAlbumTitle(item: typeof mediaItems.$inferSelect): string | null {
-  const meta = (() => {
-    try {
-      return JSON.parse(item.metadata) as Record<string, unknown>
-    } catch {
-      return null
-    }
-  })()
+  const meta = item.metadata
+
   if (typeof meta?.album === 'string' && meta.album.length > 0) {
     return meta.album
   }
@@ -68,13 +63,12 @@ export function detectMultiDiscAlbums(
 ): SmartGroupCandidate[] {
   const MUSIC_CATEGORIES: string[] = [
     MediaCategory.Music,
-    MediaCategory.Audiobooks,
-    MediaCategory.AudioClips,
+    // MediaCategory.Audiobooks,
+    // MediaCategory.AudioClips,
   ]
 
   const musicItems = items.filter(
-    (i) =>
-      i.mediaCategory !== null && MUSIC_CATEGORIES.includes(i.mediaCategory),
+    (i) => i.mimeType !== null && MUSIC_CATEGORIES.includes(i.mimeType),
   )
 
   // Group by album title → collect parent directories
@@ -143,70 +137,70 @@ function normaliseTitleForSeries(title: string): string {
  * Looks for multiple documents/audiobooks sharing the same normalised title base
  * and containing series indicator patterns.
  */
-export function detectBookSeries(
-  items: Array<typeof mediaItems.$inferSelect>,
-): SmartGroupCandidate[] {
-  const BOOK_CATEGORIES: string[] = [
-    MediaCategory.Documents,
-    MediaCategory.Audiobooks,
-  ]
+// export function detectBookSeries(
+//   items: Array<typeof mediaItems.$inferSelect>,
+// ): SmartGroupCandidate[] {
+//   const BOOK_CATEGORIES: string[] = [
+//     MediaCategory.Documents,
+//     MediaCategory.Audiobooks,
+//   ]
 
-  const bookItems = items.filter(
-    (i) =>
-      i.mediaCategory !== null && BOOK_CATEGORIES.includes(i.mediaCategory),
-  )
+//   const bookItems = items.filter(
+//     (i) =>
+//       i.mediaCategory !== null && BOOK_CATEGORIES.includes(i.mediaCategory),
+//   )
 
-  // Group by normalised title base
-  const titleGroups = new Map<string, { ids: string[]; titles: string[] }>()
+//   // Group by normalised title base
+//   const titleGroups = new Map<string, { ids: string[]; titles: string[] }>()
 
-  for (const item of bookItems) {
-    const rawTitle = item.title ?? item.fileName
-    // Only consider items that have a series indicator
-    const hasIndicator = SERIES_INDICATORS.some((re) => re.test(rawTitle))
-    if (!hasIndicator) continue
+//   for (const item of bookItems) {
+//     const rawTitle = item.title ?? item.fileName
+//     // Only consider items that have a series indicator
+//     const hasIndicator = SERIES_INDICATORS.some((re) => re.test(rawTitle))
+//     if (!hasIndicator) continue
 
-    const normalised = normaliseTitleForSeries(rawTitle)
-    if (normalised.length < 3) continue
+//     const normalised = normaliseTitleForSeries(rawTitle)
+//     if (normalised.length < 3) continue
 
-    const existing = titleGroups.get(normalised)
-    if (existing) {
-      existing.ids.push(item.id)
-      existing.titles.push(rawTitle)
-    } else {
-      titleGroups.set(normalised, { ids: [item.id], titles: [rawTitle] })
-    }
-  }
+//     const existing = titleGroups.get(normalised)
+//     if (existing) {
+//       existing.ids.push(item.id)
+//       existing.titles.push(rawTitle)
+//     } else {
+//       titleGroups.set(normalised, { ids: [item.id], titles: [rawTitle] })
+//     }
+//   }
 
-  const candidates: SmartGroupCandidate[] = []
+//   const candidates: SmartGroupCandidate[] = []
 
-  for (const [normalised, { ids, titles }] of titleGroups) {
-    if (ids.length < 2) continue
+//   for (const [normalised, { ids, titles }] of titleGroups) {
+//     if (ids.length < 2) continue
 
-    const seriesTitle = (() => {
-      // Use the longest common prefix of actual titles as the series name
-      let prefix = titles[0] ?? normalised
-      for (const t of titles.slice(1)) {
-        let i = 0
-        while (i < prefix.length && i < t.length && prefix[i] === t[i]) i++
-        prefix = prefix
-          .slice(0, i)
-          .replace(/[-_\s,]+$/, '')
-          .trim()
-      }
-      return prefix.length > 2 ? prefix : normalised
-    })()
+//     const seriesTitle = (() => {
+//       // Use the longest common prefix of actual titles as the series name
+//       let prefix = titles[0] ?? normalised
+//       for (const t of titles.slice(1)) {
+//         let i = 0
+//         while (i < prefix.length && i < t.length && prefix[i] === t[i]) i++
+//         prefix = prefix
+//           .slice(0, i)
+//           .replace(/[-_\s,]+$/, '')
+//           .trim()
+//       }
+//       return prefix.length > 2 ? prefix : normalised
+//     })()
 
-    candidates.push({
-      title: seriesTitle,
-      type: 'book-series',
-      reason: `Book series "${seriesTitle}" detected across ${ids.length} items`,
-      itemIds: ids,
-      confidence: 75,
-    })
-  }
+//     candidates.push({
+//       title: seriesTitle,
+//       type: 'book-series',
+//       reason: `Book series "${seriesTitle}" detected across ${ids.length} items`,
+//       itemIds: ids,
+//       confidence: 75,
+//     })
+//   }
 
-  return candidates
-}
+//   return candidates
+// }
 
 // ─── Supplementary materials detection ───────────────────────────────────────
 
@@ -233,66 +227,66 @@ function baseNameKey(fileName: string): string {
  * share the same normalised base name, suggesting they are companion files for
  * the same content unit.
  */
-export function detectSupplementaryMaterials(
-  items: Array<typeof mediaItems.$inferSelect>,
-): SmartGroupCandidate[] {
-  const SUPPLEMENTARY_CATEGORIES: string[] = [
-    MediaCategory.Documents,
-    MediaCategory.Music,
-    MediaCategory.Movies,
-    MediaCategory.Clips,
-    MediaCategory.HomeVideos,
-    MediaCategory.WebMedia,
-  ]
+// export function detectSupplementaryMaterials(
+//   items: Array<typeof mediaItems.$inferSelect>,
+// ): SmartGroupCandidate[] {
+//   const SUPPLEMENTARY_CATEGORIES: string[] = [
+//     MediaCategory.Documents,
+//     MediaCategory.Music,
+//     MediaCategory.Movies,
+//     MediaCategory.Clips,
+//     MediaCategory.HomeVideos,
+//     MediaCategory.WebMedia,
+//   ]
 
-  const eligible = items.filter(
-    (i) =>
-      i.mediaCategory !== null &&
-      SUPPLEMENTARY_CATEGORIES.includes(i.mediaCategory),
-  )
+//   const eligible = items.filter(
+//     (i) =>
+//       i.mediaCategory !== null &&
+//       SUPPLEMENTARY_CATEGORIES.includes(i.mediaCategory),
+//   )
 
-  // Group by normalised base name key
-  const baseGroups = new Map<
-    string,
-    { ids: string[]; categories: Set<string>; dirs: Set<string> }
-  >()
+//   // Group by normalised base name key
+//   const baseGroups = new Map<
+//     string,
+//     { ids: string[]; categories: Set<string>; dirs: Set<string> }
+//   >()
 
-  for (const item of eligible) {
-    const key = baseNameKey(item.fileName)
-    if (key.length < 3) continue
+//   for (const item of eligible) {
+//     const key = baseNameKey(item.fileName)
+//     if (key.length < 3) continue
 
-    const existing = baseGroups.get(key)
-    if (existing) {
-      existing.ids.push(item.id)
-      if (item.mediaCategory) existing.categories.add(item.mediaCategory)
-      existing.dirs.add(dirname(item.filePath))
-    } else {
-      baseGroups.set(key, {
-        ids: [item.id],
-        categories: new Set(item.mediaCategory ? [item.mediaCategory] : []),
-        dirs: new Set([dirname(item.filePath)]),
-      })
-    }
-  }
+//     const existing = baseGroups.get(key)
+//     if (existing) {
+//       existing.ids.push(item.id)
+//       if (item.mediaCategory) existing.categories.add(item.mediaCategory)
+//       existing.dirs.add(dirname(item.filePath))
+//     } else {
+//       baseGroups.set(key, {
+//         ids: [item.id],
+//         categories: new Set(item.mediaCategory ? [item.mediaCategory] : []),
+//         dirs: new Set([dirname(item.filePath)]),
+//       })
+//     }
+//   }
 
-  const candidates: SmartGroupCandidate[] = []
+//   const candidates: SmartGroupCandidate[] = []
 
-  for (const [key, { ids, categories, dirs }] of baseGroups) {
-    // Require: multiple categories OR files in different directories
-    if (ids.length < 2) continue
-    if (categories.size < 2 && dirs.size < 2) continue
+//   for (const [key, { ids, categories, dirs }] of baseGroups) {
+//     // Require: multiple categories OR files in different directories
+//     if (ids.length < 2) continue
+//     if (categories.size < 2 && dirs.size < 2) continue
 
-    candidates.push({
-      title: key,
-      type: 'collection',
-      reason: `Supplementary materials for "${key}" found across ${categories.size} media type(s)`,
-      itemIds: ids,
-      confidence: 65,
-    })
-  }
+//     candidates.push({
+//       title: key,
+//       type: 'collection',
+//       reason: `Supplementary materials for "${key}" found across ${categories.size} media type(s)`,
+//       itemIds: ids,
+//       confidence: 65,
+//     })
+//   }
 
-  return candidates
-}
+//   return candidates
+// }
 
 // ─── Deduplication of candidates ─────────────────────────────────────────────
 
@@ -363,8 +357,8 @@ export async function scanLibraryForSmartGroups(
   // Run all detectors
   const raw: SmartGroupCandidate[] = [
     ...detectMultiDiscAlbums(items),
-    ...detectBookSeries(items),
-    ...detectSupplementaryMaterials(items),
+    // ...detectBookSeries(items),
+    // ...detectSupplementaryMaterials(items),
   ]
 
   const candidates = deduplicateCandidates(raw)

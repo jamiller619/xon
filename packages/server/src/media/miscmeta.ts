@@ -4,30 +4,30 @@ import { gunzipSync } from 'node:zlib'
 import { MediaCategory } from '@xon/shared'
 import { exifTool } from './binaries.js'
 
-const DOCUMENT_CATEGORIES = new Set<string>([MediaCategory.Documents])
-const FONT_CATEGORIES = new Set<string>([MediaCategory.Fonts])
-const MODEL3D_CATEGORIES = new Set<string>([MediaCategory.Models3D])
-const ARCHIVE_CATEGORIES = new Set<string>([MediaCategory.Archives])
+// const DOCUMENT_CATEGORIES = new Set<string>([MediaCategory.Documents])
+// const FONT_CATEGORIES = new Set<string>([MediaCategory.Fonts])
+// const MODEL3D_CATEGORIES = new Set<string>([MediaCategory.Models3D])
+// const ARCHIVE_CATEGORIES = new Set<string>([MediaCategory.Archives])
 
-export function isDocumentCategory(category: string | null): boolean {
-  if (!category) return false
-  return DOCUMENT_CATEGORIES.has(category)
-}
+// export function isDocumentCategory(category: string | null): boolean {
+//   if (!category) return false
+//   return DOCUMENT_CATEGORIES.has(category)
+// }
 
-export function isFontCategory(category: string | null): boolean {
-  if (!category) return false
-  return FONT_CATEGORIES.has(category)
-}
+// export function isFontCategory(category: string | null): boolean {
+//   if (!category) return false
+//   return FONT_CATEGORIES.has(category)
+// }
 
-export function is3DModelCategory(category: string | null): boolean {
-  if (!category) return false
-  return MODEL3D_CATEGORIES.has(category)
-}
+// export function is3DModelCategory(category: string | null): boolean {
+//   if (!category) return false
+//   return MODEL3D_CATEGORIES.has(category)
+// }
 
-export function isArchiveCategory(category: string | null): boolean {
-  if (!category) return false
-  return ARCHIVE_CATEGORIES.has(category)
-}
+// export function isArchiveCategory(category: string | null): boolean {
+//   if (!category) return false
+//   return ARCHIVE_CATEGORIES.has(category)
+// }
 
 export type DocumentMetadata = {
   pageCount?: number
