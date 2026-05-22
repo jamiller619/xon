@@ -52,7 +52,7 @@ export default function AdminNetworkSettings() {
 
   useEffect(() => {
     setLoading(true)
-    apiFetch('/api/v1/admin/server-settings')
+    apiFetch('/api/admin/server-settings')
       .then((r) => r.json() as Promise<NetworkSettingsData>)
       .then((data) => {
         applySettings(data)
@@ -79,7 +79,7 @@ export default function AdminNetworkSettings() {
     }
 
     try {
-      const res = await apiFetch('/api/v1/admin/server-settings', {
+      const res = await apiFetch('/api/admin/server-settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

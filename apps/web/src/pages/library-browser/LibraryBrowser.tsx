@@ -107,7 +107,7 @@ export default function LibraryBrowser() {
 
   useEffect(() => {
     if (!id) return
-    apiFetch(`/api/v1/libraries/${id}`)
+    apiFetch(`/api/libraries/${id}`)
       .then((r) => r.json())
       .then((lib) => setLibrary(lib as Library))
       .catch(() => setError('Failed to load library'))
@@ -124,7 +124,7 @@ export default function LibraryBrowser() {
       page: String(page),
     })
     if (filterCategory) params.set('mediaCategory', filterCategory)
-    apiFetch(`/api/v1/libraries/${id}/media?${params.toString()}`)
+    apiFetch(`/api/libraries/${id}/media?${params.toString()}`)
       .then((r) => r.json())
       .then((data) => {
         const mediaList = data as MediaCardItem[]
@@ -145,7 +145,7 @@ export default function LibraryBrowser() {
   const loadGroups = useCallback(() => {
     if (!id) return
     setGroupsLoading(true)
-    apiFetch(`/api/v1/groups?libraryId=${id}`)
+    apiFetch(`/api/groups?libraryId=${id}`)
       .then((r) => r.json())
       .then((data) => setGroups(data as Group[]))
       .catch(() => {

@@ -59,7 +59,7 @@ export default function TopBar() {
       setSuggestions([])
       return
     }
-    apiFetch(`/api/v1/search?q=${encodeURIComponent(q)}&limit=5`)
+    apiFetch(`/api/search?q=${encodeURIComponent(q)}&limit=5`)
       .then((r) => r.json())
       .then((data) => {
         setSuggestions((data as { results: SuggestionItem[] }).results ?? [])

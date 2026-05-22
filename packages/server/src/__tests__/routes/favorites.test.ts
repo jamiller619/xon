@@ -82,9 +82,9 @@ describe('Favorites and Watchlist API', () => {
 
   // ─── Favorites ───────────────────────────────────────────────────────────────
 
-  describe('POST /api/v1/media/:id/favorite', () => {
+  describe('POST /api/media/:id/favorite', () => {
     it('adds item to favorites and returns 200', async () => {
-      const res = await app.request('/api/v1/media/item-1/favorite', {
+      const res = await app.request('/api/media/item-1/favorite', {
         method: 'POST',
         headers: { Authorization: USER_AUTH },
       })
@@ -94,11 +94,11 @@ describe('Favorites and Watchlist API', () => {
     })
 
     it('is idempotent — adding twice returns 200', async () => {
-      await app.request('/api/v1/media/item-1/favorite', {
+      await app.request('/api/media/item-1/favorite', {
         method: 'POST',
         headers: { Authorization: USER_AUTH },
       })
-      const res = await app.request('/api/v1/media/item-1/favorite', {
+      const res = await app.request('/api/media/item-1/favorite', {
         method: 'POST',
         headers: { Authorization: USER_AUTH },
       })
@@ -106,7 +106,7 @@ describe('Favorites and Watchlist API', () => {
     })
 
     it('returns 404 for unknown media item', async () => {
-      const res = await app.request('/api/v1/media/nonexistent/favorite', {
+      const res = await app.request('/api/media/nonexistent/favorite', {
         method: 'POST',
         headers: { Authorization: USER_AUTH },
       })
@@ -114,12 +114,12 @@ describe('Favorites and Watchlist API', () => {
     })
   })
 
-  describe('DELETE /api/v1/media/:id/favorite', () => {
+  describe('DELETE /api/media/:id/favorite', () => {
     it('removes item from favorites', async () => {
       await db
         .insert(favorites)
         .values({ userId: 'user-1', mediaItemId: 'item-1' })
-      const res = await app.request('/api/v1/media/item-1/favorite', {
+      const res = await app.request('/api/media/item-1/favorite', {
         method: 'DELETE',
         headers: { Authorization: USER_AUTH },
       })
@@ -129,7 +129,7 @@ describe('Favorites and Watchlist API', () => {
     })
 
     it('returns 200 even if not previously favorited', async () => {
-      const res = await app.request('/api/v1/media/item-1/favorite', {
+      const res = await app.request('/api/media/item-1/favorite', {
         method: 'DELETE',
         headers: { Authorization: USER_AUTH },
       })
@@ -137,9 +137,9 @@ describe('Favorites and Watchlist API', () => {
     })
   })
 
-  describe('GET /api/v1/users/me/favorites', () => {
+  describe('GET /api/users/me/favorites', () => {
     it('returns empty array when no favorites', async () => {
-      const res = await app.request('/api/v1/users/me/favorites', {
+      const res = await app.request('/api/users/me/favorites', {
         headers: { Authorization: USER_AUTH },
       })
       expect(res.status).toBe(200)
@@ -154,7 +154,7 @@ describe('Favorites and Watchlist API', () => {
       await db
         .insert(favorites)
         .values({ userId: 'user-1', mediaItemId: 'item-2' })
-      const res = await app.request('/api/v1/users/me/favorites', {
+      const res = await app.request('/api/users/me/favorites', {
         headers: { Authorization: USER_AUTH },
       })
       expect(res.status).toBe(200)
@@ -171,7 +171,7 @@ describe('Favorites and Watchlist API', () => {
       await db
         .insert(favorites)
         .values({ userId: 'user-2', mediaItemId: 'item-2' })
-      const res = await app.request('/api/v1/users/me/favorites', {
+      const res = await app.request('/api/users/me/favorites', {
         headers: { Authorization: USER_AUTH },
       })
       const body = await res.json()
@@ -182,9 +182,9 @@ describe('Favorites and Watchlist API', () => {
 
   // ─── Watchlist ────────────────────────────────────────────────────────────────
 
-  describe('POST /api/v1/media/:id/watchlist', () => {
+  describe('POST /api/media/:id/watchlist', () => {
     it('adds item to watchlist and returns 200', async () => {
-      const res = await app.request('/api/v1/media/item-1/watchlist', {
+      const res = await app.request('/api/media/item-1/watchlist', {
         method: 'POST',
         headers: { Authorization: USER_AUTH },
       })
@@ -194,11 +194,11 @@ describe('Favorites and Watchlist API', () => {
     })
 
     it('is idempotent — adding twice returns 200', async () => {
-      await app.request('/api/v1/media/item-1/watchlist', {
+      await app.request('/api/media/item-1/watchlist', {
         method: 'POST',
         headers: { Authorization: USER_AUTH },
       })
-      const res = await app.request('/api/v1/media/item-1/watchlist', {
+      const res = await app.request('/api/media/item-1/watchlist', {
         method: 'POST',
         headers: { Authorization: USER_AUTH },
       })
@@ -206,7 +206,7 @@ describe('Favorites and Watchlist API', () => {
     })
 
     it('returns 404 for unknown media item', async () => {
-      const res = await app.request('/api/v1/media/nonexistent/watchlist', {
+      const res = await app.request('/api/media/nonexistent/watchlist', {
         method: 'POST',
         headers: { Authorization: USER_AUTH },
       })
@@ -214,12 +214,12 @@ describe('Favorites and Watchlist API', () => {
     })
   })
 
-  describe('DELETE /api/v1/media/:id/watchlist', () => {
+  describe('DELETE /api/media/:id/watchlist', () => {
     it('removes item from watchlist', async () => {
       await db
         .insert(watchlist)
         .values({ userId: 'user-1', mediaItemId: 'item-1' })
-      const res = await app.request('/api/v1/media/item-1/watchlist', {
+      const res = await app.request('/api/media/item-1/watchlist', {
         method: 'DELETE',
         headers: { Authorization: USER_AUTH },
       })
@@ -229,9 +229,9 @@ describe('Favorites and Watchlist API', () => {
     })
   })
 
-  describe('GET /api/v1/users/me/watchlist', () => {
+  describe('GET /api/users/me/watchlist', () => {
     it('returns empty array when no watchlist items', async () => {
-      const res = await app.request('/api/v1/users/me/watchlist', {
+      const res = await app.request('/api/users/me/watchlist', {
         headers: { Authorization: USER_AUTH },
       })
       expect(res.status).toBe(200)
@@ -243,7 +243,7 @@ describe('Favorites and Watchlist API', () => {
       await db
         .insert(watchlist)
         .values({ userId: 'user-1', mediaItemId: 'item-1' })
-      const res = await app.request('/api/v1/users/me/watchlist', {
+      const res = await app.request('/api/users/me/watchlist', {
         headers: { Authorization: USER_AUTH },
       })
       expect(res.status).toBe(200)
@@ -259,7 +259,7 @@ describe('Favorites and Watchlist API', () => {
       await db
         .insert(watchlist)
         .values({ userId: 'user-2', mediaItemId: 'item-2' })
-      const res = await app.request('/api/v1/users/me/watchlist', {
+      const res = await app.request('/api/users/me/watchlist', {
         headers: { Authorization: USER2_AUTH },
       })
       const body = await res.json()

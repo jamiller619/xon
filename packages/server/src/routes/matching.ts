@@ -2,24 +2,29 @@ import { and, asc, eq, inArray, sql } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { libraryAccess, matchingQueue, mediaItems } from '../db/schema.js'
+import {
+  // libraryAccess,
+  matchingQueue,
+  mediaItems,
+} from '../db/schema.js'
 import { validate } from '../http/validate.js'
+
 // import { withThumbnailUrls } from './media.js'
 
 const PRIVILEGED_ROLES = ['admin', 'manager'] as const
 
-async function getAccessibleLibraryIds(
-  db: LibSQLDatabase,
-  userId: string,
-  role: string,
-): Promise<string[] | null> {
-  if ((PRIVILEGED_ROLES as readonly string[]).includes(role)) return null
-  const rows = await db
-    .select({ libraryId: libraryAccess.libraryId })
-    .from(libraryAccess)
-    .where(eq(libraryAccess.userId, userId))
-  return rows.map((r) => r.libraryId)
-}
+// async function getAccessibleLibraryIds(
+//   db: LibSQLDatabase,
+//   userId: string,
+//   role: string,
+// ): Promise<string[] | null> {
+//   if ((PRIVILEGED_ROLES as readonly string[]).includes(role)) return null
+//   const rows = await db
+//     .select({ libraryId: libraryAccess.libraryId })
+//     .from(libraryAccess)
+//     .where(eq(libraryAccess.userId, userId))
+//   return rows.map((r) => r.libraryId)
+// }
 
 export function makeMatchingRouter(db: LibSQLDatabase): Hono {
   const router = new Hono()
@@ -37,7 +42,7 @@ export function makeMatchingRouter(db: LibSQLDatabase): Hono {
     )
     const offsetNum = Math.max(0, Number(c.req.query('offset') || 0))
 
-    const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+    // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
 
     const rows = await db
       .select({
@@ -47,12 +52,12 @@ export function makeMatchingRouter(db: LibSQLDatabase): Hono {
       .from(matchingQueue)
       .innerJoin(mediaItems, eq(matchingQueue.mediaItemId, mediaItems.id))
       .where(
-        and(
-          eq(matchingQueue.status, 'pending'),
-          accessibleIds !== null
-            ? inArray(mediaItems.libraryId, accessibleIds)
-            : undefined,
-        ),
+        // and(
+        eq(matchingQueue.status, 'pending'),
+        // accessibleIds !== null
+        //   ? inArray(mediaItems.libraryId, accessibleIds)
+        //   : undefined,
+        // ),
       )
       .orderBy(asc(matchingQueue.createdAt))
       .limit(limitNum)
@@ -119,10 +124,10 @@ export function makeMatchingRouter(db: LibSQLDatabase): Hono {
       return c.json({ error: 'Media item not found' }, 404)
     }
 
-    const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
-    if (accessibleIds !== null && !accessibleIds.includes(mediaRow.libraryId)) {
-      return c.json({ error: 'Forbidden' }, 403)
-    }
+    // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+    // if (accessibleIds !== null && !accessibleIds.includes(mediaRow.libraryId)) {
+    //   return c.json({ error: 'Forbidden' }, 403)
+    // }
 
     // Merge suggested metadata into existing metadata
     const existingMeta = mediaRow.metadata
@@ -199,10 +204,10 @@ export function makeMatchingRouter(db: LibSQLDatabase): Hono {
       return c.json({ error: 'Media item not found' }, 404)
     }
 
-    const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
-    if (accessibleIds !== null && !accessibleIds.includes(mediaRow.libraryId)) {
-      return c.json({ error: 'Forbidden' }, 403)
-    }
+    // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+    // if (accessibleIds !== null && !accessibleIds.includes(mediaRow.libraryId)) {
+    //   return c.json({ error: 'Forbidden' }, 403)
+    // }
 
     await db
       .update(matchingQueue)

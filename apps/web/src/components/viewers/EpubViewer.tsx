@@ -1,7 +1,5 @@
+import type { Book, Location, NavItem, Rendition } from 'epubjs'
 import ePub from 'epubjs'
-import type { Book } from 'epubjs'
-import type { Location, Rendition } from 'epubjs'
-import type { NavItem } from 'epubjs'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiFetch } from '~/lib/apiFetch'
 import styles from './EpubViewer.module.css'
@@ -26,7 +24,7 @@ const THEME_STYLES: Record<Theme, Record<string, string>> = {
 }
 
 function savePosition(mediaId: string, cfi: string, chapterTitle?: string) {
-  apiFetch(`/api/v1/media/${mediaId}/reading-position`, {
+  apiFetch(`/api/media/${mediaId}/reading-position`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ cfi, ...(chapterTitle ? { chapterTitle } : {}) }),
@@ -83,7 +81,7 @@ export default function EpubViewer({ mediaId, title, onClose }: Props) {
     setLoading(true)
     setError(null)
 
-    const book = ePub(`/api/v1/media/${mediaId}/epub`)
+    const book = ePub(`/api/media/${mediaId}/epub`)
     bookRef.current = book
 
     const rendition = book.renderTo(viewerRef.current, {
@@ -96,7 +94,7 @@ export default function EpubViewer({ mediaId, title, onClose }: Props) {
     applyTheme(rendition, theme, fontIdx, lineIdx)
 
     // Load saved position then display
-    apiFetch(`/api/v1/media/${mediaId}/reading-position`)
+    apiFetch(`/api/media/${mediaId}/reading-position`)
       .then((r) => r.json())
       .then((pos: unknown) => {
         const savedCfi =

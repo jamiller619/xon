@@ -57,7 +57,7 @@ export default function AudioPlayer() {
     const audio = audioRef.current
     if (!audio) return
     if (currentTrack) {
-      audio.src = `/api/v1/media/${currentTrack.id}/stream`
+      audio.src = `/api/media/${currentTrack.id}/stream`
       audio.load()
       if (playingRef.current) audio.play().catch(() => setPlaying(false))
     } else {
@@ -77,7 +77,7 @@ export default function AudioPlayer() {
     const interval = setInterval(() => {
       if (!audio.paused && audio.duration > 0) {
         const completed = audio.currentTime >= audio.duration - 1
-        apiFetch(`/api/v1/media/${trackId}/progress`, {
+        apiFetch(`/api/media/${trackId}/progress`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({

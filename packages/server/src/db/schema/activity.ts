@@ -24,41 +24,23 @@ export const mediaProgress = sqliteTable(
   (table) => [primaryKey({ columns: [table.userId, table.mediaItemId] })],
 )
 
-export const favorites = sqliteTable(
-  'favorites',
-  {
-    userId: text('user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    mediaItemId: text('media_item_id')
-      .notNull()
-      .references(() => mediaItems.id, { onDelete: 'cascade' }),
-    createdAt: integer('created_at', { mode: 'timestamp' })
-      .notNull()
-      .default(sql`(unixepoch())`),
-  },
-  (table) => [primaryKey({ columns: [table.userId, table.mediaItemId] })],
-)
-
-export const watchlist = sqliteTable(
-  'watchlist',
-  {
-    userId: text('user_id')
-      .notNull()
-      .references(() => users.id, { onDelete: 'cascade' }),
-    mediaItemId: text('media_item_id')
-      .notNull()
-      .references(() => mediaItems.id, { onDelete: 'cascade' }),
-    createdAt: integer('created_at', { mode: 'timestamp' })
-      .notNull()
-      .default(sql`(unixepoch())`),
-  },
-  (table) => [primaryKey({ columns: [table.userId, table.mediaItemId] })],
-)
+// export const watchlist = sqliteTable(
+//   'watchlist',
+//   {
+//     userId: text('user_id')
+//       .notNull()
+//       .references(() => users.id, { onDelete: 'cascade' }),
+//     mediaItemId: text('media_item_id')
+//       .notNull()
+//       .references(() => mediaItems.id, { onDelete: 'cascade' }),
+//     createdAt: integer('created_at', { mode: 'timestamp' })
+//       .notNull()
+//       .default(sql`(unixepoch())`),
+//   },
+//   (table) => [primaryKey({ columns: [table.userId, table.mediaItemId] })],
+// )
 
 export type MediaProgress = typeof mediaProgress.$inferSelect
 export type NewMediaProgress = typeof mediaProgress.$inferInsert
-export type Favorite = typeof favorites.$inferSelect
-export type NewFavorite = typeof favorites.$inferInsert
-export type Watchlist = typeof watchlist.$inferSelect
-export type NewWatchlist = typeof watchlist.$inferInsert
+// export type Watchlist = typeof watchlist.$inferSelect
+// export type NewWatchlist = typeof watchlist.$inferInsert

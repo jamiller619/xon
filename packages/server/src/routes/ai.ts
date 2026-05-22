@@ -5,7 +5,7 @@ import { z } from 'zod'
 import {
   duplicateCandidates,
   libraries,
-  libraryAccess,
+  // libraryAccess,
   mediaItems,
   suggestedGroups,
 } from '../db/schema.js'
@@ -17,20 +17,20 @@ import {
 } from '../media/smartGrouping.js'
 // import { withThumbnailUrls } from './media.js'
 
-const PRIVILEGED_ROLES = ['admin', 'manager'] as const
+// const PRIVILEGED_ROLES = ['admin', 'manager'] as const
 
-async function getAccessibleLibraryIds(
-  db: LibSQLDatabase,
-  userId: string,
-  role: string,
-): Promise<string[] | null> {
-  if ((PRIVILEGED_ROLES as readonly string[]).includes(role)) return null
-  const rows = await db
-    .select({ libraryId: libraryAccess.libraryId })
-    .from(libraryAccess)
-    .where(eq(libraryAccess.userId, userId))
-  return rows.map((r) => r.libraryId)
-}
+// async function getAccessibleLibraryIds(
+//   db: LibSQLDatabase,
+//   userId: string,
+//   role: string,
+// ): Promise<string[] | null> {
+//   if ((PRIVILEGED_ROLES as readonly string[]).includes(role)) return null
+//   const rows = await db
+//     .select({ libraryId: libraryAccess.libraryId })
+//     .from(libraryAccess)
+//     .where(eq(libraryAccess.userId, userId))
+//   return rows.map((r) => r.libraryId)
+// }
 
 export function makeAiRouter(db: LibSQLDatabase): Hono {
   const router = new Hono()
@@ -53,22 +53,22 @@ export function makeAiRouter(db: LibSQLDatabase): Hono {
     )
     const libraryIdFilter = c.req.query('libraryId')
 
-    const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+    // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
 
     const conditions = [
       eq(duplicateCandidates.status, 'pending'),
       gte(duplicateCandidates.similarity, minSimilarity),
     ]
 
-    if (accessibleIds !== null) {
-      conditions.push(inArray(duplicateCandidates.libraryId, accessibleIds))
-    }
+    // if (accessibleIds !== null) {
+    //   conditions.push(inArray(duplicateCandidates.libraryId, accessibleIds))
+    // }
 
     if (libraryIdFilter) {
       // Extra filter: only this library (but still respect access control)
-      if (accessibleIds !== null && !accessibleIds.includes(libraryIdFilter)) {
-        return c.json({ items: [], limit: limitNum, offset: offsetNum })
-      }
+      // if (accessibleIds !== null && !accessibleIds.includes(libraryIdFilter)) {
+      //   return c.json({ items: [], limit: limitNum, offset: offsetNum })
+      // }
       conditions.push(eq(duplicateCandidates.libraryId, libraryIdFilter))
     }
 
@@ -146,10 +146,10 @@ export function makeAiRouter(db: LibSQLDatabase): Hono {
     const { libraryId, threshold } = c.req.valid('json')
 
     // Verify access
-    const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
-    if (accessibleIds !== null && !accessibleIds.includes(libraryId)) {
-      return c.json({ error: 'Forbidden' }, 403)
-    }
+    // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+    // if (accessibleIds !== null && !accessibleIds.includes(libraryId)) {
+    //   return c.json({ error: 'Forbidden' }, 403)
+    // }
 
     // Verify library exists
     const libRows = await db
@@ -197,13 +197,13 @@ export function makeAiRouter(db: LibSQLDatabase): Hono {
     }
 
     // Verify access
-    const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
-    if (
-      accessibleIds !== null &&
-      !accessibleIds.includes(candidate.libraryId)
-    ) {
-      return c.json({ error: 'Forbidden' }, 403)
-    }
+    // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+    // if (
+    //   accessibleIds !== null &&
+    //   !accessibleIds.includes(candidate.libraryId)
+    // ) {
+    //   return c.json({ error: 'Forbidden' }, 403)
+    // }
 
     if (action === 'keep_first') {
       // Remove mediaItem2 from DB (metadata only, not file on disk)
@@ -249,7 +249,7 @@ export function makeAiRouter(db: LibSQLDatabase): Hono {
     const statusFilter = c.req.query('status') ?? 'pending'
     const libraryIdFilter = c.req.query('libraryId')
 
-    const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+    // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
 
     const conditions = []
 
@@ -261,14 +261,14 @@ export function makeAiRouter(db: LibSQLDatabase): Hono {
       conditions.push(eq(suggestedGroups.status, statusFilter))
     }
 
-    if (accessibleIds !== null) {
-      conditions.push(inArray(suggestedGroups.libraryId, accessibleIds))
-    }
+    // if (accessibleIds !== null) {
+    //   conditions.push(inArray(suggestedGroups.libraryId, accessibleIds))
+    // }
 
     if (libraryIdFilter) {
-      if (accessibleIds !== null && !accessibleIds.includes(libraryIdFilter)) {
-        return c.json({ items: [], limit: limitNum, offset: offsetNum })
-      }
+      // if (accessibleIds !== null && !accessibleIds.includes(libraryIdFilter)) {
+      //   return c.json({ items: [], limit: limitNum, offset: offsetNum })
+      // }
       conditions.push(eq(suggestedGroups.libraryId, libraryIdFilter))
     }
 
@@ -294,16 +294,21 @@ export function makeAiRouter(db: LibSQLDatabase): Hono {
     validate('json', smartScanSchema),
     async (c) => {
       const user = c.get('user')
+
+      if (!user) {
+        return c.json({ error: 'Not authenticated' }, 401)
+      }
+
       const { libraryId } = c.req.valid('json')
 
-      const accessibleIds = await getAccessibleLibraryIds(
-        db,
-        user.id,
-        user.role,
-      )
-      if (accessibleIds !== null && !accessibleIds.includes(libraryId)) {
-        return c.json({ error: 'Forbidden' }, 403)
-      }
+      // const accessibleIds = await getAccessibleLibraryIds(
+      //   db,
+      //   user.id,
+      //   user.role,
+      // )
+      // if (accessibleIds !== null && !accessibleIds.includes(libraryId)) {
+      //   return c.json({ error: 'Forbidden' }, 403)
+      // }
 
       const libRows = await db
         .select()
@@ -341,20 +346,20 @@ export function makeAiRouter(db: LibSQLDatabase): Hono {
       return c.json({ error: 'Suggestion is not pending' }, 409)
     }
 
-    const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
-    if (
-      accessibleIds !== null &&
-      !accessibleIds.includes(suggestion.libraryId)
-    ) {
-      return c.json({ error: 'Forbidden' }, 403)
-    }
+    // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+    // if (
+    //   accessibleIds !== null &&
+    //   !accessibleIds.includes(suggestion.libraryId)
+    // ) {
+    //   return c.json({ error: 'Forbidden' }, 403)
+    // }
 
-    const result = await acceptSuggestedGroup(db, id)
-    if (!result) {
-      return c.json({ error: 'Could not accept suggestion' }, 409)
-    }
+    // const result = await acceptSuggestedGroup(db, id)
+    // if (!result) {
+    //   return c.json({ error: 'Could not accept suggestion' }, 409)
+    // }
 
-    return c.json({ groupId: result.groupId })
+    // return c.json({ groupId: result.groupId })
   })
 
   /**
@@ -380,13 +385,13 @@ export function makeAiRouter(db: LibSQLDatabase): Hono {
       return c.json({ error: 'Suggestion is not pending' }, 409)
     }
 
-    const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
-    if (
-      accessibleIds !== null &&
-      !accessibleIds.includes(suggestion.libraryId)
-    ) {
-      return c.json({ error: 'Forbidden' }, 403)
-    }
+    // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+    // if (
+    //   accessibleIds !== null &&
+    //   !accessibleIds.includes(suggestion.libraryId)
+    // ) {
+    //   return c.json({ error: 'Forbidden' }, 403)
+    // }
 
     const updated = await db
       .update(suggestedGroups)

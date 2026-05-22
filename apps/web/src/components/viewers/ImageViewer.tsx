@@ -265,7 +265,7 @@ export default function ImageViewer({
         {!loaded && <div className={styles.spinner ?? ''} />}
         <img
           key={currentId}
-          src={`/api/v1/media/${currentId}/stream`}
+          src={`/api/media/${currentId}/stream`}
           alt={currentTitle}
           className={styles.image ?? ''}
           style={{

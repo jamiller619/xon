@@ -47,7 +47,7 @@ describe('ModelViewerPlugin', () => {
       expect(registeredComponents[0]).toMatchObject({
         id: 'model-viewer-panel',
         injectionPoint: 'detail-panel',
-        bundleUrl: '/api/v1/plugins/3d-model-viewer/assets/viewer.js',
+        bundleUrl: '/api/plugins/3d-model-viewer/assets/viewer.js',
         label: '3D Model Viewer',
       })
     })

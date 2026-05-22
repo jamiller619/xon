@@ -579,9 +579,9 @@ export default function AdminBackup() {
     setLoading(true)
     try {
       const [tRes, jRes, vRes] = await Promise.all([
-        apiFetch('/api/v1/admin/backup/targets'),
-        apiFetch('/api/v1/admin/backup/media/jobs'),
-        apiFetch('/api/v1/admin/backup/verify/jobs'),
+        apiFetch('/api/admin/backup/targets'),
+        apiFetch('/api/admin/backup/media/jobs'),
+        apiFetch('/api/admin/backup/verify/jobs'),
       ])
       if (tRes.ok) setTargets((await tRes.json()) as BackupTarget[])
       if (jRes.ok) setJobs((await jRes.json()) as BackupJob[])
@@ -599,7 +599,7 @@ export default function AdminBackup() {
 
   async function handleAddTarget(form: TargetFormState) {
     setModalError('')
-    const res = await apiFetch('/api/v1/admin/backup/targets', {
+    const res = await apiFetch('/api/admin/backup/targets', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -622,20 +622,17 @@ export default function AdminBackup() {
   async function handleEditTarget(form: TargetFormState) {
     if (modal.kind !== 'editTarget') return
     setModalError('')
-    const res = await apiFetch(
-      `/api/v1/admin/backup/targets/${modal.target.id}`,
-      {
-        method: 'PUT',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name: form.name,
-          type: form.type,
-          config: buildConfig(form),
-          enabled: form.enabled,
-          removeDeleted: form.removeDeleted,
-        }),
-      },
-    )
+    const res = await apiFetch(`/api/admin/backup/targets/${modal.target.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: form.name,
+        type: form.type,
+        config: buildConfig(form),
+        enabled: form.enabled,
+        removeDeleted: form.removeDeleted,
+      }),
+    })
     if (!res.ok) {
       const data = (await res.json()) as { error?: string }
       setModalError(data.error ?? `HTTP ${res.status}`)
@@ -647,7 +644,7 @@ export default function AdminBackup() {
 
   async function handleDeleteTarget(target: BackupTarget) {
     setModalError('')
-    const res = await apiFetch(`/api/v1/admin/backup/targets/${target.id}`, {
+    const res = await apiFetch(`/api/admin/backup/targets/${target.id}`, {
       method: 'DELETE',
     })
     if (!res.ok) {
@@ -674,7 +671,7 @@ export default function AdminBackup() {
           : null,
     }
     const res = await apiFetch(
-      `/api/v1/admin/backup/targets/${targetId}/schedule`,
+      `/api/admin/backup/targets/${targetId}/schedule`,
       {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
@@ -719,7 +716,7 @@ export default function AdminBackup() {
       }
     }
 
-    const res = await apiFetch('/api/v1/admin/backup/media', {
+    const res = await apiFetch('/api/admin/backup/media', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ targetId: form.targetId, scope }),
@@ -737,7 +734,7 @@ export default function AdminBackup() {
 
   async function handleVerify(target: BackupTarget) {
     setActionError('')
-    const res = await apiFetch(`/api/v1/admin/backup/verify/${target.id}`, {
+    const res = await apiFetch(`/api/admin/backup/verify/${target.id}`, {
       method: 'POST',
     })
     if (!res.ok) {

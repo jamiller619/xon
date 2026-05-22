@@ -31,7 +31,7 @@ function matchPath(
 }
 
 /**
- * Hono wildcard handler for /api/v1/plugins/:pluginId/*.
+ * Hono wildcard handler for /api/plugins/:pluginId/*.
  * Dispatches to the matching registered plugin route handler.
  * Routes are removed automatically when a plugin is deactivated (entry.routes cleared).
  */

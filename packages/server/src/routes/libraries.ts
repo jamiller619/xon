@@ -1,4 +1,4 @@
-import type { MediaCategory } from '@xon/shared'
+import { type MediaCategory, UserRole } from '@xon/shared'
 import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
@@ -9,7 +9,7 @@ import {
   dataSources,
   getAllowedRatings,
   libraries,
-  libraryAccess,
+  // libraryAccess,
   mediaItems,
   users,
 } from '../db/schema.js'
@@ -21,21 +21,21 @@ import { makeSourcesRouter } from './sources.js'
 
 const LIBRARIES_ALL_KEY = 'libraries:all'
 
-const PRIVILEGED_ROLES = ['admin', 'manager'] as const
+// const PRIVILEGED_ROLES = ['admin', UserRole.User] as const
 
 /** Returns library IDs accessible to the requesting user. Admins/managers see all. */
-async function getAccessibleLibraryIds(
-  db: LibSQLDatabase,
-  userId: string,
-  role: string,
-): Promise<string[] | null> {
-  if ((PRIVILEGED_ROLES as readonly string[]).includes(role)) return null // null = all
-  const rows = await db
-    .select({ libraryId: libraryAccess.libraryId })
-    .from(libraryAccess)
-    .where(eq(libraryAccess.userId, userId))
-  return rows.map((r) => r.libraryId)
-}
+// async function getAccessibleLibraryIds(
+//   db: LibSQLDatabase,
+//   userId: string,
+//   role: string,
+// ): Promise<string[] | null> {
+//   if ((PRIVILEGED_ROLES as readonly string[]).includes(role)) return null // null = all
+//   const rows = await db
+//     .select({ libraryId: libraryAccess.libraryId })
+//     .from(libraryAccess)
+//     .where(eq(libraryAccess.userId, userId))
+//   return rows.map((r) => r.libraryId)
+// }
 
 /** Builds a Drizzle WHERE condition restricting media items by the user's maxContentRating. */
 // async function getContentRatingCondition(db: LibSQLDatabase, userId: string) {
@@ -88,7 +88,7 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
   // POST /libraries — create library (manager+)
   router.post(
     '/',
-    requireRole('manager'),
+    requireRole(UserRole.User),
     validate('json', createLibrarySchema),
     async (c) => {
       const body = c.req.valid('json')
@@ -114,27 +114,30 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
   // GET /libraries — list accessible libraries (admin/manager see all; user/guest see granted)
   router.get('/', async (c) => {
     const user = c.get('user')
-    const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
 
-    if (accessibleIds === null) {
-      // Admin/manager: serve from cache
-      let rows =
-        appCache.get<(typeof libraries.$inferSelect)[]>(LIBRARIES_ALL_KEY)
-      if (!rows) {
-        rows = await db.select().from(libraries)
-        appCache.set(LIBRARIES_ALL_KEY, rows, 60_000)
-      }
-      const etag = computeETag(rows)
-      if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
-      c.header('ETag', etag)
-      return c.json(rows)
+    if (!user) {
+      return c.json({ error: 'Not authenticated' }, 401)
     }
 
-    if (accessibleIds.length === 0) return c.json([])
-    const rows = await db
-      .select()
-      .from(libraries)
-      .where(inArray(libraries.id, accessibleIds))
+    // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+
+    // if (accessibleIds === null) {
+    //   // Admin/manager: serve from cache
+    //   let rows =
+    //     appCache.get<(typeof libraries.$inferSelect)[]>(LIBRARIES_ALL_KEY)
+    //   if (!rows) {
+    //     rows = await db.select().from(libraries)
+    //     appCache.set(LIBRARIES_ALL_KEY, rows, 60_000)
+    //   }
+    //   const etag = computeETag(rows)
+    //   if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
+    //   c.header('ETag', etag)
+    //   return c.json(rows)
+    // }
+
+    // if (accessibleIds.length === 0) return c.json([])
+    const rows = await db.select().from(libraries)
+    // .where(inArray(libraries.id, accessibleIds))
     const etag = computeETag(rows)
     if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
     c.header('ETag', etag)
@@ -146,13 +149,17 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
     const id = c.req.param('id')
     const user = c.get('user')
 
+    if (!user) {
+      return c.json({ error: 'Not authenticated' }, 401)
+    }
+
     const rows = await db.select().from(libraries).where(eq(libraries.id, id))
     if (rows.length === 0) return c.json({ error: 'Not found' }, 404)
 
-    const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
-    if (accessibleIds !== null && !accessibleIds.includes(id)) {
-      return c.json({ error: 'Not found' }, 404)
-    }
+    // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+    // if (accessibleIds !== null && !accessibleIds.includes(id)) {
+    //   return c.json({ error: 'Not found' }, 404)
+    // }
 
     const sources = await db
       .select()
@@ -168,7 +175,7 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
   // PUT /libraries/:id — update library (manager+)
   router.put(
     '/:id',
-    requireRole('manager'),
+    requireRole(UserRole.User),
     validate('json', updateLibrarySchema),
     async (c) => {
       const id = c.req.param('id')
@@ -201,7 +208,7 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
   )
 
   // DELETE /libraries/:id — delete library and associated data sources (manager+)
-  router.delete('/:id', requireRole('manager'), async (c) => {
+  router.delete('/:id', requireRole(UserRole.User), async (c) => {
     const id = c.req.param('id')
     const existing = await db
       .select()
@@ -221,20 +228,24 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
       const libraryId = c.req.param('libraryId') as string
       const user = c.get('user')
 
+      if (!user) {
+        return c.json({ error: 'Not authenticated' }, 401)
+      }
+
       const lib = await db
         .select()
         .from(libraries)
         .where(eq(libraries.id, libraryId))
       if (lib.length === 0) return c.json({ error: 'Not found' }, 404)
 
-      const accessibleIds = await getAccessibleLibraryIds(
-        db,
-        user.id,
-        user.role,
-      )
-      if (accessibleIds !== null && !accessibleIds.includes(libraryId)) {
-        return c.json({ error: 'Not found' }, 404)
-      }
+      // const accessibleIds = await getAccessibleLibraryIds(
+      //   db,
+      //   user.id,
+      //   user.role,
+      // )
+      // if (accessibleIds !== null && !accessibleIds.includes(libraryId)) {
+      //   return c.json({ error: 'Not found' }, 404)
+      // }
 
       const {
         mediaCategory,
@@ -253,13 +264,13 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
       // const ratingCond = await getContentRatingCondition(db, user.id)
 
       // Check if DRM items should be hidden (per library or per user preference)
-      const userRows = await db
-        .select({ hideDRMItems: users.hideDRMItems })
-        .from(users)
-        .where(eq(users.id, user.id))
-        .limit(1)
-      const userHidesDrm = userRows[0]?.hideDRMItems ?? false
-      const libHidesDrm = lib[0]?.hideDRMItems ?? false
+      // const userRows = await db
+      //   .select({ hideDRMItems: users.hideDRMItems })
+      //   .from(users)
+      //   .where(eq(users.id, user.id))
+      //   .limit(1)
+      // const userHidesDrm = userRows[0]?.hideDRMItems ?? false
+      // const libHidesDrm = lib[0]?.hideDRMItems ?? false
 
       const conditions = [eq(mediaItems.libraryId, libraryId)]
       if (mediaCategory)
@@ -268,8 +279,8 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
           conditions.push(eq(mediaItems.mimeType, mimeType))
       if (drmProtected !== undefined) {
         conditions.push(eq(mediaItems.drmProtected, drmProtected === 'true'))
-      } else if (userHidesDrm || libHidesDrm) {
-        conditions.push(eq(mediaItems.drmProtected, false))
+        // } else if (userHidesDrm || libHidesDrm) {
+        //   conditions.push(eq(mediaItems.drmProtected, false))
       }
       // if (ratingCond !== null) conditions.push(ratingCond)
 

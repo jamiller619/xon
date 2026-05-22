@@ -34,7 +34,7 @@ describe('errorMiddleware', () => {
 
   it('createApp returns 404 JSON for unknown route', async () => {
     const app = createApp()
-    const res = await app.request('/api/v1/unknown-endpoint', {
+    const res = await app.request('/api/unknown-endpoint', {
       headers: { Authorization: AUTH },
     })
     expect(res.status).toBe(404)

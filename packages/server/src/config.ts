@@ -1,9 +1,13 @@
 import fsp from 'node:fs/promises'
 import path from 'node:path'
+import { loadEnvFile } from 'node:process'
+import { parseEnv } from 'node:util'
+import { type Config, schema } from '@xon/shared'
 import envPaths from 'env-paths'
+import { findUp } from 'find-up-simple'
 import { z } from 'zod'
-import ConfigStore, { type Config } from './config/ConfigStore.ts'
-import schema from './config/schema.json' with { type: 'json' }
+import ConfigStore from './config/ConfigStore.ts'
+import { createLogger } from './logger.ts'
 
 export type { Config, ConfigStore }
 
@@ -15,16 +19,38 @@ const paths = envPaths('xon', {
   suffix: '',
 })
 
+const logger = createLogger('config')
+
+logger.log('Looking for .env file...')
+const envFile = await findUp('.env')
+
+let startingConfig: Partial<Config> = {}
+
+if (envFile) {
+  logger.log('Found .env file:', envFile)
+
+  loadEnvFile(envFile)
+
+  startingConfig = (await parseEnvFile(envFile)) ?? {}
+} else {
+  logger.log('No .env file found')
+}
+
 const configPath =
   process.env.XON_CONFIG_FILE ?? path.join(paths.data, 'config', 'config.json')
 
 await fsp.mkdir(path.dirname(configPath), { recursive: true })
 
-const data = await getConfig()
+const data = {
+  ...startingConfig,
+  ...(await getConfig()),
+}
 
 export default new ConfigStore(configPath, data)
 
-async function getConfig() {
+export * from './config/config.router.ts'
+
+async function getConfig(): Promise<Config> {
   try {
     const data = await fsp.readFile(configPath, 'utf-8')
 
@@ -91,6 +117,37 @@ function getDefaultValue(json: JsonSchema): unknown {
   }
 
   return undefined
+}
+
+async function parseEnvFile(
+  envFile: string,
+): Promise<Partial<Config> | undefined> {
+  try {
+    const data = await fsp.readFile(envFile, 'utf-8')
+    const raw = data.split('\n').reduce((acc, line) => {
+      const parsed = parseEnv(line)
+
+      if (parsed) {
+        return { ...(acc ?? {}), ...parsed }
+      }
+
+      return acc
+    }, {})
+
+    const parsed = configSchema.safeParse(raw)
+
+    if (!parsed.success) {
+      logger.log('Failed to parse .env file')
+
+      return
+    }
+
+    logger.log('Successfully parsed .env file')
+
+    return parsed.data as Partial<Config>
+  } catch (error) {
+    logger.log('Failed to parse .env file', error)
+  }
 }
 
 type JsonSchema = {

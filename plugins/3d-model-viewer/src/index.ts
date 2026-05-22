@@ -1,5 +1,5 @@
-import { BasePlugin } from '@xon/plugin-sdk'
 import type { PluginContext, PluginManifest } from '@xon/plugin-sdk'
+import { BasePlugin } from '@xon/plugin-sdk'
 import { MediaCategory } from '@xon/shared'
 
 export class ModelViewerPlugin extends BasePlugin {
@@ -18,7 +18,7 @@ export class ModelViewerPlugin extends BasePlugin {
     context.registerUI({
       id: 'model-viewer-panel',
       injectionPoint: 'detail-panel',
-      bundleUrl: `/api/v1/plugins/${this.manifest.id}/assets/viewer.js`,
+      bundleUrl: `/api/plugins/${this.manifest.id}/assets/viewer.js`,
       label: '3D Model Viewer',
     })
 

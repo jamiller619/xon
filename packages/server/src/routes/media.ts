@@ -1,7 +1,8 @@
 import { createReadStream } from 'node:fs'
-import { readFile, readdir, stat } from 'node:fs/promises'
+import { readdir, readFile, stat } from 'node:fs/promises'
 import { basename, dirname, extname, join } from 'node:path'
 import { Readable } from 'node:stream'
+import type { GroupType } from '@xon/shared'
 import { and, asc, desc, eq, inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
@@ -10,17 +11,15 @@ import { z } from 'zod'
 import { computeETag } from '../cache.js'
 import type { MediaItem } from '../db/schema.js'
 import {
-  favorites,
   getAllowedRatings,
-  groupMembers,
+  groupItems,
   groups,
-  libraryAccess,
+  // libraryAccess,
   matchingQueue,
   mediaItems,
   mediaProgress,
   readingPositions,
   users,
-  watchlist,
 } from '../db/schema.js'
 import { validate } from '../http/validate.js'
 import { listArchiveContents } from '../media/archive.js'
@@ -43,9 +42,9 @@ type ThumbnailSize = (typeof VALID_SIZES)[number]
 // export function withThumbnailUrls(item: MediaItem) {
 //   const thumbnailUrls = item.thumbnailPaths
 //     ? {
-//         small: `/api/v1/media/${item.id}/thumbnail?size=small`,
-//         medium: `/api/v1/media/${item.id}/thumbnail?size=medium`,
-//         large: `/api/v1/media/${item.id}/thumbnail?size=large`,
+//         small: `/api/media/${item.id}/thumbnail?size=small`,
+//         medium: `/api/media/${item.id}/thumbnail?size=medium`,
+//         large: `/api/media/${item.id}/thumbnail?size=large`,
 //       }
 //     : null
 //   return { ...item, thumbnailUrls }
@@ -54,19 +53,19 @@ type ThumbnailSize = (typeof VALID_SIZES)[number]
 export function makeMediaRouter(db: LibSQLDatabase): Hono {
   const router = new Hono()
 
-  const PRIVILEGED_ROLES = ['admin', 'manager'] as const
+  // const PRIVILEGED_ROLES = ['admin', 'manager'] as const
 
-  async function getAccessibleLibraryIds(
-    userId: string,
-    role: string,
-  ): Promise<string[] | null> {
-    if ((PRIVILEGED_ROLES as readonly string[]).includes(role)) return null // null = all
-    const rows = await db
-      .select({ libraryId: libraryAccess.libraryId })
-      .from(libraryAccess)
-      .where(eq(libraryAccess.userId, userId))
-    return rows.map((r) => r.libraryId)
-  }
+  // async function getAccessibleLibraryIds(
+  //   userId: string,
+  //   role: string,
+  // ): Promise<string[] | null> {
+  //   if ((PRIVILEGED_ROLES as readonly string[]).includes(role)) return null // null = all
+  //   const rows = await db
+  //     .select({ libraryId: libraryAccess.libraryId })
+  //     .from(libraryAccess)
+  //     .where(eq(libraryAccess.userId, userId))
+  //   return rows.map((r) => r.libraryId)
+  // }
 
   /** Builds a Drizzle WHERE condition restricting items by the user's maxContentRating. */
   // async function getContentRatingCondition(userId: string) {
@@ -108,47 +107,47 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
           ? sortDir(mediaItems.fileSize)
           : sortDir(mediaItems.createdAt)
 
-    const accessibleIds = await getAccessibleLibraryIds(user.id, user.role)
-    if (accessibleIds !== null && accessibleIds.length === 0) {
-      return c.json([])
-    }
+    // const accessibleIds = await getAccessibleLibraryIds(user.id, user.role)
+    // if (accessibleIds !== null && accessibleIds.length === 0) {
+    //   return c.json([])
+    // }
 
     // const ratingCond = await getContentRatingCondition(user.id)
 
-    const libraryFilter =
-      accessibleIds !== null
-        ? inArray(mediaItems.libraryId, accessibleIds)
-        : undefined
+    // const libraryFilter =
+    // accessibleIds !== null
+    // ? inArray(mediaItems.libraryId, accessibleIds)
+    // : undefined
     // const whereClause = and(libraryFilter, ratingCond ?? undefined)
-    const whereClause = and(libraryFilter, undefined)
+    // const whereClause = and(libraryFilter, undefined)
 
     const baseQuery = db.select().from(mediaItems)
-    const scopedQuery = whereClause ? baseQuery.where(whereClause) : baseQuery
-    const rows = await scopedQuery
-      .orderBy(orderExpr)
-      .limit(limitNum)
-      .offset(offset)
+    // const scopedQuery = whereClause ? baseQuery.where(whereClause) : baseQuery
+    // const rows = await scopedQuery
+    //   .orderBy(orderExpr)
+    //   .limit(limitNum)
+    //   .offset(offset)
 
     // const items = rows.map(withThumbnailUrls)
-    const items = rows
-    const etag = computeETag(items)
-    if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
-    c.header('ETag', etag)
-    return c.json(items)
+    // const items = rows
+    // const etag = computeETag(items)
+    // if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
+    // c.header('ETag', etag)
+    // return c.json(items)
   })
 
   // GET /media/:id — get single media item (scoped to accessible libraries)
   router.get('/:id', async (c) => {
     const id = c.req.param('id')
-    const user = c.get('user')
+    // const user = c.get('user')
     const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
     const item = rows[0]
     if (!item) return c.json({ error: 'Not found' }, 404)
 
-    const accessibleIds = await getAccessibleLibraryIds(user.id, user.role)
-    if (accessibleIds !== null && !accessibleIds.includes(item.libraryId)) {
-      return c.json({ error: 'Not found' }, 404)
-    }
+    // const accessibleIds = await getAccessibleLibraryIds(user.id, user.role)
+    // if (accessibleIds !== null && !accessibleIds.includes(item.libraryId)) {
+    //   return c.json({ error: 'Not found' }, 404)
+    // }
 
     // const ratingCond = await getContentRatingCondition(user.id)
     // if (ratingCond !== null) {
@@ -172,7 +171,7 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
   // GET /media/:id/match — get pending match for a media item
   router.get('/:id/match', async (c) => {
     const id = c.req.param('id')
-    const user = c.get('user')
+    // const user = c.get('user')
 
     const rows = await db
       .select({ libraryId: mediaItems.libraryId })
@@ -181,10 +180,10 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     const item = rows[0]
     if (!item) return c.json({ error: 'Not found' }, 404)
 
-    const accessibleIds = await getAccessibleLibraryIds(user.id, user.role)
-    if (accessibleIds !== null && !accessibleIds.includes(item.libraryId)) {
-      return c.json({ error: 'Not found' }, 404)
-    }
+    // const accessibleIds = await getAccessibleLibraryIds(user.id, user.role)
+    // if (accessibleIds !== null && !accessibleIds.includes(item.libraryId)) {
+    //   return c.json({ error: 'Not found' }, 404)
+    // }
 
     const matchRows = await db
       .select()
@@ -333,24 +332,25 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     const user = c.get('user')
 
     // Scope to accessible libraries
-    const accessibleIds = await getAccessibleLibraryIds(user.id, user.role)
-    if (accessibleIds !== null && accessibleIds.length === 0) {
-      return c.json({ error: 'No accessible libraries' }, 403)
-    }
+    // const accessibleIds = await getAccessibleLibraryIds(user.id, user.role)
+    // if (accessibleIds !== null && accessibleIds.length === 0) {
+    //   return c.json({ error: 'No accessible libraries' }, 403)
+    // }
 
-    const libraryFilter =
-      accessibleIds !== null
-        ? inArray(mediaItems.libraryId, accessibleIds)
-        : undefined
+    // const libraryFilter =
+    //   accessibleIds !== null
+    //     ? inArray(mediaItems.libraryId, accessibleIds)
+    //     : undefined
 
     // Fetch requested items (access-check + existence)
     const baseQuery = db
       .select({ id: mediaItems.id, metadata: mediaItems.metadata })
       .from(mediaItems)
       .where(
-        libraryFilter
-          ? and(inArray(mediaItems.id, body.ids), libraryFilter)
-          : inArray(mediaItems.id, body.ids),
+        // libraryFilter
+        //   ? and(inArray(mediaItems.id, body.ids), libraryFilter)
+        // :
+        inArray(mediaItems.id, body.ids),
       )
     const rows = await baseQuery
     const foundIds = rows.map((r) => r.id)
@@ -411,7 +411,7 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
 
     for (const id of foundIds) {
       await db
-        .insert(groupMembers)
+        .insert(groupItems)
         .values({ groupId: body.groupId, mediaItemId: id, sortOrder: 0 })
         .onConflictDoNothing()
     }
@@ -425,14 +425,6 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
     const item = rows[0]
     if (!item) return c.json({ error: 'Not found' }, 404)
-
-    let fileSize: number
-    try {
-      const stats = await stat(item.filePath)
-      fileSize = stats.size
-    } catch {
-      return c.json({ error: 'File not accessible' }, 404)
-    }
 
     // RAW camera images: convert to JPEG on-the-fly via dcraw
     if (isRawImage(item.filePath)) {
@@ -452,7 +444,7 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     // Check if format needs transcoding — if so, redirect to HLS playlist
     const meta = await extractFfprobeMetadata(item.filePath)
     if (meta && needsTranscoding(meta.codec, meta.audioCodec)) {
-      return c.redirect(`/api/v1/media/${id}/hls/playlist.m3u8`, 307)
+      return c.redirect(`/api/media/${id}/hls/playlist.m3u8`, 307)
     }
 
     const range = c.req.header('Range')
@@ -462,10 +454,12 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       const match = /bytes=(\d+)-(\d*)/.exec(range)
       if (!match) return c.json({ error: 'Invalid range' }, 400)
       const start = Number.parseInt(match[1] ?? '0', 10)
-      const end = match[2] ? Number.parseInt(match[2], 10) : fileSize - 1
+      const end = match[2] ? Number.parseInt(match[2], 10) : item.fileSize - 1
 
-      if (start > end || end >= fileSize) {
-        return c.body(null, 416, { 'Content-Range': `bytes */${fileSize}` })
+      if (start > end || end >= item.fileSize) {
+        return c.body(null, 416, {
+          'Content-Range': `bytes */${item.fileSize}`,
+        })
       }
 
       const chunkSize = end - start + 1
@@ -473,7 +467,7 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       const webStream = Readable.toWeb(nodeStream) as ReadableStream
 
       return c.body(webStream, 206, {
-        'Content-Range': `bytes ${start}-${end}/${fileSize}`,
+        'Content-Range': `bytes ${start}-${end}/${item.fileSize}`,
         'Accept-Ranges': 'bytes',
         'Content-Length': String(chunkSize),
         'Content-Type': mimeType,
@@ -485,7 +479,7 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
 
     return c.body(webStream, 200, {
       'Accept-Ranges': 'bytes',
-      'Content-Length': String(fileSize),
+      'Content-Length': String(item.fileSize),
       'Content-Type': mimeType,
     })
   })
@@ -499,12 +493,15 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     const item = rows[0]
     if (!item) return c.json({ error: 'Not found' }, 404)
 
-    const meta = await extractFfprobeMetadata(item.filePath)
-    if (!meta?.duration) {
-      return c.json({ error: 'Cannot determine media duration' }, 422)
-    }
+    const duration = item.metadata?.duration
 
-    const playlist = generateHlsPlaylist(meta.duration, HLS_SEGMENT_DURATION)
+    if (!duration)
+      return c.json({ error: 'Cannot determine media duration' }, 422)
+
+    const playlist = generateHlsPlaylist(
+      item.metadata.duration,
+      HLS_SEGMENT_DURATION,
+    )
     return c.text(playlist, 200, {
       'Content-Type': 'application/vnd.apple.mpegurl',
       'Cache-Control': 'no-cache',
@@ -524,12 +521,6 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
     const item = rows[0]
     if (!item) return c.json({ error: 'Not found' }, 404)
-
-    try {
-      await stat(item.filePath)
-    } catch {
-      return c.json({ error: 'File not accessible' }, 404)
-    }
 
     const proc = spawnTranscodeSegment(
       item.filePath,
@@ -881,6 +872,9 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
   router.put('/:id/progress', validate('json', progressSchema), async (c) => {
     const id = c.req.param('id')
     const user = c.get('user')
+
+    if (!user) return c.json({ error: 'Unauthorized' }, 401)
+
     const body = c.req.valid('json')
 
     const rows = await db
@@ -929,57 +923,79 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     return c.json({ ok: true })
   })
 
-  // POST /media/:id/favorite — add to favorites (idempotent)
-  router.post('/:id/favorite', async (c) => {
-    const user = c.get('user')
-    const id = c.req.param('id')
-    const [item] = await db
-      .select({ id: mediaItems.id })
-      .from(mediaItems)
-      .where(eq(mediaItems.id, id))
-    if (!item) return c.json({ error: 'Not found' }, 404)
-    await db
-      .insert(favorites)
-      .values({ userId: user.id, mediaItemId: id })
-      .onConflictDoNothing()
-    return c.json({ favorited: true })
-  })
+  // POST /media/:id/favorite — add to favorites
+  // (idempotent)
+  // router.post('/:id/groups/:type', async (c) => {
+  //   const user = c.get('user')
+  //   const id = c.req.param('id')
+  //   const type = c.req.param('type') as GroupType
+  //   const [item] = await db
+  //     .select({ id: mediaItems.id })
+  //     .from(mediaItems)
+  //     .where(eq(mediaItems.id, id))
+  //   if (!item) return c.json({ error: 'Not found' }, 404)
+
+  //   const group = await db
+  //     .select()
+  //     .from(groups)
+  //     .innerJoin(groupItems, eq(groupItems.groupId, groups.id))
+  //     .where(and(eq(groups.type, type), eq(groups.userId, user.id)))
+  //   // await db
+  //   //   .insert(favorites)
+  //   //   .values({ userId: user.id, mediaItemId: id, type })
+  //   //   .onConflictDoNothing()
+  //   return c.json({ favorited: true })
+  // })
+  // router.post('/:id/favorite', async (c) => {
+  //   const user = c.get('user')
+  //   const id = c.req.param('id')
+  //   const [item] = await db
+  //     .select({ id: mediaItems.id })
+  //     .from(mediaItems)
+  //     .where(eq(mediaItems.id, id))
+  //   if (!item) return c.json({ error: 'Not found' }, 404)
+  //   await db
+  //     .insert(favorites)
+  //     .values({ userId: user.id, mediaItemId: id })
+  //     .onConflictDoNothing()
+  //   return c.json({ favorited: true })
+  // })
 
   // DELETE /media/:id/favorite — remove from favorites
-  router.delete('/:id/favorite', async (c) => {
-    const user = c.get('user')
-    const id = c.req.param('id')
-    await db
-      .delete(favorites)
-      .where(and(eq(favorites.userId, user.id), eq(favorites.mediaItemId, id)))
-    return c.json({ favorited: false })
-  })
+  // router.delete('/:id/favorite', async (c) => {
+  //   const user = c.get('user')
+  //   const id = c.req.param('id')
+  //   await db
+  //     .delete(favorites)
+  //     .where(and(eq(favorites.userId, user.id), eq(favorites.mediaItemId, id)))
+  //   return c.json({ favorited: false })
+  // })
 
   // POST /media/:id/watchlist — add to watchlist (idempotent)
-  router.post('/:id/watchlist', async (c) => {
-    const user = c.get('user')
-    const id = c.req.param('id')
-    const [item] = await db
-      .select({ id: mediaItems.id })
-      .from(mediaItems)
-      .where(eq(mediaItems.id, id))
-    if (!item) return c.json({ error: 'Not found' }, 404)
-    await db
-      .insert(watchlist)
-      .values({ userId: user.id, mediaItemId: id })
-      .onConflictDoNothing()
-    return c.json({ watchlisted: true })
-  })
+  // router.post('/:id/watchlist', async (c) => {
+  //   const user = c.get('user')
+  //   const id = c.req.param('id')
+  //   const [item] = await db
+  //     .select({ id: mediaItems.id })
+  //     .from(mediaItems)
+  //     .where(eq(mediaItems.id, id))
+  //   if (!item) return c.json({ error: 'Not found' }, 404)
+  //   await db
+  //     .insert(watchlist)
+  //     .values({ userId: user.id, mediaItemId: id })
+  //     .onConflictDoNothing()
+  //   return c.json({ watchlisted: true })
+  // })
 
   // DELETE /media/:id/watchlist — remove from watchlist
-  router.delete('/:id/watchlist', async (c) => {
-    const user = c.get('user')
-    const id = c.req.param('id')
-    await db
-      .delete(watchlist)
-      .where(and(eq(watchlist.userId, user.id), eq(watchlist.mediaItemId, id)))
-    return c.json({ watchlisted: false })
-  })
+  // router.delete('/:id/watchlist', async (c) => {
+  //   const user = c.get('user')
+  //   const id = c.req.param('id')
+  //   await db
+  //     .delete(watchlist)
+  //     .where(and(eq(watchlist.userId, user.id), eq(watchlist.mediaItemId, id)))
+  //   return c.json({ watchlisted: false })
+  // })
 
   return router
 }

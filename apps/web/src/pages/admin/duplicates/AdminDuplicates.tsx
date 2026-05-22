@@ -55,7 +55,7 @@ export default function AdminDuplicates() {
         limit: '50',
       })
       if (selectedLibraryId) params.set('libraryId', selectedLibraryId)
-      const res = await apiFetch(`/api/v1/ai/duplicates?${params.toString()}`)
+      const res = await apiFetch(`/api/ai/duplicates?${params.toString()}`)
       if (res.ok) {
         const data = (await res.json()) as { items: DuplicateCandidate[] }
         setCandidates(data.items)
@@ -68,7 +68,7 @@ export default function AdminDuplicates() {
   }, [minSimilarity, selectedLibraryId])
 
   useEffect(() => {
-    apiFetch('/api/v1/libraries')
+    apiFetch('/api/libraries')
       .then((r) => r.json() as Promise<Library[]>)
       .then(setLibraries)
       .catch(() => {})
@@ -82,7 +82,7 @@ export default function AdminDuplicates() {
     if (!selectedLibraryId) return
     setScanning(true)
     try {
-      await apiFetch('/api/v1/ai/duplicates/scan', {
+      await apiFetch('/api/ai/duplicates/scan', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -104,14 +104,11 @@ export default function AdminDuplicates() {
   ) {
     setResolvingId(candidateId)
     try {
-      const res = await apiFetch(
-        `/api/v1/ai/duplicates/${candidateId}/resolve`,
-        {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ action }),
-        },
-      )
+      const res = await apiFetch(`/api/ai/duplicates/${candidateId}/resolve`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+      })
       if (res.ok) {
         setCandidates((prev) => prev.filter((c) => c.id !== candidateId))
       }
@@ -240,7 +237,10 @@ export default function AdminDuplicates() {
 function MediaCard({
   item,
   label,
-}: { item: MediaItemInfo | null; label: string }) {
+}: {
+  item: MediaItemInfo | null
+  label: string
+}) {
   if (!item) {
     return (
       <div className={styles.mediaCard}>

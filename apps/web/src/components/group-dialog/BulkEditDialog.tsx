@@ -32,7 +32,7 @@ export default function BulkEditDialog({
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    apiFetch(`/api/v1/groups?libraryId=${libraryId}`)
+    apiFetch(`/api/groups?libraryId=${libraryId}`)
       .then((r) => r.json())
       .then((data) => setGroups(data as Group[]))
       .catch(() => {
@@ -67,7 +67,7 @@ export default function BulkEditDialog({
     setSubmitting(true)
     setError(null)
     try {
-      const res = await apiFetch('/api/v1/media/bulk', {
+      const res = await apiFetch('/api/media/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'update', ids: selectedIds, updates }),
@@ -93,7 +93,7 @@ export default function BulkEditDialog({
     setSubmitting(true)
     setError(null)
     try {
-      const res = await apiFetch('/api/v1/media/bulk', {
+      const res = await apiFetch('/api/media/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -126,7 +126,7 @@ export default function BulkEditDialog({
     setSubmitting(true)
     setError(null)
     try {
-      const res = await apiFetch('/api/v1/media/bulk', {
+      const res = await apiFetch('/api/media/bulk', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ action: 'delete', ids: selectedIds }),

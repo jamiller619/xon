@@ -11,7 +11,7 @@ export default function useLibraries() {
     setIsLoading(true)
 
     try {
-      const res = await apiFetch('/api/v1/libraries')
+      const res = await apiFetch('/api/libraries')
       const data = (await res.json()) as Library[]
       setLibraries(data)
     } catch {

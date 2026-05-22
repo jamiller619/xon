@@ -45,7 +45,7 @@ function saveProgress(
   duration: number,
   completed: boolean,
 ) {
-  apiFetch(`/api/v1/media/${mediaId}/progress`, {
+  apiFetch(`/api/media/${mediaId}/progress`, {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -79,7 +79,7 @@ export default function VideoPlayer({
   })
 
   useEffect(() => {
-    apiFetch(`/api/v1/media/${mediaId}/tracks`)
+    apiFetch(`/api/media/${mediaId}/tracks`)
       .then((r) => r.json())
       .then((data: TracksResponse) => {
         setTracks(data)
@@ -111,7 +111,7 @@ export default function VideoPlayer({
     if (!video) return
 
     const token = useAuthStore.getState().accessToken
-    const hlsUrl = `/api/v1/media/${mediaId}/hls/playlist.m3u8${token ? `?token=${token}` : ''}`
+    const hlsUrl = `/api/media/${mediaId}/hls/playlist.m3u8${token ? `?token=${token}` : ''}`
 
     if (Hls.isSupported()) {
       const hls = new Hls({
@@ -234,7 +234,7 @@ export default function VideoPlayer({
       <video
         ref={videoRef}
         className={styles.video ?? ''}
-        {...(useHls ? {} : { src: apiUrl(`/api/v1/media/${mediaId}/stream`) })}
+        {...(useHls ? {} : { src: apiUrl(`/api/media/${mediaId}/stream`) })}
         controls
         autoPlay
       >
@@ -244,7 +244,7 @@ export default function VideoPlayer({
             id={sub.file}
             kind="subtitles"
             src={apiUrl(
-              `/api/v1/media/${mediaId}/subtitle?file=${encodeURIComponent(sub.file)}`,
+              `/api/media/${mediaId}/subtitle?file=${encodeURIComponent(sub.file)}`,
             )}
             srcLang={sub.language ?? ''}
             label={sub.label}

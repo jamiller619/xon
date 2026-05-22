@@ -35,9 +35,9 @@ describe('Auth API', () => {
 
   // ─── Login ──────────────────────────────────────────────────────────────────
 
-  describe('POST /api/v1/auth/login', () => {
+  describe('POST /api/auth/login', () => {
     it('returns 200 with access and refresh tokens on valid credentials', async () => {
-      const res = await app.request('/api/v1/auth/login', {
+      const res = await app.request('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: 'testuser', password: 'password123' }),
@@ -51,7 +51,7 @@ describe('Auth API', () => {
     })
 
     it('returns 401 for wrong password', async () => {
-      const res = await app.request('/api/v1/auth/login', {
+      const res = await app.request('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: 'testuser', password: 'wrongpass' }),
@@ -62,7 +62,7 @@ describe('Auth API', () => {
     })
 
     it('returns 401 for unknown username', async () => {
-      const res = await app.request('/api/v1/auth/login', {
+      const res = await app.request('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: 'nobody', password: 'password123' }),
@@ -71,7 +71,7 @@ describe('Auth API', () => {
     })
 
     it('returns 400 for missing fields', async () => {
-      const res = await app.request('/api/v1/auth/login', {
+      const res = await app.request('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: 'testuser' }),
@@ -80,7 +80,7 @@ describe('Auth API', () => {
     })
 
     it('stores a refresh token in the database on successful login', async () => {
-      await app.request('/api/v1/auth/login', {
+      await app.request('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: 'testuser', password: 'password123' }),
@@ -96,9 +96,9 @@ describe('Auth API', () => {
 
   // ─── Refresh ─────────────────────────────────────────────────────────────────
 
-  describe('POST /api/v1/auth/refresh', () => {
+  describe('POST /api/auth/refresh', () => {
     async function login() {
-      const res = await app.request('/api/v1/auth/login', {
+      const res = await app.request('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: 'testuser', password: 'password123' }),
@@ -111,7 +111,7 @@ describe('Auth API', () => {
 
     it('returns new tokens with a valid refresh token', async () => {
       const { refreshToken } = await login()
-      const res = await app.request('/api/v1/auth/refresh', {
+      const res = await app.request('/api/auth/refresh', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken }),
@@ -126,14 +126,14 @@ describe('Auth API', () => {
       const { refreshToken } = await login()
 
       // First refresh succeeds
-      await app.request('/api/v1/auth/refresh', {
+      await app.request('/api/auth/refresh', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken }),
       })
 
       // Second refresh with same token should fail
-      const res2 = await app.request('/api/v1/auth/refresh', {
+      const res2 = await app.request('/api/auth/refresh', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken }),
@@ -142,7 +142,7 @@ describe('Auth API', () => {
     })
 
     it('returns 401 with invalid token', async () => {
-      const res = await app.request('/api/v1/auth/refresh', {
+      const res = await app.request('/api/auth/refresh', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken: 'not-a-valid-token' }),
@@ -151,7 +151,7 @@ describe('Auth API', () => {
     })
 
     it('returns 400 when refresh token is missing', async () => {
-      const res = await app.request('/api/v1/auth/refresh', {
+      const res = await app.request('/api/auth/refresh', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -162,9 +162,9 @@ describe('Auth API', () => {
 
   // ─── Logout ──────────────────────────────────────────────────────────────────
 
-  describe('POST /api/v1/auth/logout', () => {
+  describe('POST /api/auth/logout', () => {
     async function login() {
-      const res = await app.request('/api/v1/auth/login', {
+      const res = await app.request('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: 'testuser', password: 'password123' }),
@@ -178,7 +178,7 @@ describe('Auth API', () => {
     it('returns 200 and removes refresh token from DB', async () => {
       const { refreshToken } = await login()
 
-      const res = await app.request('/api/v1/auth/logout', {
+      const res = await app.request('/api/auth/logout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken }),
@@ -196,7 +196,7 @@ describe('Auth API', () => {
     })
 
     it('returns 200 even with an invalid token (no information leakage)', async () => {
-      const res = await app.request('/api/v1/auth/logout', {
+      const res = await app.request('/api/auth/logout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ refreshToken: 'not-a-valid-token' }),
@@ -205,7 +205,7 @@ describe('Auth API', () => {
     })
 
     it('returns 400 when refresh token is missing', async () => {
-      const res = await app.request('/api/v1/auth/logout', {
+      const res = await app.request('/api/auth/logout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -218,12 +218,12 @@ describe('Auth API', () => {
 
   describe('Auth middleware', () => {
     it('returns 401 for protected routes without token', async () => {
-      const res = await app.request('/api/v1/libraries')
+      const res = await app.request('/api/libraries')
       expect(res.status).toBe(401)
     })
 
     it('allows access with valid access token', async () => {
-      const loginRes = await app.request('/api/v1/auth/login', {
+      const loginRes = await app.request('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: 'testuser', password: 'password123' }),
@@ -233,14 +233,14 @@ describe('Auth API', () => {
         refreshToken: string
       }
 
-      const res = await app.request('/api/v1/libraries', {
+      const res = await app.request('/api/libraries', {
         headers: { Authorization: `Bearer ${accessToken}` },
       })
       expect(res.status).toBe(200)
     })
 
     it('returns 401 with a tampered token', async () => {
-      const res = await app.request('/api/v1/libraries', {
+      const res = await app.request('/api/libraries', {
         headers: {
           Authorization: 'Bearer eyJhbGciOiJIUzI1NiJ9.tampered.signature',
         },
@@ -249,13 +249,13 @@ describe('Auth API', () => {
     })
 
     it('health check does not require auth', async () => {
-      const res = await app.request('/api/v1/health')
+      const res = await app.request('/api/health')
       expect(res.status).toBe(200)
     })
 
     it('auth routes do not require token', async () => {
       // Login route is accessible without token
-      const res = await app.request('/api/v1/auth/login', {
+      const res = await app.request('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: 'testuser', password: 'password123' }),
@@ -283,9 +283,9 @@ describe('Setup API (first-time setup)', () => {
     client.close()
   })
 
-  describe('GET /api/v1/auth/setup-status', () => {
+  describe('GET /api/auth/setup-status', () => {
     it('returns setupComplete: false when no users exist', async () => {
-      const res = await app.request('/api/v1/auth/setup-status')
+      const res = await app.request('/api/auth/setup-status')
       expect(res.status).toBe(200)
       const body = await res.json()
       expect(body).toEqual({ setupComplete: false })
@@ -300,16 +300,16 @@ describe('Setup API (first-time setup)', () => {
         passwordHash: await hashPassword('password'),
         role: 'admin',
       })
-      const res = await app.request('/api/v1/auth/setup-status')
+      const res = await app.request('/api/auth/setup-status')
       expect(res.status).toBe(200)
       const body = await res.json()
       expect(body).toEqual({ setupComplete: true })
     })
   })
 
-  describe('POST /api/v1/auth/setup', () => {
+  describe('POST /api/auth/setup', () => {
     it('creates the first admin user and returns tokens', async () => {
-      const res = await app.request('/api/v1/auth/setup', {
+      const res = await app.request('/api/auth/setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -333,7 +333,7 @@ describe('Setup API (first-time setup)', () => {
         passwordHash: await hashPassword('password'),
         role: 'admin',
       })
-      const res = await app.request('/api/v1/auth/setup', {
+      const res = await app.request('/api/auth/setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -346,7 +346,7 @@ describe('Setup API (first-time setup)', () => {
     })
 
     it('returns 400 for short password (< 8 chars)', async () => {
-      const res = await app.request('/api/v1/auth/setup', {
+      const res = await app.request('/api/auth/setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -359,7 +359,7 @@ describe('Setup API (first-time setup)', () => {
     })
 
     it('the created user can log in via /auth/login', async () => {
-      await app.request('/api/v1/auth/setup', {
+      await app.request('/api/auth/setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -369,7 +369,7 @@ describe('Setup API (first-time setup)', () => {
         }),
       })
 
-      const loginRes = await app.request('/api/v1/auth/login', {
+      const loginRes = await app.request('/api/auth/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: 'admin', password: 'password123' }),

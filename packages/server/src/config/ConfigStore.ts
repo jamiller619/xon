@@ -1,12 +1,6 @@
+import type { Config, ConfigKey } from '@xon/shared'
 import writeAtomic from 'write-file-atomic'
-import type { XonConfigSchema } from './schema.ts'
 
-export type ConfigKey = keyof XonConfigSchema
-export type Config = XonConfigSchema
-
-// The electron-store module requires escaping keys that
-// contain dots, so this class simply wraps the store to do
-// that for us. Now we can do `config.get('some.config.key')`
 export default class ConfigStore {
   #data: Config
   #filePath: string
@@ -16,6 +10,18 @@ export default class ConfigStore {
     this.#filePath = filePath
   }
 
+  getStore(): Config {
+    return {
+      ...this.#data,
+    }
+  }
+
+  async setStore(data: Partial<Config>): Promise<void> {
+    Object.assign(this.#data, data)
+
+    await this.#write()
+  }
+
   get<K extends ConfigKey>(key: K): Config[K] {
     return this.#data[key]
   }
@@ -23,6 +29,10 @@ export default class ConfigStore {
   async set<K extends ConfigKey>(key: K, value?: Config[K]): Promise<void> {
     Object.assign(this.#data, { [key]: value })
 
+    await this.#write()
+  }
+
+  async #write() {
     await writeAtomic(this.#filePath, JSON.stringify(this.#data, null, 2))
   }
 }

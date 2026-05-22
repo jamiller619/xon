@@ -28,16 +28,16 @@ describe('RBAC middleware', () => {
 
   // ─── Admin-only routes ───────────────────────────────────────────────────────
 
-  describe('GET /api/v1/admin/users', () => {
+  describe('GET /api/admin/users', () => {
     it('allows admin', async () => {
-      const res = await app.request('/api/v1/admin/users', {
+      const res = await app.request('/api/admin/users', {
         headers: { Authorization: ADMIN_AUTH },
       })
       expect(res.status).toBe(200)
     })
 
     it('rejects manager with 403', async () => {
-      const res = await app.request('/api/v1/admin/users', {
+      const res = await app.request('/api/admin/users', {
         headers: { Authorization: MANAGER_AUTH },
       })
       expect(res.status).toBe(403)
@@ -46,30 +46,30 @@ describe('RBAC middleware', () => {
     })
 
     it('rejects user with 403', async () => {
-      const res = await app.request('/api/v1/admin/users', {
+      const res = await app.request('/api/admin/users', {
         headers: { Authorization: USER_AUTH },
       })
       expect(res.status).toBe(403)
     })
 
     it('rejects guest with 403', async () => {
-      const res = await app.request('/api/v1/admin/users', {
+      const res = await app.request('/api/admin/users', {
         headers: { Authorization: GUEST_AUTH },
       })
       expect(res.status).toBe(403)
     })
   })
 
-  describe('GET /api/v1/admin/plugins', () => {
+  describe('GET /api/admin/plugins', () => {
     it('allows admin', async () => {
-      const res = await app.request('/api/v1/admin/plugins', {
+      const res = await app.request('/api/admin/plugins', {
         headers: { Authorization: ADMIN_AUTH },
       })
       expect(res.status).toBe(200)
     })
 
     it('rejects manager with 403', async () => {
-      const res = await app.request('/api/v1/admin/plugins', {
+      const res = await app.request('/api/admin/plugins', {
         headers: { Authorization: MANAGER_AUTH },
       })
       expect(res.status).toBe(403)
@@ -78,7 +78,7 @@ describe('RBAC middleware', () => {
 
   // ─── Manager-only routes ─────────────────────────────────────────────────────
 
-  describe('POST /api/v1/libraries', () => {
+  describe('POST /api/libraries', () => {
     const body = JSON.stringify({ name: 'Test Library' })
     const headers = (auth: string) => ({
       'Content-Type': 'application/json',
@@ -86,7 +86,7 @@ describe('RBAC middleware', () => {
     })
 
     it('allows admin to create library', async () => {
-      const res = await app.request('/api/v1/libraries', {
+      const res = await app.request('/api/libraries', {
         method: 'POST',
         headers: headers(ADMIN_AUTH),
         body,
@@ -95,7 +95,7 @@ describe('RBAC middleware', () => {
     })
 
     it('allows manager to create library', async () => {
-      const res = await app.request('/api/v1/libraries', {
+      const res = await app.request('/api/libraries', {
         method: 'POST',
         headers: headers(MANAGER_AUTH),
         body,
@@ -104,7 +104,7 @@ describe('RBAC middleware', () => {
     })
 
     it('rejects user with 403', async () => {
-      const res = await app.request('/api/v1/libraries', {
+      const res = await app.request('/api/libraries', {
         method: 'POST',
         headers: headers(USER_AUTH),
         body,
@@ -115,7 +115,7 @@ describe('RBAC middleware', () => {
     })
 
     it('rejects guest with 403', async () => {
-      const res = await app.request('/api/v1/libraries', {
+      const res = await app.request('/api/libraries', {
         method: 'POST',
         headers: headers(GUEST_AUTH),
         body,
@@ -124,10 +124,10 @@ describe('RBAC middleware', () => {
     })
   })
 
-  describe('DELETE /api/v1/libraries/:id', () => {
+  describe('DELETE /api/libraries/:id', () => {
     it('allows manager to delete library', async () => {
       // Create library first
-      const createRes = await app.request('/api/v1/libraries', {
+      const createRes = await app.request('/api/libraries', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -137,7 +137,7 @@ describe('RBAC middleware', () => {
       })
       const lib = await createRes.json()
 
-      const res = await app.request(`/api/v1/libraries/${lib.id}`, {
+      const res = await app.request(`/api/libraries/${lib.id}`, {
         method: 'DELETE',
         headers: { Authorization: MANAGER_AUTH },
       })
@@ -145,7 +145,7 @@ describe('RBAC middleware', () => {
     })
 
     it('rejects user with 403 on delete', async () => {
-      const res = await app.request('/api/v1/libraries/some-id', {
+      const res = await app.request('/api/libraries/some-id', {
         method: 'DELETE',
         headers: { Authorization: USER_AUTH },
       })
@@ -155,16 +155,16 @@ describe('RBAC middleware', () => {
 
   // ─── Read-only access for guests ─────────────────────────────────────────────
 
-  describe('GET /api/v1/libraries (read access)', () => {
+  describe('GET /api/libraries (read access)', () => {
     it('allows guest to read libraries', async () => {
-      const res = await app.request('/api/v1/libraries', {
+      const res = await app.request('/api/libraries', {
         headers: { Authorization: GUEST_AUTH },
       })
       expect(res.status).toBe(200)
     })
 
     it('allows user to read libraries', async () => {
-      const res = await app.request('/api/v1/libraries', {
+      const res = await app.request('/api/libraries', {
         headers: { Authorization: USER_AUTH },
       })
       expect(res.status).toBe(200)
@@ -175,7 +175,7 @@ describe('RBAC middleware', () => {
 
   describe('role hierarchy: admin > manager > user > guest', () => {
     it('admin can access manager routes', async () => {
-      const res = await app.request('/api/v1/libraries', {
+      const res = await app.request('/api/libraries', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -187,7 +187,7 @@ describe('RBAC middleware', () => {
     })
 
     it('manager cannot access admin routes', async () => {
-      const res = await app.request('/api/v1/admin/users', {
+      const res = await app.request('/api/admin/users', {
         headers: { Authorization: MANAGER_AUTH },
       })
       expect(res.status).toBe(403)

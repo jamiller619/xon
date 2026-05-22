@@ -12,7 +12,14 @@
     "appdata.cachePath",
     "appdata.logsPath",
     "appdata.pluginsPath",
-    "network.httpPort"
+    "network.httpPort",
+    "network.remoteEnabled",
+    "network.security.corsEnabled",
+    "network.security.corsAllowedOrigins",
+    "session.ttlDays",
+    "session.updateAge",
+    "session.disableSessionRefresh",
+    "session.enableAnonymousLogins"
   ],
   "properties": {
     "app.locale": {
@@ -108,7 +115,7 @@
     "network.security.corsEnabled": {
       "title": "Enable CORS",
       "type": "boolean",
-      "default": false
+      "default": true
     },
     "network.security.corsAllowedOrigins": {
       "title": "CORS Allowed Origins",
@@ -117,6 +124,33 @@
         "type": "string"
       },
       "default": ["*"]
+    },
+    "session.ttlDays": {
+      "title": "Session TTL Days",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 365,
+      "default": 7
+    },
+    "session.updateAge": {
+      "title": "Session Update Age",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 365,
+      "default": 1,
+      "description": "The number of days after which the session expiration is updated."
+    },
+    "session.disableSessionRefresh": {
+      "title": "Disable Session Refresh",
+      "type": "boolean",
+      "default": false,
+      "description": "By default, whenever the session is used and the updateAge is reached, the session expiration is updated. This setting disables that functionality."
+    },
+    "session.enableAnonymousLogins": {
+      "title": "Allow Anonymous Logins",
+      "type": "boolean",
+      "default": true,
+      "description": "Controls whether accounts are required to login to the server. If disabled, accounts will be required to login."
     }
   }
 }

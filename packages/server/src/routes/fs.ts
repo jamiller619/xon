@@ -5,7 +5,8 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { users } from '../db/schema.js'
 import { validate } from '../http/validate.js'
-import { verifyAccessToken } from '../routes/auth.js'
+
+// import { verifyAccessToken } from '../routes/auth.js'
 
 const ROLE_RANK = {
   guest: 0,
@@ -33,16 +34,16 @@ export function makeFsRouter(db: LibSQLDatabase): Hono {
         .limit(1)
 
       if (existingUsers.length > 0) {
-        const authHeader = c.req.header('Authorization')
-        const token = authHeader?.startsWith('Bearer ')
-          ? authHeader.slice(7)
-          : (c.req.query('token') ?? '')
-        const payload = token ? await verifyAccessToken(token) : null
-        const rank =
-          (ROLE_RANK as Record<string, number>)[payload?.role ?? ''] ?? -1
-        if (rank < ROLE_RANK.manager) {
-          return c.json({ error: 'Unauthorized' }, 401)
-        }
+        // const authHeader = c.req.header('Authorization')
+        // const token = authHeader?.startsWith('Bearer ')
+        //   ? authHeader.slice(7)
+        //   : (c.req.query('token') ?? '')
+        // const payload = token ? await verifyAccessToken(token) : null
+        // const rank =
+        //   (ROLE_RANK as Record<string, number>)[payload?.role ?? ''] ?? -1
+        // if (rank < ROLE_RANK.manager) {
+        //   return c.json({ error: 'Unauthorized' }, 401)
+        // }
       }
 
       const rawPath = c.req.valid('query').path ?? '/'

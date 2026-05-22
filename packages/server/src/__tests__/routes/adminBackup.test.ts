@@ -153,12 +153,12 @@ describe('Admin Backup API', () => {
 
   // ─── POST /admin/backup/metadata ───────────────────────────────────────────
 
-  describe('POST /api/v1/admin/backup/metadata', () => {
+  describe('POST /api/admin/backup/metadata', () => {
     it('returns 200 with a ZIP for admin', async () => {
       const { readFile } = await import('node:fs/promises')
       vi.mocked(readFile).mockResolvedValueOnce(Buffer.from('fake-db') as never)
 
-      const res = await app.request('/api/v1/admin/backup/metadata', {
+      const res = await app.request('/api/admin/backup/metadata', {
         method: 'POST',
         headers: { Authorization: ADMIN_AUTH },
       })
@@ -171,7 +171,7 @@ describe('Admin Backup API', () => {
     })
 
     it('returns 403 for non-admin', async () => {
-      const res = await app.request('/api/v1/admin/backup/metadata', {
+      const res = await app.request('/api/admin/backup/metadata', {
         method: 'POST',
         headers: { Authorization: USER_AUTH },
       })
@@ -179,7 +179,7 @@ describe('Admin Backup API', () => {
     })
 
     it('returns 401 without auth', async () => {
-      const res = await app.request('/api/v1/admin/backup/metadata', {
+      const res = await app.request('/api/admin/backup/metadata', {
         method: 'POST',
       })
       expect(res.status).toBe(401)
@@ -189,7 +189,7 @@ describe('Admin Backup API', () => {
       const { readFile } = await import('node:fs/promises')
       vi.mocked(readFile).mockResolvedValueOnce(Buffer.from('fake-db') as never)
 
-      const res = await app.request('/api/v1/admin/backup/metadata', {
+      const res = await app.request('/api/admin/backup/metadata', {
         method: 'POST',
         headers: { Authorization: ADMIN_AUTH },
       })
@@ -216,7 +216,7 @@ describe('Admin Backup API', () => {
       const { readFile } = await import('node:fs/promises')
       vi.mocked(readFile).mockRejectedValueOnce(new Error('ENOENT') as never)
 
-      const res = await app.request('/api/v1/admin/backup/metadata', {
+      const res = await app.request('/api/admin/backup/metadata', {
         method: 'POST',
         headers: { Authorization: ADMIN_AUTH },
       })
@@ -228,14 +228,14 @@ describe('Admin Backup API', () => {
 
   // ─── POST /admin/restore/metadata ─────────────────────────────────────────
 
-  describe('POST /api/v1/admin/restore/metadata', () => {
+  describe('POST /api/admin/restore/metadata', () => {
     it('returns 200 and restores DB from valid backup ZIP', async () => {
       const { writeFile } = await import('node:fs/promises')
       vi.mocked(writeFile).mockResolvedValueOnce(undefined as never)
 
       const zipBuf = buildValidBackupZip()
 
-      const res = await app.request('/api/v1/admin/restore/metadata', {
+      const res = await app.request('/api/admin/restore/metadata', {
         method: 'POST',
         headers: {
           Authorization: ADMIN_AUTH,
@@ -255,7 +255,7 @@ describe('Admin Backup API', () => {
     it('returns 400 for an incompatible backup version', async () => {
       const zipBuf = buildValidBackupZip({ version: '99' })
 
-      const res = await app.request('/api/v1/admin/restore/metadata', {
+      const res = await app.request('/api/admin/restore/metadata', {
         method: 'POST',
         headers: {
           Authorization: ADMIN_AUTH,
@@ -274,7 +274,7 @@ describe('Admin Backup API', () => {
         { name: 'xon.db', data: Buffer.from('fake-db') },
       ])
 
-      const res = await app.request('/api/v1/admin/restore/metadata', {
+      const res = await app.request('/api/admin/restore/metadata', {
         method: 'POST',
         headers: {
           Authorization: ADMIN_AUTH,
@@ -289,7 +289,7 @@ describe('Admin Backup API', () => {
     })
 
     it('returns 400 for an invalid (non-ZIP) body', async () => {
-      const res = await app.request('/api/v1/admin/restore/metadata', {
+      const res = await app.request('/api/admin/restore/metadata', {
         method: 'POST',
         headers: {
           Authorization: ADMIN_AUTH,
@@ -304,7 +304,7 @@ describe('Admin Backup API', () => {
     })
 
     it('returns 400 for empty body', async () => {
-      const res = await app.request('/api/v1/admin/restore/metadata', {
+      const res = await app.request('/api/admin/restore/metadata', {
         method: 'POST',
         headers: {
           Authorization: ADMIN_AUTH,
@@ -319,7 +319,7 @@ describe('Admin Backup API', () => {
     })
 
     it('returns 403 for non-admin', async () => {
-      const res = await app.request('/api/v1/admin/restore/metadata', {
+      const res = await app.request('/api/admin/restore/metadata', {
         method: 'POST',
         headers: { Authorization: USER_AUTH },
         body: Buffer.alloc(0),
@@ -328,7 +328,7 @@ describe('Admin Backup API', () => {
     })
 
     it('returns 401 without auth', async () => {
-      const res = await app.request('/api/v1/admin/restore/metadata', {
+      const res = await app.request('/api/admin/restore/metadata', {
         method: 'POST',
       })
       expect(res.status).toBe(401)
@@ -352,7 +352,7 @@ describe('Admin Backup API', () => {
         { name: 'xon.db', data: Buffer.alloc(0) },
       ])
 
-      const res = await app.request('/api/v1/admin/restore/metadata', {
+      const res = await app.request('/api/admin/restore/metadata', {
         method: 'POST',
         headers: {
           Authorization: ADMIN_AUTH,

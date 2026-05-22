@@ -37,11 +37,11 @@ export default function AdminLibraryAccess() {
   const [savingLibSettings, setSavingLibSettings] = useState(false)
 
   useEffect(() => {
-    apiFetch('/api/v1/libraries')
+    apiFetch('/api/libraries')
       .then((r) => r.json())
       .then((data: Library[]) => setLibraries(data))
       .catch(() => {})
-    apiFetch('/api/v1/admin/users')
+    apiFetch('/api/admin/users')
       .then((r) => r.json())
       .then((data: UserInfo[]) => setUsers(data))
       .catch(() => {})
@@ -53,7 +53,7 @@ export default function AdminLibraryAccess() {
       return
     }
     setLoadingAccess(true)
-    apiFetch(`/api/v1/admin/libraries/${selectedLibraryId}/access`)
+    apiFetch(`/api/admin/libraries/${selectedLibraryId}/access`)
       .then((r) => r.json())
       .then((data: AccessEntry[]) => setAccessList(data))
       .catch(() => setAccessList([]))
@@ -66,7 +66,7 @@ export default function AdminLibraryAccess() {
     setGrantError('')
     try {
       const res = await apiFetch(
-        `/api/v1/admin/libraries/${selectedLibraryId}/access`,
+        `/api/admin/libraries/${selectedLibraryId}/access`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -83,7 +83,7 @@ export default function AdminLibraryAccess() {
       setGrantUserId('')
       // Refresh access list
       const updated = await apiFetch(
-        `/api/v1/admin/libraries/${selectedLibraryId}/access`,
+        `/api/admin/libraries/${selectedLibraryId}/access`,
       ).then((r) => r.json())
       setAccessList(updated as AccessEntry[])
     } finally {
@@ -95,7 +95,7 @@ export default function AdminLibraryAccess() {
     if (!selectedLibraryId) return
     setSavingLibSettings(true)
     try {
-      await apiFetch(`/api/v1/libraries/${selectedLibraryId}`, {
+      await apiFetch(`/api/libraries/${selectedLibraryId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ hideDRMItems: value }),
@@ -115,7 +115,7 @@ export default function AdminLibraryAccess() {
     setRevoking(true)
     try {
       await apiFetch(
-        `/api/v1/admin/libraries/${selectedLibraryId}/access/${userId}`,
+        `/api/admin/libraries/${selectedLibraryId}/access/${userId}`,
         {
           method: 'DELETE',
         },

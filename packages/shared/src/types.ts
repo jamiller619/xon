@@ -12,13 +12,6 @@ export type StatsPayload = {
     used: number
     size: number
   }[]
-  network: {
-    iface: string
-    rx: number
-    rxSec: number
-    tx: number
-    txSec: number
-  }[]
   timestamp: number
   uptime: number
   system: {
@@ -28,6 +21,22 @@ export type StatsPayload = {
     release: string
     hostname: string
   }
+}
+
+export enum GroupType {
+  Series = 'Series',
+  Season = 'Season',
+  Album = 'Album',
+  Artist = 'Artist',
+  BookSeries = 'Book Series',
+  Collection = 'Collection',
+  Favorites = 'Favorites',
+  Watchlist = 'Watchlist',
+  Playlist = 'Playlist',
+  Shelf = 'Shelf',
+  Folder = 'Folder',
+  PhotoLocation = 'Photo Location',
+  PhotoDate = 'Photo Date',
 }
 
 export interface Library {

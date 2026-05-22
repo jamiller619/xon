@@ -21,7 +21,7 @@ describe('Data Sources CRUD API', () => {
     app = createApp(db)
 
     // Create a library to use in tests
-    const res = await app.request('/api/v1/libraries', {
+    const res = await app.request('/api/libraries', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: AUTH },
       body: JSON.stringify({ name: 'Test Library' }),
@@ -37,7 +37,7 @@ describe('Data Sources CRUD API', () => {
   const tmpDir = tmpdir()
 
   function sourcesUrl(libId = libraryId) {
-    return `/api/v1/libraries/${libId}/sources`
+    return `/api/libraries/${libId}/sources`
   }
 
   async function createSource(
@@ -56,7 +56,7 @@ describe('Data Sources CRUD API', () => {
     })
   }
 
-  describe('POST /api/v1/libraries/:libraryId/sources', () => {
+  describe('POST /api/libraries/:libraryId/sources', () => {
     it('creates a network source and returns 201', async () => {
       const res = await createSource({ type: 'network', path: '//nas/media' })
       expect(res.status).toBe(201)
@@ -128,7 +128,7 @@ describe('Data Sources CRUD API', () => {
     })
   })
 
-  describe('GET /api/v1/libraries/:libraryId/sources', () => {
+  describe('GET /api/libraries/:libraryId/sources', () => {
     it('returns empty array when no sources', async () => {
       const res = await app.request(sourcesUrl(), {
         headers: { Authorization: AUTH },
@@ -157,7 +157,7 @@ describe('Data Sources CRUD API', () => {
     })
   })
 
-  describe('PUT /api/v1/libraries/:libraryId/sources/:id', () => {
+  describe('PUT /api/libraries/:libraryId/sources/:id', () => {
     it('updates source path', async () => {
       const created = await (
         await createSource({ type: 'network', path: '//nas/old' })
@@ -208,7 +208,7 @@ describe('Data Sources CRUD API', () => {
     })
   })
 
-  describe('DELETE /api/v1/libraries/:libraryId/sources/:id', () => {
+  describe('DELETE /api/libraries/:libraryId/sources/:id', () => {
     it('deletes a source and returns success', async () => {
       const created = await (
         await createSource({ type: 'network', path: '//nas/media' })

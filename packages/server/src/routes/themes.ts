@@ -26,10 +26,10 @@ export function makeThemesRouter(): Hono {
         description: entry.manifest.description,
         active: entry.status === 'active',
         ...(assets?.cssFile
-          ? { cssUrl: `/api/v1/plugins/${pluginId}/assets/${assets.cssFile}` }
+          ? { cssUrl: `/api/plugins/${pluginId}/assets/${assets.cssFile}` }
           : {}),
         ...(assets?.jsFile
-          ? { jsUrl: `/api/v1/plugins/${pluginId}/assets/${assets.jsFile}` }
+          ? { jsUrl: `/api/plugins/${pluginId}/assets/${assets.jsFile}` }
           : {}),
       })
     }

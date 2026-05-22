@@ -44,7 +44,7 @@ let fetchPromise: Promise<PluginUIComponent[]> | null = null
 async function fetchPluginComponents(): Promise<PluginUIComponent[]> {
   if (componentsCache !== null) return componentsCache
   if (!fetchPromise) {
-    fetchPromise = apiFetch('/api/v1/plugins/ui-components')
+    fetchPromise = apiFetch('/api/plugins/ui-components')
       .then((r) => r.json() as Promise<PluginUIComponent[]>)
       .then((data) => {
         componentsCache = data

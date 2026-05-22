@@ -99,7 +99,7 @@ export default function Search() {
     })
     if (category) params.set('category', category)
 
-    apiFetch(`/api/v1/search?${params.toString()}`)
+    apiFetch(`/api/search?${params.toString()}`)
       .then((r) => r.json())
       .then((data) => {
         const rows = (data as { results: SearchResult[] }).results

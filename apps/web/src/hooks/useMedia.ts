@@ -19,8 +19,8 @@ export default function useMedia(props: UseMediaProps) {
       const order = props.order ?? 'desc'
       const limit = props.limit ?? 10
       const baseURL = libraryId
-        ? `/api/v1/libraries/${libraryId}/media`
-        : '/api/v1/media'
+        ? `/api/libraries/${libraryId}/media`
+        : '/api/media'
 
       setIsLoading(true)
 

@@ -80,9 +80,9 @@ describe('Admin Backup Media API', () => {
 
   // ─── POST /admin/backup/media ────────────────────────────────────────────────
 
-  describe('POST /api/v1/admin/backup/media', () => {
+  describe('POST /api/admin/backup/media', () => {
     it('returns 202 and creates a job for admin', async () => {
-      const res = await app.request('/api/v1/admin/backup/media', {
+      const res = await app.request('/api/admin/backup/media', {
         method: 'POST',
         headers: {
           Authorization: ADMIN_AUTH,
@@ -97,7 +97,7 @@ describe('Admin Backup Media API', () => {
     })
 
     it('returns 403 for non-admin', async () => {
-      const res = await app.request('/api/v1/admin/backup/media', {
+      const res = await app.request('/api/admin/backup/media', {
         method: 'POST',
         headers: {
           Authorization: USER_AUTH,
@@ -109,7 +109,7 @@ describe('Admin Backup Media API', () => {
     })
 
     it('returns 401 without auth', async () => {
-      const res = await app.request('/api/v1/admin/backup/media', {
+      const res = await app.request('/api/admin/backup/media', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ targetId, scope: {} }),
@@ -118,7 +118,7 @@ describe('Admin Backup Media API', () => {
     })
 
     it('returns 404 for unknown targetId', async () => {
-      const res = await app.request('/api/v1/admin/backup/media', {
+      const res = await app.request('/api/admin/backup/media', {
         method: 'POST',
         headers: {
           Authorization: ADMIN_AUTH,
@@ -140,7 +140,7 @@ describe('Admin Backup Media API', () => {
         createdAt: new Date(),
       })
 
-      const res = await app.request('/api/v1/admin/backup/media', {
+      const res = await app.request('/api/admin/backup/media', {
         method: 'POST',
         headers: {
           Authorization: ADMIN_AUTH,
@@ -152,7 +152,7 @@ describe('Admin Backup Media API', () => {
     })
 
     it('returns 400 when targetId is missing', async () => {
-      const res = await app.request('/api/v1/admin/backup/media', {
+      const res = await app.request('/api/admin/backup/media', {
         method: 'POST',
         headers: {
           Authorization: ADMIN_AUTH,
@@ -166,9 +166,9 @@ describe('Admin Backup Media API', () => {
 
   // ─── GET /admin/backup/media/jobs ────────────────────────────────────────────
 
-  describe('GET /api/v1/admin/backup/media/jobs', () => {
+  describe('GET /api/admin/backup/media/jobs', () => {
     it('returns empty list initially', async () => {
-      const res = await app.request('/api/v1/admin/backup/media/jobs', {
+      const res = await app.request('/api/admin/backup/media/jobs', {
         headers: { Authorization: ADMIN_AUTH },
       })
       expect(res.status).toBe(200)
@@ -178,7 +178,7 @@ describe('Admin Backup Media API', () => {
     })
 
     it('returns jobs after starting a backup', async () => {
-      await app.request('/api/v1/admin/backup/media', {
+      await app.request('/api/admin/backup/media', {
         method: 'POST',
         headers: {
           Authorization: ADMIN_AUTH,
@@ -187,7 +187,7 @@ describe('Admin Backup Media API', () => {
         body: JSON.stringify({ targetId, scope: {} }),
       })
 
-      const res = await app.request('/api/v1/admin/backup/media/jobs', {
+      const res = await app.request('/api/admin/backup/media/jobs', {
         headers: { Authorization: ADMIN_AUTH },
       })
       expect(res.status).toBe(200)
@@ -197,7 +197,7 @@ describe('Admin Backup Media API', () => {
     })
 
     it('returns 403 for non-admin', async () => {
-      const res = await app.request('/api/v1/admin/backup/media/jobs', {
+      const res = await app.request('/api/admin/backup/media/jobs', {
         headers: { Authorization: USER_AUTH },
       })
       expect(res.status).toBe(403)
@@ -206,7 +206,7 @@ describe('Admin Backup Media API', () => {
 
   // ─── GET /admin/backup/media/jobs/:id ────────────────────────────────────────
 
-  describe('GET /api/v1/admin/backup/media/jobs/:id', () => {
+  describe('GET /api/admin/backup/media/jobs/:id', () => {
     it('returns specific job by id', async () => {
       const jobId = crypto.randomUUID()
       await db.insert(backupJobs).values({
@@ -220,12 +220,9 @@ describe('Admin Backup Media API', () => {
         createdAt: new Date(),
       })
 
-      const res = await app.request(
-        `/api/v1/admin/backup/media/jobs/${jobId}`,
-        {
-          headers: { Authorization: ADMIN_AUTH },
-        },
-      )
+      const res = await app.request(`/api/admin/backup/media/jobs/${jobId}`, {
+        headers: { Authorization: ADMIN_AUTH },
+      })
       expect(res.status).toBe(200)
       const body = await res.json()
       expect(body.id).toBe(jobId)
@@ -236,7 +233,7 @@ describe('Admin Backup Media API', () => {
 
     it('returns 404 for unknown job id', async () => {
       const res = await app.request(
-        '/api/v1/admin/backup/media/jobs/nonexistent',
+        '/api/admin/backup/media/jobs/nonexistent',
         {
           headers: { Authorization: ADMIN_AUTH },
         },

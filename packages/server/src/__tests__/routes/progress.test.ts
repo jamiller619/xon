@@ -83,9 +83,9 @@ describe('Progress API', () => {
 
   // ─── PUT /media/:id/progress ─────────────────────────────────────────────────
 
-  describe('PUT /api/v1/media/:id/progress', () => {
+  describe('PUT /api/media/:id/progress', () => {
     it('saves progress for a media item', async () => {
-      const res = await app.request('/api/v1/media/item-1/progress', {
+      const res = await app.request('/api/media/item-1/progress', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -99,7 +99,7 @@ describe('Progress API', () => {
     })
 
     it('updates progress on subsequent calls', async () => {
-      await app.request('/api/v1/media/item-1/progress', {
+      await app.request('/api/media/item-1/progress', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -108,7 +108,7 @@ describe('Progress API', () => {
         body: JSON.stringify({ position: 120, duration: 3600 }),
       })
 
-      const res = await app.request('/api/v1/media/item-1/progress', {
+      const res = await app.request('/api/media/item-1/progress', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -124,7 +124,7 @@ describe('Progress API', () => {
     })
 
     it('can mark item as completed', async () => {
-      const res = await app.request('/api/v1/media/item-1/progress', {
+      const res = await app.request('/api/media/item-1/progress', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -140,7 +140,7 @@ describe('Progress API', () => {
     })
 
     it('returns 404 for nonexistent media item', async () => {
-      const res = await app.request('/api/v1/media/nonexistent/progress', {
+      const res = await app.request('/api/media/nonexistent/progress', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -152,7 +152,7 @@ describe('Progress API', () => {
     })
 
     it('requires authentication', async () => {
-      const res = await app.request('/api/v1/media/item-1/progress', {
+      const res = await app.request('/api/media/item-1/progress', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ position: 0 }),
@@ -163,9 +163,9 @@ describe('Progress API', () => {
 
   // ─── GET /users/me/progress ──────────────────────────────────────────────────
 
-  describe('GET /api/v1/users/me/progress', () => {
+  describe('GET /api/users/me/progress', () => {
     it('returns empty array when no progress recorded', async () => {
-      const res = await app.request('/api/v1/users/me/progress', {
+      const res = await app.request('/api/users/me/progress', {
         headers: { Authorization: USER_AUTH },
       })
       expect(res.status).toBe(200)
@@ -174,7 +174,7 @@ describe('Progress API', () => {
     })
 
     it('returns in-progress items', async () => {
-      await app.request('/api/v1/media/item-1/progress', {
+      await app.request('/api/media/item-1/progress', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -183,7 +183,7 @@ describe('Progress API', () => {
         body: JSON.stringify({ position: 120, duration: 3600 }),
       })
 
-      const res = await app.request('/api/v1/users/me/progress', {
+      const res = await app.request('/api/users/me/progress', {
         headers: { Authorization: USER_AUTH },
       })
       expect(res.status).toBe(200)
@@ -198,7 +198,7 @@ describe('Progress API', () => {
     })
 
     it('excludes completed items', async () => {
-      await app.request('/api/v1/media/item-1/progress', {
+      await app.request('/api/media/item-1/progress', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -211,7 +211,7 @@ describe('Progress API', () => {
         }),
       })
 
-      const res = await app.request('/api/v1/users/me/progress', {
+      const res = await app.request('/api/users/me/progress', {
         headers: { Authorization: USER_AUTH },
       })
       expect(res.status).toBe(200)
@@ -220,7 +220,7 @@ describe('Progress API', () => {
     })
 
     it('only returns items for the authenticated user', async () => {
-      await app.request('/api/v1/media/item-1/progress', {
+      await app.request('/api/media/item-1/progress', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -230,7 +230,7 @@ describe('Progress API', () => {
       })
 
       // Other user should see nothing
-      const res = await app.request('/api/v1/users/me/progress', {
+      const res = await app.request('/api/users/me/progress', {
         headers: { Authorization: OTHER_AUTH },
       })
       expect(res.status).toBe(200)
@@ -239,12 +239,12 @@ describe('Progress API', () => {
     })
 
     it('requires authentication', async () => {
-      const res = await app.request('/api/v1/users/me/progress')
+      const res = await app.request('/api/users/me/progress')
       expect(res.status).toBe(401)
     })
 
     it('returns multiple in-progress items ordered by updatedAt desc', async () => {
-      await app.request('/api/v1/media/item-1/progress', {
+      await app.request('/api/media/item-1/progress', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -252,7 +252,7 @@ describe('Progress API', () => {
         },
         body: JSON.stringify({ position: 120, duration: 3600 }),
       })
-      await app.request('/api/v1/media/item-2/progress', {
+      await app.request('/api/media/item-2/progress', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -261,7 +261,7 @@ describe('Progress API', () => {
         body: JSON.stringify({ position: 60, duration: 7200 }),
       })
 
-      const res = await app.request('/api/v1/users/me/progress', {
+      const res = await app.request('/api/users/me/progress', {
         headers: { Authorization: USER_AUTH },
       })
       expect(res.status).toBe(200)

@@ -1,9 +1,9 @@
-import { BasePlugin } from '@xon/plugin-sdk'
 import type {
   PluginContext,
   PluginManifest,
   RouteDefinition,
 } from '@xon/plugin-sdk'
+import { BasePlugin } from '@xon/plugin-sdk'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { createApp } from '../../app.js'
 import {
@@ -57,7 +57,7 @@ afterEach(() => {
 describe('pluginRouteDispatcher — basic routing', () => {
   it('returns 404 when plugin not in registry', async () => {
     const app = createApp()
-    const res = await app.request('/api/v1/plugins/unknown-plugin/status', {
+    const res = await app.request('/api/plugins/unknown-plugin/status', {
       headers: { Authorization: AUTH },
     })
     expect(res.status).toBe(404)
@@ -76,7 +76,7 @@ describe('pluginRouteDispatcher — basic routing', () => {
       uiComponents: [],
     })
     const app = createApp()
-    const res = await app.request('/api/v1/plugins/test-plugin/status', {
+    const res = await app.request('/api/plugins/test-plugin/status', {
       headers: { Authorization: AUTH },
     })
     expect(res.status).toBe(404)
@@ -91,7 +91,7 @@ describe('pluginRouteDispatcher — basic routing', () => {
       },
     ])
     const app = createApp()
-    const res = await app.request('/api/v1/plugins/test-plugin/status', {
+    const res = await app.request('/api/plugins/test-plugin/status', {
       headers: { Authorization: AUTH },
     })
     expect(res.status).toBe(200)
@@ -108,7 +108,7 @@ describe('pluginRouteDispatcher — basic routing', () => {
       },
     ])
     const app = createApp()
-    const res = await app.request('/api/v1/plugins/test-plugin/items', {
+    const res = await app.request('/api/plugins/test-plugin/items', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: AUTH },
       body: JSON.stringify({}),
@@ -127,7 +127,7 @@ describe('pluginRouteDispatcher — basic routing', () => {
       },
     ])
     const app = createApp()
-    const res = await app.request('/api/v1/plugins/test-plugin/status', {
+    const res = await app.request('/api/plugins/test-plugin/status', {
       method: 'POST',
       headers: { Authorization: AUTH },
     })
@@ -143,7 +143,7 @@ describe('pluginRouteDispatcher — basic routing', () => {
       },
     ])
     const app = createApp()
-    const res = await app.request('/api/v1/plugins/test-plugin/other', {
+    const res = await app.request('/api/plugins/test-plugin/other', {
       headers: { Authorization: AUTH },
     })
     expect(res.status).toBe(404)
@@ -164,7 +164,7 @@ describe('pluginRouteDispatcher — path params', () => {
       },
     ])
     const app = createApp()
-    const res = await app.request('/api/v1/plugins/test-plugin/items/abc123', {
+    const res = await app.request('/api/plugins/test-plugin/items/abc123', {
       headers: { Authorization: AUTH },
     })
     expect(res.status).toBe(200)
@@ -187,7 +187,7 @@ describe('pluginRouteDispatcher — path params', () => {
     ])
     const app = createApp()
     const res = await app.request(
-      '/api/v1/plugins/test-plugin/categories/movies/items/42',
+      '/api/plugins/test-plugin/categories/movies/items/42',
       {
         headers: { Authorization: AUTH },
       },
@@ -211,12 +211,9 @@ describe('pluginRouteDispatcher — query params', () => {
       },
     ])
     const app = createApp()
-    const res = await app.request(
-      '/api/v1/plugins/test-plugin/search?q=hello',
-      {
-        headers: { Authorization: AUTH },
-      },
-    )
+    const res = await app.request('/api/plugins/test-plugin/search?q=hello', {
+      headers: { Authorization: AUTH },
+    })
     expect(res.status).toBe(200)
     expect(capturedQuery).toBe('hello')
   })
@@ -234,7 +231,7 @@ describe('pluginRouteDispatcher — routes removed on deactivation', () => {
     const app = createApp()
 
     // Route is accessible while active
-    const res1 = await app.request('/api/v1/plugins/test-plugin/status', {
+    const res1 = await app.request('/api/plugins/test-plugin/status', {
       headers: { Authorization: AUTH },
     })
     expect(res1.status).toBe(200)
@@ -244,7 +241,7 @@ describe('pluginRouteDispatcher — routes removed on deactivation', () => {
     entry.status = 'inactive'
 
     // Route is no longer accessible
-    const res2 = await app.request('/api/v1/plugins/test-plugin/status', {
+    const res2 = await app.request('/api/plugins/test-plugin/status', {
       headers: { Authorization: AUTH },
     })
     expect(res2.status).toBe(404)
@@ -295,13 +292,13 @@ describe('pluginRouteDispatcher — multiple plugins', () => {
 
     const app = createApp()
 
-    const res1 = await app.request('/api/v1/plugins/test-plugin/status', {
+    const res1 = await app.request('/api/plugins/test-plugin/status', {
       headers: { Authorization: AUTH },
     })
     const body1 = await res1.json()
     expect(body1).toEqual({ plugin: 'test' })
 
-    const res2 = await app.request('/api/v1/plugins/other-plugin/status', {
+    const res2 = await app.request('/api/plugins/other-plugin/status', {
       headers: { Authorization: AUTH },
     })
     const body2 = await res2.json()
@@ -322,7 +319,7 @@ describe('pluginRouteDispatcher — async handlers', () => {
       },
     ])
     const app = createApp()
-    const res = await app.request('/api/v1/plugins/test-plugin/async', {
+    const res = await app.request('/api/plugins/test-plugin/async', {
       headers: { Authorization: AUTH },
     })
     expect(res.status).toBe(200)
@@ -362,7 +359,7 @@ describe('pluginRouteDispatcher — context registered via activatePlugin', () =
     expect(entry.status).toBe('active')
 
     const app = createApp()
-    const res = await app.request('/api/v1/plugins/test-plugin/hello', {
+    const res = await app.request('/api/plugins/test-plugin/hello', {
       headers: { Authorization: AUTH },
     })
     expect(res.status).toBe(200)

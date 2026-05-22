@@ -118,7 +118,7 @@ export default function MediaDetail() {
   useEffect(() => {
     if (item) return
 
-    apiFetch(`/api/v1/media/${id}`)
+    apiFetch(`/api/media/${id}`)
       .then((r) => {
         if (!r.ok) throw new Error('Not found')
         return r.json()
@@ -134,7 +134,7 @@ export default function MediaDetail() {
   // useEffect(() => {
   //   if (!title) return
   //   setLoading(true)
-  //   apiFetch(`/api/v1/media/${id}`)
+  //   apiFetch(`/api/media/${id}`)
   //     .then((r) => {
   //       if (!r.ok) throw new Error('Not found')
   //       return r.json()
@@ -152,7 +152,7 @@ export default function MediaDetail() {
   // Load pending match
   // useEffect(() => {
   //   if (!id) return
-  //   apiFetch(`/api/v1/media/${id}/match`)
+  //   apiFetch(`/api/media/${id}/match`)
   //     .then((r) => (r.ok ? r.json() : null))
   //     .then((data: unknown) => {
   //       setPendingMatch(data as PendingMatch | null)
@@ -163,14 +163,14 @@ export default function MediaDetail() {
   // async function confirmMatch() {
   //   if (!pendingMatch) return
   //   setMatchActionLoading(true)
-  //   const res = await apiFetch(`/api/v1/matching/${pendingMatch.id}/confirm`, {
+  //   const res = await apiFetch(`/api/matching/${pendingMatch.id}/confirm`, {
   //     method: 'PUT',
   //   }).catch(() => null)
   //   if (res?.ok) {
   //     setPendingMatch(null)
   //     // Refresh media item to pick up updated title/metadata
   //     if (id) {
-  //       apiFetch(`/api/v1/media/${id}`)
+  //       apiFetch(`/api/media/${id}`)
   //         .then((r) => (r.ok ? r.json() : null))
   //         .then((data: unknown) => {
   //           if (data) setItem(data as MediaDetailItem)
@@ -184,7 +184,7 @@ export default function MediaDetail() {
   // async function rejectMatch() {
   //   if (!pendingMatch) return
   //   setMatchActionLoading(true)
-  //   const res = await apiFetch(`/api/v1/matching/${pendingMatch.id}/reject`, {
+  //   const res = await apiFetch(`/api/matching/${pendingMatch.id}/reject`, {
   //     method: 'PUT',
   //   }).catch(() => null)
   //   if (res?.ok) setPendingMatch(null)
@@ -194,7 +194,7 @@ export default function MediaDetail() {
   // Load favorite/watchlist state
   useEffect(() => {
     if (!item?.id) return
-    apiFetch('/api/v1/users/me/favorites')
+    apiFetch('/api/users/me/favorites')
       .then((r) => r.json())
       .then((data: unknown) => {
         if (Array.isArray(data)) {
@@ -204,7 +204,7 @@ export default function MediaDetail() {
         }
       })
       .catch(() => {})
-    apiFetch('/api/v1/users/me/watchlist')
+    apiFetch('/api/users/me/watchlist')
       .then((r) => r.json())
       .then((data: unknown) => {
         if (Array.isArray(data)) {
@@ -219,14 +219,14 @@ export default function MediaDetail() {
   async function toggleFavorite() {
     if (!item.id) return
     const method = isFavorited ? 'DELETE' : 'POST'
-    const res = await apiFetch(`/api/v1/media/${item.id}/favorite`, { method })
+    const res = await apiFetch(`/api/media/${item.id}/favorite`, { method })
     if (res.ok) setIsFavorited(!isFavorited)
   }
 
   async function toggleWatchlist() {
     if (!item.id) return
     const method = isWatchlisted ? 'DELETE' : 'POST'
-    const res = await apiFetch(`/api/v1/media/${item.id}/watchlist`, { method })
+    const res = await apiFetch(`/api/media/${item.id}/watchlist`, { method })
     if (res.ok) setIsWatchlisted(!isWatchlisted)
   }
 
@@ -234,7 +234,7 @@ export default function MediaDetail() {
   useEffect(() => {
     if (!item || !item.mimeType?.startsWith('image/') || !item.libraryId) return
     apiFetch(
-      `/api/v1/libraries/${item.libraryId}/media?mediaCategory=${encodeURIComponent(item.mimeType ?? 'Pictures')}&limit=100`,
+      `/api/libraries/${item.libraryId}/media?mediaCategory=${encodeURIComponent(item.mimeType ?? 'Pictures')}&limit=100`,
     )
       .then((r) => r.json())
       .then((data: unknown) => {
@@ -275,7 +275,7 @@ export default function MediaDetail() {
     if (!item?.id) return
     const body =
       action === 'accept' ? { accept: [tagText] } : { reject: [tagText] }
-    const res = await apiFetch(`/api/v1/media/${item.id}/ai-tags`, {
+    const res = await apiFetch(`/api/media/${item.id}/ai-tags`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(body),
@@ -301,7 +301,7 @@ export default function MediaDetail() {
     payload.tags = tags
 
     try {
-      const res = await apiFetch(`/api/v1/media/${item.id}`, {
+      const res = await apiFetch(`/api/media/${item.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(payload),

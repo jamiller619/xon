@@ -1,3 +1,4 @@
+import { UserRole } from '@xon/shared'
 import { and, eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
@@ -29,7 +30,7 @@ export function makeSourcesRouter(db: LibSQLDatabase): Hono {
   // POST /:libraryId/sources — add data source (manager+)
   router.post(
     '/',
-    requireRole('manager'),
+    requireRole(UserRole.User),
     validate('json', createSourceSchema),
     async (c) => {
       // libraryId comes from parent route /:libraryId/sources
@@ -93,7 +94,7 @@ export function makeSourcesRouter(db: LibSQLDatabase): Hono {
   // PUT /:libraryId/sources/:id — update data source (manager+)
   router.put(
     '/:id',
-    requireRole('manager'),
+    requireRole(UserRole.User),
     validate('json', updateSourceSchema),
     async (c) => {
       const libraryId = c.req.param('libraryId') as string
@@ -143,7 +144,7 @@ export function makeSourcesRouter(db: LibSQLDatabase): Hono {
   )
 
   // DELETE /:libraryId/sources/:id — remove data source (manager+)
-  router.delete('/:id', requireRole('manager'), async (c) => {
+  router.delete('/:id', requireRole(UserRole.User), async (c) => {
     const libraryId = c.req.param('libraryId') as string
     const id = c.req.param('id')
 

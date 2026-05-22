@@ -107,7 +107,7 @@ describe('AI Suggested Groups API', () => {
     return id
   }
 
-  describe('GET /api/v1/ai/suggested-groups', () => {
+  describe('GET /api/ai/suggested-groups', () => {
     it('returns pending suggestions for admin', async () => {
       await insertSuggestion({
         suggestedTitle: 'My Series',
@@ -118,7 +118,7 @@ describe('AI Suggested Groups API', () => {
         status: 'accepted',
       })
 
-      const res = await app.request('/api/v1/ai/suggested-groups', {
+      const res = await app.request('/api/ai/suggested-groups', {
         headers: { Authorization: AUTH_ADMIN },
       })
       expect(res.status).toBe(200)
@@ -136,7 +136,7 @@ describe('AI Suggested Groups API', () => {
       })
 
       const res = await app.request(
-        '/api/v1/ai/suggested-groups?status=accepted',
+        '/api/ai/suggested-groups?status=accepted',
         {
           headers: { Authorization: AUTH_ADMIN },
         },
@@ -153,7 +153,7 @@ describe('AI Suggested Groups API', () => {
       await insertSuggestion({ suggestedTitle: 'In Library' })
 
       const res = await app.request(
-        `/api/v1/ai/suggested-groups?libraryId=${libraryId}`,
+        `/api/ai/suggested-groups?libraryId=${libraryId}`,
         {
           headers: { Authorization: AUTH_ADMIN },
         },
@@ -164,14 +164,14 @@ describe('AI Suggested Groups API', () => {
     })
 
     it('returns 401 without auth', async () => {
-      const res = await app.request('/api/v1/ai/suggested-groups')
+      const res = await app.request('/api/ai/suggested-groups')
       expect(res.status).toBe(401)
     })
   })
 
-  describe('POST /api/v1/ai/suggested-groups/scan', () => {
+  describe('POST /api/ai/suggested-groups/scan', () => {
     it('returns found count of 0 for empty library', async () => {
-      const res = await app.request('/api/v1/ai/suggested-groups/scan', {
+      const res = await app.request('/api/ai/suggested-groups/scan', {
         method: 'POST',
         headers: {
           Authorization: AUTH_ADMIN,
@@ -190,7 +190,7 @@ describe('AI Suggested Groups API', () => {
       await insertMediaItem('Disc 1/track2.mp3', 'Music', album)
       await insertMediaItem('Disc 2/track1.mp3', 'Music', album)
 
-      const res = await app.request('/api/v1/ai/suggested-groups/scan', {
+      const res = await app.request('/api/ai/suggested-groups/scan', {
         method: 'POST',
         headers: {
           Authorization: AUTH_ADMIN,
@@ -204,7 +204,7 @@ describe('AI Suggested Groups API', () => {
     })
 
     it('returns 404 for unknown library', async () => {
-      const res = await app.request('/api/v1/ai/suggested-groups/scan', {
+      const res = await app.request('/api/ai/suggested-groups/scan', {
         method: 'POST',
         headers: {
           Authorization: AUTH_ADMIN,
@@ -216,7 +216,7 @@ describe('AI Suggested Groups API', () => {
     })
 
     it('returns 422 with missing libraryId', async () => {
-      const res = await app.request('/api/v1/ai/suggested-groups/scan', {
+      const res = await app.request('/api/ai/suggested-groups/scan', {
         method: 'POST',
         headers: {
           Authorization: AUTH_ADMIN,
@@ -228,7 +228,7 @@ describe('AI Suggested Groups API', () => {
     })
   })
 
-  describe('POST /api/v1/ai/suggested-groups/:id/accept', () => {
+  describe('POST /api/ai/suggested-groups/:id/accept', () => {
     it('accepts a pending suggestion and creates a group', async () => {
       const itemId = await insertMediaItem('track.mp3', 'Music')
       const suggId = await insertSuggestion({
@@ -239,7 +239,7 @@ describe('AI Suggested Groups API', () => {
       })
 
       const res = await app.request(
-        `/api/v1/ai/suggested-groups/${suggId}/accept`,
+        `/api/ai/suggested-groups/${suggId}/accept`,
         {
           method: 'POST',
           headers: { Authorization: AUTH_ADMIN },
@@ -264,7 +264,7 @@ describe('AI Suggested Groups API', () => {
 
     it('returns 404 for unknown suggestion', async () => {
       const res = await app.request(
-        '/api/v1/ai/suggested-groups/nonexistent/accept',
+        '/api/ai/suggested-groups/nonexistent/accept',
         {
           method: 'POST',
           headers: { Authorization: AUTH_ADMIN },
@@ -276,7 +276,7 @@ describe('AI Suggested Groups API', () => {
     it('returns 409 for already-accepted suggestion', async () => {
       const suggId = await insertSuggestion({ status: 'accepted' })
       const res = await app.request(
-        `/api/v1/ai/suggested-groups/${suggId}/accept`,
+        `/api/ai/suggested-groups/${suggId}/accept`,
         {
           method: 'POST',
           headers: { Authorization: AUTH_ADMIN },
@@ -286,12 +286,12 @@ describe('AI Suggested Groups API', () => {
     })
   })
 
-  describe('POST /api/v1/ai/suggested-groups/:id/reject', () => {
+  describe('POST /api/ai/suggested-groups/:id/reject', () => {
     it('rejects a pending suggestion', async () => {
       const suggId = await insertSuggestion({ status: 'pending' })
 
       const res = await app.request(
-        `/api/v1/ai/suggested-groups/${suggId}/reject`,
+        `/api/ai/suggested-groups/${suggId}/reject`,
         {
           method: 'POST',
           headers: { Authorization: AUTH_ADMIN },
@@ -304,7 +304,7 @@ describe('AI Suggested Groups API', () => {
 
     it('returns 404 for unknown suggestion', async () => {
       const res = await app.request(
-        '/api/v1/ai/suggested-groups/nonexistent/reject',
+        '/api/ai/suggested-groups/nonexistent/reject',
         {
           method: 'POST',
           headers: { Authorization: AUTH_ADMIN },
@@ -316,7 +316,7 @@ describe('AI Suggested Groups API', () => {
     it('returns 409 for already-rejected suggestion', async () => {
       const suggId = await insertSuggestion({ status: 'rejected' })
       const res = await app.request(
-        `/api/v1/ai/suggested-groups/${suggId}/reject`,
+        `/api/ai/suggested-groups/${suggId}/reject`,
         {
           method: 'POST',
           headers: { Authorization: AUTH_ADMIN },
@@ -356,7 +356,7 @@ describe('AI Suggested Groups API', () => {
       const suggId = await insertSuggestion({ status: 'pending' })
 
       const res = await app.request(
-        `/api/v1/ai/suggested-groups/${suggId}/reject`,
+        `/api/ai/suggested-groups/${suggId}/reject`,
         {
           method: 'POST',
           headers: { Authorization: AUTH_USER },

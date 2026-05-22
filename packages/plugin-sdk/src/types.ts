@@ -235,7 +235,7 @@ export interface PluginContext {
     event: E,
     handler: (payload: PluginEventPayloads[E]) => void | Promise<void>,
   ) => void
-  /** Register an API route under /api/v1/plugins/:pluginId/ */
+  /** Register an API route under /api/plugins/:pluginId/ */
   registerRoute: (route: RouteDefinition) => void
   /** Register a UI component injection */
   registerUI: (component: UIComponent) => void

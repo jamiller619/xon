@@ -9,16 +9,16 @@ export function makeStatsRouter(): Hono {
   router.get('/', async (c) => {
     return streamSSE(c, async (stream) => {
       while (true) {
-        const [cpu, mem, disk, net, os, sys] = await Promise.all([
+        const [cpu, mem, disk, os, sys] = await Promise.all([
           si.currentLoad(),
           si.mem(),
           si.fsSize(),
-          si.networkStats(),
           si.osInfo(),
           si.system(),
         ])
 
         const payload: StatsPayload = {
+          timestamp: Date.now(),
           cpu: cpu.currentLoad,
           memory: {
             used: mem.used,
@@ -30,14 +30,6 @@ export function makeStatsRouter(): Hono {
             used: d.used,
             size: d.size,
           })),
-          network: net.map((n) => ({
-            iface: n.iface,
-            rx: n.rx_bytes,
-            rxSec: n.rx_sec,
-            tx: n.tx_bytes,
-            txSec: n.tx_sec,
-          })),
-          timestamp: Date.now(),
           uptime: si.time().uptime,
           system: {
             model: sys.model,

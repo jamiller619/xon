@@ -68,7 +68,7 @@ export function CreateLibraryForm({
     setLoading(true)
 
     try {
-      const libRes = await apiFetch('/api/v1/libraries', {
+      const libRes = await apiFetch('/api/libraries', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -87,7 +87,7 @@ export function CreateLibraryForm({
       const lib = (await libRes.json()) as { id: string }
 
       if (sourcePath.trim()) {
-        const srcRes = await apiFetch(`/api/v1/libraries/${lib.id}/sources`, {
+        const srcRes = await apiFetch(`/api/libraries/${lib.id}/sources`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -183,7 +183,9 @@ interface BrowseResult {
 
 function MediaFolderBrowser({
   onSelect,
-}: { onSelect: (path: string) => void }) {
+}: {
+  onSelect: (path: string) => void
+}) {
   const [currentPath, setCurrentPath] = useState('/')
   const [entries, setEntries] = useState<{ name: string; path: string }[]>([])
   const [loading, setLoading] = useState(false)
@@ -192,7 +194,7 @@ function MediaFolderBrowser({
   useEffect(() => {
     setLoading(true)
     setError(null)
-    apiFetch(`/api/v1/fs/browse?path=${encodeURIComponent(currentPath)}`)
+    apiFetch(`/api/fs/browse?path=${encodeURIComponent(currentPath)}`)
       .then((r) => r.json())
       .then((data: BrowseResult | { error: string }) => {
         if ('error' in data) {

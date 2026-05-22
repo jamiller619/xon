@@ -51,7 +51,7 @@ export default function AdminSettings() {
 
   useEffect(() => {
     setLoading(true)
-    apiFetch('/api/v1/admin/settings')
+    apiFetch('/api/admin/settings')
       .then((r) => r.json() as Promise<ServerConfigData>)
       .then((data) => {
         applyConfig(data)
@@ -78,7 +78,7 @@ export default function AdminSettings() {
     setRestartNotice(false)
 
     try {
-      const res = await apiFetch('/api/v1/admin/settings', {
+      const res = await apiFetch('/api/admin/settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

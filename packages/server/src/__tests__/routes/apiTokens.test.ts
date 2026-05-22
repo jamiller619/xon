@@ -34,9 +34,9 @@ describe('API Tokens', () => {
     client.close()
   })
 
-  describe('POST /api/v1/users/me/tokens', () => {
+  describe('POST /api/users/me/tokens', () => {
     it('creates a token and returns it once', async () => {
-      const res = await app.request('/api/v1/users/me/tokens', {
+      const res = await app.request('/api/users/me/tokens', {
         method: 'POST',
         headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: 'My CLI token' }),
@@ -52,7 +52,7 @@ describe('API Tokens', () => {
 
     it('creates a token with expiry', async () => {
       const expiresAt = new Date(Date.now() + 1000 * 60 * 60).toISOString()
-      const res = await app.request('/api/v1/users/me/tokens', {
+      const res = await app.request('/api/users/me/tokens', {
         method: 'POST',
         headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: 'Expiring token', expiresAt }),
@@ -64,7 +64,7 @@ describe('API Tokens', () => {
     })
 
     it('returns 400 for missing name', async () => {
-      const res = await app.request('/api/v1/users/me/tokens', {
+      const res = await app.request('/api/users/me/tokens', {
         method: 'POST',
         headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({}),
@@ -73,7 +73,7 @@ describe('API Tokens', () => {
     })
 
     it('returns 401 without auth', async () => {
-      const res = await app.request('/api/v1/users/me/tokens', {
+      const res = await app.request('/api/users/me/tokens', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: 'test' }),
@@ -82,21 +82,21 @@ describe('API Tokens', () => {
     })
   })
 
-  describe('GET /api/v1/users/me/tokens', () => {
+  describe('GET /api/users/me/tokens', () => {
     it('lists tokens without revealing token values', async () => {
       // Create two tokens
-      await app.request('/api/v1/users/me/tokens', {
+      await app.request('/api/users/me/tokens', {
         method: 'POST',
         headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: 'Token A' }),
       })
-      await app.request('/api/v1/users/me/tokens', {
+      await app.request('/api/users/me/tokens', {
         method: 'POST',
         headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: 'Token B' }),
       })
 
-      const res = await app.request('/api/v1/users/me/tokens', {
+      const res = await app.request('/api/users/me/tokens', {
         headers: { Authorization: AUTH },
       })
 
@@ -113,23 +113,23 @@ describe('API Tokens', () => {
     })
   })
 
-  describe('DELETE /api/v1/users/me/tokens/:id', () => {
+  describe('DELETE /api/users/me/tokens/:id', () => {
     it('revokes a token by id', async () => {
-      const createRes = await app.request('/api/v1/users/me/tokens', {
+      const createRes = await app.request('/api/users/me/tokens', {
         method: 'POST',
         headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: 'To revoke' }),
       })
       const { id } = await createRes.json()
 
-      const deleteRes = await app.request(`/api/v1/users/me/tokens/${id}`, {
+      const deleteRes = await app.request(`/api/users/me/tokens/${id}`, {
         method: 'DELETE',
         headers: { Authorization: AUTH },
       })
       expect(deleteRes.status).toBe(200)
 
       // Token should no longer appear in list
-      const listRes = await app.request('/api/v1/users/me/tokens', {
+      const listRes = await app.request('/api/users/me/tokens', {
         headers: { Authorization: AUTH },
       })
       const list = await listRes.json()
@@ -137,7 +137,7 @@ describe('API Tokens', () => {
     })
 
     it('returns 404 for non-existent token', async () => {
-      const res = await app.request('/api/v1/users/me/tokens/nonexistent', {
+      const res = await app.request('/api/users/me/tokens/nonexistent', {
         method: 'DELETE',
         headers: { Authorization: AUTH },
       })
@@ -148,7 +148,7 @@ describe('API Tokens', () => {
   describe('API token authentication', () => {
     it('can authenticate using an API token as Bearer', async () => {
       // Create an API token via JWT auth
-      const createRes = await app.request('/api/v1/users/me/tokens', {
+      const createRes = await app.request('/api/users/me/tokens', {
         method: 'POST',
         headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({ name: 'Auth test token' }),
@@ -156,7 +156,7 @@ describe('API Tokens', () => {
       const { token } = await createRes.json()
 
       // Use the API token to access a protected endpoint
-      const res = await app.request('/api/v1/users/me/tokens', {
+      const res = await app.request('/api/users/me/tokens', {
         headers: { Authorization: `Bearer ${token}` },
       })
       expect(res.status).toBe(200)
@@ -176,14 +176,14 @@ describe('API Tokens', () => {
         expiresAt: new Date(Date.now() - 1000),
       })
 
-      const res = await app.request('/api/v1/users/me/tokens', {
+      const res = await app.request('/api/users/me/tokens', {
         headers: { Authorization: `Bearer ${rawToken}` },
       })
       expect(res.status).toBe(401)
     })
 
     it('rejects unknown tokens', async () => {
-      const res = await app.request('/api/v1/users/me/tokens', {
+      const res = await app.request('/api/users/me/tokens', {
         headers: {
           Authorization:
             'Bearer xon_unknowntokenvalue1234567890abcdef1234567890abcdef1234567890abcd',

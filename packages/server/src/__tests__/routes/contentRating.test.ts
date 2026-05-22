@@ -5,8 +5,13 @@ import { createApp } from '../../app.js'
 import { hashPassword } from '../../auth/password.js'
 import { openDatabase } from '../../db/db.js'
 import { migrateDatabase } from '../../db/migrate.js'
-import { getAllowedRatings } from '../../db/schema.js'
-import { dataSources, libraries, mediaItems, users } from '../../db/schema.js'
+import {
+  dataSources,
+  getAllowedRatings,
+  libraries,
+  mediaItems,
+  users,
+} from '../../db/schema.js'
 import { signAccessToken } from '../../routes/auth.js'
 
 const ADMIN_AUTH = `Bearer ${await signAccessToken('admin-1', 'admin', 'admin')}`
@@ -164,9 +169,9 @@ describe('Content rating filtering', () => {
 
   // ── GET /media ─────────────────────────────────────────────────────────────
 
-  describe('GET /api/v1/media', () => {
+  describe('GET /api/media', () => {
     it('admin (none) sees all 6 items', async () => {
-      const res = await app.request('/api/v1/media', {
+      const res = await app.request('/api/media', {
         headers: { Authorization: ADMIN_AUTH },
       })
       expect(res.status).toBe(200)
@@ -176,7 +181,7 @@ describe('Content rating filtering', () => {
     })
 
     it('user with maxContentRating=G sees only G and null-rated items', async () => {
-      const res = await app.request('/api/v1/media', {
+      const res = await app.request('/api/media', {
         headers: { Authorization: USER_G_AUTH },
       })
       expect(res.status).toBe(200)
@@ -192,7 +197,7 @@ describe('Content rating filtering', () => {
     })
 
     it('user with maxContentRating=PG-13 sees G, PG, PG-13 but not R or unrated', async () => {
-      const res = await app.request('/api/v1/media', {
+      const res = await app.request('/api/media', {
         headers: { Authorization: USER_PG13_AUTH },
       })
       expect(res.status).toBe(200)
@@ -207,7 +212,7 @@ describe('Content rating filtering', () => {
     })
 
     it('user with maxContentRating=none sees all items', async () => {
-      const res = await app.request('/api/v1/media', {
+      const res = await app.request('/api/media', {
         headers: { Authorization: USER_NONE_AUTH },
       })
       expect(res.status).toBe(200)
@@ -218,37 +223,37 @@ describe('Content rating filtering', () => {
 
   // ── GET /media/:id ─────────────────────────────────────────────────────────
 
-  describe('GET /api/v1/media/:id', () => {
+  describe('GET /api/media/:id', () => {
     it('user-g can access G-rated item', async () => {
-      const res = await app.request('/api/v1/media/item-g', {
+      const res = await app.request('/api/media/item-g', {
         headers: { Authorization: USER_G_AUTH },
       })
       expect(res.status).toBe(200)
     })
 
     it('user-g cannot access R-rated item (returns 404)', async () => {
-      const res = await app.request('/api/v1/media/item-r', {
+      const res = await app.request('/api/media/item-r', {
         headers: { Authorization: USER_G_AUTH },
       })
       expect(res.status).toBe(404)
     })
 
     it('user-pg13 can access PG-13 item', async () => {
-      const res = await app.request('/api/v1/media/item-pg13', {
+      const res = await app.request('/api/media/item-pg13', {
         headers: { Authorization: USER_PG13_AUTH },
       })
       expect(res.status).toBe(200)
     })
 
     it('user-pg13 cannot access unrated item', async () => {
-      const res = await app.request('/api/v1/media/item-unrated', {
+      const res = await app.request('/api/media/item-unrated', {
         headers: { Authorization: USER_PG13_AUTH },
       })
       expect(res.status).toBe(404)
     })
 
     it('user-none can access any item including R', async () => {
-      const res = await app.request('/api/v1/media/item-r', {
+      const res = await app.request('/api/media/item-r', {
         headers: { Authorization: USER_NONE_AUTH },
       })
       expect(res.status).toBe(200)
@@ -257,9 +262,9 @@ describe('Content rating filtering', () => {
 
   // ── GET /libraries/:id/media ───────────────────────────────────────────────
 
-  describe('GET /api/v1/libraries/:id/media', () => {
+  describe('GET /api/libraries/:id/media', () => {
     it('user-pg13 sees only allowed ratings in library media', async () => {
-      const res = await app.request(`/api/v1/libraries/${libId}/media`, {
+      const res = await app.request(`/api/libraries/${libId}/media`, {
         headers: { Authorization: USER_PG13_AUTH },
       })
       expect(res.status).toBe(200)
@@ -275,9 +280,9 @@ describe('Content rating filtering', () => {
 
   // ── PUT /admin/users/:id maxContentRating ──────────────────────────────────
 
-  describe('PUT /api/v1/admin/users/:id (maxContentRating)', () => {
+  describe('PUT /api/admin/users/:id (maxContentRating)', () => {
     it('admin can set maxContentRating on a user', async () => {
-      const res = await app.request('/api/v1/admin/users/user-none', {
+      const res = await app.request('/api/admin/users/user-none', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -291,7 +296,7 @@ describe('Content rating filtering', () => {
     })
 
     it('maxContentRating is returned in user list', async () => {
-      const res = await app.request('/api/v1/admin/users', {
+      const res = await app.request('/api/admin/users', {
         headers: { Authorization: ADMIN_AUTH },
       })
       expect(res.status).toBe(200)

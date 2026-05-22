@@ -1,10 +1,10 @@
 import { randomUUID } from 'node:crypto'
 import { basename, dirname } from 'node:path'
-import { MediaCategory } from '@xon/shared'
+import { type GroupType, MediaCategory } from '@xon/shared'
 import { and, eq, inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import {
-  groupMembers,
+  groupItems,
   groups,
   libraries,
   mediaItems,
@@ -415,6 +415,7 @@ export async function scanLibraryForSmartGroups(
 export async function acceptSuggestedGroup(
   db: LibSQLDatabase,
   suggestionId: string,
+  userId: string,
 ): Promise<{ groupId: string } | null> {
   const rows = await db
     .select()
@@ -442,14 +443,14 @@ export async function acceptSuggestedGroup(
     .insert(groups)
     .values({
       id: groupId,
-      libraryId: suggestion.libraryId,
-      type: suggestion.suggestedType,
+      type: suggestion.suggestedType as GroupType,
       title: suggestion.suggestedTitle,
       metadata: JSON.stringify({
         source: 'smart-grouping',
         reason: suggestion.reason,
       }),
       createdAt: now,
+      userId,
     })
     .onConflictDoUpdate({
       target: groups.id,
@@ -460,7 +461,7 @@ export async function acceptSuggestedGroup(
   if (itemIds.length > 0) {
     for (const mediaItemId of itemIds) {
       await db
-        .insert(groupMembers)
+        .insert(groupItems)
         .values({ groupId, mediaItemId, sortOrder: 0 })
         .onConflictDoNothing()
     }

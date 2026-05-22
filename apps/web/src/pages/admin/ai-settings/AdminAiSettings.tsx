@@ -45,7 +45,7 @@ export default function AdminAiSettings() {
 
   useEffect(() => {
     setLoading(true)
-    apiFetch('/api/v1/admin/ai-settings')
+    apiFetch('/api/admin/ai-settings')
       .then((r) => r.json() as Promise<AiSettingsData>)
       .then((data) => {
         setSettings(data)
@@ -83,7 +83,7 @@ export default function AdminAiSettings() {
     }
 
     try {
-      const res = await apiFetch('/api/v1/admin/ai-settings', {
+      const res = await apiFetch('/api/admin/ai-settings', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),

@@ -17,7 +17,7 @@ import { signAccessToken } from '../../routes/auth.js'
 const ADMIN_AUTH = `Bearer ${await signAccessToken('admin-id', 'admin', 'admin')}`
 const USER_AUTH = `Bearer ${await signAccessToken('user-id', 'regularuser', 'user')}`
 
-describe('Search API - GET /api/v1/search', () => {
+describe('Search API - GET /api/search', () => {
   let client: Client
   let db: LibSQLDatabase
   let app: ReturnType<typeof createApp>
@@ -112,7 +112,7 @@ describe('Search API - GET /api/v1/search', () => {
   })
 
   it('returns 400 when q param is missing', async () => {
-    const res = await app.request('/api/v1/search', {
+    const res = await app.request('/api/search', {
       headers: { Authorization: ADMIN_AUTH },
     })
     expect(res.status).toBe(400)
@@ -121,7 +121,7 @@ describe('Search API - GET /api/v1/search', () => {
   })
 
   it('returns search results matching title', async () => {
-    const res = await app.request('/api/v1/search?q=Inception', {
+    const res = await app.request('/api/search?q=Inception', {
       headers: { Authorization: ADMIN_AUTH },
     })
     expect(res.status).toBe(200)
@@ -132,7 +132,7 @@ describe('Search API - GET /api/v1/search', () => {
   })
 
   it('returns results with thumbnailUrls null when no thumbnail', async () => {
-    const res = await app.request('/api/v1/search?q=Inception', {
+    const res = await app.request('/api/search?q=Inception', {
       headers: { Authorization: ADMIN_AUTH },
     })
     const body = await res.json()
@@ -147,19 +147,19 @@ describe('Search API - GET /api/v1/search', () => {
       })
       .where(eq(mediaItems.id, 'item-1'))
 
-    const res = await app.request('/api/v1/search?q=Inception', {
+    const res = await app.request('/api/search?q=Inception', {
       headers: { Authorization: ADMIN_AUTH },
     })
     const body = await res.json()
     expect(body.results[0].thumbnailUrls).toEqual({
-      small: '/api/v1/media/item-1/thumbnail?size=small',
-      medium: '/api/v1/media/item-1/thumbnail?size=medium',
-      large: '/api/v1/media/item-1/thumbnail?size=large',
+      small: '/api/media/item-1/thumbnail?size=small',
+      medium: '/api/media/item-1/thumbnail?size=medium',
+      large: '/api/media/item-1/thumbnail?size=large',
     })
   })
 
   it('returns results matching description', async () => {
-    const res = await app.request('/api/v1/search?q=wormholes', {
+    const res = await app.request('/api/search?q=wormholes', {
       headers: { Authorization: ADMIN_AUTH },
     })
     expect(res.status).toBe(200)
@@ -170,7 +170,7 @@ describe('Search API - GET /api/v1/search', () => {
   })
 
   it('filters results by category', async () => {
-    const res = await app.request('/api/v1/search?q=Dark+Side&category=Music', {
+    const res = await app.request('/api/search?q=Dark+Side&category=Music', {
       headers: { Authorization: ADMIN_AUTH },
     })
     expect(res.status).toBe(200)
@@ -180,7 +180,7 @@ describe('Search API - GET /api/v1/search', () => {
   })
 
   it('returns empty results for category with no matches', async () => {
-    const res = await app.request('/api/v1/search?q=Inception&category=Music', {
+    const res = await app.request('/api/search?q=Inception&category=Music', {
       headers: { Authorization: ADMIN_AUTH },
     })
     expect(res.status).toBe(200)
@@ -190,7 +190,7 @@ describe('Search API - GET /api/v1/search', () => {
 
   it('scopes results to accessible libraries for regular users', async () => {
     // Regular user has access to lib-1 only (not lib-2)
-    const res = await app.request('/api/v1/search?q=Dark+Side', {
+    const res = await app.request('/api/search?q=Dark+Side', {
       headers: { Authorization: USER_AUTH },
     })
     expect(res.status).toBe(200)
@@ -202,7 +202,7 @@ describe('Search API - GET /api/v1/search', () => {
   })
 
   it('admin can see all results across libraries', async () => {
-    const res = await app.request('/api/v1/search?q=side', {
+    const res = await app.request('/api/search?q=side', {
       headers: { Authorization: ADMIN_AUTH },
     })
     expect(res.status).toBe(200)
@@ -225,7 +225,7 @@ describe('Search API - GET /api/v1/search', () => {
     })
     const noAccessAuth = `Bearer ${await signAccessToken('no-access-id', 'noaccess', 'user')}`
 
-    const res = await app.request('/api/v1/search?q=Inception', {
+    const res = await app.request('/api/search?q=Inception', {
       headers: { Authorization: noAccessAuth },
     })
     expect(res.status).toBe(200)
@@ -234,7 +234,7 @@ describe('Search API - GET /api/v1/search', () => {
   })
 
   it('respects limit and offset pagination', async () => {
-    const res = await app.request('/api/v1/search?q=the&limit=1&offset=0', {
+    const res = await app.request('/api/search?q=the&limit=1&offset=0', {
       headers: { Authorization: ADMIN_AUTH },
     })
     expect(res.status).toBe(200)

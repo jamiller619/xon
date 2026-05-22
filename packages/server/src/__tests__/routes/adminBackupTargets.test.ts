@@ -40,7 +40,7 @@ describe('Backup Targets API', () => {
   // ---------------------------------------------------------------------------
 
   it('GET /admin/backup/targets — returns empty list initially', async () => {
-    const res = await app.request('/api/v1/admin/backup/targets', {
+    const res = await app.request('/api/admin/backup/targets', {
       headers: { Authorization: AUTH },
     })
     expect(res.status).toBe(200)
@@ -54,7 +54,7 @@ describe('Backup Targets API', () => {
   // ---------------------------------------------------------------------------
 
   it('POST /admin/backup/targets — creates a local target', async () => {
-    const res = await app.request('/api/v1/admin/backup/targets', {
+    const res = await app.request('/api/admin/backup/targets', {
       method: 'POST',
       headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -74,7 +74,7 @@ describe('Backup Targets API', () => {
   })
 
   it('POST /admin/backup/targets — creates a network target', async () => {
-    const res = await app.request('/api/v1/admin/backup/targets', {
+    const res = await app.request('/api/admin/backup/targets', {
       method: 'POST',
       headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -90,7 +90,7 @@ describe('Backup Targets API', () => {
   })
 
   it('POST /admin/backup/targets — 400 on missing name', async () => {
-    const res = await app.request('/api/v1/admin/backup/targets', {
+    const res = await app.request('/api/admin/backup/targets', {
       method: 'POST',
       headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
       body: JSON.stringify({ type: 'local', config: {} }),
@@ -114,7 +114,7 @@ describe('Backup Targets API', () => {
       createdAt: now,
     })
 
-    const res = await app.request(`/api/v1/admin/backup/targets/${id}`, {
+    const res = await app.request(`/api/admin/backup/targets/${id}`, {
       headers: { Authorization: AUTH },
     })
     expect(res.status).toBe(200)
@@ -124,7 +124,7 @@ describe('Backup Targets API', () => {
   })
 
   it('GET /admin/backup/targets/:id — 404 for unknown id', async () => {
-    const res = await app.request('/api/v1/admin/backup/targets/nonexistent', {
+    const res = await app.request('/api/admin/backup/targets/nonexistent', {
       headers: { Authorization: AUTH },
     })
     expect(res.status).toBe(404)
@@ -146,7 +146,7 @@ describe('Backup Targets API', () => {
       createdAt: now,
     })
 
-    const res = await app.request(`/api/v1/admin/backup/targets/${id}`, {
+    const res = await app.request(`/api/admin/backup/targets/${id}`, {
       method: 'PUT',
       headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'New Name', enabled: false }),
@@ -158,7 +158,7 @@ describe('Backup Targets API', () => {
   })
 
   it('PUT /admin/backup/targets/:id — 404 for unknown id', async () => {
-    const res = await app.request('/api/v1/admin/backup/targets/nonexistent', {
+    const res = await app.request('/api/admin/backup/targets/nonexistent', {
       method: 'PUT',
       headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
       body: JSON.stringify({ name: 'Updated' }),
@@ -182,7 +182,7 @@ describe('Backup Targets API', () => {
       createdAt: now,
     })
 
-    const res = await app.request(`/api/v1/admin/backup/targets/${id}`, {
+    const res = await app.request(`/api/admin/backup/targets/${id}`, {
       method: 'DELETE',
       headers: { Authorization: AUTH },
     })
@@ -191,14 +191,14 @@ describe('Backup Targets API', () => {
     expect(body.success).toBe(true)
 
     // Confirm gone
-    const check = await app.request(`/api/v1/admin/backup/targets/${id}`, {
+    const check = await app.request(`/api/admin/backup/targets/${id}`, {
       headers: { Authorization: AUTH },
     })
     expect(check.status).toBe(404)
   })
 
   it('DELETE /admin/backup/targets/:id — 404 for unknown id', async () => {
-    const res = await app.request('/api/v1/admin/backup/targets/nonexistent', {
+    const res = await app.request('/api/admin/backup/targets/nonexistent', {
       method: 'DELETE',
       headers: { Authorization: AUTH },
     })
@@ -220,14 +220,11 @@ describe('Backup Targets API', () => {
       createdAt: new Date(),
     })
 
-    const res = await app.request(
-      `/api/v1/admin/backup/targets/${id}/schedule`,
-      {
-        method: 'PUT',
-        headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schedule: '0 2 * * *' }),
-      },
-    )
+    const res = await app.request(`/api/admin/backup/targets/${id}/schedule`, {
+      method: 'PUT',
+      headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ schedule: '0 2 * * *' }),
+    })
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.schedule).toBe('0 2 * * *')
@@ -246,14 +243,11 @@ describe('Backup Targets API', () => {
       createdAt: new Date(),
     })
 
-    const res = await app.request(
-      `/api/v1/admin/backup/targets/${id}/schedule`,
-      {
-        method: 'PUT',
-        headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ retentionKeepCount: 5 }),
-      },
-    )
+    const res = await app.request(`/api/admin/backup/targets/${id}/schedule`, {
+      method: 'PUT',
+      headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ retentionKeepCount: 5 }),
+    })
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.retentionKeepCount).toBe(5)
@@ -270,14 +264,11 @@ describe('Backup Targets API', () => {
       createdAt: new Date(),
     })
 
-    const res = await app.request(
-      `/api/v1/admin/backup/targets/${id}/schedule`,
-      {
-        method: 'PUT',
-        headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ retentionKeepDays: 30 }),
-      },
-    )
+    const res = await app.request(`/api/admin/backup/targets/${id}/schedule`, {
+      method: 'PUT',
+      headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ retentionKeepDays: 30 }),
+    })
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.retentionKeepDays).toBe(30)
@@ -294,14 +285,11 @@ describe('Backup Targets API', () => {
       createdAt: new Date(),
     })
 
-    const res = await app.request(
-      `/api/v1/admin/backup/targets/${id}/schedule`,
-      {
-        method: 'PUT',
-        headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schedule: 'not-a-cron' }),
-      },
-    )
+    const res = await app.request(`/api/admin/backup/targets/${id}/schedule`, {
+      method: 'PUT',
+      headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ schedule: 'not-a-cron' }),
+    })
     expect(res.status).toBe(400)
     const body = await res.json()
     expect(body.error).toMatch(/Invalid cron expression/)
@@ -309,7 +297,7 @@ describe('Backup Targets API', () => {
 
   it('PUT /admin/backup/targets/:id/schedule — 404 for unknown target', async () => {
     const res = await app.request(
-      '/api/v1/admin/backup/targets/nonexistent/schedule',
+      '/api/admin/backup/targets/nonexistent/schedule',
       {
         method: 'PUT',
         headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
@@ -331,14 +319,11 @@ describe('Backup Targets API', () => {
       createdAt: new Date(),
     })
 
-    const res = await app.request(
-      `/api/v1/admin/backup/targets/${id}/schedule`,
-      {
-        method: 'PUT',
-        headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
-        body: JSON.stringify({ schedule: null }),
-      },
-    )
+    const res = await app.request(`/api/admin/backup/targets/${id}/schedule`, {
+      method: 'PUT',
+      headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ schedule: null }),
+    })
     expect(res.status).toBe(200)
     const body = await res.json()
     expect(body.schedule).toBeNull()

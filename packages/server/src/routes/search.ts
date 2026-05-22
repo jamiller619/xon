@@ -1,8 +1,12 @@
-import { type SQL, eq, sql } from 'drizzle-orm'
+import { eq, type SQL, sql } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { getAllowedRatings, libraryAccess, users } from '../db/schema.js'
+import {
+  getAllowedRatings,
+  // libraryAccess,
+  users,
+} from '../db/schema.js'
 import { validate } from '../http/validate.js'
 
 const searchQuerySchema = z.object({
@@ -14,18 +18,18 @@ const searchQuerySchema = z.object({
 
 const PRIVILEGED_ROLES = ['admin', 'manager'] as const
 
-async function getAccessibleLibraryIds(
-  db: LibSQLDatabase,
-  userId: string,
-  role: string,
-): Promise<string[] | null> {
-  if ((PRIVILEGED_ROLES as readonly string[]).includes(role)) return null
-  const rows = await db
-    .select({ libraryId: libraryAccess.libraryId })
-    .from(libraryAccess)
-    .where(eq(libraryAccess.userId, userId))
-  return rows.map((r) => r.libraryId)
-}
+// async function getAccessibleLibraryIds(
+//   db: LibSQLDatabase,
+//   userId: string,
+//   role: string,
+// ): Promise<string[] | null> {
+//   if ((PRIVILEGED_ROLES as readonly string[]).includes(role)) return null
+//   const rows = await db
+//     .select({ libraryId: libraryAccess.libraryId })
+//     .from(libraryAccess)
+//     .where(eq(libraryAccess.userId, userId))
+//   return rows.map((r) => r.libraryId)
+// }
 
 interface SearchRow {
   id: string
@@ -54,57 +58,57 @@ export function makeSearchRouter(db: LibSQLDatabase): Hono {
     const user = c.get('user')
 
     // Get accessible library IDs for this user
-    const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
-    if (accessibleIds !== null && accessibleIds.length === 0) {
-      return c.json({ results: [] })
-    }
+    // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+    // if (accessibleIds !== null && accessibleIds.length === 0) {
+    //   return c.json({ results: [] })
+    // }
 
     // Get user's content rating restriction
-    const userRows = await db
-      .select({ maxContentRating: users.maxContentRating })
-      .from(users)
-      .where(eq(users.id, user.id))
-    const maxRating = userRows[0]?.maxContentRating ?? 'none'
-    const allowedRatings = getAllowedRatings(maxRating)
+    // const userRows = await db
+    //   .select({ maxContentRating: users.maxContentRating })
+    //   .from(users)
+    //   .where(eq(users.id, user.id))
+    // const maxRating = userRows[0]?.maxContentRating ?? 'none'
+    // const allowedRatings = getAllowedRatings(maxRating)
 
     // Build WHERE conditions for the raw SQL query
     const conditions: SQL[] = [sql`media_fts MATCH ${q}`]
 
-    if (accessibleIds !== null) {
-      conditions.push(
-        sql`m.library_id IN (${sql.join(
-          accessibleIds.map((id) => sql`${id}`),
-          sql`, `,
-        )})`,
-      )
-    }
+    // if (accessibleIds !== null) {
+    //   conditions.push(
+    //     sql`m.library_id IN (${sql.join(
+    //       accessibleIds.map((id) => sql`${id}`),
+    //       sql`, `,
+    //     )})`,
+    //   )
+    // }
 
     if (category) {
       conditions.push(sql`m.media_category = ${category}`)
     }
 
-    if (allowedRatings !== null) {
-      if (allowedRatings.length === 0) {
-        conditions.push(sql`m.content_rating IS NULL`)
-      } else {
-        const unratedAllowed = (allowedRatings as string[]).includes('unrated')
-        if (unratedAllowed) {
-          conditions.push(
-            sql`(m.content_rating IS NULL OR m.content_rating IN (${sql.join(
-              allowedRatings.map((r) => sql`${r}`),
-              sql`, `,
-            )}))`,
-          )
-        } else {
-          conditions.push(
-            sql`m.content_rating IN (${sql.join(
-              allowedRatings.map((r) => sql`${r}`),
-              sql`, `,
-            )})`,
-          )
-        }
-      }
-    }
+    // if (allowedRatings !== null) {
+    //   if (allowedRatings.length === 0) {
+    //     conditions.push(sql`m.content_rating IS NULL`)
+    //   } else {
+    //     const unratedAllowed = (allowedRatings as string[]).includes('unrated')
+    //     if (unratedAllowed) {
+    //       conditions.push(
+    //         sql`(m.content_rating IS NULL OR m.content_rating IN (${sql.join(
+    //           allowedRatings.map((r) => sql`${r}`),
+    //           sql`, `,
+    //         )}))`,
+    //       )
+    //     } else {
+    //       conditions.push(
+    //         sql`m.content_rating IN (${sql.join(
+    //           allowedRatings.map((r) => sql`${r}`),
+    //           sql`, `,
+    //         )})`,
+    //       )
+    //     }
+    //   }
+    // }
 
     const whereClause = sql.join(conditions, sql` AND `)
 
@@ -140,9 +144,9 @@ export function makeSearchRouter(db: LibSQLDatabase): Hono {
         : null,
       thumbnailUrls: row.thumbnail_paths
         ? {
-            small: `/api/v1/media/${row.id}/thumbnail?size=small`,
-            medium: `/api/v1/media/${row.id}/thumbnail?size=medium`,
-            large: `/api/v1/media/${row.id}/thumbnail?size=large`,
+            small: `/api/media/${row.id}/thumbnail?size=small`,
+            medium: `/api/media/${row.id}/thumbnail?size=medium`,
+            large: `/api/media/${row.id}/thumbnail?size=large`,
           }
         : null,
     }))

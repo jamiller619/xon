@@ -4,19 +4,21 @@ import { serve } from '@hono/node-server'
 // import { DEFAULT_PORT } from '@xon/shared'
 import { Hono } from 'hono'
 import { createApp } from './app.js'
-import { openDatabase } from './db/db.js'
+import { client, db } from './db/db.ts'
 import { migrateDatabase } from './db/migrate.js'
 // import { serverSettings } from './db/schema.js'
 // import { acquireAcmeCert, loadManualCerts } from './http/httpsManager.js'
 import { makeStaticMiddleware } from './http/staticFiles.js'
 import { createLogger, initLogger, setLogLevel } from './logger.js'
 
-process.loadEnvFile('./.env')
+// process.loadEnvFile('./.env')
 
 const logger = createLogger('server')
 
+import type { AddressInfo } from 'node:net'
 import path from 'node:path'
 import config from './config.ts'
+import { initializeGroups } from './groups.ts'
 import {
   discoverAndActivatePlugins,
   emitPluginEvent,
@@ -25,7 +27,7 @@ import {
 import { createWsServer, WS_PATH } from './routes/ws.js'
 import { startScheduler } from './scanner/scheduler.js'
 
-// import { ensureAdminUser } from './userInit.js'
+// import { initializeUsers } from './users.ts'
 
 // Bundled plugins ship alongside the server package, two levels up from packages/server/
 const BUNDLED_PLUGINS_DIR = path.join(
@@ -46,29 +48,28 @@ process.on('unhandledRejection', (reason: unknown) => {
 })
 
 export async function boot(): Promise<void> {
+  const start = Date.now()
   const port = Number(config.get('network.httpPort'))
-  // const dataDir = process.env.DATA_DIR ?? './data'
   const webClientDir = process.env.WEB_CLIENT_DIR
   const webSsrBundle = process.env.WEB_SSR_BUNDLE
 
   await initLogger()
 
-  logger.log(`Logger initialized at  ${config.get('appdata.logsPath')}`)
+  setLogLevel(config.get('log.level'))
+
+  logger.log(`Logger initialized at: ${config.get('appdata.logsPath')}`)
+  logger.log(`Log level set to: "${config.get('log.level')}"`)
   logger.log('Node.js version:', process.versions)
 
   try {
-    const { client, db } = await openDatabase(
-      path.join(config.get('appdata.dbPath'), 'xon.db'),
-    )
-
     logger.log('Running database migrations')
 
     await migrateDatabase(db)
 
     logger.log('Migrations complete')
 
-    // await ensureAdminUser(db)
-    // logger.log('Admin user verified')
+    logger.log('Initializing groups')
+    await initializeGroups(db)
 
     setPluginDatabase(client)
     logger.log('Plugin database configured')
@@ -87,10 +88,6 @@ export async function boot(): Promise<void> {
     //   .where(eq(serverSettings.id, SERVER_SETTINGS_ID))
     // const httpsConfig = settingsRows[0]
     // logger.log('Server settings loaded')
-
-    // Apply log level
-    setLogLevel(config.get('log.level'))
-    logger.log(`Log level set to ${config.get('log.level')}`)
 
     const { handleUpgrade } = createWsServer()
     logger.log('WebSocket server created')
@@ -166,11 +163,17 @@ export async function boot(): Promise<void> {
           }
         : { fetch: app.fetch, port }
 
-    const server = serve(serveOptions, (info) => {
+    function handleServerStart(info: AddressInfo) {
       const protocol = tlsCert ? 'https' : 'http'
-      logger.log(`Xon server listening on ${protocol}://0.0.0.0:${info.port}`)
+
+      logger.log(`Xon Server listening on ${protocol}://0.0.0.0:${info.port}`)
+
       emitPluginEvent('server:boot', {})
-    })
+
+      logger.log(`Xon Server successfully started in ${Date.now() - start}ms`)
+    }
+
+    const server = serve(serveOptions, handleServerStart)
 
     server.on('upgrade', (req, socket, head) => {
       if (req.url === WS_PATH) {

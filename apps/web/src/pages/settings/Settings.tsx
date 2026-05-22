@@ -57,7 +57,7 @@ export default function Settings() {
   const [passwordSaving, setPasswordSaving] = useState(false)
 
   const loadProfile = useCallback(() => {
-    apiFetch('/api/v1/users/me')
+    apiFetch('/api/users/me')
       .then((r) => r.json())
       .then((data: unknown) => {
         const d = data as UserProfile
@@ -73,7 +73,7 @@ export default function Settings() {
   }, [])
 
   useEffect(() => {
-    apiFetch('/api/v1/themes')
+    apiFetch('/api/themes')
       .then((r) => r.json() as Promise<ThemeInfo[]>)
       .then(setThemes)
       .catch(() => {})
@@ -85,7 +85,7 @@ export default function Settings() {
     setProfileSaving(true)
     setProfileMsg(null)
     try {
-      const res = await apiFetch('/api/v1/users/me', {
+      const res = await apiFetch('/api/users/me', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -118,7 +118,7 @@ export default function Settings() {
     setPasswordSaving(true)
     setPasswordMsg(null)
     try {
-      const res = await apiFetch('/api/v1/users/me/password', {
+      const res = await apiFetch('/api/users/me/password', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ currentPassword, newPassword }),

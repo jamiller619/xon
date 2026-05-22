@@ -1,31 +1,36 @@
+import { UserRole } from '@xon/shared'
 import { sql } from 'drizzle-orm'
 import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import { libraries } from './libraries.ts'
+import { keys, timestamps } from './shared.ts'
 
 export const users = sqliteTable('users', {
-  id: text('id').primaryKey(),
+  // id: text('id').primaryKey(),
+  ...keys,
+  ...timestamps,
   username: text('username').notNull().unique(),
   email: text('email').notNull().unique(),
-  displayName: text('display_name').notNull(),
+  // displayName: text('display_name').notNull(),
   avatarUrl: text('avatar_url'),
   passwordHash: text('password_hash').notNull(),
-  role: text('role', { enum: ['admin', 'manager', 'user', 'guest'] })
+  role: text('role', { enum: ['admin', 'user', 'guest'] })
+    .$type<UserRole>()
     .notNull()
-    .default('user'),
-  maxContentRating: text('max_content_rating', {
-    enum: ['G', 'PG', 'PG-13', 'R', 'unrated', 'none'],
-  })
-    .notNull()
-    .default('none'),
-  hideDRMItems: integer('hide_drm_items', { mode: 'boolean' })
-    .notNull()
-    .default(false),
-  createdAt: integer('created_at', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`(unixepoch())`),
-  updatedAt: integer('updated_at', { mode: 'timestamp' })
-    .notNull()
-    .default(sql`(unixepoch())`),
+    .default(UserRole.User),
+  // maxContentRating: text('max_content_rating', {
+  //   enum: ['G', 'PG', 'PG-13', 'R', 'unrated', 'none'],
+  // })
+  // .notNull()
+  // .default('none'),
+  // hideDRMItems: integer('hide_drm_items', { mode: 'boolean' })
+  //   .notNull()
+  //   .default(false),
+  // createdAt: integer('created_at', { mode: 'timestamp' })
+  //   .notNull()
+  //   .default(sql`(unixepoch())`),
+  // updatedAt: integer('updated_at', { mode: 'timestamp' })
+  //   .notNull()
+  //   .default(sql`(unixepoch())`),
 })
 
 export const refreshTokens = sqliteTable('refresh_tokens', {

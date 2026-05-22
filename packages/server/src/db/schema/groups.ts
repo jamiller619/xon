@@ -1,4 +1,4 @@
-import { sql } from 'drizzle-orm'
+import type { GroupType } from '@xon/shared'
 import {
   index,
   integer,
@@ -7,36 +7,26 @@ import {
   text,
 } from 'drizzle-orm/sqlite-core'
 import { mediaItems } from './media.ts'
-
-export const GROUP_TYPES = [
-  'series',
-  'season',
-  'album',
-  'artist',
-  'book-series',
-  'collection',
-  'playlist',
-  'shelf',
-  'folder',
-] as const
-export type GroupType = (typeof GROUP_TYPES)[number]
+import { keys, timestamps } from './shared.ts'
+import { users } from './users.ts'
 
 export const groups = sqliteTable(
   'groups',
   {
-    id: text('id').primaryKey(),
-    type: text('type').notNull(),
+    ...keys,
+    ...timestamps,
+    userId: text('user_id')
+      .notNull()
+      .references(() => users.id, { onDelete: 'cascade' }),
+    type: text('type').$type<GroupType>().notNull(),
     title: text('title').notNull(),
     parentGroupId: text('parent_group_id'),
     metadata: text('metadata').notNull().default('{}'),
-    createdAt: integer('created_at', { mode: 'timestamp' })
-      .notNull()
-      .default(sql`(unixepoch())`),
   },
   (table) => [index('groups_parent_group_id_idx').on(table.parentGroupId)],
 )
 
-export const groupMembers = sqliteTable(
+export const groupItems = sqliteTable(
   'group_members',
   {
     groupId: text('group_id')
@@ -52,5 +42,5 @@ export const groupMembers = sqliteTable(
 
 export type Group = typeof groups.$inferSelect
 export type NewGroup = typeof groups.$inferInsert
-export type GroupMember = typeof groupMembers.$inferSelect
-export type NewGroupMember = typeof groupMembers.$inferInsert
+export type GroupMember = typeof groupItems.$inferSelect
+export type NewGroupMember = typeof groupItems.$inferInsert

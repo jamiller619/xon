@@ -27,7 +27,7 @@ describe('Scan API', () => {
     app = createApp(db)
 
     // Create a library for scan tests
-    const res = await app.request('/api/v1/libraries', {
+    const res = await app.request('/api/libraries', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: AUTH },
       body: JSON.stringify({ name: 'Scan Test Library' }),
@@ -42,11 +42,11 @@ describe('Scan API', () => {
     client.close()
   })
 
-  describe('POST /api/v1/libraries/:id/scan', () => {
+  describe('POST /api/libraries/:id/scan', () => {
     it('returns 202 with status started when scan begins', async () => {
       mockScanLibrary.mockReturnValue(new Promise(() => {}))
 
-      const res = await app.request(`/api/v1/libraries/${libraryId}/scan`, {
+      const res = await app.request(`/api/libraries/${libraryId}/scan`, {
         method: 'POST',
         headers: { Authorization: AUTH },
       })
@@ -58,12 +58,12 @@ describe('Scan API', () => {
     it('returns 409 with already_running if scan is in progress', async () => {
       mockScanLibrary.mockReturnValue(new Promise(() => {}))
 
-      await app.request(`/api/v1/libraries/${libraryId}/scan`, {
+      await app.request(`/api/libraries/${libraryId}/scan`, {
         method: 'POST',
         headers: { Authorization: AUTH },
       })
 
-      const res = await app.request(`/api/v1/libraries/${libraryId}/scan`, {
+      const res = await app.request(`/api/libraries/${libraryId}/scan`, {
         method: 'POST',
         headers: { Authorization: AUTH },
       })
@@ -82,7 +82,7 @@ describe('Scan API', () => {
       }
       mockScanLibrary.mockResolvedValue(summary)
 
-      await app.request(`/api/v1/libraries/${libraryId}/scan`, {
+      await app.request(`/api/libraries/${libraryId}/scan`, {
         method: 'POST',
         headers: { Authorization: AUTH },
       })
@@ -90,7 +90,7 @@ describe('Scan API', () => {
       await Promise.resolve()
       await Promise.resolve()
 
-      const res = await app.request(`/api/v1/libraries/${libraryId}/scan`, {
+      const res = await app.request(`/api/libraries/${libraryId}/scan`, {
         method: 'POST',
         headers: { Authorization: AUTH },
       })
@@ -100,14 +100,11 @@ describe('Scan API', () => {
     })
   })
 
-  describe('GET /api/v1/libraries/:id/scan/status', () => {
+  describe('GET /api/libraries/:id/scan/status', () => {
     it('returns idle when no scan has been triggered', async () => {
-      const res = await app.request(
-        `/api/v1/libraries/${libraryId}/scan/status`,
-        {
-          headers: { Authorization: AUTH },
-        },
-      )
+      const res = await app.request(`/api/libraries/${libraryId}/scan/status`, {
+        headers: { Authorization: AUTH },
+      })
       expect(res.status).toBe(200)
       const body = await res.json()
       expect(body.status).toBe('idle')
@@ -116,17 +113,14 @@ describe('Scan API', () => {
     it('returns running status while scan is in progress', async () => {
       mockScanLibrary.mockReturnValue(new Promise(() => {}))
 
-      await app.request(`/api/v1/libraries/${libraryId}/scan`, {
+      await app.request(`/api/libraries/${libraryId}/scan`, {
         method: 'POST',
         headers: { Authorization: AUTH },
       })
 
-      const res = await app.request(
-        `/api/v1/libraries/${libraryId}/scan/status`,
-        {
-          headers: { Authorization: AUTH },
-        },
-      )
+      const res = await app.request(`/api/libraries/${libraryId}/scan/status`, {
+        headers: { Authorization: AUTH },
+      })
       expect(res.status).toBe(200)
       const body = await res.json()
       expect(body.status).toBe('running')
@@ -146,7 +140,7 @@ describe('Scan API', () => {
       }
       mockScanLibrary.mockResolvedValue(summary)
 
-      await app.request(`/api/v1/libraries/${libraryId}/scan`, {
+      await app.request(`/api/libraries/${libraryId}/scan`, {
         method: 'POST',
         headers: { Authorization: AUTH },
       })
@@ -154,12 +148,9 @@ describe('Scan API', () => {
       await Promise.resolve()
       await Promise.resolve()
 
-      const res = await app.request(
-        `/api/v1/libraries/${libraryId}/scan/status`,
-        {
-          headers: { Authorization: AUTH },
-        },
-      )
+      const res = await app.request(`/api/libraries/${libraryId}/scan/status`, {
+        headers: { Authorization: AUTH },
+      })
       expect(res.status).toBe(200)
       const body = await res.json()
       expect(body.status).toBe('completed')
@@ -169,19 +160,16 @@ describe('Scan API', () => {
     it('returns failed status with error message when scan throws', async () => {
       mockScanLibrary.mockRejectedValue(new Error('Library not found: bad-id'))
 
-      await app.request(`/api/v1/libraries/${libraryId}/scan`, {
+      await app.request(`/api/libraries/${libraryId}/scan`, {
         method: 'POST',
         headers: { Authorization: AUTH },
       })
       await Promise.resolve()
       await Promise.resolve()
 
-      const res = await app.request(
-        `/api/v1/libraries/${libraryId}/scan/status`,
-        {
-          headers: { Authorization: AUTH },
-        },
-      )
+      const res = await app.request(`/api/libraries/${libraryId}/scan/status`, {
+        headers: { Authorization: AUTH },
+      })
       expect(res.status).toBe(200)
       const body = await res.json()
       expect(body.status).toBe('failed')
@@ -189,10 +177,10 @@ describe('Scan API', () => {
     })
   })
 
-  describe('PUT /api/v1/libraries/:id/scan/schedule', () => {
+  describe('PUT /api/libraries/:id/scan/schedule', () => {
     it('sets a valid cron schedule on the library', async () => {
       const res = await app.request(
-        `/api/v1/libraries/${libraryId}/scan/schedule`,
+        `/api/libraries/${libraryId}/scan/schedule`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', Authorization: AUTH },
@@ -206,7 +194,7 @@ describe('Scan API', () => {
 
     it('clears a schedule by setting null', async () => {
       // First set a schedule
-      await app.request(`/api/v1/libraries/${libraryId}/scan/schedule`, {
+      await app.request(`/api/libraries/${libraryId}/scan/schedule`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json', Authorization: AUTH },
         body: JSON.stringify({ scanSchedule: '0 */6 * * *' }),
@@ -214,7 +202,7 @@ describe('Scan API', () => {
 
       // Then clear it
       const res = await app.request(
-        `/api/v1/libraries/${libraryId}/scan/schedule`,
+        `/api/libraries/${libraryId}/scan/schedule`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', Authorization: AUTH },
@@ -228,7 +216,7 @@ describe('Scan API', () => {
 
     it('returns 400 for an unsupported cron expression', async () => {
       const res = await app.request(
-        `/api/v1/libraries/${libraryId}/scan/schedule`,
+        `/api/libraries/${libraryId}/scan/schedule`,
         {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json', Authorization: AUTH },
@@ -239,14 +227,11 @@ describe('Scan API', () => {
     })
 
     it('returns 404 for a non-existent library', async () => {
-      const res = await app.request(
-        '/api/v1/libraries/no-such-id/scan/schedule',
-        {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json', Authorization: AUTH },
-          body: JSON.stringify({ scanSchedule: '0 */6 * * *' }),
-        },
-      )
+      const res = await app.request('/api/libraries/no-such-id/scan/schedule', {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json', Authorization: AUTH },
+        body: JSON.stringify({ scanSchedule: '0 */6 * * *' }),
+      })
       expect(res.status).toBe(404)
     })
   })

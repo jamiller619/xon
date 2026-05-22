@@ -92,9 +92,9 @@ describe('Matching API', () => {
     return id
   }
 
-  describe('GET /api/v1/matching/pending', () => {
+  describe('GET /api/matching/pending', () => {
     it('returns empty items list when queue is empty', async () => {
-      const res = await app.request('/api/v1/matching/pending', {
+      const res = await app.request('/api/matching/pending', {
         headers: { Authorization: AUTH_ADMIN },
       })
       expect(res.status).toBe(200)
@@ -104,7 +104,7 @@ describe('Matching API', () => {
 
     it('returns pending queue items with media item info', async () => {
       await insertQueueItem()
-      const res = await app.request('/api/v1/matching/pending', {
+      const res = await app.request('/api/matching/pending', {
         headers: { Authorization: AUTH_ADMIN },
       })
       expect(res.status).toBe(200)
@@ -119,7 +119,7 @@ describe('Matching API', () => {
     it('does not return confirmed or rejected items', async () => {
       await insertQueueItem({ status: 'confirmed' })
       await insertQueueItem({ status: 'rejected' })
-      const res = await app.request('/api/v1/matching/pending', {
+      const res = await app.request('/api/matching/pending', {
         headers: { Authorization: AUTH_ADMIN },
       })
       expect(res.status).toBe(200)
@@ -132,12 +132,9 @@ describe('Matching API', () => {
       await insertQueueItem({ id: 'q2' })
       await insertQueueItem({ id: 'q3' })
 
-      const res = await app.request(
-        '/api/v1/matching/pending?limit=2&offset=1',
-        {
-          headers: { Authorization: AUTH_ADMIN },
-        },
-      )
+      const res = await app.request('/api/matching/pending?limit=2&offset=1', {
+        headers: { Authorization: AUTH_ADMIN },
+      })
       expect(res.status).toBe(200)
       const body = await res.json()
       expect(body.items).toHaveLength(2)
@@ -147,7 +144,7 @@ describe('Matching API', () => {
 
     it('parses suggestedMetadata as JSON object', async () => {
       await insertQueueItem()
-      const res = await app.request('/api/v1/matching/pending', {
+      const res = await app.request('/api/matching/pending', {
         headers: { Authorization: AUTH_ADMIN },
       })
       const body = await res.json()
@@ -155,16 +152,16 @@ describe('Matching API', () => {
     })
 
     it('returns 401 when not authenticated', async () => {
-      const res = await app.request('/api/v1/matching/pending')
+      const res = await app.request('/api/matching/pending')
       expect(res.status).toBe(401)
     })
   })
 
-  describe('PUT /api/v1/matching/:id/confirm', () => {
+  describe('PUT /api/matching/:id/confirm', () => {
     it('confirms a pending queue item and updates media item title', async () => {
       const qId = await insertQueueItem({ suggestedTitle: 'Inception' })
 
-      const res = await app.request(`/api/v1/matching/${qId}/confirm`, {
+      const res = await app.request(`/api/matching/${qId}/confirm`, {
         method: 'PUT',
         headers: { Authorization: AUTH_ADMIN },
       })
@@ -188,7 +185,7 @@ describe('Matching API', () => {
         suggestedTitle: 'Inception',
       })
 
-      await app.request(`/api/v1/matching/${qId}/confirm`, {
+      await app.request(`/api/matching/${qId}/confirm`, {
         method: 'PUT',
         headers: { Authorization: AUTH_ADMIN },
       })
@@ -204,7 +201,7 @@ describe('Matching API', () => {
     })
 
     it('returns 404 for non-existent queue item', async () => {
-      const res = await app.request('/api/v1/matching/does-not-exist/confirm', {
+      const res = await app.request('/api/matching/does-not-exist/confirm', {
         method: 'PUT',
         headers: { Authorization: AUTH_ADMIN },
       })
@@ -213,7 +210,7 @@ describe('Matching API', () => {
 
     it('returns 409 when confirming an already-confirmed item', async () => {
       const qId = await insertQueueItem({ status: 'confirmed' })
-      const res = await app.request(`/api/v1/matching/${qId}/confirm`, {
+      const res = await app.request(`/api/matching/${qId}/confirm`, {
         method: 'PUT',
         headers: { Authorization: AUTH_ADMIN },
       })
@@ -222,18 +219,18 @@ describe('Matching API', () => {
 
     it('returns 401 when not authenticated', async () => {
       const qId = await insertQueueItem()
-      const res = await app.request(`/api/v1/matching/${qId}/confirm`, {
+      const res = await app.request(`/api/matching/${qId}/confirm`, {
         method: 'PUT',
       })
       expect(res.status).toBe(401)
     })
   })
 
-  describe('PUT /api/v1/matching/:id/reject', () => {
+  describe('PUT /api/matching/:id/reject', () => {
     it('rejects a pending queue item', async () => {
       const qId = await insertQueueItem()
 
-      const res = await app.request(`/api/v1/matching/${qId}/reject`, {
+      const res = await app.request(`/api/matching/${qId}/reject`, {
         method: 'PUT',
         headers: { Authorization: AUTH_ADMIN },
       })
@@ -243,7 +240,7 @@ describe('Matching API', () => {
     })
 
     it('returns 404 for non-existent queue item', async () => {
-      const res = await app.request('/api/v1/matching/does-not-exist/reject', {
+      const res = await app.request('/api/matching/does-not-exist/reject', {
         method: 'PUT',
         headers: { Authorization: AUTH_ADMIN },
       })
@@ -252,7 +249,7 @@ describe('Matching API', () => {
 
     it('returns 409 when rejecting an already-rejected item', async () => {
       const qId = await insertQueueItem({ status: 'rejected' })
-      const res = await app.request(`/api/v1/matching/${qId}/reject`, {
+      const res = await app.request(`/api/matching/${qId}/reject`, {
         method: 'PUT',
         headers: { Authorization: AUTH_ADMIN },
       })
@@ -262,7 +259,7 @@ describe('Matching API', () => {
     it('does not update media item title on reject', async () => {
       const qId = await insertQueueItem({ suggestedTitle: 'Should Not Apply' })
 
-      await app.request(`/api/v1/matching/${qId}/reject`, {
+      await app.request(`/api/matching/${qId}/reject`, {
         method: 'PUT',
         headers: { Authorization: AUTH_ADMIN },
       })
@@ -273,7 +270,7 @@ describe('Matching API', () => {
 
     it('returns 401 when not authenticated', async () => {
       const qId = await insertQueueItem()
-      const res = await app.request(`/api/v1/matching/${qId}/reject`, {
+      const res = await app.request(`/api/matching/${qId}/reject`, {
         method: 'PUT',
       })
       expect(res.status).toBe(401)
@@ -284,7 +281,7 @@ describe('Matching API', () => {
     it('regular user cannot see items from inaccessible libraries', async () => {
       await insertQueueItem()
       // user-id has no library access grants
-      const res = await app.request('/api/v1/matching/pending', {
+      const res = await app.request('/api/matching/pending', {
         headers: { Authorization: AUTH_USER },
       })
       expect(res.status).toBe(200)

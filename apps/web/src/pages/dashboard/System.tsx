@@ -14,7 +14,7 @@ export default function System({ className, ...props }: SystemProps) {
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    const eventSource = new EventSource('/api/v1/stats')
+    const eventSource = new EventSource('/api/stats')
 
     eventSource.onmessage = (event) => {
       const parsedData = JSON.parse(event.data)
@@ -52,14 +52,14 @@ export default function System({ className, ...props }: SystemProps) {
                 })}
             </dd>
           </div>
-          {data.network?.map((n) => (
+          {/* {data.network?.map((n) => (
             <div key={n.iface} className={styles.row}>
               <dt>{n.iface}</dt>
               <dd>
                 {n.rx} / {n.rxSec} / {n.tx} / {n.txSec}
               </dd>
             </div>
-          ))}
+          ))} */}
           <div>
             <div className={styles.row}>
               <dt>CPU Usage</dt>

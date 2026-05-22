@@ -1,5 +1,5 @@
-import { BasePlugin } from '@xon/plugin-sdk'
 import type { PluginContext, PluginManifest } from '@xon/plugin-sdk'
+import { BasePlugin } from '@xon/plugin-sdk'
 import { MediaCategory } from '@xon/shared'
 import { parseBookPath } from './bookParser.js'
 import { OpenLibraryClient } from './openLibraryClient.js'
@@ -50,7 +50,7 @@ export class OpenLibraryMetadataPlugin extends BasePlugin {
       await this.enrichMedia(mediaId, filePath)
     })
 
-    // Route: GET /api/v1/plugins/openlibrary-metadata/metadata/:mediaId
+    // Route: GET /api/plugins/openlibrary-metadata/metadata/:mediaId
     context.registerRoute({
       method: 'GET',
       path: '/metadata/:mediaId',

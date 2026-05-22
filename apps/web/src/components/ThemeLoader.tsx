@@ -22,7 +22,7 @@ export default function ThemeLoader() {
     let cancelled = false
     const injected: HTMLElement[] = []
 
-    apiFetch('/api/v1/themes')
+    apiFetch('/api/themes')
       .then((r) => r.json() as Promise<ThemeInfo[]>)
       .then((themes) => {
         if (cancelled) return

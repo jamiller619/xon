@@ -72,7 +72,7 @@ export default function AdminUsers() {
   const [confirmDeleteId, setConfirmDeleteId] = useState<string | null>(null)
 
   useEffect(() => {
-    apiFetch('/api/v1/admin/users')
+    apiFetch('/api/admin/users')
       .then((r) => r.json() as Promise<UserInfo[]>)
       .then(setUsers)
       .catch(() => {})
@@ -108,7 +108,7 @@ export default function AdminUsers() {
     }
     if (editForm.password) body.password = editForm.password
     try {
-      const res = await apiFetch(`/api/v1/admin/users/${editingId}`, {
+      const res = await apiFetch(`/api/admin/users/${editingId}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(body),
@@ -130,7 +130,7 @@ export default function AdminUsers() {
   async function confirmDelete(id: string) {
     setDeletingId(id)
     try {
-      const res = await apiFetch(`/api/v1/admin/users/${id}`, {
+      const res = await apiFetch(`/api/admin/users/${id}`, {
         method: 'DELETE',
       })
       if (res.ok) {
@@ -148,7 +148,7 @@ export default function AdminUsers() {
     setCreating(true)
     setCreateError('')
     try {
-      const res = await apiFetch('/api/v1/admin/users', {
+      const res = await apiFetch('/api/admin/users', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(createForm),

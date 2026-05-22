@@ -16,7 +16,7 @@ export default function Setup() {
 
   // Check if setup already complete — redirect to login
   useEffect(() => {
-    fetch('/api/v1/auth/setup-status')
+    fetch('/api/auth/setup-status')
       .then((r) => r.json())
       .then((data: { setupComplete: boolean }) => {
         if (data.setupComplete) {

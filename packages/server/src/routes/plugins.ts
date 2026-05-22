@@ -43,7 +43,7 @@ export function makePluginsRouter(): Hono {
 
     // Extract the file path after /assets/
     const url = new URL(c.req.url)
-    const prefix = `/api/v1/plugins/${pluginId}/assets/`
+    const prefix = `/api/plugins/${pluginId}/assets/`
     const filePath = url.pathname.slice(prefix.length)
 
     if (!filePath) {

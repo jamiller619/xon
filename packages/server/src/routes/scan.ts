@@ -1,3 +1,4 @@
+import { UserRole } from '@xon/shared'
 import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
@@ -123,7 +124,7 @@ export function makeScanRouter(db: LibSQLDatabase): Hono {
   const router = new Hono()
 
   // POST / — trigger scan (mounted at /:libraryId/scan) (manager+)
-  router.post('/', requireRole('manager'), (c) => {
+  router.post('/', requireRole(UserRole.User), (c) => {
     const libraryId = c.req.param('libraryId') as string
     const started = triggerLibraryScan(db, libraryId)
     if (!started) {
@@ -153,7 +154,7 @@ export function makeScanRouter(db: LibSQLDatabase): Hono {
   // PUT /schedule — update scan schedule for a library (manager+)
   router.put(
     '/schedule',
-    requireRole('manager'),
+    requireRole(UserRole.User),
     validate('json', scheduleSchema),
     async (c) => {
       const libraryId = c.req.param('libraryId') as string
@@ -181,7 +182,7 @@ export function makeScanRouter(db: LibSQLDatabase): Hono {
   // PUT /watch — enable/disable filesystem watch for a library (manager+)
   router.put(
     '/watch',
-    requireRole('manager'),
+    requireRole(UserRole.User),
     validate('json', watchSchema),
     async (c) => {
       const libraryId = c.req.param('libraryId') as string

@@ -28,7 +28,7 @@ describe('Admin Settings API', () => {
   // ---------------------------------------------------------------------------
 
   it('GET /admin/settings — returns defaults', async () => {
-    const res = await app.request('/api/v1/admin/settings', {
+    const res = await app.request('/api/admin/settings', {
       headers: { Authorization: AUTH },
     })
     expect(res.status).toBe(200)
@@ -42,7 +42,7 @@ describe('Admin Settings API', () => {
 
   it('GET /admin/settings — requires admin auth', async () => {
     const userAuth = `Bearer ${await signAccessToken('user-id', 'user', 'user')}`
-    const res = await app.request('/api/v1/admin/settings', {
+    const res = await app.request('/api/admin/settings', {
       headers: { Authorization: userAuth },
     })
     expect(res.status).toBe(403)
@@ -53,7 +53,7 @@ describe('Admin Settings API', () => {
   // ---------------------------------------------------------------------------
 
   it('PUT /admin/settings — updates port and returns requiresRestart=true', async () => {
-    const res = await app.request('/api/v1/admin/settings', {
+    const res = await app.request('/api/admin/settings', {
       method: 'PUT',
       headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
       body: JSON.stringify({ serverPort: 8080 }),
@@ -65,7 +65,7 @@ describe('Admin Settings API', () => {
   })
 
   it('PUT /admin/settings — updates dataDirectory and returns requiresRestart=true', async () => {
-    const res = await app.request('/api/v1/admin/settings', {
+    const res = await app.request('/api/admin/settings', {
       method: 'PUT',
       headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
       body: JSON.stringify({ dataDirectory: '/mnt/data/xon' }),
@@ -77,7 +77,7 @@ describe('Admin Settings API', () => {
   })
 
   it('PUT /admin/settings — updates scan schedule (no restart)', async () => {
-    const res = await app.request('/api/v1/admin/settings', {
+    const res = await app.request('/api/admin/settings', {
       method: 'PUT',
       headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
       body: JSON.stringify({ defaultScanSchedule: '0 2 * * *' }),
@@ -89,12 +89,12 @@ describe('Admin Settings API', () => {
   })
 
   it('PUT /admin/settings — clears scan schedule with null', async () => {
-    await app.request('/api/v1/admin/settings', {
+    await app.request('/api/admin/settings', {
       method: 'PUT',
       headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
       body: JSON.stringify({ defaultScanSchedule: '0 2 * * *' }),
     })
-    const res = await app.request('/api/v1/admin/settings', {
+    const res = await app.request('/api/admin/settings', {
       method: 'PUT',
       headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
       body: JSON.stringify({ defaultScanSchedule: null }),
@@ -105,7 +105,7 @@ describe('Admin Settings API', () => {
   })
 
   it('PUT /admin/settings — updates thumbnail sizes (no restart)', async () => {
-    const res = await app.request('/api/v1/admin/settings', {
+    const res = await app.request('/api/admin/settings', {
       method: 'PUT',
       headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
       body: JSON.stringify({ thumbnailSizes: ['small', 'medium', 'large'] }),
@@ -117,7 +117,7 @@ describe('Admin Settings API', () => {
   })
 
   it('PUT /admin/settings — same port value does not set requiresRestart', async () => {
-    const res = await app.request('/api/v1/admin/settings', {
+    const res = await app.request('/api/admin/settings', {
       method: 'PUT',
       headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
       body: JSON.stringify({ serverPort: 32400 }),
@@ -128,7 +128,7 @@ describe('Admin Settings API', () => {
   })
 
   it('PUT /admin/settings — rejects invalid port', async () => {
-    const res = await app.request('/api/v1/admin/settings', {
+    const res = await app.request('/api/admin/settings', {
       method: 'PUT',
       headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
       body: JSON.stringify({ serverPort: 99999 }),

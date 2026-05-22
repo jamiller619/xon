@@ -36,9 +36,9 @@ describe('Users API', () => {
 
   // ─── GET /users/me ───────────────────────────────────────────────────────────
 
-  describe('GET /api/v1/users/me', () => {
+  describe('GET /api/users/me', () => {
     it('returns the current user profile', async () => {
-      const res = await app.request('/api/v1/users/me', {
+      const res = await app.request('/api/users/me', {
         headers: { Authorization: AUTH },
       })
       expect(res.status).toBe(200)
@@ -54,16 +54,16 @@ describe('Users API', () => {
     })
 
     it('returns 401 without auth', async () => {
-      const res = await app.request('/api/v1/users/me')
+      const res = await app.request('/api/users/me')
       expect(res.status).toBe(401)
     })
   })
 
   // ─── PUT /users/me ───────────────────────────────────────────────────────────
 
-  describe('PUT /api/v1/users/me', () => {
+  describe('PUT /api/users/me', () => {
     it('updates display name', async () => {
-      const res = await app.request('/api/v1/users/me', {
+      const res = await app.request('/api/users/me', {
         method: 'PUT',
         headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({ displayName: 'New Name' }),
@@ -74,7 +74,7 @@ describe('Users API', () => {
     })
 
     it('updates email', async () => {
-      const res = await app.request('/api/v1/users/me', {
+      const res = await app.request('/api/users/me', {
         method: 'PUT',
         headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: 'new@example.com' }),
@@ -85,7 +85,7 @@ describe('Users API', () => {
     })
 
     it('updates avatarUrl', async () => {
-      const res = await app.request('/api/v1/users/me', {
+      const res = await app.request('/api/users/me', {
         method: 'PUT',
         headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({ avatarUrl: 'https://example.com/avatar.png' }),
@@ -96,7 +96,7 @@ describe('Users API', () => {
     })
 
     it('updates maxContentRating and hideDRMItems', async () => {
-      const res = await app.request('/api/v1/users/me', {
+      const res = await app.request('/api/users/me', {
         method: 'PUT',
         headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({ maxContentRating: 'PG-13', hideDRMItems: true }),
@@ -108,7 +108,7 @@ describe('Users API', () => {
     })
 
     it('returns 400 for invalid email', async () => {
-      const res = await app.request('/api/v1/users/me', {
+      const res = await app.request('/api/users/me', {
         method: 'PUT',
         headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({ email: 'not-an-email' }),
@@ -117,7 +117,7 @@ describe('Users API', () => {
     })
 
     it('returns 401 without auth', async () => {
-      const res = await app.request('/api/v1/users/me', {
+      const res = await app.request('/api/users/me', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ displayName: 'x' }),
@@ -128,9 +128,9 @@ describe('Users API', () => {
 
   // ─── PUT /users/me/password ──────────────────────────────────────────────────
 
-  describe('PUT /api/v1/users/me/password', () => {
+  describe('PUT /api/users/me/password', () => {
     it('changes password with correct current password', async () => {
-      const res = await app.request('/api/v1/users/me/password', {
+      const res = await app.request('/api/users/me/password', {
         method: 'PUT',
         headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -144,7 +144,7 @@ describe('Users API', () => {
     })
 
     it('returns 400 for wrong current password', async () => {
-      const res = await app.request('/api/v1/users/me/password', {
+      const res = await app.request('/api/users/me/password', {
         method: 'PUT',
         headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -158,7 +158,7 @@ describe('Users API', () => {
     })
 
     it('returns 400 if new password too short', async () => {
-      const res = await app.request('/api/v1/users/me/password', {
+      const res = await app.request('/api/users/me/password', {
         method: 'PUT',
         headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -170,7 +170,7 @@ describe('Users API', () => {
     })
 
     it('returns 401 without auth', async () => {
-      const res = await app.request('/api/v1/users/me/password', {
+      const res = await app.request('/api/users/me/password', {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

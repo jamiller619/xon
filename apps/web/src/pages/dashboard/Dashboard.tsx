@@ -63,7 +63,7 @@ export default function Dashboard() {
                 <span
                   className={styles.libraryThumbnailBackdrop}
                   style={{
-                    backgroundImage: `url(/api/v1/libraries/${library.id}/thumbnail)`,
+                    backgroundImage: `url(/api/libraries/${library.id}/thumbnail)`,
                   }}
                 />
                 <span className={styles.libraryThumbnailTitle}>

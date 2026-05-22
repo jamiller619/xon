@@ -18,7 +18,7 @@ export default function AdminPlugins() {
   const [toggling, setToggling] = useState<Set<string>>(new Set())
 
   useEffect(() => {
-    apiFetch('/api/v1/admin/plugins')
+    apiFetch('/api/admin/plugins')
       .then((r) => r.json() as Promise<PluginInfo[]>)
       .then(setPlugins)
       .catch(() => {})
@@ -27,7 +27,7 @@ export default function AdminPlugins() {
 
   function toggle(id: string) {
     setToggling((prev) => new Set([...prev, id]))
-    apiFetch(`/api/v1/admin/plugins/${id}/toggle`, { method: 'PUT' })
+    apiFetch(`/api/admin/plugins/${id}/toggle`, { method: 'PUT' })
       .then((r) => r.json() as Promise<{ id: string; status: string }>)
       .then((updated) => {
         setPlugins((prev) =>

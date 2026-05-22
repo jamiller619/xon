@@ -58,9 +58,9 @@ describe('Admin Library Access API', () => {
 
   // ─── GET /admin/libraries/:libraryId/access ─────────────────────────────────
 
-  describe('GET /api/v1/admin/libraries/:libraryId/access', () => {
+  describe('GET /api/admin/libraries/:libraryId/access', () => {
     it('returns 200 with empty list when no grants', async () => {
-      const res = await app.request('/api/v1/admin/libraries/lib-1/access', {
+      const res = await app.request('/api/admin/libraries/lib-1/access', {
         headers: { Authorization: ADMIN_AUTH },
       })
       expect(res.status).toBe(200)
@@ -76,7 +76,7 @@ describe('Admin Library Access API', () => {
         grantedBy: 'admin-1',
       })
 
-      const res = await app.request('/api/v1/admin/libraries/lib-1/access', {
+      const res = await app.request('/api/admin/libraries/lib-1/access', {
         headers: { Authorization: ADMIN_AUTH },
       })
       expect(res.status).toBe(200)
@@ -90,17 +90,14 @@ describe('Admin Library Access API', () => {
     })
 
     it('returns 404 for unknown library', async () => {
-      const res = await app.request(
-        '/api/v1/admin/libraries/nonexistent/access',
-        {
-          headers: { Authorization: ADMIN_AUTH },
-        },
-      )
+      const res = await app.request('/api/admin/libraries/nonexistent/access', {
+        headers: { Authorization: ADMIN_AUTH },
+      })
       expect(res.status).toBe(404)
     })
 
     it('returns 403 for non-admin', async () => {
-      const res = await app.request('/api/v1/admin/libraries/lib-1/access', {
+      const res = await app.request('/api/admin/libraries/lib-1/access', {
         headers: { Authorization: USER_AUTH },
       })
       expect(res.status).toBe(403)
@@ -109,9 +106,9 @@ describe('Admin Library Access API', () => {
 
   // ─── POST /admin/libraries/:libraryId/access ────────────────────────────────
 
-  describe('POST /api/v1/admin/libraries/:libraryId/access', () => {
+  describe('POST /api/admin/libraries/:libraryId/access', () => {
     it('grants access and returns 201', async () => {
-      const res = await app.request('/api/v1/admin/libraries/lib-1/access', {
+      const res = await app.request('/api/admin/libraries/lib-1/access', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -134,7 +131,7 @@ describe('Admin Library Access API', () => {
     })
 
     it('is idempotent — duplicate grant does not error', async () => {
-      await app.request('/api/v1/admin/libraries/lib-1/access', {
+      await app.request('/api/admin/libraries/lib-1/access', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -143,7 +140,7 @@ describe('Admin Library Access API', () => {
         body: JSON.stringify({ userId: 'user-1' }),
       })
 
-      const res = await app.request('/api/v1/admin/libraries/lib-1/access', {
+      const res = await app.request('/api/admin/libraries/lib-1/access', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -157,22 +154,19 @@ describe('Admin Library Access API', () => {
     })
 
     it('returns 404 for unknown library', async () => {
-      const res = await app.request(
-        '/api/v1/admin/libraries/nonexistent/access',
-        {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: ADMIN_AUTH,
-          },
-          body: JSON.stringify({ userId: 'user-1' }),
+      const res = await app.request('/api/admin/libraries/nonexistent/access', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: ADMIN_AUTH,
         },
-      )
+        body: JSON.stringify({ userId: 'user-1' }),
+      })
       expect(res.status).toBe(404)
     })
 
     it('returns 404 for unknown user', async () => {
-      const res = await app.request('/api/v1/admin/libraries/lib-1/access', {
+      const res = await app.request('/api/admin/libraries/lib-1/access', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -184,7 +178,7 @@ describe('Admin Library Access API', () => {
     })
 
     it('returns 403 for non-admin', async () => {
-      const res = await app.request('/api/v1/admin/libraries/lib-1/access', {
+      const res = await app.request('/api/admin/libraries/lib-1/access', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -198,7 +192,7 @@ describe('Admin Library Access API', () => {
 
   // ─── DELETE /admin/libraries/:libraryId/access/:userId ─────────────────────
 
-  describe('DELETE /api/v1/admin/libraries/:libraryId/access/:userId', () => {
+  describe('DELETE /api/admin/libraries/:libraryId/access/:userId', () => {
     beforeEach(async () => {
       await db.insert(libraryAccess).values({
         userId: 'user-1',
@@ -210,7 +204,7 @@ describe('Admin Library Access API', () => {
 
     it('revokes access and returns success', async () => {
       const res = await app.request(
-        '/api/v1/admin/libraries/lib-1/access/user-1',
+        '/api/admin/libraries/lib-1/access/user-1',
         {
           method: 'DELETE',
           headers: { Authorization: ADMIN_AUTH },
@@ -226,7 +220,7 @@ describe('Admin Library Access API', () => {
 
     it('returns 404 for unknown library', async () => {
       const res = await app.request(
-        '/api/v1/admin/libraries/nonexistent/access/user-1',
+        '/api/admin/libraries/nonexistent/access/user-1',
         {
           method: 'DELETE',
           headers: { Authorization: ADMIN_AUTH },
@@ -237,7 +231,7 @@ describe('Admin Library Access API', () => {
 
     it('returns 403 for non-admin', async () => {
       const res = await app.request(
-        '/api/v1/admin/libraries/lib-1/access/user-1',
+        '/api/admin/libraries/lib-1/access/user-1',
         {
           method: 'DELETE',
           headers: { Authorization: USER_AUTH },
@@ -255,7 +249,7 @@ describe('Admin Library Access API', () => {
       })
 
       const res = await app.request(
-        '/api/v1/admin/libraries/lib-1/access/user-1',
+        '/api/admin/libraries/lib-1/access/user-1',
         {
           method: 'DELETE',
           headers: { Authorization: ADMIN_AUTH },

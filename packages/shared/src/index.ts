@@ -1,4 +1,5 @@
+export * from './config.js'
 export * from './constants.js'
+export * from './mediaCategories.js'
 export * from './schemas.js'
 export * from './types.js'
-export * from './mediaCategories.js'

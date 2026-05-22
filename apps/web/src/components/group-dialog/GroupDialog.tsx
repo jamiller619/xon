@@ -86,7 +86,7 @@ export default function GroupDialog({
     setSubmitting(true)
     setError(null)
     try {
-      const res = await apiFetch('/api/v1/groups', {
+      const res = await apiFetch('/api/groups', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({

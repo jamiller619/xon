@@ -131,7 +131,7 @@ export default function AdminLibraries() {
     setNewSourceRecursive(true)
     // Fetch data sources
     try {
-      const res = await apiFetch(`/api/v1/libraries/${lib.id}`)
+      const res = await apiFetch(`/api/libraries/${lib.id}`)
       const data = (await res.json()) as Library
       setEditingLibrary(data)
       setFormName(data.name)
@@ -157,7 +157,7 @@ export default function AdminLibraries() {
     setFormSaving(true)
     setFormError('')
     try {
-      const res = await apiFetch(`/api/v1/libraries/${editingLibrary.id}`, {
+      const res = await apiFetch(`/api/libraries/${editingLibrary.id}`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -184,7 +184,7 @@ export default function AdminLibraries() {
 
   async function handleDelete(id: string) {
     try {
-      await apiFetch(`/api/v1/libraries/${id}`, { method: 'DELETE' })
+      await apiFetch(`/api/libraries/${id}`, { method: 'DELETE' })
       setDeleteConfirmId(null)
       if (editingLibrary?.id === id) setEditingLibrary(null)
       await fetchLibraries()
@@ -200,7 +200,7 @@ export default function AdminLibraries() {
     setSourceError('')
     try {
       const res = await apiFetch(
-        `/api/v1/libraries/${editingLibrary.id}/sources`,
+        `/api/libraries/${editingLibrary.id}/sources`,
         {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -236,7 +236,7 @@ export default function AdminLibraries() {
   //   if (!editingLibrary) return
   //   try {
   //     const res = await apiFetch(
-  //       `/api/v1/libraries/${editingLibrary.id}/sources/${source.id}`,
+  //       `/api/libraries/${editingLibrary.id}/sources/${source.id}`,
   //       {
   //         method: 'PUT',
   //         headers: { 'Content-Type': 'application/json' },
@@ -261,7 +261,7 @@ export default function AdminLibraries() {
     if (!editingLibrary) return
     try {
       await apiFetch(
-        `/api/v1/libraries/${editingLibrary.id}/sources/${sourceId}`,
+        `/api/libraries/${editingLibrary.id}/sources/${sourceId}`,
         {
           method: 'DELETE',
         },
@@ -283,12 +283,12 @@ export default function AdminLibraries() {
     setScheduleError('')
     try {
       const [schedRes, watchRes] = await Promise.all([
-        apiFetch(`/api/v1/libraries/${editingLibrary.id}/scan/schedule`, {
+        apiFetch(`/api/libraries/${editingLibrary.id}/scan/schedule`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ scanSchedule: scheduleValue }),
         }),
-        apiFetch(`/api/v1/libraries/${editingLibrary.id}/scan/watch`, {
+        apiFetch(`/api/libraries/${editingLibrary.id}/scan/watch`, {
           method: 'PUT',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ watchEnabled }),
@@ -312,7 +312,7 @@ export default function AdminLibraries() {
     setScanningIds((prev) => new Set([...prev, libraryId]))
     setScanMessages((prev) => ({ ...prev, [libraryId]: '' }))
     try {
-      const res = await apiFetch(`/api/v1/libraries/${libraryId}/scan`, {
+      const res = await apiFetch(`/api/libraries/${libraryId}/scan`, {
         method: 'POST',
       })
       if (res.status === 409) {

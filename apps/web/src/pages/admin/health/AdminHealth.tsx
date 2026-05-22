@@ -74,7 +74,7 @@ export default function AdminHealth() {
   const [data, setData] = useState<HealthData | null>(null)
 
   const fetchHealth = useCallback(() => {
-    apiFetch('/api/v1/admin/health')
+    apiFetch('/api/admin/health')
       .then((r) => r.json() as Promise<HealthData>)
       .then((d) => {
         setData(d)

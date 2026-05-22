@@ -132,9 +132,9 @@ describe('Media API - Detail endpoint', () => {
     client.close()
   })
 
-  describe('GET /api/v1/media/:id', () => {
+  describe('GET /api/media/:id', () => {
     it('returns media item with thumbnailUrls when thumbnails exist', async () => {
-      const res = await app.request(`/api/v1/media/${mediaItemId}`, {
+      const res = await app.request(`/api/media/${mediaItemId}`, {
         headers: { Authorization: AUTH },
       })
       expect(res.status).toBe(200)
@@ -142,14 +142,14 @@ describe('Media API - Detail endpoint', () => {
       expect(body.id).toBe(mediaItemId)
       expect(body.fileName).toBe('photo.jpg')
       expect(body.thumbnailUrls).toMatchObject({
-        small: `/api/v1/media/${mediaItemId}/thumbnail?size=small`,
-        medium: `/api/v1/media/${mediaItemId}/thumbnail?size=medium`,
-        large: `/api/v1/media/${mediaItemId}/thumbnail?size=large`,
+        small: `/api/media/${mediaItemId}/thumbnail?size=small`,
+        medium: `/api/media/${mediaItemId}/thumbnail?size=medium`,
+        large: `/api/media/${mediaItemId}/thumbnail?size=large`,
       })
     })
 
     it('returns null thumbnailUrls when item has no thumbnails', async () => {
-      const res = await app.request(`/api/v1/media/${noThumbItemId}`, {
+      const res = await app.request(`/api/media/${noThumbItemId}`, {
         headers: { Authorization: AUTH },
       })
       expect(res.status).toBe(200)
@@ -159,7 +159,7 @@ describe('Media API - Detail endpoint', () => {
     })
 
     it('returns 404 for unknown id', async () => {
-      const res = await app.request('/api/v1/media/nonexistent-id', {
+      const res = await app.request('/api/media/nonexistent-id', {
         headers: { Authorization: AUTH },
       })
       expect(res.status).toBe(404)
@@ -167,7 +167,7 @@ describe('Media API - Detail endpoint', () => {
   })
 })
 
-describe('Media API - PUT /api/v1/media/:id', () => {
+describe('Media API - PUT /api/media/:id', () => {
   let client: Client
   let db: LibSQLDatabase
   let app: ReturnType<typeof createApp>
@@ -224,7 +224,7 @@ describe('Media API - PUT /api/v1/media/:id', () => {
   })
 
   it('updates title', async () => {
-    const res = await app.request(`/api/v1/media/${mediaItemId}`, {
+    const res = await app.request(`/api/media/${mediaItemId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: AUTH },
       body: JSON.stringify({ title: 'New Title' }),
@@ -236,7 +236,7 @@ describe('Media API - PUT /api/v1/media/:id', () => {
   })
 
   it('updates description', async () => {
-    const res = await app.request(`/api/v1/media/${mediaItemId}`, {
+    const res = await app.request(`/api/media/${mediaItemId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: AUTH },
       body: JSON.stringify({ description: 'New description' }),
@@ -248,7 +248,7 @@ describe('Media API - PUT /api/v1/media/:id', () => {
   })
 
   it('updates tags within metadata preserving other fields', async () => {
-    const res = await app.request(`/api/v1/media/${mediaItemId}`, {
+    const res = await app.request(`/api/media/${mediaItemId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: AUTH },
       body: JSON.stringify({ tags: ['action', 'drama'] }),
@@ -261,7 +261,7 @@ describe('Media API - PUT /api/v1/media/:id', () => {
   })
 
   it('returns 404 for unknown id', async () => {
-    const res = await app.request('/api/v1/media/nonexistent-id', {
+    const res = await app.request('/api/media/nonexistent-id', {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: AUTH },
       body: JSON.stringify({ title: 'X' }),
@@ -270,7 +270,7 @@ describe('Media API - PUT /api/v1/media/:id', () => {
   })
 
   it('returns 400 for invalid payload', async () => {
-    const res = await app.request(`/api/v1/media/${mediaItemId}`, {
+    const res = await app.request(`/api/media/${mediaItemId}`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json', Authorization: AUTH },
       body: JSON.stringify({ title: '' }),
@@ -339,13 +339,13 @@ describe('Media API - Thumbnail endpoint', () => {
     client.close()
   })
 
-  describe('GET /api/v1/media/:id/thumbnail', () => {
+  describe('GET /api/media/:id/thumbnail', () => {
     it('returns image with Content-Type image/jpeg for valid medium thumbnail', async () => {
       const fakeBuffer = Buffer.from('fake-image-data')
       mockReadFile.mockResolvedValueOnce(fakeBuffer as never)
 
       const res = await app.request(
-        `/api/v1/media/${mediaItemId}/thumbnail?size=medium`,
+        `/api/media/${mediaItemId}/thumbnail?size=medium`,
         {
           headers: { Authorization: AUTH },
         },
@@ -359,7 +359,7 @@ describe('Media API - Thumbnail endpoint', () => {
       mockReadFile.mockResolvedValueOnce(fakeBuffer as never)
 
       const res = await app.request(
-        `/api/v1/media/${mediaItemId}/thumbnail?size=small`,
+        `/api/media/${mediaItemId}/thumbnail?size=small`,
         {
           headers: { Authorization: AUTH },
         },
@@ -374,7 +374,7 @@ describe('Media API - Thumbnail endpoint', () => {
       const fakeBuffer = Buffer.from('fake-image-data')
       mockReadFile.mockResolvedValueOnce(fakeBuffer as never)
 
-      const res = await app.request(`/api/v1/media/${mediaItemId}/thumbnail`, {
+      const res = await app.request(`/api/media/${mediaItemId}/thumbnail`, {
         headers: { Authorization: AUTH },
       })
       expect(res.status).toBe(200)
@@ -388,7 +388,7 @@ describe('Media API - Thumbnail endpoint', () => {
       mockReadFile.mockResolvedValueOnce(fakeBuffer as never)
 
       const res = await app.request(
-        `/api/v1/media/${mediaItemId}/thumbnail?size=small`,
+        `/api/media/${mediaItemId}/thumbnail?size=small`,
         {
           headers: { Authorization: AUTH },
         },
@@ -404,7 +404,7 @@ describe('Media API - Thumbnail endpoint', () => {
       mockReadFile.mockResolvedValueOnce(fakeBuffer as never)
 
       const res = await app.request(
-        `/api/v1/media/${mediaItemId}/thumbnail?size=large`,
+        `/api/media/${mediaItemId}/thumbnail?size=large`,
         {
           headers: { Authorization: AUTH },
         },
@@ -417,7 +417,7 @@ describe('Media API - Thumbnail endpoint', () => {
 
     it('returns 404 for unknown media item id', async () => {
       const res = await app.request(
-        '/api/v1/media/nonexistent-id/thumbnail?size=medium',
+        '/api/media/nonexistent-id/thumbnail?size=medium',
         {
           headers: { Authorization: AUTH },
         },
@@ -446,7 +446,7 @@ describe('Media API - Thumbnail endpoint', () => {
       })
 
       const res = await app.request(
-        `/api/v1/media/${noThumbId}/thumbnail?size=medium`,
+        `/api/media/${noThumbId}/thumbnail?size=medium`,
         {
           headers: { Authorization: AUTH },
         },
@@ -460,7 +460,7 @@ describe('Media API - Thumbnail endpoint', () => {
       )
 
       const res = await app.request(
-        `/api/v1/media/${mediaItemId}/thumbnail?size=medium`,
+        `/api/media/${mediaItemId}/thumbnail?size=medium`,
         {
           headers: { Authorization: AUTH },
         },
@@ -470,7 +470,7 @@ describe('Media API - Thumbnail endpoint', () => {
 
     it('returns 400 for invalid size parameter', async () => {
       const res = await app.request(
-        `/api/v1/media/${mediaItemId}/thumbnail?size=huge`,
+        `/api/media/${mediaItemId}/thumbnail?size=huge`,
         {
           headers: { Authorization: AUTH },
         },
@@ -536,9 +536,9 @@ describe('Media API - Stream endpoint', () => {
     client.close()
   })
 
-  describe('GET /api/v1/media/:id/stream', () => {
+  describe('GET /api/media/:id/stream', () => {
     it('returns 404 for unknown media item', async () => {
-      const res = await app.request('/api/v1/media/nonexistent-id/stream', {
+      const res = await app.request('/api/media/nonexistent-id/stream', {
         headers: { Authorization: AUTH },
       })
       expect(res.status).toBe(404)
@@ -548,7 +548,7 @@ describe('Media API - Stream endpoint', () => {
       mockStat.mockRejectedValueOnce(
         Object.assign(new Error('ENOENT'), { code: 'ENOENT' }) as never,
       )
-      const res = await app.request(`/api/v1/media/${videoItemId}/stream`, {
+      const res = await app.request(`/api/media/${videoItemId}/stream`, {
         headers: { Authorization: AUTH },
       })
       expect(res.status).toBe(404)
@@ -559,7 +559,7 @@ describe('Media API - Stream endpoint', () => {
       const fakeStream = Readable.from(['fake video data'])
       mockCreateReadStream.mockReturnValueOnce(fakeStream as never)
 
-      const res = await app.request(`/api/v1/media/${videoItemId}/stream`, {
+      const res = await app.request(`/api/media/${videoItemId}/stream`, {
         headers: { Authorization: AUTH },
       })
       expect(res.status).toBe(200)
@@ -573,7 +573,7 @@ describe('Media API - Stream endpoint', () => {
       const fakeStream = Readable.from(['chunk'])
       mockCreateReadStream.mockReturnValueOnce(fakeStream as never)
 
-      const res = await app.request(`/api/v1/media/${videoItemId}/stream`, {
+      const res = await app.request(`/api/media/${videoItemId}/stream`, {
         headers: { Range: 'bytes=0-1023', Authorization: AUTH },
       })
       expect(res.status).toBe(206)
@@ -588,7 +588,7 @@ describe('Media API - Stream endpoint', () => {
       const fakeStream = Readable.from(['tail'])
       mockCreateReadStream.mockReturnValueOnce(fakeStream as never)
 
-      const res = await app.request(`/api/v1/media/${videoItemId}/stream`, {
+      const res = await app.request(`/api/media/${videoItemId}/stream`, {
         headers: { Range: 'bytes=9000-', Authorization: AUTH },
       })
       expect(res.status).toBe(206)
@@ -599,7 +599,7 @@ describe('Media API - Stream endpoint', () => {
     it('returns 416 when range is out of bounds', async () => {
       mockStat.mockResolvedValueOnce({ size: 10000 } as never)
 
-      const res = await app.request(`/api/v1/media/${videoItemId}/stream`, {
+      const res = await app.request(`/api/media/${videoItemId}/stream`, {
         headers: { Range: 'bytes=9999-10000', Authorization: AUTH },
       })
       expect(res.status).toBe(416)
@@ -663,9 +663,9 @@ describe('Media API - Tracks endpoint', () => {
     client.close()
   })
 
-  describe('GET /api/v1/media/:id/tracks', () => {
+  describe('GET /api/media/:id/tracks', () => {
     it('returns 404 for unknown media item', async () => {
-      const res = await app.request('/api/v1/media/nonexistent-id/tracks', {
+      const res = await app.request('/api/media/nonexistent-id/tracks', {
         headers: { Authorization: AUTH },
       })
       expect(res.status).toBe(404)
@@ -695,7 +695,7 @@ describe('Media API - Tracks endpoint', () => {
         'other.jpg',
       ] as never)
 
-      const res = await app.request(`/api/v1/media/${videoItemId}/tracks`, {
+      const res = await app.request(`/api/media/${videoItemId}/tracks`, {
         headers: { Authorization: AUTH },
       })
       expect(res.status).toBe(200)
@@ -735,7 +735,7 @@ describe('Media API - Tracks endpoint', () => {
       mockExtractStreamTracks.mockResolvedValueOnce([])
       mockReaddir.mockRejectedValueOnce(new Error('EACCES') as never)
 
-      const res = await app.request(`/api/v1/media/${videoItemId}/tracks`, {
+      const res = await app.request(`/api/media/${videoItemId}/tracks`, {
         headers: { Authorization: AUTH },
       })
       expect(res.status).toBe(200)
@@ -757,7 +757,7 @@ describe('Media API - Tracks endpoint', () => {
         'movie.jpg',
       ] as never)
 
-      const res = await app.request(`/api/v1/media/${videoItemId}/tracks`, {
+      const res = await app.request(`/api/media/${videoItemId}/tracks`, {
         headers: { Authorization: AUTH },
       })
       const body = (await res.json()) as { subtitleTracks: { file: string }[] }
@@ -826,9 +826,9 @@ describe('Media API - Subtitle endpoint', () => {
     client.close()
   })
 
-  describe('GET /api/v1/media/:id/subtitle', () => {
+  describe('GET /api/media/:id/subtitle', () => {
     it('returns 400 when file parameter is missing', async () => {
-      const res = await app.request(`/api/v1/media/${videoItemId}/subtitle`, {
+      const res = await app.request(`/api/media/${videoItemId}/subtitle`, {
         headers: { Authorization: AUTH },
       })
       expect(res.status).toBe(400)
@@ -836,7 +836,7 @@ describe('Media API - Subtitle endpoint', () => {
 
     it('returns 400 for path traversal attempt', async () => {
       const res = await app.request(
-        `/api/v1/media/${videoItemId}/subtitle?file=../secret.vtt`,
+        `/api/media/${videoItemId}/subtitle?file=../secret.vtt`,
         {
           headers: { Authorization: AUTH },
         },
@@ -846,7 +846,7 @@ describe('Media API - Subtitle endpoint', () => {
 
     it('returns 400 for unsupported file extension', async () => {
       const res = await app.request(
-        `/api/v1/media/${videoItemId}/subtitle?file=movie.ass`,
+        `/api/media/${videoItemId}/subtitle?file=movie.ass`,
         {
           headers: { Authorization: AUTH },
         },
@@ -856,7 +856,7 @@ describe('Media API - Subtitle endpoint', () => {
 
     it('returns 404 for unknown media item', async () => {
       const res = await app.request(
-        '/api/v1/media/nonexistent-id/subtitle?file=movie.vtt',
+        '/api/media/nonexistent-id/subtitle?file=movie.vtt',
         {
           headers: { Authorization: AUTH },
         },
@@ -869,7 +869,7 @@ describe('Media API - Subtitle endpoint', () => {
         Object.assign(new Error('ENOENT'), { code: 'ENOENT' }) as never,
       )
       const res = await app.request(
-        `/api/v1/media/${videoItemId}/subtitle?file=movie.vtt`,
+        `/api/media/${videoItemId}/subtitle?file=movie.vtt`,
         {
           headers: { Authorization: AUTH },
         },
@@ -882,7 +882,7 @@ describe('Media API - Subtitle endpoint', () => {
       mockReadFile.mockResolvedValueOnce(Buffer.from(vttContent) as never)
 
       const res = await app.request(
-        `/api/v1/media/${videoItemId}/subtitle?file=movie.vtt`,
+        `/api/media/${videoItemId}/subtitle?file=movie.vtt`,
         {
           headers: { Authorization: AUTH },
         },
@@ -899,7 +899,7 @@ describe('Media API - Subtitle endpoint', () => {
       mockReadFile.mockResolvedValueOnce(Buffer.from(srtContent) as never)
 
       const res = await app.request(
-        `/api/v1/media/${videoItemId}/subtitle?file=movie.srt`,
+        `/api/media/${videoItemId}/subtitle?file=movie.srt`,
         {
           headers: { Authorization: AUTH },
         },
@@ -973,7 +973,7 @@ describe('Media API - HLS transcoding endpoints', () => {
     client.close()
   })
 
-  describe('GET /api/v1/media/:id/stream — redirect for non-native formats', () => {
+  describe('GET /api/media/:id/stream — redirect for non-native formats', () => {
     it('redirects to HLS playlist when transcoding is needed', async () => {
       mockStat.mockResolvedValueOnce({ size: 500000 } as never)
       mockExtractFfprobeMetadata.mockResolvedValueOnce({
@@ -982,12 +982,12 @@ describe('Media API - HLS transcoding endpoints', () => {
       } as never)
       mockNeedsTranscoding.mockReturnValueOnce(true)
 
-      const res = await app.request(`/api/v1/media/${videoItemId}/stream`, {
+      const res = await app.request(`/api/media/${videoItemId}/stream`, {
         headers: { Authorization: AUTH },
       })
       expect(res.status).toBe(307)
       expect(res.headers.get('Location')).toContain(
-        `/api/v1/media/${videoItemId}/hls/playlist.m3u8`,
+        `/api/media/${videoItemId}/hls/playlist.m3u8`,
       )
     })
 
@@ -1001,17 +1001,17 @@ describe('Media API - HLS transcoding endpoints', () => {
       const fakeStream = Readable.from(['video data'])
       mockCreateReadStream.mockReturnValueOnce(fakeStream as never)
 
-      const res = await app.request(`/api/v1/media/${videoItemId}/stream`, {
+      const res = await app.request(`/api/media/${videoItemId}/stream`, {
         headers: { Authorization: AUTH },
       })
       expect(res.status).toBe(200)
     })
   })
 
-  describe('GET /api/v1/media/:id/hls/playlist.m3u8', () => {
+  describe('GET /api/media/:id/hls/playlist.m3u8', () => {
     it('returns 404 for unknown media item', async () => {
       const res = await app.request(
-        '/api/v1/media/nonexistent/hls/playlist.m3u8',
+        '/api/media/nonexistent/hls/playlist.m3u8',
         {
           headers: { Authorization: AUTH },
         },
@@ -1023,7 +1023,7 @@ describe('Media API - HLS transcoding endpoints', () => {
       mockExtractFfprobeMetadata.mockResolvedValueOnce(null as never)
 
       const res = await app.request(
-        `/api/v1/media/${videoItemId}/hls/playlist.m3u8`,
+        `/api/media/${videoItemId}/hls/playlist.m3u8`,
         {
           headers: { Authorization: AUTH },
         },
@@ -1040,7 +1040,7 @@ describe('Media API - HLS transcoding endpoints', () => {
       )
 
       const res = await app.request(
-        `/api/v1/media/${videoItemId}/hls/playlist.m3u8`,
+        `/api/media/${videoItemId}/hls/playlist.m3u8`,
         {
           headers: { Authorization: AUTH },
         },
@@ -1055,10 +1055,10 @@ describe('Media API - HLS transcoding endpoints', () => {
     })
   })
 
-  describe('GET /api/v1/media/:id/hls/:segment', () => {
+  describe('GET /api/media/:id/hls/:segment', () => {
     it('returns 400 for invalid segment name', async () => {
       const res = await app.request(
-        `/api/v1/media/${videoItemId}/hls/invalid.mp4`,
+        `/api/media/${videoItemId}/hls/invalid.mp4`,
         {
           headers: { Authorization: AUTH },
         },
@@ -1067,12 +1067,9 @@ describe('Media API - HLS transcoding endpoints', () => {
     })
 
     it('returns 404 for unknown media item', async () => {
-      const res = await app.request(
-        '/api/v1/media/nonexistent/hls/segment-0.ts',
-        {
-          headers: { Authorization: AUTH },
-        },
-      )
+      const res = await app.request('/api/media/nonexistent/hls/segment-0.ts', {
+        headers: { Authorization: AUTH },
+      })
       expect(res.status).toBe(404)
     })
 
@@ -1082,7 +1079,7 @@ describe('Media API - HLS transcoding endpoints', () => {
       )
 
       const res = await app.request(
-        `/api/v1/media/${videoItemId}/hls/segment-0.ts`,
+        `/api/media/${videoItemId}/hls/segment-0.ts`,
         {
           headers: { Authorization: AUTH },
         },
@@ -1106,7 +1103,7 @@ describe('Media API - HLS transcoding endpoints', () => {
       mockSpawnTranscodeSegment.mockReturnValueOnce(mockProc as never)
 
       const res = await app.request(
-        `/api/v1/media/${videoItemId}/hls/segment-2.ts`,
+        `/api/media/${videoItemId}/hls/segment-2.ts`,
         {
           headers: { Authorization: AUTH },
         },
@@ -1183,7 +1180,7 @@ describe('Media API - RAW image stream endpoint', () => {
     mockIsRawImage.mockReturnValueOnce(true)
     mockConvertRawToJpeg.mockResolvedValueOnce(jpegData)
 
-    const res = await app.request(`/api/v1/media/${rawItemId}/stream`, {
+    const res = await app.request(`/api/media/${rawItemId}/stream`, {
       headers: { Authorization: AUTH },
     })
     expect(res.status).toBe(200)
@@ -1198,7 +1195,7 @@ describe('Media API - RAW image stream endpoint', () => {
       new Error('dcraw not found. Install dcraw to enable RAW image preview.'),
     )
 
-    const res = await app.request(`/api/v1/media/${rawItemId}/stream`, {
+    const res = await app.request(`/api/media/${rawItemId}/stream`, {
       headers: { Authorization: AUTH },
     })
     expect(res.status).toBe(500)
@@ -1214,7 +1211,7 @@ describe('Media API - RAW image stream endpoint', () => {
     const fakeStream = Readable.from(['jpeg data'])
     mockCreateReadStream.mockReturnValueOnce(fakeStream as never)
 
-    const res = await app.request(`/api/v1/media/${rawItemId}/stream`, {
+    const res = await app.request(`/api/media/${rawItemId}/stream`, {
       headers: { Authorization: AUTH },
     })
     expect(res.status).toBe(200)
@@ -1222,7 +1219,7 @@ describe('Media API - RAW image stream endpoint', () => {
   })
 })
 
-describe('Media API - POST /api/v1/media/bulk', () => {
+describe('Media API - POST /api/media/bulk', () => {
   let client: Client
   let db: LibSQLDatabase
   let app: ReturnType<typeof createApp>
@@ -1286,7 +1283,7 @@ describe('Media API - POST /api/v1/media/bulk', () => {
   })
 
   it('bulk deletes items from the database', async () => {
-    const res = await app.request('/api/v1/media/bulk', {
+    const res = await app.request('/api/media/bulk', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: AUTH },
       body: JSON.stringify({ action: 'delete', ids: [itemId1, itemId2] }),
@@ -1300,7 +1297,7 @@ describe('Media API - POST /api/v1/media/bulk', () => {
   })
 
   it('bulk updates genre and tags in metadata', async () => {
-    const res = await app.request('/api/v1/media/bulk', {
+    const res = await app.request('/api/media/bulk', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: AUTH },
       body: JSON.stringify({
@@ -1322,7 +1319,7 @@ describe('Media API - POST /api/v1/media/bulk', () => {
   })
 
   it('bulk updates contentRating', async () => {
-    const res = await app.request('/api/v1/media/bulk', {
+    const res = await app.request('/api/media/bulk', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: AUTH },
       body: JSON.stringify({
@@ -1353,7 +1350,7 @@ describe('Media API - POST /api/v1/media/bulk', () => {
       createdAt: now,
     })
 
-    const res = await app.request('/api/v1/media/bulk', {
+    const res = await app.request('/api/media/bulk', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: AUTH },
       body: JSON.stringify({
@@ -1368,7 +1365,7 @@ describe('Media API - POST /api/v1/media/bulk', () => {
   })
 
   it('returns 404 when no matching items found', async () => {
-    const res = await app.request('/api/v1/media/bulk', {
+    const res = await app.request('/api/media/bulk', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: AUTH },
       body: JSON.stringify({ action: 'delete', ids: ['nonexistent-id'] }),
@@ -1377,7 +1374,7 @@ describe('Media API - POST /api/v1/media/bulk', () => {
   })
 
   it('returns 400 for update action with no updates', async () => {
-    const res = await app.request('/api/v1/media/bulk', {
+    const res = await app.request('/api/media/bulk', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: AUTH },
       body: JSON.stringify({ action: 'update', ids: [itemId1] }),
@@ -1386,7 +1383,7 @@ describe('Media API - POST /api/v1/media/bulk', () => {
   })
 
   it('returns 400 for move-to-group without groupId', async () => {
-    const res = await app.request('/api/v1/media/bulk', {
+    const res = await app.request('/api/media/bulk', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: AUTH },
       body: JSON.stringify({ action: 'move-to-group', ids: [itemId1] }),

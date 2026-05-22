@@ -1,42 +1,21 @@
+import { GroupType, UserRole } from '@xon/shared'
 import { and, asc, eq, inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { requireRole } from '../auth/rbac.js'
-import {
-  groupMembers,
-  groups,
-  libraryAccess,
-  mediaItems,
-} from '../db/schema.js'
+import { groupItems, groups, mediaItems } from '../db/schema.js'
 import { validate } from '../http/validate.js'
 
-const PRIVILEGED_ROLES = ['admin', 'manager'] as const
-
-async function getAccessibleLibraryIds(
-  db: LibSQLDatabase,
-  userId: string,
-  role: string,
-): Promise<string[] | null> {
-  if ((PRIVILEGED_ROLES as readonly string[]).includes(role)) return null
-  const rows = await db
-    .select({ libraryId: libraryAccess.libraryId })
-    .from(libraryAccess)
-    .where(eq(libraryAccess.userId, userId))
-  return rows.map((r) => r.libraryId)
-}
-
 const MANUAL_GROUP_TYPES = [
-  'collection',
-  'playlist',
-  'album',
-  'shelf',
-  'folder',
+  GroupType.Collection,
+  GroupType.Playlist,
+  GroupType.Album,
+  GroupType.Shelf,
+  GroupType.Folder,
 ] as const
-type ManualGroupType = (typeof MANUAL_GROUP_TYPES)[number]
 
 const createGroupSchema = z.object({
-  libraryId: z.string().min(1),
   type: z.enum(MANUAL_GROUP_TYPES),
   title: z.string().min(1),
 })
@@ -63,45 +42,54 @@ const reorderItemsSchema = z.object({
 export function makeGroupsRouter(db: LibSQLDatabase): Hono {
   const router = new Hono()
 
-  // POST /groups — create a manual group (manager+)
+  // POST /groups — create a manual group (user+)
   router.post(
     '/',
-    requireRole('manager'),
+    requireRole(UserRole.User),
     validate('json', createGroupSchema),
     async (c) => {
       const body = c.req.valid('json')
-      const id = `grp:manual:${body.libraryId}:${crypto.randomUUID()}`
+      const userId = c.get('user')?.id
+
+      if (!userId) {
+        return c.json({ error: 'Not authenticated' }, 401)
+      }
+
+      const id = crypto.randomUUID()
+
       await db.insert(groups).values({
         id,
-        libraryId: body.libraryId,
-        type: body.type as ManualGroupType,
+        userId,
+        type: body.type as GroupType,
         title: body.title,
         metadata: '{}',
         createdAt: new Date(),
       })
+
       const rows = await db.select().from(groups).where(eq(groups.id, id))
+
       return c.json(rows[0], 201)
     },
   )
 
   // GET /groups?libraryId=xxx — list manual groups for a library (access-checked)
   router.get('/', async (c) => {
-    const user = c.get('user')
-    const libraryId = c.req.query('libraryId')
-    if (!libraryId)
-      return c.json({ error: 'libraryId query param required' }, 400)
+    // const user = c.get('user')
+    // const libraryId = c.req.query('libraryId')
+    // if (!libraryId)
+    //   return c.json({ error: 'libraryId query param required' }, 400)
 
-    const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
-    if (accessibleIds !== null && !accessibleIds.includes(libraryId)) {
-      return c.json({ error: 'Not found' }, 404)
-    }
+    // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+    // if (accessibleIds !== null && !accessibleIds.includes(libraryId)) {
+    //   return c.json({ error: 'Not found' }, 404)
+    // }
 
     const rows = await db
       .select()
       .from(groups)
       .where(
         and(
-          eq(groups.libraryId, libraryId),
+          // eq(groups.libraryId, libraryId),
           inArray(groups.type, [...MANUAL_GROUP_TYPES]),
         ),
       )
@@ -112,23 +100,23 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
   // GET /groups/:id — get group with members (access-checked)
   router.get('/:id', async (c) => {
     const id = c.req.param('id')
-    const user = c.get('user')
+    // const user = c.get('user')
 
     const groupRows = await db.select().from(groups).where(eq(groups.id, id))
     if (groupRows.length === 0) return c.json({ error: 'Not found' }, 404)
     const group = groupRows[0]
     if (!group) return c.json({ error: 'Not found' }, 404)
 
-    const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
-    if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
-      return c.json({ error: 'Not found' }, 404)
-    }
+    // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+    // if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
+    //   return c.json({ error: 'Not found' }, 404)
+    // }
 
     // Fetch members with media item details
     const members = await db
       .select({
-        mediaItemId: groupMembers.mediaItemId,
-        sortOrder: groupMembers.sortOrder,
+        mediaItemId: groupItems.mediaItemId,
+        sortOrder: groupItems.sortOrder,
         title: mediaItems.title,
         // mediaCategory: mediaItems.mediaCategory,
         mimeType: mediaItems.mimeType,
@@ -136,10 +124,10 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
         createdAt: mediaItems.createdAt,
         // thumbnailPaths: mediaItems.thumbnailPaths,
       })
-      .from(groupMembers)
-      .innerJoin(mediaItems, eq(groupMembers.mediaItemId, mediaItems.id))
-      .where(eq(groupMembers.groupId, id))
-      .orderBy(asc(groupMembers.sortOrder))
+      .from(groupItems)
+      .innerJoin(mediaItems, eq(groupItems.mediaItemId, mediaItems.id))
+      .where(eq(groupItems.groupId, id))
+      .orderBy(asc(groupItems.sortOrder))
 
     const membersWithThumbs = members.map((m) => {
       const thumbnailUrls: {
@@ -156,9 +144,9 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
       //     }
       //     if (paths.small && paths.medium && paths.large) {
       //       thumbnailUrls = {
-      //         small: `/api/v1/media/${m.mediaItemId}/thumbnail/small`,
-      //         medium: `/api/v1/media/${m.mediaItemId}/thumbnail/medium`,
-      //         large: `/api/v1/media/${m.mediaItemId}/thumbnail/large`,
+      //         small: `/api/media/${m.mediaItemId}/thumbnail/small`,
+      //         medium: `/api/media/${m.mediaItemId}/thumbnail/medium`,
+      //         large: `/api/media/${m.mediaItemId}/thumbnail/large`,
       //       }
       //     }
       //   } catch {
@@ -174,26 +162,26 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
   // PUT /groups/:id — update group title/type (manager+)
   router.put(
     '/:id',
-    requireRole('manager'),
+    requireRole(UserRole.User),
     validate('json', updateGroupSchema),
     async (c) => {
       const id = c.req.param('id')
       const body = c.req.valid('json')
-      const user = c.get('user')
+      // const user = c.get('user')
 
       const groupRows = await db.select().from(groups).where(eq(groups.id, id))
       if (groupRows.length === 0) return c.json({ error: 'Not found' }, 404)
       const group = groupRows[0]
       if (!group) return c.json({ error: 'Not found' }, 404)
 
-      const accessibleIds = await getAccessibleLibraryIds(
-        db,
-        user.id,
-        user.role,
-      )
-      if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
-        return c.json({ error: 'Not found' }, 404)
-      }
+      // const accessibleIds = await getAccessibleLibraryIds(
+      //   db,
+      //   user.id,
+      //   user.role,
+      // )
+      // if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
+      //   return c.json({ error: 'Not found' }, 404)
+      // }
 
       // Only allow updating manual group types
       if (!(MANUAL_GROUP_TYPES as readonly string[]).includes(group.type)) {
@@ -214,19 +202,19 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
   )
 
   // DELETE /groups/:id — delete group (manager+)
-  router.delete('/:id', requireRole('manager'), async (c) => {
+  router.delete('/:id', requireRole(UserRole.User), async (c) => {
     const id = c.req.param('id')
-    const user = c.get('user')
+    // const user = c.get('user')
 
     const groupRows = await db.select().from(groups).where(eq(groups.id, id))
     if (groupRows.length === 0) return c.json({ error: 'Not found' }, 404)
     const group = groupRows[0]
     if (!group) return c.json({ error: 'Not found' }, 404)
 
-    const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
-    if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
-      return c.json({ error: 'Not found' }, 404)
-    }
+    // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+    // if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
+    //   return c.json({ error: 'Not found' }, 404)
+    // }
 
     // Only allow deleting manual group types
     if (!(MANUAL_GROUP_TYPES as readonly string[]).includes(group.type)) {
@@ -240,12 +228,12 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
   // POST /groups/:id/items — add item to group (upsert with sortOrder)
   router.post(
     '/:id/items',
-    requireRole('manager'),
+    requireRole(UserRole.User),
     validate('json', addItemSchema),
     async (c) => {
       const groupId = c.req.param('id')
       const body = c.req.valid('json')
-      const user = c.get('user')
+      // const user = c.get('user')
 
       const groupRows = await db
         .select()
@@ -255,14 +243,14 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
       const group = groupRows[0]
       if (!group) return c.json({ error: 'Not found' }, 404)
 
-      const accessibleIds = await getAccessibleLibraryIds(
-        db,
-        user.id,
-        user.role,
-      )
-      if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
-        return c.json({ error: 'Not found' }, 404)
-      }
+      // const accessibleIds = await getAccessibleLibraryIds(
+      //   db,
+      //   user.id,
+      //   user.role,
+      // )
+      // if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
+      //   return c.json({ error: 'Not found' }, 404)
+      // }
 
       // Verify media item exists and belongs to same library
       const itemRows = await db
@@ -271,7 +259,7 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
         .where(
           and(
             eq(mediaItems.id, body.mediaItemId),
-            eq(mediaItems.libraryId, group.libraryId),
+            // eq(mediaItems.libraryId, group.libraryId),
           ),
         )
       if (itemRows.length === 0)
@@ -281,19 +269,19 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
       let sortOrder = body.sortOrder
       if (sortOrder === undefined) {
         const existing = await db
-          .select({ sortOrder: groupMembers.sortOrder })
-          .from(groupMembers)
-          .where(eq(groupMembers.groupId, groupId))
-          .orderBy(asc(groupMembers.sortOrder))
+          .select({ sortOrder: groupItems.sortOrder })
+          .from(groupItems)
+          .where(eq(groupItems.groupId, groupId))
+          .orderBy(asc(groupItems.sortOrder))
         const last = existing[existing.length - 1]
         sortOrder = last ? last.sortOrder + 1 : 0
       }
 
       await db
-        .insert(groupMembers)
+        .insert(groupItems)
         .values({ groupId, mediaItemId: body.mediaItemId, sortOrder })
         .onConflictDoUpdate({
-          target: [groupMembers.groupId, groupMembers.mediaItemId],
+          target: [groupItems.groupId, groupItems.mediaItemId],
           set: { sortOrder },
         })
 
@@ -304,12 +292,12 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
   // PUT /groups/:id/items — reorder items (batch update sortOrder)
   router.put(
     '/:id/items',
-    requireRole('manager'),
+    requireRole(UserRole.User),
     validate('json', reorderItemsSchema),
     async (c) => {
       const groupId = c.req.param('id')
       const body = c.req.valid('json')
-      const user = c.get('user')
+      // const user = c.get('user')
 
       const groupRows = await db
         .select()
@@ -319,23 +307,23 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
       const group = groupRows[0]
       if (!group) return c.json({ error: 'Not found' }, 404)
 
-      const accessibleIds = await getAccessibleLibraryIds(
-        db,
-        user.id,
-        user.role,
-      )
-      if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
-        return c.json({ error: 'Not found' }, 404)
-      }
+      // const accessibleIds = await getAccessibleLibraryIds(
+      //   db,
+      //   user.id,
+      //   user.role,
+      // )
+      // if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
+      //   return c.json({ error: 'Not found' }, 404)
+      // }
 
       for (const item of body.items) {
         await db
-          .update(groupMembers)
+          .update(groupItems)
           .set({ sortOrder: item.sortOrder })
           .where(
             and(
-              eq(groupMembers.groupId, groupId),
-              eq(groupMembers.mediaItemId, item.mediaItemId),
+              eq(groupItems.groupId, groupId),
+              eq(groupItems.mediaItemId, item.mediaItemId),
             ),
           )
       }
@@ -347,11 +335,11 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
   // DELETE /groups/:id/items/:mediaItemId — remove item from group (manager+)
   router.delete(
     '/:id/items/:mediaItemId',
-    requireRole('manager'),
+    requireRole(UserRole.User),
     async (c) => {
       const groupId = c.req.param('id')
       const mediaItemId = c.req.param('mediaItemId')
-      const user = c.get('user')
+      // const user = c.get('user')
 
       const groupRows = await db
         .select()
@@ -361,21 +349,21 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
       const group = groupRows[0]
       if (!group) return c.json({ error: 'Not found' }, 404)
 
-      const accessibleIds = await getAccessibleLibraryIds(
-        db,
-        user.id,
-        user.role,
-      )
-      if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
-        return c.json({ error: 'Not found' }, 404)
-      }
+      // const accessibleIds = await getAccessibleLibraryIds(
+      //   db,
+      //   user.id,
+      //   user.role,
+      // )
+      // if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
+      //   return c.json({ error: 'Not found' }, 404)
+      // }
 
       await db
-        .delete(groupMembers)
+        .delete(groupItems)
         .where(
           and(
-            eq(groupMembers.groupId, groupId),
-            eq(groupMembers.mediaItemId, mediaItemId),
+            eq(groupItems.groupId, groupId),
+            eq(groupItems.mediaItemId, mediaItemId),
           ),
         )
 

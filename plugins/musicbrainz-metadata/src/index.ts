@@ -1,5 +1,5 @@
-import { BasePlugin } from '@xon/plugin-sdk'
 import type { PluginContext, PluginManifest } from '@xon/plugin-sdk'
+import { BasePlugin } from '@xon/plugin-sdk'
 import { MediaCategory } from '@xon/shared'
 import { MusicBrainzClient } from './musicBrainzClient.js'
 import { parseMusicPath } from './musicParser.js'
@@ -46,17 +46,23 @@ export class MusicBrainzMetadataPlugin extends BasePlugin {
       )
     `)
 
-    context.on('media:created', async ({ mediaId, filePath, mediaCategory }) => {
-      if (!this.manifest.mediaCategories?.includes(mediaCategory)) return
-      await this.enrichMedia(mediaId, filePath)
-    })
+    context.on(
+      'media:created',
+      async ({ mediaId, filePath, mediaCategory }) => {
+        if (!this.manifest.mediaCategories?.includes(mediaCategory)) return
+        await this.enrichMedia(mediaId, filePath)
+      },
+    )
 
-    context.on('media:updated', async ({ mediaId, filePath, mediaCategory }) => {
-      if (!this.manifest.mediaCategories?.includes(mediaCategory)) return
-      await this.enrichMedia(mediaId, filePath)
-    })
+    context.on(
+      'media:updated',
+      async ({ mediaId, filePath, mediaCategory }) => {
+        if (!this.manifest.mediaCategories?.includes(mediaCategory)) return
+        await this.enrichMedia(mediaId, filePath)
+      },
+    )
 
-    // Route: GET /api/v1/plugins/musicbrainz-metadata/metadata/:mediaId
+    // Route: GET /api/plugins/musicbrainz-metadata/metadata/:mediaId
     context.registerRoute({
       method: 'GET',
       path: '/metadata/:mediaId',

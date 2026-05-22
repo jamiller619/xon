@@ -1,9 +1,9 @@
 import type { IncomingMessage } from 'node:http'
 import type { Duplex } from 'node:stream'
 import { WebSocketServer } from 'ws'
-import { type XonEvent, eventBus } from '../events.js'
+import { eventBus, type XonEvent } from '../events.js'
 
-export const WS_PATH = '/api/v1/ws'
+export const WS_PATH = '/api/ws'
 
 type UpgradeHandler = (
   req: IncomingMessage,

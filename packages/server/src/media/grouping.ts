@@ -1,18 +1,25 @@
 import path, { basename, dirname, extname } from 'node:path'
-import {
-  MediaCategory,
-  getExtensionsForCategory,
-  getMimeTypesForCategory,
-} from '@xon/shared'
+import { GroupType, getMimeTypesForCategory, MediaCategory } from '@xon/shared'
 import { and, eq, inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
-import { groupMembers, groups, libraries, mediaItems } from '../db/schema.js'
+import { groupItems, groups, mediaItems } from '../db/schema.js'
 
 export interface TvEpisodeInfo {
   seriesName: string | null
   season: number
   episode: number
 }
+
+// export async function checkIfSeeded(db: LibSQLDatabase): Promise<void> {
+//   const data = await db.select().from(groups)
+
+//   if (data.length === 0) {
+//     await db.insert(groups).values({
+//       title: 'Favorites',
+//       type: GroupType.Collection,
+//     })
+//   }
+// }
 
 /**
  * Parses TV episode info from a filename.
@@ -97,6 +104,7 @@ function makeSeasonGroupId(seriesGroupId: string, season: number): string {
 export async function groupTvEpisodes(
   db: LibSQLDatabase,
   libraryId: string,
+  userId: string,
 ): Promise<void> {
   // Fetch all TV Show items for this library
   const tvItems = await db
@@ -172,11 +180,11 @@ export async function groupTvEpisodes(
       if (seriesTitle) {
         seriesInserts.push({
           id: seriesGroupId,
-          libraryId,
-          type: 'series',
+          type: GroupType.Series,
           title: seriesTitle,
           parentGroupId: null,
           metadata: '{}',
+          userId,
         })
       }
     }
@@ -191,11 +199,11 @@ export async function groupTvEpisodes(
     if (!existingGroupIdSet.has(seasonGroupId)) {
       seasonInserts.push({
         id: seasonGroupId,
-        libraryId,
-        type: 'season',
+        type: GroupType.Season,
         title: `Season ${season}`,
         parentGroupId: seriesGroupId,
         metadata: '{}',
+        userId,
       })
     }
   }
@@ -206,13 +214,13 @@ export async function groupTvEpisodes(
   // Fetch existing group members to avoid duplicates
   const episodeIds = episodes.map((e) => e.id)
   const existingMembers = await db
-    .select({ mediaItemId: groupMembers.mediaItemId })
-    .from(groupMembers)
-    .where(inArray(groupMembers.mediaItemId, episodeIds))
+    .select({ mediaItemId: groupItems.mediaItemId })
+    .from(groupItems)
+    .where(inArray(groupItems.mediaItemId, episodeIds))
   const existingMemberSet = new Set(existingMembers.map((m) => m.mediaItemId))
 
   // Insert missing group members
-  const memberInserts: Array<typeof groupMembers.$inferInsert> = []
+  const memberInserts: Array<typeof groupItems.$inferInsert> = []
   for (const ep of episodes) {
     if (!existingMemberSet.has(ep.id)) {
       const seriesGroupId = makeSeriesGroupId(libraryId, ep.seriesName)
@@ -225,7 +233,7 @@ export async function groupTvEpisodes(
     }
   }
   if (memberInserts.length > 0) {
-    await db.insert(groupMembers).values(memberInserts)
+    await db.insert(groupItems).values(memberInserts)
   }
 }
 
@@ -334,6 +342,7 @@ interface MusicTrackData {
 export async function groupMusicTracks(
   db: LibSQLDatabase,
   libraryId: string,
+  userId: string,
 ): Promise<void> {
   // Fetch all Music category items for this library
   const musicItems = await db
@@ -432,11 +441,11 @@ export async function groupMusicTracks(
     if (!existingGroupIdSet.has(artistGroupId)) {
       artistInserts.push({
         id: artistGroupId,
-        libraryId,
-        type: 'artist',
+        type: GroupType.Artist,
         title: artistName,
         parentGroupId: null,
         metadata: '{}',
+        userId,
       })
     }
   }
@@ -451,11 +460,11 @@ export async function groupMusicTracks(
       const artistGroupId = artistGroupIds.get(albumArtist) ?? null
       albumInserts.push({
         id: albumGroupId,
-        libraryId,
-        type: 'album',
+        type: GroupType.Album,
         title: albumTitle,
         parentGroupId: artistGroupId,
         metadata: '{}',
+        userId,
       })
     }
   }
@@ -466,13 +475,13 @@ export async function groupMusicTracks(
   // Fetch existing group members
   const trackIds = tracks.map((t) => t.id)
   const existingMembers = await db
-    .select({ mediaItemId: groupMembers.mediaItemId })
-    .from(groupMembers)
-    .where(inArray(groupMembers.mediaItemId, trackIds))
+    .select({ mediaItemId: groupItems.mediaItemId })
+    .from(groupItems)
+    .where(inArray(groupItems.mediaItemId, trackIds))
   const existingMemberSet = new Set(existingMembers.map((m) => m.mediaItemId))
 
   // Insert missing members — sort by disc * 1000 + trackNumber
-  const memberInserts: Array<typeof groupMembers.$inferInsert> = []
+  const memberInserts: Array<typeof groupItems.$inferInsert> = []
   for (const track of tracks) {
     if (!existingMemberSet.has(track.id)) {
       const albumArtist = getAlbumArtist(track.album)
@@ -489,7 +498,7 @@ export async function groupMusicTracks(
     }
   }
   if (memberInserts.length > 0) {
-    await db.insert(groupMembers).values(memberInserts)
+    await db.insert(groupItems).values(memberInserts)
   }
 }
 
@@ -556,6 +565,7 @@ interface PhotoData {
 export async function groupPhotos(
   db: LibSQLDatabase,
   libraryId: string,
+  userId: string,
 ): Promise<void> {
   const photoItems = await db
     .select({ id: mediaItems.id, metadata: mediaItems.metadata })
@@ -633,11 +643,11 @@ export async function groupPhotos(
     if (!existingGroupIdSet.has(gid)) {
       dateInserts.push({
         id: gid,
-        libraryId,
-        type: 'photo-date',
+        type: GroupType.PhotoDate,
         title: dateStr,
         parentGroupId: null,
         metadata: '{}',
+        userId,
       })
     }
   }
@@ -651,11 +661,11 @@ export async function groupPhotos(
     if (!existingGroupIdSet.has(gid)) {
       locationInserts.push({
         id: gid,
-        libraryId,
-        type: 'photo-location',
+        type: GroupType.PhotoLocation,
         title: `${lat}, ${lon}`,
         parentGroupId: null,
         metadata: JSON.stringify({ lat, lon }),
+        userId,
       })
     }
   }
@@ -667,17 +677,17 @@ export async function groupPhotos(
   const photoIds = photos.map((p) => p.id)
   const existingMembers = await db
     .select({
-      groupId: groupMembers.groupId,
-      mediaItemId: groupMembers.mediaItemId,
+      groupId: groupItems.groupId,
+      mediaItemId: groupItems.mediaItemId,
     })
-    .from(groupMembers)
-    .where(inArray(groupMembers.mediaItemId, photoIds))
+    .from(groupItems)
+    .where(inArray(groupItems.mediaItemId, photoIds))
   const existingMemberKeys = new Set(
     existingMembers.map((m) => `${m.groupId}:${m.mediaItemId}`),
   )
 
   // Insert missing memberships
-  const memberInserts: Array<typeof groupMembers.$inferInsert> = []
+  const memberInserts: Array<typeof groupItems.$inferInsert> = []
   for (const photo of photos) {
     if (photo.dateStr) {
       const gid = makePhotoDateGroupId(libraryId, photo.dateStr)
@@ -707,6 +717,6 @@ export async function groupPhotos(
     }
   }
   if (memberInserts.length > 0) {
-    await db.insert(groupMembers).values(memberInserts)
+    await db.insert(groupItems).values(memberInserts)
   }
 }

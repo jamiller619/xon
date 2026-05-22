@@ -13,7 +13,9 @@
   "dependencies": {
     "@fluentui/react-icons": "^2.0.324",
     "@number-flow/react": "^0.6.0",
+    "@tanstack/react-query": "^5.100.11",
     "@xon/ui": "*",
+    "better-auth": "^1.6.11",
     "boneyard-js": "^1.8.1",
     "epubjs": "^0.3.93",
     "hls.js": "^1.0.0",

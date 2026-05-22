@@ -2,7 +2,7 @@ import { useAuthStore } from '~/store/authStore'
 
 /**
  * fetch wrapper that injects the current access token as a Bearer header.
- * Falls back to unauthenticated for public endpoints (e.g. /api/v1/health).
+ * Falls back to unauthenticated for public endpoints (e.g. /api/health).
  */
 export function apiFetch(url: string, init?: RequestInit): Promise<Response> {
   const token = useAuthStore.getState().accessToken

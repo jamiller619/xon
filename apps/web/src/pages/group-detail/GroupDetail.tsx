@@ -61,7 +61,7 @@ export default function GroupDetail() {
     setLoading(true)
     setError(null)
     try {
-      const res = await apiFetch(`/api/v1/groups/${id}`)
+      const res = await apiFetch(`/api/groups/${id}`)
       if (!res.ok) {
         setError('Group not found')
         return
@@ -82,7 +82,7 @@ export default function GroupDetail() {
 
   async function handleRemoveItem(mediaItemId: string) {
     if (!id) return
-    await apiFetch(`/api/v1/groups/${id}/items/${mediaItemId}`, {
+    await apiFetch(`/api/groups/${id}/items/${mediaItemId}`, {
       method: 'DELETE',
     })
     setMembers((prev) => prev.filter((m) => m.mediaItemId !== mediaItemId))
@@ -116,7 +116,7 @@ export default function GroupDetail() {
       sortOrder: i,
     }))
     try {
-      await apiFetch(`/api/v1/groups/${id}/items`, {
+      await apiFetch(`/api/groups/${id}/items`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: payload }),
@@ -135,7 +135,7 @@ export default function GroupDetail() {
       )
     )
       return
-    const res = await apiFetch(`/api/v1/groups/${id}`, { method: 'DELETE' })
+    const res = await apiFetch(`/api/groups/${id}`, { method: 'DELETE' })
     if (res.ok) {
       navigate(`/libraries/${group.libraryId}`)
     }
@@ -150,7 +150,7 @@ export default function GroupDetail() {
     try {
       setAddLoading(true)
       const res = await apiFetch(
-        `/api/v1/libraries/${group.libraryId}/media?limit=100&page=1`,
+        `/api/libraries/${group.libraryId}/media?limit=100&page=1`,
       )
       if (res.ok) {
         const data = (await res.json()) as LibraryMediaItem[]
@@ -183,7 +183,7 @@ export default function GroupDetail() {
     setAddError(null)
     try {
       for (const mediaItemId of selectedIds) {
-        await apiFetch(`/api/v1/groups/${id}/items`, {
+        await apiFetch(`/api/groups/${id}/items`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ mediaItemId }),

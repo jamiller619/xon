@@ -1,10 +1,11 @@
 import { Theme } from '@xon/ui'
-import { Suspense, lazy } from 'react'
+import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
-import RequireAuth from '~/components/RequireAuth'
-import ThemeLoader from '~/components/ThemeLoader'
 import ErrorBoundary from '~/components/error-boundary/ErrorBoundary'
 import Layout from '~/components/layout/Layout'
+import RequireAuth from '~/components/RequireAuth'
+import ThemeLoader from '~/components/ThemeLoader'
+
 // import '../../../bones/registry.ts'
 
 // Route-level code splitting — each page is a separate JS chunk

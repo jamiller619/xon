@@ -46,9 +46,9 @@ describe('Admin Users API', () => {
 
   // ─── GET /admin/users ────────────────────────────────────────────────────────
 
-  describe('GET /api/v1/admin/users', () => {
+  describe('GET /api/admin/users', () => {
     it('returns 200 with user list for admin', async () => {
-      const res = await app.request('/api/v1/admin/users', {
+      const res = await app.request('/api/admin/users', {
         headers: { Authorization: ADMIN_AUTH },
       })
       expect(res.status).toBe(200)
@@ -60,23 +60,23 @@ describe('Admin Users API', () => {
     })
 
     it('returns 403 for non-admin role', async () => {
-      const res = await app.request('/api/v1/admin/users', {
+      const res = await app.request('/api/admin/users', {
         headers: { Authorization: USER_AUTH },
       })
       expect(res.status).toBe(403)
     })
 
     it('returns 401 without auth', async () => {
-      const res = await app.request('/api/v1/admin/users')
+      const res = await app.request('/api/admin/users')
       expect(res.status).toBe(401)
     })
   })
 
   // ─── POST /admin/users ───────────────────────────────────────────────────────
 
-  describe('POST /api/v1/admin/users', () => {
+  describe('POST /api/admin/users', () => {
     it('creates a new user', async () => {
-      const res = await app.request('/api/v1/admin/users', {
+      const res = await app.request('/api/admin/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -98,7 +98,7 @@ describe('Admin Users API', () => {
     })
 
     it('returns 403 for non-admin', async () => {
-      const res = await app.request('/api/v1/admin/users', {
+      const res = await app.request('/api/admin/users', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -118,9 +118,9 @@ describe('Admin Users API', () => {
 
   // ─── PUT /admin/users/:id ────────────────────────────────────────────────────
 
-  describe('PUT /api/v1/admin/users/:id', () => {
+  describe('PUT /api/admin/users/:id', () => {
     it('updates user fields', async () => {
-      const res = await app.request('/api/v1/admin/users/user-1', {
+      const res = await app.request('/api/admin/users/user-1', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -135,7 +135,7 @@ describe('Admin Users API', () => {
     })
 
     it('returns 404 for unknown user', async () => {
-      const res = await app.request('/api/v1/admin/users/nonexistent', {
+      const res = await app.request('/api/admin/users/nonexistent', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -147,7 +147,7 @@ describe('Admin Users API', () => {
     })
 
     it('returns 403 for non-admin', async () => {
-      const res = await app.request('/api/v1/admin/users/user-1', {
+      const res = await app.request('/api/admin/users/user-1', {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -161,9 +161,9 @@ describe('Admin Users API', () => {
 
   // ─── DELETE /admin/users/:id ─────────────────────────────────────────────────
 
-  describe('DELETE /api/v1/admin/users/:id', () => {
+  describe('DELETE /api/admin/users/:id', () => {
     it('deletes a user', async () => {
-      const res = await app.request('/api/v1/admin/users/user-1', {
+      const res = await app.request('/api/admin/users/user-1', {
         method: 'DELETE',
         headers: { Authorization: ADMIN_AUTH },
       })
@@ -173,7 +173,7 @@ describe('Admin Users API', () => {
     })
 
     it('returns 404 for unknown user', async () => {
-      const res = await app.request('/api/v1/admin/users/nonexistent', {
+      const res = await app.request('/api/admin/users/nonexistent', {
         method: 'DELETE',
         headers: { Authorization: ADMIN_AUTH },
       })
@@ -181,7 +181,7 @@ describe('Admin Users API', () => {
     })
 
     it('returns 403 for non-admin', async () => {
-      const res = await app.request('/api/v1/admin/users/admin-1', {
+      const res = await app.request('/api/admin/users/admin-1', {
         method: 'DELETE',
         headers: { Authorization: USER_AUTH },
       })

@@ -1,8 +1,10 @@
+import { UserRole } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { cors } from 'hono/cors'
-import { makeAuthMiddleware } from './auth/authMiddleware.js'
+import { makeSessionMiddleware } from './auth/middleware.ts'
 import { requireRole } from './auth/rbac.js'
+import { makeConfigRouter } from './config/config.router.js'
 import config from './config.ts'
 import { onError, onNotFound } from './http/errorMiddleware.js'
 import { makeLoggingMiddleware } from './http/loggingMiddleware.js'
@@ -44,7 +46,8 @@ export function createApp(
   db?: LibSQLDatabase,
   options?: { isHttps?: boolean },
 ): Hono {
-  const app = new Hono().basePath('/api/v1')
+  // const app = new Hono().basePath('/api/v1')
+  const app = new Hono().basePath('/api')
 
   // Global error handler: returns consistent JSON for unhandled errors
   app.onError(onError)
@@ -61,22 +64,23 @@ export function createApp(
   )
 
   // CORS middleware (dynamic, reads from server settings)
-  app.use(
-    '/*',
-    cors({
-      origin: async (origin) => {
-        if (!origin) return null
-        if (!config.get('network.security.corsEnabled')) return null
-        const allowed = config.get('network.security.corsAllowedOrigins') ?? []
+  // app.use(
+  //   '/*',
+  //   cors({
+  //     // origin: 'http://localhost:5173',
+  //     origin: async (origin) => {
+  //       if (!origin) return null
+  //       if (!config.get('network.security.corsEnabled')) return null
+  //       const allowed = config.get('network.security.corsAllowedOrigins') ?? []
 
-        if (allowed.includes('*')) return origin
-        return allowed.includes(origin) ? origin : null
-      },
-      allowHeaders: ['Authorization', 'Content-Type'],
-      allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
-      credentials: true,
-    }),
-  )
+  //       if (allowed.includes('*')) return origin
+  //       return allowed.includes(origin) ? origin : null
+  //     },
+  //     // allowHeaders: ['Authorization', 'Content-Type'],
+  //     // allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
+  //     credentials: true,
+  //   }),
+  // )
 
   if (db) {
     // Rate limiting: auth endpoints (strict), general API
@@ -110,9 +114,9 @@ export function createApp(
   //   })
   // }
 
-  // Auth middleware on all routes (skips /api/v1/auth/* internally)
+  // Auth middleware on all routes (skips /api/auth/* internally)
   // Passes db so API tokens can be verified alongside JWT access tokens
-  app.use('/*', makeAuthMiddleware(db))
+  app.use('/*', makeSessionMiddleware())
 
   app.get('/health', (c) => {
     return c.json({ status: 'ok', timestamp: new Date().toISOString() })
@@ -122,7 +126,7 @@ export function createApp(
   app.route('/docs', makeDocsRouter())
 
   if (db) {
-    app.route('/auth', makeAuthRouter(db))
+    app.route('/auth', makeAuthRouter())
     app.route('/fs', makeFsRouter(db))
     app.route('/libraries', makeLibrariesRouter(db))
     app.route('/groups', makeGroupsRouter(db))
@@ -133,10 +137,11 @@ export function createApp(
     app.route('/users', makeUsersRouter(db))
     app.route('/sync/profiles', makeSyncRouter(db))
     app.route('/stats', makeStatsRouter())
+    app.route('/config', makeConfigRouter())
   }
 
   // Admin-only: require admin role for all /admin/* routes
-  app.use('/admin/*', requireRole('admin'))
+  app.use('/admin/*', requireRole(UserRole.Admin))
 
   // Admin: user management
   if (db) {

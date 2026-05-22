@@ -66,7 +66,7 @@ export default function FontViewer({ mediaId, title, onClose }: Props) {
     const run = async () => {
       try {
         // Load font metadata
-        const metaRes = await apiFetch(`/api/v1/media/${mediaId}/font-metadata`)
+        const metaRes = await apiFetch(`/api/media/${mediaId}/font-metadata`)
         if (!metaRes.ok) throw new Error('Failed to load font metadata')
         const metaData = (await metaRes.json()) as FontMeta
         if (cancelled) return
@@ -75,7 +75,7 @@ export default function FontViewer({ mediaId, title, onClose }: Props) {
         // Load font via FontFace API
         const fontFace = new FontFace(
           fontFamily,
-          `url(/api/v1/media/${mediaId}/stream)`,
+          `url(/api/media/${mediaId}/stream)`,
         )
         await fontFace.load()
         if (cancelled) return

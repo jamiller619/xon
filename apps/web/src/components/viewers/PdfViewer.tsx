@@ -1,5 +1,5 @@
-import * as pdfjsLib from 'pdfjs-dist'
 import type { PDFDocumentProxy, PDFPageProxy, RenderTask } from 'pdfjs-dist'
+import * as pdfjsLib from 'pdfjs-dist'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { apiFetch } from '~/lib/apiFetch'
 import styles from './PdfViewer.module.css'
@@ -43,9 +43,7 @@ export default function PdfViewer({ mediaId, title, onClose }: Props) {
 
     const loadDoc = async () => {
       try {
-        const loadingTask = pdfjsLib.getDocument(
-          `/api/v1/media/${mediaId}/stream`,
-        )
+        const loadingTask = pdfjsLib.getDocument(`/api/media/${mediaId}/stream`)
         const doc = await loadingTask.promise
         if (cancelled) {
           doc.destroy()
@@ -118,7 +116,7 @@ export default function PdfViewer({ mediaId, title, onClose }: Props) {
   useEffect(() => {
     if (!pdfDoc || numPages === 0) return
     const completed = currentPage >= numPages
-    apiFetch(`/api/v1/media/${mediaId}/progress`, {
+    apiFetch(`/api/media/${mediaId}/progress`, {
       method: 'PUT',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({

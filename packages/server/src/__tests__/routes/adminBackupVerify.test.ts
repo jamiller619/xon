@@ -70,9 +70,9 @@ describe('Admin Backup Verify API', () => {
 
   // ─── POST /admin/backup/verify/:targetId ─────────────────────────────────────
 
-  describe('POST /api/v1/admin/backup/verify/:targetId', () => {
+  describe('POST /api/admin/backup/verify/:targetId', () => {
     it('returns 202 and creates a verify job for admin', async () => {
-      const res = await app.request(`/api/v1/admin/backup/verify/${targetId}`, {
+      const res = await app.request(`/api/admin/backup/verify/${targetId}`, {
         method: 'POST',
         headers: { Authorization: ADMIN_AUTH },
       })
@@ -83,13 +83,10 @@ describe('Admin Backup Verify API', () => {
     })
 
     it('returns 404 for unknown target', async () => {
-      const res = await app.request(
-        '/api/v1/admin/backup/verify/nonexistent-id',
-        {
-          method: 'POST',
-          headers: { Authorization: ADMIN_AUTH },
-        },
-      )
+      const res = await app.request('/api/admin/backup/verify/nonexistent-id', {
+        method: 'POST',
+        headers: { Authorization: ADMIN_AUTH },
+      })
       expect(res.status).toBe(404)
     })
 
@@ -103,7 +100,7 @@ describe('Admin Backup Verify API', () => {
             targetId,
           ),
         )
-      const res = await app.request(`/api/v1/admin/backup/verify/${targetId}`, {
+      const res = await app.request(`/api/admin/backup/verify/${targetId}`, {
         method: 'POST',
         headers: { Authorization: ADMIN_AUTH },
       })
@@ -111,14 +108,14 @@ describe('Admin Backup Verify API', () => {
     })
 
     it('returns 401 for unauthenticated request', async () => {
-      const res = await app.request(`/api/v1/admin/backup/verify/${targetId}`, {
+      const res = await app.request(`/api/admin/backup/verify/${targetId}`, {
         method: 'POST',
       })
       expect(res.status).toBe(401)
     })
 
     it('returns 403 for non-admin user', async () => {
-      const res = await app.request(`/api/v1/admin/backup/verify/${targetId}`, {
+      const res = await app.request(`/api/admin/backup/verify/${targetId}`, {
         method: 'POST',
         headers: { Authorization: USER_AUTH },
       })
@@ -128,9 +125,9 @@ describe('Admin Backup Verify API', () => {
 
   // ─── GET /admin/backup/verify/jobs ───────────────────────────────────────────
 
-  describe('GET /api/v1/admin/backup/verify/jobs', () => {
+  describe('GET /api/admin/backup/verify/jobs', () => {
     it('returns empty list initially', async () => {
-      const res = await app.request('/api/v1/admin/backup/verify/jobs', {
+      const res = await app.request('/api/admin/backup/verify/jobs', {
         headers: { Authorization: ADMIN_AUTH },
       })
       expect(res.status).toBe(200)
@@ -140,14 +137,14 @@ describe('Admin Backup Verify API', () => {
     })
 
     it('returns list after verify job created', async () => {
-      await app.request(`/api/v1/admin/backup/verify/${targetId}`, {
+      await app.request(`/api/admin/backup/verify/${targetId}`, {
         method: 'POST',
         headers: { Authorization: ADMIN_AUTH },
       })
       // Wait for async job to settle
       await new Promise((r) => setTimeout(r, 50))
 
-      const res = await app.request('/api/v1/admin/backup/verify/jobs', {
+      const res = await app.request('/api/admin/backup/verify/jobs', {
         headers: { Authorization: ADMIN_AUTH },
       })
       expect(res.status).toBe(200)
@@ -158,10 +155,10 @@ describe('Admin Backup Verify API', () => {
 
   // ─── GET /admin/backup/verify/jobs/:id ───────────────────────────────────────
 
-  describe('GET /api/v1/admin/backup/verify/jobs/:id', () => {
+  describe('GET /api/admin/backup/verify/jobs/:id', () => {
     it('returns 404 for unknown job id', async () => {
       const res = await app.request(
-        '/api/v1/admin/backup/verify/jobs/no-such-id',
+        '/api/admin/backup/verify/jobs/no-such-id',
         {
           headers: { Authorization: ADMIN_AUTH },
         },
@@ -171,7 +168,7 @@ describe('Admin Backup Verify API', () => {
 
     it('returns job record by id', async () => {
       const createRes = await app.request(
-        `/api/v1/admin/backup/verify/${targetId}`,
+        `/api/admin/backup/verify/${targetId}`,
         {
           method: 'POST',
           headers: { Authorization: ADMIN_AUTH },
@@ -180,12 +177,9 @@ describe('Admin Backup Verify API', () => {
       const { jobId } = await createRes.json()
       await new Promise((r) => setTimeout(r, 50))
 
-      const res = await app.request(
-        `/api/v1/admin/backup/verify/jobs/${jobId}`,
-        {
-          headers: { Authorization: ADMIN_AUTH },
-        },
-      )
+      const res = await app.request(`/api/admin/backup/verify/jobs/${jobId}`, {
+        headers: { Authorization: ADMIN_AUTH },
+      })
       expect(res.status).toBe(200)
       const body = await res.json()
       expect(body.id).toBe(jobId)
@@ -210,7 +204,7 @@ describe('Admin Backup Verify API', () => {
       })
 
       const createRes = await app.request(
-        `/api/v1/admin/backup/verify/${targetId}`,
+        `/api/admin/backup/verify/${targetId}`,
         {
           method: 'POST',
           headers: { Authorization: ADMIN_AUTH },
@@ -253,7 +247,7 @@ describe('Admin Backup Verify API', () => {
         .mockResolvedValueOnce(Buffer.from('different-dest-content'))
 
       const createRes = await app.request(
-        `/api/v1/admin/backup/verify/${targetId}`,
+        `/api/admin/backup/verify/${targetId}`,
         {
           method: 'POST',
           headers: { Authorization: ADMIN_AUTH },
@@ -310,7 +304,7 @@ describe('Admin Backup Verify API', () => {
         .mockRejectedValueOnce(new Error('ENOENT: no such file or directory'))
 
       const createRes = await app.request(
-        `/api/v1/admin/backup/verify/${targetId}`,
+        `/api/admin/backup/verify/${targetId}`,
         {
           method: 'POST',
           headers: { Authorization: ADMIN_AUTH },
@@ -337,7 +331,7 @@ describe('Admin Backup Verify API', () => {
 
     it('handles empty state (no backed-up files)', async () => {
       const createRes = await app.request(
-        `/api/v1/admin/backup/verify/${targetId}`,
+        `/api/admin/backup/verify/${targetId}`,
         {
           method: 'POST',
           headers: { Authorization: ADMIN_AUTH },
@@ -377,7 +371,7 @@ describe('Admin Backup Verify API', () => {
       })
 
       const createRes = await app.request(
-        `/api/v1/admin/backup/verify/${targetId}`,
+        `/api/admin/backup/verify/${targetId}`,
         {
           method: 'POST',
           headers: { Authorization: ADMIN_AUTH },

@@ -154,7 +154,7 @@ export default function render(container, props) {
   async function loadModel() {
     let fileName = ''
     try {
-      const res = await fetch(`/api/v1/media/${mediaId}`)
+      const res = await fetch(`/api/media/${mediaId}`)
       const item = await res.json()
       fileName = item.fileName ?? item.filePath ?? ''
     } catch {
@@ -163,7 +163,7 @@ export default function render(container, props) {
     }
 
     const ext = fileName.split('.').pop()?.toLowerCase() ?? ''
-    const streamUrl = `/api/v1/media/${mediaId}/stream`
+    const streamUrl = `/api/media/${mediaId}/stream`
 
     if (ext === 'obj') {
       const loader = new OBJLoader()

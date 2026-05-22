@@ -262,7 +262,7 @@ export default function ArchiveViewer({ mediaId, title, onClose }: Props) {
   useEffect(() => {
     setLoading(true)
     setError(null)
-    apiFetch(`/api/v1/media/${mediaId}/archive-contents`)
+    apiFetch(`/api/media/${mediaId}/archive-contents`)
       .then((r) => {
         if (!r.ok) throw new Error('Failed to load archive contents')
         return r.json()

@@ -37,7 +37,7 @@ describe('Admin Health API', () => {
   })
 
   it('GET /admin/health — returns 200 with required fields', async () => {
-    const res = await app.request('/api/v1/admin/health', {
+    const res = await app.request('/api/admin/health', {
       headers: { Authorization: AUTH },
     })
     expect(res.status).toBe(200)
@@ -60,7 +60,7 @@ describe('Admin Health API', () => {
 
   it('GET /admin/health — requires admin auth', async () => {
     const userAuth = `Bearer ${await signAccessToken('user-id', 'user', 'user')}`
-    const res = await app.request('/api/v1/admin/health', {
+    const res = await app.request('/api/admin/health', {
       headers: { Authorization: userAuth },
     })
     expect(res.status).toBe(403)
@@ -93,7 +93,7 @@ describe('Admin Health API', () => {
       error: null,
     })
 
-    const res = await app.request('/api/v1/admin/health', {
+    const res = await app.request('/api/admin/health', {
       headers: { Authorization: AUTH },
     })
     expect(res.status).toBe(200)
@@ -104,7 +104,7 @@ describe('Admin Health API', () => {
   })
 
   it('GET /admin/health — storage uses statfs values', async () => {
-    const res = await app.request('/api/v1/admin/health', {
+    const res = await app.request('/api/admin/health', {
       headers: { Authorization: AUTH },
     })
     expect(res.status).toBe(200)
@@ -116,7 +116,7 @@ describe('Admin Health API', () => {
   })
 
   it('GET /admin/health — libraries array is empty when no libraries', async () => {
-    const res = await app.request('/api/v1/admin/health', {
+    const res = await app.request('/api/admin/health', {
       headers: { Authorization: AUTH },
     })
     expect(res.status).toBe(200)

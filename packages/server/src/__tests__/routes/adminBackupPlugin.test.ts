@@ -185,7 +185,7 @@ describe('Backup Targets API — plugin type', () => {
   })
 
   it('POST /admin/backup/targets — creates a plugin target', async () => {
-    const res = await app.request('/api/v1/admin/backup/targets', {
+    const res = await app.request('/api/admin/backup/targets', {
       method: 'POST',
       headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
       body: JSON.stringify({
@@ -212,7 +212,7 @@ describe('Backup Targets API — plugin type', () => {
       createdAt: new Date(),
     })
 
-    const res = await app.request(`/api/v1/admin/backup/targets/${id}`, {
+    const res = await app.request(`/api/admin/backup/targets/${id}`, {
       method: 'PUT',
       headers: { Authorization: AUTH, 'Content-Type': 'application/json' },
       body: JSON.stringify({
