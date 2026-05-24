@@ -3,15 +3,15 @@ import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { requireRole } from '../auth/rbac.js'
-import { appCache } from '../cache.js'
-import { libraries } from '../db/schema.js'
-import { emitEvent } from '../events.js'
-import { validate } from '../http/validate.js'
-import { emitPluginEvent } from '../plugins/pluginManager.js'
-import { scanLibrary } from '../scanner/orchestrator.ts'
-import { type ScanState, scanRegistry } from '../scanner/scanRegistry.js'
-import { parseCronInterval } from '../scanner/scheduler.js'
+import { requireRole } from '../auth/rbac.ts'
+import { appCache } from '../cache.ts'
+import { libraries } from '../db/schema.ts'
+import { emitEvent } from '../events.ts'
+import { validate } from '../http/validate.ts'
+import { emitPluginEvent } from '../plugins/pluginManager.ts'
+import { type ScanState, scanRegistry } from '../scanner/scanRegistry.ts'
+import { parseCronInterval } from '../scanner/scheduler.ts'
+import { spawnScan } from '../scanner/spawnScan.ts'
 
 const scheduleSchema = z.object({
   scanSchedule: z
@@ -32,7 +32,7 @@ const watchSchema = z.object({
  * Returns false if a scan is already running, true if one was started.
  */
 export function triggerLibraryScan(
-  db: LibSQLDatabase,
+  _db: LibSQLDatabase,
   libraryId: string,
 ): boolean {
   const current = scanRegistry.get(libraryId)
@@ -66,7 +66,7 @@ export function triggerLibraryScan(
   //     },
   //   })
   // })
-  scanLibrary(db, libraryId)
+  spawnScan(libraryId)
     .then(async (summary) => {
       const duration = Date.now() - scanStartedAt
       state.status = 'completed'

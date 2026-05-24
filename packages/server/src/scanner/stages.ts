@@ -1,19 +1,19 @@
 import { MediaCategory, type Metadata } from '@xon/shared'
 import { eq } from 'drizzle-orm'
 import { mediaItems } from '../db/schema.ts'
-import { detectDrm } from '../media/drm.js'
-import { extractExiftoolMetadata } from '../media/exiftool.js'
-import { extractFfprobeMetadata } from '../media/ffprobe.js'
+import { detectDrm } from '../media/drm.ts'
+import { extractExiftoolMetadata } from '../media/exiftool.ts'
+import { extractFfprobeMetadata } from '../media/ffprobe.ts'
 import { parseFilename } from '../media/filenameParser.ts'
-import { extractMusicTags } from '../media/musictags.js'
-import { generateThumbnails } from '../media/thumbnails.js'
+import { extractMusicTags } from '../media/musictags.ts'
+import { generateThumbnails } from '../media/thumbnails.ts'
 import type { FileEntry } from './fileEntry.ts'
 import type {
   MediaJob,
   MediaJobItem,
   PipelineContext,
   PipelineStage,
-} from './pipeline.js'
+} from './pipeline.ts'
 
 export const DRMStage: PipelineStage = {
   name: 'drm',

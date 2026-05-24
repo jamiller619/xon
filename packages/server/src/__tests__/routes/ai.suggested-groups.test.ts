@@ -1,9 +1,9 @@
 import type { Client } from '@libsql/client'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { createApp } from '../../app.js'
-import { openDatabase } from '../../db/db.js'
-import { migrateDatabase } from '../../db/migrate.js'
+import { createApp } from '../../app.ts'
+import { openDatabase } from '../../db/db.ts'
+import { migrateDatabase } from '../../db/migrate.ts'
 import {
   dataSources,
   groups,
@@ -11,8 +11,8 @@ import {
   mediaItems,
   suggestedGroups,
   users,
-} from '../../db/schema.js'
-import { signAccessToken } from '../../routes/auth.js'
+} from '../../db/schema.ts'
+import { signAccessToken } from '../../routes/auth.ts'
 
 const AUTH_ADMIN = `Bearer ${await signAccessToken('admin-id', 'admin', 'admin')}`
 const AUTH_USER = `Bearer ${await signAccessToken('user-id', 'regularuser', 'user')}`

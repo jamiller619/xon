@@ -3,9 +3,9 @@ import { unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { MediaCategory } from '@xon/shared'
 import config from '../config.ts'
-import { createLogger } from '../logger.js'
-import { ffmpegPath, ffprobePath } from './binaries.js'
-import { type ThumbnailPaths, writeThumbnailImages } from './images.js'
+import { createLogger } from '../logger.ts'
+import { ffmpegPath, ffprobePath } from './binaries.ts'
+import { type ThumbnailPaths, writeThumbnailImages } from './images.ts'
 
 const logger = createLogger('video-thumbnails')
 

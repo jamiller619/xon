@@ -8,9 +8,9 @@ import {
 import fileEntryCache from 'file-entry-cache'
 import klaw from 'klaw'
 import config from '../config.ts'
-import { createLogger } from '../logger.js'
-import { getMediaProviderPlugin } from '../plugins/mediaProviderPluginRegistry.js'
-import { createFileEntry, type FileEntry } from './fileEntry.js'
+import { createLogger } from '../logger.ts'
+import { getMediaProviderPlugin } from '../plugins/mediaProviderPluginRegistry.ts'
+import { createFileEntry, type FileEntry } from './fileEntry.ts'
 
 const logger = createLogger('scanner')
 
@@ -56,7 +56,7 @@ async function* localSource(
 }
 
 const scanCacheDir = path.join(config.get('appdata.cachePath'))
-const scanCacheFilePath = path.join(scanCacheDir, 'scanner')
+const scanCacheFilePath = path.join(scanCacheDir, 'scanner.json')
 
 await fsp.mkdir(scanCacheDir, { recursive: true })
 

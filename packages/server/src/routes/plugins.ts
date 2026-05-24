@@ -2,7 +2,7 @@ import { createReadStream, existsSync } from 'node:fs'
 import { stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { Hono } from 'hono'
-import { registry } from '../plugins/pluginManager.js'
+import { registry } from '../plugins/pluginManager.ts'
 
 export function makePluginsRouter(): Hono {
   const router = new Hono()

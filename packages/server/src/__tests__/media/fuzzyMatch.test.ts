@@ -9,7 +9,7 @@ import {
   ngramSimilarity,
   parseFilenameInfo,
   setOnnxSession,
-} from '../../media/fuzzyMatch.js'
+} from '../../media/fuzzyMatch.ts'
 
 afterEach(() => {
   setOnnxSession(null)

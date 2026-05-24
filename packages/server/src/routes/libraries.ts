@@ -7,14 +7,14 @@ import {
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { requireRole } from '../auth/rbac.js'
-import { appCache, computeETag } from '../cache.js'
-import { validate } from '../http/validate.js'
-import * as libraryService from '../services/libraryService.js'
-import { makeLibraryThumbnailRouter } from './libraryThumbnail.js'
-import { makeScanRouter, triggerLibraryScan } from './scan.js'
+import { requireRole } from '../auth/rbac.ts'
+import { appCache, computeETag } from '../cache.ts'
+import { validate } from '../http/validate.ts'
+import * as libraryService from '../services/libraryService.ts'
+import { makeLibraryThumbnailRouter } from './libraryThumbnail.ts'
+import { makeScanRouter, triggerLibraryScan } from './scan.ts'
 
-// import { makeSourcesRouter } from './sources.js'
+// import { makeSourcesRouter } from './sources.ts'
 
 const LIBRARIES_ALL_KEY = 'libraries:all'
 

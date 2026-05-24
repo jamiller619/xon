@@ -10,7 +10,7 @@ import {
   type MusicTagsMetadata,
   extractMusicTags,
   isMusicCategory,
-} from '../../media/musictags.js'
+} from '../../media/musictags.ts'
 
 const mockParseFile = vi.mocked(parseFile)
 

@@ -16,7 +16,7 @@ import {
   RAW_EXTENSIONS,
   convertRawToJpeg,
   isRawImage,
-} from '../../media/raw.js'
+} from '../../media/raw.ts'
 
 type FakeChildProcess = EventEmitter & {
   stdout: EventEmitter

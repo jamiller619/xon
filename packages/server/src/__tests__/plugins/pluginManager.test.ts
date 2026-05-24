@@ -11,7 +11,7 @@ import {
   loadPlugin,
   registry,
   uninstallPlugin,
-} from '../../plugins/pluginManager.js'
+} from '../../plugins/pluginManager.ts'
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 

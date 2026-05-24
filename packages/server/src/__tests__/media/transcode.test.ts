@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { generateHlsPlaylist, needsTranscoding } from '../../media/transcode.js'
+import { generateHlsPlaylist, needsTranscoding } from '../../media/transcode.ts'
 
 describe('needsTranscoding', () => {
   it('returns false when both codecs are undefined', () => {

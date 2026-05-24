@@ -1,8 +1,8 @@
 import { Hono } from 'hono'
 import { describe, expect, it } from 'vitest'
-import { createApp } from '../../app.js'
-import { onError, onNotFound } from '../../http/errorMiddleware.js'
-import { signAccessToken } from '../../routes/auth.js'
+import { createApp } from '../../app.ts'
+import { onError, onNotFound } from '../../http/errorMiddleware.ts'
+import { signAccessToken } from '../../routes/auth.ts'
 
 const AUTH = `Bearer ${await signAccessToken('admin-id', 'admin', 'admin')}`
 

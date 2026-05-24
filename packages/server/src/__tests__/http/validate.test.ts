@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { describe, expect, it } from 'vitest'
 import { z } from 'zod'
-import { validate } from '../../http/validate.js'
+import { validate } from '../../http/validate.ts'
 
 describe('validate', () => {
   it('passes valid JSON body to handler', async () => {

@@ -1,10 +1,10 @@
 import type { Client } from '@libsql/client'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createApp } from '../../app.js'
-import { openDatabase } from '../../db/db.js'
-import { migrateDatabase } from '../../db/migrate.js'
-import { signAccessToken } from '../../routes/auth.js'
+import { createApp } from '../../app.ts'
+import { openDatabase } from '../../db/db.ts'
+import { migrateDatabase } from '../../db/migrate.ts'
+import { signAccessToken } from '../../routes/auth.ts'
 
 const AUTH = `Bearer ${await signAccessToken('test-id', 'testuser', 'admin')}`
 

@@ -25,7 +25,7 @@ import {
   isArchiveCategory,
   isDocumentCategory,
   isFontCategory,
-} from '../../media/miscmeta.js'
+} from '../../media/miscmeta.ts'
 
 type FakeChildProcess = EventEmitter & { stdout: EventEmitter }
 

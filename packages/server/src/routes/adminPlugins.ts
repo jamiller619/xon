@@ -4,7 +4,7 @@ import {
   deactivatePlugin,
   pluginErrors,
   registry,
-} from '../plugins/pluginManager.js'
+} from '../plugins/pluginManager.ts'
 
 export interface PluginAdminInfo {
   id: string

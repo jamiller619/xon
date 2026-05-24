@@ -4,7 +4,7 @@ import { and, desc, eq, isNull, or } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { hashPassword, verifyPassword } from '../auth/password.js'
+import { hashPassword, verifyPassword } from '../auth/password.ts'
 import {
   // apiTokens,
   groupItems,
@@ -14,9 +14,9 @@ import {
   mediaProgress,
   users,
   // watchlist,
-} from '../db/schema.js'
-import { validate } from '../http/validate.js'
-// import { withThumbnailUrls } from './media.js'
+} from '../db/schema.ts'
+import { validate } from '../http/validate.ts'
+// import { withThumbnailUrls } from './media.ts'
 
 export function hashApiToken(token: string): string {
   return createHash('sha256').update(token).digest('hex')

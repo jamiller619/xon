@@ -4,8 +4,8 @@ import { and, desc, eq, inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { mediaItems, syncProfiles, syncRuns } from '../db/schema.js'
-import { validate } from '../http/validate.js'
+import { mediaItems, syncProfiles, syncRuns } from '../db/schema.ts'
+import { validate } from '../http/validate.ts'
 
 // ---------------------------------------------------------------------------
 // Request schemas

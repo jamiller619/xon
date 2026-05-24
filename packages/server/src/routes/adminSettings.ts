@@ -1,8 +1,8 @@
 import { Hono } from 'hono'
 import { configSchema } from '../config.ts'
 // import { z } from 'zod'
-// import { serverSettings } from '../db/schema.js'
-import { validate } from '../http/validate.js'
+// import { serverSettings } from '../db/schema.ts'
+import { validate } from '../http/validate.ts'
 
 // const THUMBNAIL_SIZE_OPTIONS = ['small', 'medium', 'large', 'xlarge'] as const
 // type ThumbnailSize = (typeof THUMBNAIL_SIZE_OPTIONS)[number]

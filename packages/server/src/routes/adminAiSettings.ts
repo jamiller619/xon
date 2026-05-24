@@ -2,9 +2,9 @@ import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { decryptSecret, encryptSecret } from '../auth/crypto.js'
-import { aiSettings } from '../db/schema.js'
-import { validate } from '../http/validate.js'
+import { decryptSecret, encryptSecret } from '../auth/crypto.ts'
+import { aiSettings } from '../db/schema.ts'
+import { validate } from '../http/validate.ts'
 
 const AI_SETTINGS_ID = 'default'
 

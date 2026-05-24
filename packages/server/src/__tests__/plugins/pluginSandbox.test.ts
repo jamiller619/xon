@@ -14,7 +14,7 @@ import {
   createSandboxedFetch,
   createSandboxedFs,
   isPathAllowed,
-} from '../../plugins/pluginSandbox.js'
+} from '../../plugins/pluginSandbox.ts'
 
 const mockFs = vi.mocked(nodeFsPromises)
 

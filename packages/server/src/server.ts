@@ -3,13 +3,13 @@ import { fileURLToPath, pathToFileURL } from 'node:url'
 import { serve } from '@hono/node-server'
 // import { DEFAULT_PORT } from '@xon/shared'
 import { Hono } from 'hono'
-import { createApp } from './app.js'
+import { createApp } from './app.ts'
 import { client, db } from './db/db.ts'
-import { migrateDatabase } from './db/migrate.js'
-// import { serverSettings } from './db/schema.js'
-// import { acquireAcmeCert, loadManualCerts } from './http/httpsManager.js'
-import { makeStaticMiddleware } from './http/staticFiles.js'
-import { createLogger, initLogger, setLogLevel } from './logger.js'
+import { migrateDatabase } from './db/migrate.ts'
+// import { serverSettings } from './db/schema.ts'
+// import { acquireAcmeCert, loadManualCerts } from './http/httpsManager.ts'
+import { makeStaticMiddleware } from './http/staticFiles.ts'
+import { createLogger, initLogger, setLogLevel } from './logger.ts'
 
 // process.loadEnvFile('./.env')
 
@@ -18,14 +18,14 @@ const logger = createLogger('server')
 import type { AddressInfo } from 'node:net'
 import path from 'node:path'
 import config from './config.ts'
-import { initializeGroups } from './groups.ts'
+// import { initializeGroups } from './groups.ts'
 import {
   discoverAndActivatePlugins,
   emitPluginEvent,
   setPluginDatabase,
-} from './plugins/pluginManager.js'
-import { createWsServer, WS_PATH } from './routes/ws.js'
-import { startScheduler } from './scanner/scheduler.js'
+} from './plugins/pluginManager.ts'
+import { createWsServer, WS_PATH } from './routes/ws.ts'
+import { startScheduler } from './scanner/scheduler.ts'
 
 // import { initializeUsers } from './users.ts'
 
@@ -68,8 +68,8 @@ export async function boot(): Promise<void> {
 
     logger.log('Migrations complete')
 
-    logger.log('Initializing groups')
-    await initializeGroups(db)
+    // logger.log('Initializing groups')
+    // await initializeGroups(db)
 
     setPluginDatabase(client)
     logger.log('Plugin database configured')

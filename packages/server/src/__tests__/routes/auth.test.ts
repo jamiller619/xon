@@ -2,11 +2,11 @@ import type { Client } from '@libsql/client'
 import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { createApp } from '../../app.js'
-import { hashPassword } from '../../auth/password.js'
-import { openDatabase } from '../../db/db.js'
-import { migrateDatabase } from '../../db/migrate.js'
-import { refreshTokens, users } from '../../db/schema.js'
+import { createApp } from '../../app.ts'
+import { hashPassword } from '../../auth/password.ts'
+import { openDatabase } from '../../db/db.ts'
+import { migrateDatabase } from '../../db/migrate.ts'
+import { refreshTokens, users } from '../../db/schema.ts'
 
 describe('Auth API', () => {
   let client: Client

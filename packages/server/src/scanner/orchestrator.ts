@@ -2,12 +2,12 @@ import { CATEGORY_DEFINITIONS } from '@xon/shared'
 import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import config from '../config.ts'
-import { libraries } from '../db/schema.js'
-import { createLogger } from '../logger.js'
-import { type MediaJob, type PipelineContext, runPipeline } from './pipeline.js'
-import { scanDataSource } from './scanner.js'
-import MetadataStage from './stages/MetadataStage.js'
-import { DRMStage, PersistStage, ThumbnailStage, TitleStage } from './stages.js'
+import { libraries } from '../db/schema.ts'
+import { createLogger } from '../logger.ts'
+import { type MediaJob, type PipelineContext, runPipeline } from './pipeline.ts'
+import { scanDataSource } from './scanner.ts'
+import MetadataStage from './stages/MetadataStage.ts'
+import { DRMStage, PersistStage, ThumbnailStage, TitleStage } from './stages.ts'
 
 const logger = createLogger('orchestrator')
 

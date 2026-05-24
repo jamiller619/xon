@@ -2,17 +2,17 @@ import type { Client } from '@libsql/client'
 import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { createApp } from '../../app.js'
-import { openDatabase } from '../../db/db.js'
-import { migrateDatabase } from '../../db/migrate.js'
+import { createApp } from '../../app.ts'
+import { openDatabase } from '../../db/db.ts'
+import { migrateDatabase } from '../../db/migrate.ts'
 import {
   dataSources,
   libraries,
   libraryAccess,
   mediaItems,
   users,
-} from '../../db/schema.js'
-import { signAccessToken } from '../../routes/auth.js'
+} from '../../db/schema.ts'
+import { signAccessToken } from '../../routes/auth.ts'
 
 const ADMIN_AUTH = `Bearer ${await signAccessToken('admin-id', 'admin', 'admin')}`
 const USER_AUTH = `Bearer ${await signAccessToken('user-id', 'regularuser', 'user')}`

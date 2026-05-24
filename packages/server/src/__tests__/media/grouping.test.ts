@@ -2,15 +2,15 @@ import type { Client } from '@libsql/client'
 import { MediaCategory } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { openDatabase } from '../../db/db.js'
-import { migrateDatabase } from '../../db/migrate.js'
+import { openDatabase } from '../../db/db.ts'
+import { migrateDatabase } from '../../db/migrate.ts'
 import {
   dataSources,
   groupMembers,
   groups,
   libraries,
   mediaItems,
-} from '../../db/schema.js'
+} from '../../db/schema.ts'
 import {
   clusterCoordinate,
   groupAudiobooks,
@@ -22,7 +22,7 @@ import {
   parseTvEpisode,
   resolveAudiobookInfo,
   resolveSeriesName,
-} from '../../media/grouping.js'
+} from '../../media/grouping.ts'
 
 describe('parseTvEpisode', () => {
   it('parses standard SxxExx with series name', () => {

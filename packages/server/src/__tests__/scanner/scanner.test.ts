@@ -3,7 +3,7 @@ import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { MediaCategory } from '@xon/shared'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { scanDataSource } from '../../scanner/scanner.js'
+import { scanDataSource } from '../../scanner/scanner.ts'
 
 describe('scanDataSource', () => {
   let tmpDir: string

@@ -1,6 +1,6 @@
 import { and, asc, desc, eq, lt, sql } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
-import { backupJobs, backupTargets } from '../db/schema.js'
+import { backupJobs, backupTargets } from '../db/schema.ts'
 
 // ---------------------------------------------------------------------------
 // Cron expression parsing

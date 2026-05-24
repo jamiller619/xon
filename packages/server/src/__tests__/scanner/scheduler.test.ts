@@ -2,10 +2,10 @@ import { watch } from 'node:fs'
 import type { Client } from '@libsql/client'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { openDatabase } from '../../db/db.js'
-import { migrateDatabase } from '../../db/migrate.js'
-import { dataSources, libraries } from '../../db/schema.js'
-import { parseCronInterval, startScheduler } from '../../scanner/scheduler.js'
+import { openDatabase } from '../../db/db.ts'
+import { migrateDatabase } from '../../db/migrate.ts'
+import { dataSources, libraries } from '../../db/schema.ts'
+import { parseCronInterval, startScheduler } from '../../scanner/scheduler.ts'
 
 vi.mock('node:fs', () => ({
   watch: vi.fn(),

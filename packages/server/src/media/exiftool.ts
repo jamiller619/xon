@@ -1,6 +1,6 @@
 import { CATEGORY_DEFINITIONS, MediaCategory } from '@xon/shared'
-import { createLogger } from '../logger.js'
-import { exifTool } from './binaries.js'
+import { createLogger } from '../logger.ts'
+import { exifTool } from './binaries.ts'
 
 const logger = createLogger('exiftool')
 

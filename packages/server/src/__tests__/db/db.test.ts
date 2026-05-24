@@ -2,7 +2,7 @@ import { mkdir, rm } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
 import { afterEach, describe, expect, it } from 'vitest'
-import { openDatabase } from '../../db/db.js'
+import { openDatabase } from '../../db/db.ts'
 
 describe('openDatabase', () => {
   const tempDir = join(tmpdir(), `xon-test-db-${Date.now()}`)

@@ -9,7 +9,7 @@ import {
   libraries,
   mediaItems,
   suggestedGroups,
-} from '../db/schema.js'
+} from '../db/schema.ts'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 

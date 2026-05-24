@@ -3,7 +3,7 @@ import {
   detectBookSeries,
   detectMultiDiscAlbums,
   detectSupplementaryMaterials,
-} from '../../media/smartGrouping.js'
+} from '../../media/smartGrouping.ts'
 
 // Minimal mediaItem shape for testing
 type MinItem = {

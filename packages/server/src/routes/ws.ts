@@ -1,7 +1,7 @@
 import type { IncomingMessage } from 'node:http'
 import type { Duplex } from 'node:stream'
 import { WebSocketServer } from 'ws'
-import { eventBus, type XonEvent } from '../events.js'
+import { eventBus, type XonEvent } from '../events.ts'
 
 export const WS_PATH = '/api/ws'
 

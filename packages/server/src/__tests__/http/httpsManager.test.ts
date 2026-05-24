@@ -43,7 +43,7 @@ import {
   acquireAcmeCert,
   isCertFileValid,
   loadManualCerts,
-} from '../../http/httpsManager.js'
+} from '../../http/httpsManager.ts'
 
 const mReadFile = vi.mocked(readFile)
 const mStat = vi.mocked(stat)

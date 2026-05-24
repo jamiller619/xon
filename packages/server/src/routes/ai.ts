@@ -8,14 +8,14 @@ import {
   // libraryAccess,
   mediaItems,
   suggestedGroups,
-} from '../db/schema.js'
-import { validate } from '../http/validate.js'
-import { scanLibraryForDuplicates } from '../media/perceptualHash.js'
+} from '../db/schema.ts'
+import { validate } from '../http/validate.ts'
+import { scanLibraryForDuplicates } from '../media/perceptualHash.ts'
 import {
   acceptSuggestedGroup,
   scanLibraryForSmartGroups,
-} from '../media/smartGrouping.js'
-// import { withThumbnailUrls } from './media.js'
+} from '../media/smartGrouping.ts'
+// import { withThumbnailUrls } from './media.ts'
 
 // const PRIVILEGED_ROLES = ['admin', 'manager'] as const
 

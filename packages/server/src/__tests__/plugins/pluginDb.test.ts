@@ -1,9 +1,9 @@
 import { describe, expect, it } from 'vitest'
-import { openDatabase } from '../../db/db.js'
+import { openDatabase } from '../../db/db.ts'
 import {
   createPluginDatabaseAccess,
   validatePluginSql,
-} from '../../plugins/pluginDb.js'
+} from '../../plugins/pluginDb.ts'
 
 // ─── validatePluginSql ───────────────────────────────────────────────────────
 

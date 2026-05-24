@@ -2,7 +2,7 @@ import { readFile } from 'node:fs/promises'
 import { extname } from 'node:path'
 import { gunzipSync } from 'node:zlib'
 import { MediaCategory } from '@xon/shared'
-import { exifTool } from './binaries.js'
+import { exifTool } from './binaries.ts'
 
 // const DOCUMENT_CATEGORIES = new Set<string>([MediaCategory.Documents])
 // const FONT_CATEGORIES = new Set<string>([MediaCategory.Fonts])

@@ -6,8 +6,8 @@ import {
   getAllowedRatings,
   // libraryAccess,
   users,
-} from '../db/schema.js'
-import { validate } from '../http/validate.js'
+} from '../db/schema.ts'
+import { validate } from '../http/validate.ts'
 
 const searchQuerySchema = z.object({
   q: z.string().trim().min(1, 'q is required'),

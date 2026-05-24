@@ -4,7 +4,7 @@ import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import sharp from 'sharp'
-import { libraries, mediaItems } from '../db/schema.js'
+import { libraries, mediaItems } from '../db/schema.ts'
 
 const CELL_W = 150
 const CELL_H = 225

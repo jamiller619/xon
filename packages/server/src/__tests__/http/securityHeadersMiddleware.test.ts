@@ -1,6 +1,6 @@
 import { Hono } from 'hono'
 import { describe, expect, it } from 'vitest'
-import { makeSecurityHeadersMiddleware } from '../../http/securityHeadersMiddleware.js'
+import { makeSecurityHeadersMiddleware } from '../../http/securityHeadersMiddleware.ts'
 
 function makeTestApp(options?: { isHttps?: boolean }): Hono {
   const app = new Hono()

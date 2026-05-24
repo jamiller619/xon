@@ -1,8 +1,8 @@
 import type { MediaCategory, MediaItem, Metadata } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import pLimit from 'p-limit'
-import type { Logger } from '../logger.js'
-import type { FileEntry } from './fileEntry.js'
+import type { Logger } from '../logger.ts'
+import type { FileEntry } from './fileEntry.ts'
 
 export type PipelineContext = {
   db: LibSQLDatabase

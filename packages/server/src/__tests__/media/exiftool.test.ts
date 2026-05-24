@@ -11,7 +11,7 @@ import {
   type ExiftoolMetadata,
   extractExiftoolMetadata,
   isImageCategory,
-} from '../../media/exiftool.js'
+} from '../../media/exiftool.ts'
 
 type FakeChildProcess = EventEmitter & { stdout: EventEmitter }
 

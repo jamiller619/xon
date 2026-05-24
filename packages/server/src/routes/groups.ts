@@ -3,9 +3,9 @@ import { and, asc, eq, inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { requireRole } from '../auth/rbac.js'
-import { groupItems, groups, mediaItems } from '../db/schema.js'
-import { validate } from '../http/validate.js'
+import { requireRole } from '../auth/rbac.ts'
+import { groupItems, groups, mediaItems } from '../db/schema.ts'
+import { validate } from '../http/validate.ts'
 
 const MANUAL_GROUP_TYPES = [
   GroupType.Collection,
@@ -74,7 +74,7 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
 
   // GET /groups?libraryId=xxx — list manual groups for a library (access-checked)
   router.get('/', async (c) => {
-    // const user = c.get('user')
+    const user = c.get('user')
     // const libraryId = c.req.query('libraryId')
     // if (!libraryId)
     //   return c.json({ error: 'libraryId query param required' }, 400)
@@ -83,17 +83,16 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
     // if (accessibleIds !== null && !accessibleIds.includes(libraryId)) {
     //   return c.json({ error: 'Not found' }, 404)
     // }
+    if (!user) {
+      return c.json({ error: 'Not authenticated' }, 401)
+    }
 
     const rows = await db
       .select()
       .from(groups)
-      .where(
-        and(
-          // eq(groups.libraryId, libraryId),
-          inArray(groups.type, [...MANUAL_GROUP_TYPES]),
-        ),
-      )
+      .where(eq(groups.userId, user.id))
       .orderBy(asc(groups.createdAt))
+
     return c.json(rows)
   })
 

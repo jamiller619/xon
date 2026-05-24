@@ -1,5 +1,5 @@
-import { createLogger } from '../logger.js'
-import { type ThumbnailPaths, writeThumbnailImages } from './images.js'
+import { createLogger } from '../logger.ts'
+import { type ThumbnailPaths, writeThumbnailImages } from './images.ts'
 
 const logger = createLogger('thumbnails')
 

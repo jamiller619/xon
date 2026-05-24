@@ -6,10 +6,10 @@ import {
   // libraryAccess,
   matchingQueue,
   mediaItems,
-} from '../db/schema.js'
-import { validate } from '../http/validate.js'
+} from '../db/schema.ts'
+import { validate } from '../http/validate.ts'
 
-// import { withThumbnailUrls } from './media.js'
+// import { withThumbnailUrls } from './media.ts'
 
 const PRIVILEGED_ROLES = ['admin', 'manager'] as const
 

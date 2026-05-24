@@ -2,8 +2,8 @@ import { mkdir } from 'node:fs/promises'
 import path, { extname, join } from 'node:path'
 import sharp from 'sharp'
 import config from '../config.ts'
-import type { Logger } from '../logger.js'
-import { convertRawToJpeg } from './raw.js'
+import type { Logger } from '../logger.ts'
+import { convertRawToJpeg } from './raw.ts'
 
 export type ThumbnailPaths = {
   small: string

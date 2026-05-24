@@ -21,6 +21,10 @@ export async function createLibrary(
   return libraryId
 }
 
+export async function getAllLibraries(db: LibSQLDatabase) {
+  return db.select().from(libraries)
+}
+
 export async function getLibraryById(
   db: LibSQLDatabase,
   id: string,

@@ -4,7 +4,7 @@ import {
   getMediaProviderPlugin,
   registerMediaProviderPlugin,
   unregisterMediaProviderPlugin,
-} from '../../plugins/mediaProviderPluginRegistry.js'
+} from '../../plugins/mediaProviderPluginRegistry.ts'
 
 function makePlugin() {
   return {

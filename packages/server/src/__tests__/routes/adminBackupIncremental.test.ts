@@ -3,9 +3,9 @@ import type { Client } from '@libsql/client'
 import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { hashPassword } from '../../auth/password.js'
-import { openDatabase } from '../../db/db.js'
-import { migrateDatabase } from '../../db/migrate.js'
+import { hashPassword } from '../../auth/password.ts'
+import { openDatabase } from '../../db/db.ts'
+import { migrateDatabase } from '../../db/migrate.ts'
 import {
   backupFileState,
   backupJobs,
@@ -14,8 +14,8 @@ import {
   libraries,
   mediaItems,
   users,
-} from '../../db/schema.js'
-import { signAccessToken } from '../../routes/auth.js'
+} from '../../db/schema.ts'
+import { signAccessToken } from '../../routes/auth.ts'
 
 vi.mock('node:fs/promises', () => ({
   copyFile: vi.fn(),

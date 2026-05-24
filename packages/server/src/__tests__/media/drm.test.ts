@@ -5,7 +5,7 @@ vi.mock('node:fs/promises', () => ({
 }))
 
 import { open } from 'node:fs/promises'
-import { detectDrm } from '../../media/drm.js'
+import { detectDrm } from '../../media/drm.ts'
 
 const mockOpen = vi.mocked(open)
 

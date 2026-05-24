@@ -2,15 +2,15 @@ import { copyFile, mkdir } from 'node:fs/promises'
 import type { Client } from '@libsql/client'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createApp } from '../../app.js'
-import { openDatabase } from '../../db/db.js'
-import { migrateDatabase } from '../../db/migrate.js'
-import { backupTargets } from '../../db/schema.js'
+import { createApp } from '../../app.ts'
+import { openDatabase } from '../../db/db.ts'
+import { migrateDatabase } from '../../db/migrate.ts'
+import { backupTargets } from '../../db/schema.ts'
 import {
   copyFilesToDestination,
   runBackupToTarget,
-} from '../../routes/adminBackupTargets.js'
-import { signAccessToken } from '../../routes/auth.js'
+} from '../../routes/adminBackupTargets.ts'
+import { signAccessToken } from '../../routes/auth.ts'
 
 vi.mock('node:fs/promises', () => ({
   copyFile: vi.fn(),

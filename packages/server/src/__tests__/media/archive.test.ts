@@ -12,7 +12,7 @@ vi.mock('node:fs/promises', () => ({
 
 import { spawn } from 'node:child_process'
 import { readFile } from 'node:fs/promises'
-import { type ArchiveEntry, listArchiveContents } from '../../media/archive.js'
+import { type ArchiveEntry, listArchiveContents } from '../../media/archive.ts'
 
 type FakeChildProcess = EventEmitter & { stdout: EventEmitter }
 

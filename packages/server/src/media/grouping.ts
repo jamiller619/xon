@@ -2,7 +2,7 @@ import path, { basename, dirname, extname } from 'node:path'
 import { GroupType, getMimeTypesForCategory, MediaCategory } from '@xon/shared'
 import { and, eq, inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
-import { groupItems, groups, mediaItems } from '../db/schema.js'
+import { groupItems, groups, mediaItems } from '../db/schema.ts'
 
 export interface TvEpisodeInfo {
   seriesName: string | null

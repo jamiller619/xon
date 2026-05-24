@@ -8,8 +8,8 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 // import { parse as parseFont } from 'opentype.js'
 import { z } from 'zod'
-import { computeETag } from '../cache.js'
-import type { MediaItem } from '../db/schema.js'
+import { computeETag } from '../cache.ts'
+import type { MediaItem } from '../db/schema.ts'
 import {
   getAllowedRatings,
   groupItems,
@@ -20,21 +20,21 @@ import {
   mediaProgress,
   readingPositions,
   users,
-} from '../db/schema.js'
-import { validate } from '../http/validate.js'
-import { listArchiveContents } from '../media/archive.js'
+} from '../db/schema.ts'
+import { validate } from '../http/validate.ts'
+import { listArchiveContents } from '../media/archive.ts'
 import {
   extractFfprobeMetadata,
   extractStreamTracks,
-} from '../media/ffprobe.js'
-import { convertMobiToEpub } from '../media/mobi.js'
-import { convertRawToJpeg, isRawImage } from '../media/raw.js'
+} from '../media/ffprobe.ts'
+import { convertMobiToEpub } from '../media/mobi.ts'
+import { convertRawToJpeg, isRawImage } from '../media/raw.ts'
 import {
   generateHlsPlaylist,
   needsTranscoding,
   spawnTranscodeSegment,
-} from '../media/transcode.js'
-import { getPluginMetadataForItem } from '../plugins/pluginManager.js'
+} from '../media/transcode.ts'
+import { getPluginMetadataForItem } from '../plugins/pluginManager.ts'
 
 const VALID_SIZES = ['small', 'medium', 'large'] as const
 type ThumbnailSize = (typeof VALID_SIZES)[number]

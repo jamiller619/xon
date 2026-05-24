@@ -6,8 +6,8 @@ import {
   libraries,
   // libraryAccess,
   users,
-} from '../db/schema.js'
-import { validate } from '../http/validate.js'
+} from '../db/schema.ts'
+import { validate } from '../http/validate.ts'
 
 const grantSchema = z.object({
   userId: z.string().min(1),

@@ -1,6 +1,5 @@
 import { basename, join } from 'node:path'
 import type { Client } from '@libsql/client'
-import { BasePlugin } from '@xon/plugin-sdk'
 import type {
   PluginCategory,
   PluginContext,
@@ -10,9 +9,10 @@ import type {
   RouteDefinition,
   UIComponent,
 } from '@xon/plugin-sdk'
-import { createPluginDatabaseAccess } from './pluginDb.js'
-import { discoverPluginManifests } from './pluginLoader.js'
-import { createSandboxedFetch, createSandboxedFs } from './pluginSandbox.js'
+import { BasePlugin } from '@xon/plugin-sdk'
+import { createPluginDatabaseAccess } from './pluginDb.ts'
+import { discoverPluginManifests } from './pluginLoader.ts'
+import { createSandboxedFetch, createSandboxedFs } from './pluginSandbox.ts'
 
 type AnyPluginEventHandler = (payload: unknown) => void | Promise<void>
 

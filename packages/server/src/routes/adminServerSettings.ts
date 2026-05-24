@@ -1,7 +1,7 @@
 import { Hono } from 'hono'
 import { configSchema } from '../config.ts'
-// import { serverSettings } from '../db/schema.js'
-import { validate } from '../http/validate.js'
+// import { serverSettings } from '../db/schema.ts'
+import { validate } from '../http/validate.ts'
 
 // const updateSchema = z.object({
 //   corsEnabled: z.boolean().optional(),

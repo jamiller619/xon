@@ -1,5 +1,5 @@
 import { Hono } from 'hono'
-import { registry } from '../plugins/pluginManager.js'
+import { registry } from '../plugins/pluginManager.ts'
 
 export interface ThemeInfo {
   id: string

@@ -11,7 +11,7 @@ import {
   getBackupTargetPlugin,
   registerBackupTargetPlugin,
   unregisterBackupTargetPlugin,
-} from '../../plugins/backupTargetPluginRegistry.js'
+} from '../../plugins/backupTargetPluginRegistry.ts'
 
 // Minimal concrete BackupTargetPlugin for testing
 class TestBackupPlugin extends BackupTargetPlugin {

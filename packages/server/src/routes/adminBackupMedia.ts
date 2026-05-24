@@ -9,16 +9,16 @@ import {
   backupJobs,
   backupTargets,
   mediaItems,
-} from '../db/schema.js'
-import { emitEvent } from '../events.js'
-import { validate } from '../http/validate.js'
-import { getBackupTargetPlugin } from '../plugins/backupTargetPluginRegistry.js'
-import { applyRetentionPolicy } from '../scanner/backupScheduler.js'
+} from '../db/schema.ts'
+import { emitEvent } from '../events.ts'
+import { validate } from '../http/validate.ts'
+import { getBackupTargetPlugin } from '../plugins/backupTargetPluginRegistry.ts'
+import { applyRetentionPolicy } from '../scanner/backupScheduler.ts'
 import {
   localConfigSchema,
   networkConfigSchema,
   pluginConfigSchema,
-} from './adminBackupTargets.js'
+} from './adminBackupTargets.ts'
 
 // ---------------------------------------------------------------------------
 // Request schema

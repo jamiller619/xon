@@ -2,8 +2,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest'
 import {
   _resetMediaProviderPluginRegistry,
   registerMediaProviderPlugin,
-} from '../../plugins/mediaProviderPluginRegistry.js'
-import { scanDataSource } from '../../scanner/scanner.js'
+} from '../../plugins/mediaProviderPluginRegistry.ts'
+import { scanDataSource } from '../../scanner/scanner.ts'
 
 vi.mock('node:fs/promises', () => ({
   readdir: vi.fn().mockResolvedValue([]),

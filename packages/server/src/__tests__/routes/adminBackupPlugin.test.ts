@@ -9,9 +9,9 @@ import type {
 import { BackupTargetPlugin } from '@xon/plugin-sdk'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { createApp } from '../../app.js'
-import { openDatabase } from '../../db/db.js'
-import { migrateDatabase } from '../../db/migrate.js'
+import { createApp } from '../../app.ts'
+import { openDatabase } from '../../db/db.ts'
+import { migrateDatabase } from '../../db/migrate.ts'
 import {
   backupFileState,
   backupJobs,
@@ -20,15 +20,15 @@ import {
   dataSources,
   libraries,
   mediaItems,
-} from '../../db/schema.js'
+} from '../../db/schema.ts'
 import {
   _resetBackupTargetPluginRegistry,
   registerBackupTargetPlugin,
-} from '../../plugins/backupTargetPluginRegistry.js'
-import { runMediaBackupJob } from '../../routes/adminBackupMedia.js'
-import { runBackupToTarget } from '../../routes/adminBackupTargets.js'
-import { runVerifyJob } from '../../routes/adminBackupVerify.js'
-import { signAccessToken } from '../../routes/auth.js'
+} from '../../plugins/backupTargetPluginRegistry.ts'
+import { runMediaBackupJob } from '../../routes/adminBackupMedia.ts'
+import { runBackupToTarget } from '../../routes/adminBackupTargets.ts'
+import { runVerifyJob } from '../../routes/adminBackupVerify.ts'
+import { signAccessToken } from '../../routes/auth.ts'
 
 vi.mock('node:fs/promises', () => ({
   copyFile: vi.fn(),

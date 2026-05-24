@@ -1,6 +1,6 @@
 import type { ChildProcess } from 'node:child_process'
 import { spawn } from 'node:child_process'
-import { ffmpegPath } from './binaries.js'
+import { ffmpegPath } from './binaries.ts'
 
 // Video codecs natively supported by modern browsers (H.264, VP8, VP9, AV1, Theora)
 const BROWSER_NATIVE_VIDEO_CODECS = new Set([

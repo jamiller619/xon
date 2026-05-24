@@ -2,9 +2,9 @@ import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { hashPassword } from '../auth/password.js'
-import { users } from '../db/schema.js'
-import { validate } from '../http/validate.js'
+import { hashPassword } from '../auth/password.ts'
+import { users } from '../db/schema.ts'
+import { validate } from '../http/validate.ts'
 
 const createUserSchema = z.object({
   username: z.string().min(1),

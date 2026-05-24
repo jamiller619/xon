@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest'
-import { type XonEvent, emitEvent, eventBus } from '../events.js'
+import { type XonEvent, emitEvent, eventBus } from '../events.ts'
 
 describe('eventBus', () => {
   afterEach(() => {

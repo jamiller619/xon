@@ -2,8 +2,8 @@ import { createServer } from 'node:http'
 import type { AddressInfo } from 'node:net'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { WebSocket } from 'ws'
-import { emitEvent, eventBus } from '../../events.js'
-import { createWsServer } from '../../routes/ws.js'
+import { emitEvent, eventBus } from '../../events.ts'
+import { createWsServer } from '../../routes/ws.ts'
 
 describe('WebSocket server', () => {
   let server: ReturnType<typeof createServer>

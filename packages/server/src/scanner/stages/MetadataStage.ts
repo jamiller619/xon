@@ -1,7 +1,7 @@
 import type { MetadataSourcePlugin } from '@xon/plugin-sdk'
-import { getPluginsByCategory } from '../../plugins/pluginManager.js'
-import type { PipelineStage } from '../pipeline.js'
-import { parseMeta } from '../stages.js'
+import { getPluginsByCategory } from '../../plugins/pluginManager.ts'
+import type { PipelineStage } from '../pipeline.ts'
+import { parseMeta } from '../stages.ts'
 
 export default {
   name: 'Metadata Stage',

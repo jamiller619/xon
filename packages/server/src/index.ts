@@ -1,7 +1,7 @@
-export { app } from './app.js'
-export { hashPassword, verifyPassword } from './auth/password.js'
-export type { LibSQLDatabase } from './db/db.js'
-export { migrateDatabase } from './db/migrate.js'
+export { app } from './app.ts'
+export { hashPassword, verifyPassword } from './auth/password.ts'
+export type { LibSQLDatabase } from './db/db.ts'
+export { migrateDatabase } from './db/migrate.ts'
 export {
   type AiMode,
   type AiSettingsRow,
@@ -73,8 +73,8 @@ export {
   users,
   // type Watchlist,
   // watchlist,
-} from './db/schema.js'
-export { emitEvent, eventBus, type XonEvent } from './events.js'
+} from './db/schema.ts'
+export { emitEvent, eventBus, type XonEvent } from './events.ts'
 export {
   type AutoTag,
   type AutoTagOnnxSession,
@@ -83,18 +83,18 @@ export {
   computeImageTags,
   getAutoTagOnnxSession,
   setAutoTagOnnxSession,
-} from './media/autoTag.js'
-export { detectDrm } from './media/drm.js'
+} from './media/autoTag.ts'
+export { detectDrm } from './media/drm.ts'
 export {
   type ExiftoolMetadata,
   extractExiftoolMetadata,
   isImageCategory,
-} from './media/exiftool.js'
+} from './media/exiftool.ts'
 export {
   extractFfprobeMetadata,
   type FfprobeMetadata,
   isAudioVideoCategory,
-} from './media/ffprobe.js'
+} from './media/ffprobe.ts'
 export {
   computeMatchScore,
   type FuzzyMatchConfig,
@@ -107,7 +107,7 @@ export {
   type OnnxInferenceSession,
   parseFilenameInfo,
   setOnnxSession,
-} from './media/fuzzyMatch.js'
+} from './media/fuzzyMatch.ts'
 export {
   clusterCoordinate,
   groupMusicTracks,
@@ -120,7 +120,7 @@ export {
   resolveAudiobookInfo,
   resolveSeriesName,
   type TvEpisodeInfo,
-} from './media/grouping.js'
+} from './media/grouping.ts'
 export {
   type ArchiveMetadata,
   // isDocumentCategory,
@@ -134,12 +134,12 @@ export {
   extractFontMetadata,
   type FontMetadata,
   type Model3DMetadata,
-} from './media/miscmeta.js'
+} from './media/miscmeta.ts'
 export {
   extractMusicTags,
   isMusicCategory,
   type MusicTagsMetadata,
-} from './media/musictags.js'
+} from './media/musictags.ts'
 export {
   computePerceptualHash,
   getPerceptualHashOnnxSession,
@@ -149,7 +149,7 @@ export {
   type PerceptualHashOnnxSession,
   scanLibraryForDuplicates,
   setPerceptualHashOnnxSession,
-} from './media/perceptualHash.js'
+} from './media/perceptualHash.ts'
 export {
   acceptSuggestedGroup,
   detectMultiDiscAlbums,
@@ -157,26 +157,26 @@ export {
   // detectSupplementaryMaterials,
   type SmartGroupCandidate,
   scanLibraryForSmartGroups,
-} from './media/smartGrouping.js'
-export { generateThumbnails } from './media/thumbnails.js'
+} from './media/smartGrouping.ts'
+export { generateThumbnails } from './media/thumbnails.ts'
 export {
   generateVideoThumbnails,
   isVideoCategory,
-} from './media/videoThumbnails.js'
+} from './media/videoThumbnails.ts'
 export {
   getBackupTargetPlugin,
   registerBackupTargetPlugin,
   unregisterBackupTargetPlugin,
-} from './plugins/backupTargetPluginRegistry.js'
+} from './plugins/backupTargetPluginRegistry.ts'
 export {
   getMediaProviderPlugin,
   registerMediaProviderPlugin,
   unregisterMediaProviderPlugin,
-} from './plugins/mediaProviderPluginRegistry.js'
+} from './plugins/mediaProviderPluginRegistry.ts'
 export {
   discoverPluginManifests,
   type PluginLoadResult,
-} from './plugins/pluginLoader.js'
+} from './plugins/pluginLoader.ts'
 export {
   activatePlugin,
   deactivatePlugin,
@@ -188,30 +188,30 @@ export {
   registry as pluginRegistry,
   setPluginDatabase,
   uninstallPlugin,
-} from './plugins/pluginManager.js'
-export { runMediaBackupJob } from './routes/adminBackupMedia.js'
+} from './plugins/pluginManager.ts'
+export { runMediaBackupJob } from './routes/adminBackupMedia.ts'
 export {
   copyFilesToDestination,
   type LocalBackupConfig,
   type NetworkBackupConfig,
   type PluginBackupConfig,
   runBackupToTarget,
-} from './routes/adminBackupTargets.js'
-export { computeChecksum, runVerifyJob } from './routes/adminBackupVerify.js'
-export { runSyncJob } from './routes/sync.js'
+} from './routes/adminBackupTargets.ts'
+export { computeChecksum, runVerifyJob } from './routes/adminBackupVerify.ts'
+export { runSyncJob } from './routes/sync.ts'
 export {
   type ScanResult,
   scanDataSource,
-} from './scanner/scanner.js'
+} from './scanner/scanner.ts'
 export {
   parseCronInterval,
   type SchedulerHandle,
   startScheduler,
   type TriggerFn,
-} from './scanner/scheduler.js'
+} from './scanner/scheduler.ts'
 // export {
 //   scanLibrary,
 //   type ScanProgress,
 //   type ScanSummary,
-// } from './scanner/orchestrator.old.js'
-export { boot } from './server.js'
+// } from './scanner/orchestrator.old.ts'
+export { boot } from './server.ts'

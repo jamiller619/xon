@@ -11,7 +11,7 @@ import {
   type FfprobeMetadata,
   extractFfprobeMetadata,
   isAudioVideoCategory,
-} from '../../media/ffprobe.js'
+} from '../../media/ffprobe.ts'
 
 type FakeChildProcess = EventEmitter & { stdout: EventEmitter }
 

@@ -8,14 +8,14 @@ import {
   backupFileState,
   backupTargets,
   backupVerifyJobs,
-} from '../db/schema.js'
-import { emitEvent } from '../events.js'
-import { getBackupTargetPlugin } from '../plugins/backupTargetPluginRegistry.js'
+} from '../db/schema.ts'
+import { emitEvent } from '../events.ts'
+import { getBackupTargetPlugin } from '../plugins/backupTargetPluginRegistry.ts'
 import {
   localConfigSchema,
   networkConfigSchema,
   pluginConfigSchema,
-} from './adminBackupTargets.js'
+} from './adminBackupTargets.ts'
 
 // ---------------------------------------------------------------------------
 // Checksum helper

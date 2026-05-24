@@ -1,8 +1,8 @@
 import { eq, inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import sharp from 'sharp'
-import { duplicateCandidates, imageHashes, mediaItems } from '../db/schema.js'
-import { isImage, isImageCategory } from './exiftool.js'
+import { duplicateCandidates, imageHashes, mediaItems } from '../db/schema.ts'
+import { isImage, isImageCategory } from './exiftool.ts'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 

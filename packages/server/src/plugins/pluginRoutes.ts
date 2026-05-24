@@ -1,6 +1,6 @@
 import type { PluginRouteContext, PluginRouteResponse } from '@xon/plugin-sdk'
 import type { Context } from 'hono'
-import { registry } from './pluginManager.js'
+import { registry } from './pluginManager.ts'
 
 /**
  * Match a route pattern against a path segment, extracting named params.

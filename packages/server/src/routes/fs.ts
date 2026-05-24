@@ -3,10 +3,10 @@ import path from 'node:path'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { users } from '../db/schema.js'
-import { validate } from '../http/validate.js'
+import { users } from '../db/schema.ts'
+import { validate } from '../http/validate.ts'
 
-// import { verifyAccessToken } from '../routes/auth.js'
+// import { verifyAccessToken } from '../routes/auth.ts'
 
 const ROLE_RANK = {
   guest: 0,

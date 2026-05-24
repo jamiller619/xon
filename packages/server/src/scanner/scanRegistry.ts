@@ -1,4 +1,4 @@
-import type { ScanProgress, ScanSummary } from './orchestrator.js'
+import type { ScanProgress, ScanSummary } from './orchestrator.ts'
 
 export type ScanState = {
   status: 'running' | 'completed' | 'failed'

@@ -1,7 +1,7 @@
 import { spawn } from 'node:child_process'
 import { MediaCategory } from '@xon/shared'
-import { createLogger } from '../logger.js'
-import { ffprobePath } from './binaries.js'
+import { createLogger } from '../logger.ts'
+import { ffprobePath } from './binaries.ts'
 
 const logger = createLogger('ffprobe')
 

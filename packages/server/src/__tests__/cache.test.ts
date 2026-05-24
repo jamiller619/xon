@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { InMemoryCache, computeETag } from '../cache.js'
+import { InMemoryCache, computeETag } from '../cache.ts'
 
 describe('InMemoryCache', () => {
   let cache: InMemoryCache

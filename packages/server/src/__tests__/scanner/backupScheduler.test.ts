@@ -1,15 +1,15 @@
 import type { Client } from '@libsql/client'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { openDatabase } from '../../db/db.js'
-import { migrateDatabase } from '../../db/migrate.js'
-import { backupJobs, backupTargets } from '../../db/schema.js'
+import { openDatabase } from '../../db/db.ts'
+import { migrateDatabase } from '../../db/migrate.ts'
+import { backupJobs, backupTargets } from '../../db/schema.ts'
 import {
   applyRetentionPolicy,
   getNextCronTime,
   parseCronExpression,
   validateCronExpression,
-} from '../../scanner/backupScheduler.js'
+} from '../../scanner/backupScheduler.ts'
 
 // ---------------------------------------------------------------------------
 // parseCronExpression / validateCronExpression
