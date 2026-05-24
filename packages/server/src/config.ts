@@ -36,29 +36,29 @@ if (envFile) {
   logger.log('No .env file found')
 }
 
-const configPath =
-  process.env.XON_CONFIG_FILE ?? path.join(paths.data, 'config', 'config.json')
+const configFilePath =
+  process.env.XON_CONFIG_FILE ?? path.join(paths.data, 'config.json')
 
-await fsp.mkdir(path.dirname(configPath), { recursive: true })
+await fsp.mkdir(path.dirname(configFilePath), { recursive: true })
 
 const data = {
   ...startingConfig,
   ...(await getConfig()),
 }
 
-export default new ConfigStore(configPath, data)
+export default new ConfigStore(configFilePath, data)
 
 export * from './config/config.router.ts'
 
 async function getConfig(): Promise<Config> {
   try {
-    const data = await fsp.readFile(configPath, 'utf-8')
+    const data = await fsp.readFile(configFilePath, 'utf-8')
 
     return JSON.parse(data)
   } catch {
     const data = createDefaultsFromSchema(schema as JsonSchema)
 
-    await fsp.writeFile(configPath, JSON.stringify(data))
+    await fsp.writeFile(configFilePath, JSON.stringify(data))
 
     return data
   }

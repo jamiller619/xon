@@ -1,12 +1,11 @@
 import { Theme } from '@xon/ui'
+import { AnimatePresence, motion } from 'motion/react'
 import { lazy, Suspense } from 'react'
 import { Route, Routes } from 'react-router-dom'
 import ErrorBoundary from '~/components/error-boundary/ErrorBoundary'
 import Layout from '~/components/layout/Layout'
 import RequireAuth from '~/components/RequireAuth'
 import ThemeLoader from '~/components/ThemeLoader'
-
-// import '../../../bones/registry.ts'
 
 // Route-level code splitting — each page is a separate JS chunk
 const AdminAiSettings = lazy(
@@ -43,9 +42,21 @@ const Setup = lazy(() => import('~/pages/setup/Setup'))
 
 function PageLoader() {
   return (
-    <div style={{ display: 'flex', justifyContent: 'center', padding: '4rem' }}>
-      Loading...
-    </div>
+    <AnimatePresence>
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        style={{
+          display: 'flex',
+          justifyContent: 'center',
+          padding: '4rem',
+          background: 'var(--color-gray-1',
+        }}
+      >
+        Loading...
+      </motion.div>
+    </AnimatePresence>
   )
 }
 

@@ -1,7 +1,7 @@
 import { watch } from 'node:fs'
 import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
-import { dataSources, libraries } from '../db/schema.js'
+import { libraries } from '../db/schema.js'
 import { createLogger } from '../logger.js'
 import { scanLibrary } from './orchestrator.ts'
 // import { scanLibrary } from './orchestrator.old.js'
@@ -85,14 +85,9 @@ export async function startScheduler(
     }
 
     // Filesystem watchers for local data sources
-    const sources = await db
-      .select()
-      .from(dataSources)
-      .where(eq(dataSources.libraryId, lib.id))
+    // if (!lib.watchEnabled) continue
 
-    if (!lib.watchEnabled) continue
-
-    for (const source of sources) {
+    for (const source of lib.dataSources) {
       if (source.type !== 'local') continue
       // if (source.type !== 'local' || !source.enabled) continue
 

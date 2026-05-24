@@ -1,12 +1,13 @@
 import { CATEGORY_DEFINITIONS } from '@xon/shared'
 import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
-import { dataSources, libraries } from '../db/schema.js'
+import config from '../config.ts'
+import { libraries } from '../db/schema.js'
 import { createLogger } from '../logger.js'
 import { type MediaJob, type PipelineContext, runPipeline } from './pipeline.js'
 import { scanDataSource } from './scanner.js'
-import { DRMStage, PersistStage, ThumbnailStage, TitleStage } from './stages.js'
 import MetadataStage from './stages/MetadataStage.js'
+import { DRMStage, PersistStage, ThumbnailStage, TitleStage } from './stages.js'
 
 const logger = createLogger('orchestrator')
 
@@ -29,11 +30,11 @@ export type ScanSummary = {
 export async function scanLibrary(
   db: LibSQLDatabase,
   libraryId: string,
-  onProgress?: (progress: ScanProgress) => void,
-  dataDir?: string,
+  // onProgress?: (progress: ScanProgress) => void,
+  // dataDir?: string,
 ): Promise<ScanSummary> {
   const scanStart = Date.now()
-  const resolvedDataDir = dataDir ?? process.env.DATA_DIR ?? './data'
+  const resolvedDataDir = config.get('appdata.path')
   const libraryRows = await db
     .select()
     .from(libraries)
@@ -47,14 +48,9 @@ export async function scanLibrary(
   const mediaTypes = library.mediaCategories ?? []
   const hasTypeFilter = mediaTypes.length > 0
 
-  const sources = await db
-    .select()
-    .from(dataSources)
-    .where(eq(dataSources.libraryId, libraryId))
-
   logger.log(`Scan started: "${library.name}"`, {
     libraryId,
-    sources: sources.length,
+    sources: library.dataSources.length,
     typeFilter: hasTypeFilter ? mediaTypes : 'none',
   })
 
@@ -70,10 +66,10 @@ export async function scanLibrary(
   let totalRemoved = 0
   let totalDiscovered = 0
 
-  for await (const source of sources) {
+  for await (const source of library.dataSources) {
     const mediaCategories =
       library.mediaCategories ?? Object.keys(CATEGORY_DEFINITIONS)
-    const result = await scanDataSource(source, mediaCategories)
+    const result = await scanDataSource(library.id, source, mediaCategories)
 
     totalNew += result.newFiles.length
     totalUpdated += result.changedFiles.length

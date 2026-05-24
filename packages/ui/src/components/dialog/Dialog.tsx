@@ -1,29 +1,29 @@
 import { Dialog as UIDialog } from '@base-ui/react'
 import type { ReactNode } from 'react'
-import { Button, type ButtonVariant, Flex, IconButton } from '../../index.js'
+import { Button, type ButtonProps, Flex, IconButton } from '../../index.js'
 import styles from './Dialog.module.css'
 
 type DialogProps = Omit<UIDialog.Root.Props, 'children'> & {
-  trigger: string
+  triggerText: string
   title: string
   description?: string
   children: ReactNode
-  buttonVariant?: ButtonVariant
+  buttonProps?: ButtonProps
 }
 
 export default function Dialog({
-  trigger,
+  triggerText,
   title,
   description,
   children,
-  buttonVariant,
+  buttonProps,
 }: DialogProps) {
   return (
     <UIDialog.Root>
       <UIDialog.Trigger
-        render={(props) => <Button variant={buttonVariant} {...props} />}
+        render={(props) => <Button {...buttonProps} {...props} />}
       >
-        {trigger}
+        {triggerText}
       </UIDialog.Trigger>
       <UIDialog.Portal>
         <UIDialog.Backdrop className={styles.backdrop} />

@@ -27,6 +27,7 @@
     "@hono/zod-validator": "^0.4.3",
     "@libsql/client": "^0.14.0",
     "@node-rs/argon2": "^2.0.2",
+    "@simple-libs/child-process-utils": "^1.0.2",
     "@xon/plugin-sdk": "*",
     "@xon/shared": "*",
     "acme-client": "^5.4.0",

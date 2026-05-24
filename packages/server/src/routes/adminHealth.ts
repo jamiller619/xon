@@ -4,6 +4,7 @@ import { eq, sql } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { appCache } from '../cache.js'
+import config from '../config.ts'
 import { libraries, mediaItems } from '../db/schema.js'
 import { scanRegistry } from '../scanner/scanRegistry.js'
 
@@ -32,7 +33,7 @@ export function makeAdminHealthRouter(db: LibSQLDatabase): Hono {
     // Disk stats for the data directory
     let diskTotal = 0
     let diskFree = 0
-    const dataDir = process.env.DATA_DIR ?? './data'
+    const dataDir = config.get('appdata.path')
     try {
       const stats = await statfs(dataDir)
       diskTotal = stats.bsize * stats.blocks

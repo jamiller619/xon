@@ -50,35 +50,36 @@ export function triggerLibraryScan(
 
   const scanStartedAt = Date.now()
 
-  scanLibrary(db, libraryId, (progress) => {
-    state.progress = progress
-    const percentComplete =
-      progress.totalFiles > 0
-        ? Math.round((progress.processedFiles / progress.totalFiles) * 100)
-        : 0
-    emitEvent({
-      type: 'scan:progress',
-      payload: {
-        libraryId,
-        fileCount: progress.totalFiles,
-        currentFile: progress.currentFile,
-        percentComplete,
-      },
-    })
-  })
+  // scanLibrary(db, libraryId, (progress) => {
+  //   state.progress = progress
+  //   const percentComplete =
+  //     progress.totalFiles > 0
+  //       ? Math.round((progress.processedFiles / progress.totalFiles) * 100)
+  //       : 0
+  //   emitEvent({
+  //     type: 'scan:progress',
+  //     payload: {
+  //       libraryId,
+  //       fileCount: progress.totalFiles,
+  //       currentFile: progress.currentFile,
+  //       percentComplete,
+  //     },
+  //   })
+  // })
+  scanLibrary(db, libraryId)
     .then(async (summary) => {
       const duration = Date.now() - scanStartedAt
       state.status = 'completed'
       state.summary = summary
 
-      await db
-        .update(libraries)
-        .set({
-          lastScanResult: 'completed',
-          lastScanDuration: duration,
-          updatedAt: new Date(),
-        })
-        .where(eq(libraries.id, libraryId))
+      // await db
+      //   .update(libraries)
+      //   .set({
+      //     lastScanResult: 'completed',
+      //     lastScanDuration: duration,
+      //     updatedAt: new Date(),
+      //   })
+      //   .where(eq(libraries.id, libraryId))
 
       appCache.invalidate(`media:count:${libraryId}`)
       appCache.invalidate('libraries:all')
@@ -103,14 +104,14 @@ export function triggerLibraryScan(
       state.status = 'failed'
       const errorMessage = err instanceof Error ? err.message : String(err)
       state.error = errorMessage
-      await db
-        .update(libraries)
-        .set({
-          lastScanResult: 'failed',
-          lastScanDuration: duration,
-          updatedAt: new Date(),
-        })
-        .where(eq(libraries.id, libraryId))
+      // await db
+      //   .update(libraries)
+      //   .set({
+      //     lastScanResult: 'failed',
+      //     lastScanDuration: duration,
+      //     updatedAt: new Date(),
+      //   })
+      //   .where(eq(libraries.id, libraryId))
       emitEvent({
         type: 'scan:error',
         payload: { libraryId, error: errorMessage },
@@ -180,32 +181,32 @@ export function makeScanRouter(db: LibSQLDatabase): Hono {
   )
 
   // PUT /watch — enable/disable filesystem watch for a library (manager+)
-  router.put(
-    '/watch',
-    requireRole(UserRole.User),
-    validate('json', watchSchema),
-    async (c) => {
-      const libraryId = c.req.param('libraryId') as string
-      const { watchEnabled } = c.req.valid('json')
+  // router.put(
+  //   '/watch',
+  //   requireRole(UserRole.User),
+  //   validate('json', watchSchema),
+  //   async (c) => {
+  //     const libraryId = c.req.param('libraryId') as string
+  //     const { watchEnabled } = c.req.valid('json')
 
-      const existing = await db
-        .select()
-        .from(libraries)
-        .where(eq(libraries.id, libraryId))
-      if (existing.length === 0) return c.json({ error: 'Not found' }, 404)
+  //     const existing = await db
+  //       .select()
+  //       .from(libraries)
+  //       .where(eq(libraries.id, libraryId))
+  //     if (existing.length === 0) return c.json({ error: 'Not found' }, 404)
 
-      await db
-        .update(libraries)
-        .set({ watchEnabled, updatedAt: new Date() })
-        .where(eq(libraries.id, libraryId))
+  //     await db
+  //       .update(libraries)
+  //       .set({ watchEnabled, updatedAt: new Date() })
+  //       .where(eq(libraries.id, libraryId))
 
-      const updated = await db
-        .select()
-        .from(libraries)
-        .where(eq(libraries.id, libraryId))
-      return c.json(updated[0])
-    },
-  )
+  //     const updated = await db
+  //       .select()
+  //       .from(libraries)
+  //       .where(eq(libraries.id, libraryId))
+  //     return c.json(updated[0])
+  //   },
+  // )
 
   return router
 }

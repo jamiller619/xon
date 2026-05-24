@@ -3,6 +3,7 @@ import { Textbox } from '@xon/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiFetch, apiUrl } from '~/lib/apiFetch'
+import authClient from '~/lib/authClient'
 import styles from './TopBar.module.css'
 
 const HISTORY_KEY = 'xon:searchHistory'
@@ -39,6 +40,7 @@ export default function TopBar() {
   const [highlightIdx, setHighlightIdx] = useState(-1)
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
   const wrapperRef = useRef<HTMLDivElement>(null)
+  const { data: authData } = authClient.useSession()
 
   // Close dropdown on outside click
   useEffect(() => {
@@ -216,8 +218,10 @@ export default function TopBar() {
         )}
       </div>
       <button type="button" className={styles.userMenu} aria-label="User menu">
-        <span className={styles.avatar}>U</span>
-        <span>User</span>
+        <span className={styles.avatar}>
+          {authData?.user.name.charAt(0).toUpperCase()}
+        </span>
+        <span>{authData?.user.name}</span>
       </button>
     </header>
   )

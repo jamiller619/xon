@@ -30,6 +30,10 @@ export type ApplicationDatabasePath = string;
  */
 export type ApplicationCachePath = string;
 /**
+ * The amount of local disk space to use for storing cache files.
+ */
+export type ApplicationCacheQuota = number;
+/**
  * The file system path where application logs are stored.
  */
 export type ApplicationLogsPath = string;
@@ -38,7 +42,6 @@ export type ApplicationLogsPath = string;
  */
 export type ApplicationPluginsPath = string;
 export type ServerPort = number;
-export type StorageLimit = number;
 export type HTTPPort = number;
 export type HTTPSPort = number;
 /**
@@ -58,7 +61,7 @@ export type SessionUpdateAge = number;
  */
 export type DisableSessionRefresh = boolean;
 /**
- * Controls whether accounts are required to login to the server. If disabled, accounts will be required to login.
+ * By default, Xon does not require an account to login. This makes Xon very easy to use, especially for people that don't need the additional security features. If, however, you want to require accounts, simply turn this off.
  */
 export type AllowAnonymousLogins = boolean;
 
@@ -69,10 +72,10 @@ export interface XonConfigSchema {
   "appdata.path": ApplicationDataPath;
   "appdata.dbPath": ApplicationDatabasePath;
   "appdata.cachePath": ApplicationCachePath;
+  "appdata.cacheQuota": ApplicationCacheQuota;
   "appdata.logsPath": ApplicationLogsPath;
   "appdata.pluginsPath": ApplicationPluginsPath;
   "server.port"?: ServerPort;
-  "server.storageLimit"?: StorageLimit;
   "network.httpPort": HTTPPort;
   "network.httpsPort"?: HTTPSPort;
   "network.sslPath"?: SSLCertificatesPath;

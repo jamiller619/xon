@@ -1,5 +1,5 @@
 import { Dialog as BaseDialog } from '@base-ui/react'
-import { MediaCategory } from '@xon/shared'
+import { DataSourceType, type Library, MediaCategory } from '@xon/shared'
 import {
   Button,
   Checkbox,
@@ -12,7 +12,7 @@ import {
 } from '@xon/ui'
 import clsx from 'clsx'
 import { type SubmitEvent, useEffect, useState } from 'react'
-import { apiFetch } from '~/lib/apiFetch'
+import { apiFetch, getAPIError } from '~/lib/apiFetch'
 import styles from './CreateLibraryForm.module.css'
 
 const ALL_MEDIA_TYPES: { label: MediaCategory; emoji: string }[] = [
@@ -51,13 +51,13 @@ export function CreateLibraryForm({
 }: CreateLibraryFormProps) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [mediaTypes, setMediaTypes] = useState<string[]>([])
+  const [mediaCategories, setMediaCategories] = useState<MediaCategory[]>([])
   const [sourcePath, setSourcePath] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  function toggleMediaType(type: string) {
-    setMediaTypes((prev) =>
+  function toggleMediaType(type: MediaCategory) {
+    setMediaCategories((prev) =>
       prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type],
     )
   }
@@ -74,37 +74,25 @@ export function CreateLibraryForm({
         body: JSON.stringify({
           name,
           description: description.trim() || undefined,
-          mediaTypes,
+          mediaCategories,
+          dataSources: [
+            {
+              type: DataSourceType.local,
+              path: sourcePath.trim(),
+            },
+          ],
         }),
       })
 
       if (!libRes.ok) {
-        const body = (await libRes.json()) as { error?: string }
-        setError(body.error ?? 'Failed to create library')
+        setError(await getAPIError(libRes, 'Failed to create library'))
+
         return
       }
 
-      const lib = (await libRes.json()) as { id: string }
+      const library = (await libRes.json()) as Library
 
-      if (sourcePath.trim()) {
-        const srcRes = await apiFetch(`/api/libraries/${lib.id}/sources`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            type: 'local',
-            path: sourcePath.trim(),
-            recursive: true,
-          }),
-        })
-
-        if (!srcRes.ok) {
-          const body = (await srcRes.json()) as { error?: string }
-          setError(body.error ?? 'Failed to add data source')
-          return
-        }
-      }
-
-      onSuccess(lib.id)
+      onSuccess(library.id)
     } catch {
       setError('Network error — please try again')
     } finally {
@@ -121,15 +109,16 @@ export function CreateLibraryForm({
           onChange={(e) => setName(e.target.value)}
           required
           placeholder="e.g. Movies, Music, Photos"
+          block={true}
         />
       </Label>
       <Label>
         Description
         <Textbox
-          className={styles.input}
           value={description}
           onChange={(e) => setDescription(e.target.value)}
           placeholder="Optional description"
+          block={true}
         />
       </Label>
       <span>Media Types (leave empty for all)</span>
@@ -143,7 +132,7 @@ export function CreateLibraryForm({
                 <span>{emoji}</span> {label}
               </>
             }
-            checked={mediaTypes.includes(label)}
+            checked={mediaCategories.includes(label)}
             onChange={() => toggleMediaType(label)}
           />
         ))}
@@ -155,19 +144,16 @@ export function CreateLibraryForm({
           required
           onChange={(e) => setSourcePath(e.target.value)}
           style={{ flex: 1 }}
+          block={true}
         />
       </Flex>
-      <Dialog
-        trigger="Browse..."
-        buttonVariant="block"
-        title="Select Media Folder"
-      >
+      <Dialog triggerText="📂 Browse..." title="Select Media Folder">
         <MediaFolderBrowser onSelect={setSourcePath} />
       </Dialog>
       {error && <div className={styles.error}>{error}</div>}
       <Button
         type="submit"
-        variant="block"
+        block
         disabled={loading || !name.trim() || !sourcePath.trim()}
       >
         {loading ? 'Creating...' : submitLabel}
@@ -221,9 +207,8 @@ function MediaFolderBrowser({
         >
           ⮤
         </button>
-        <Textbox value={currentPath} style={{ flex: 1 }} />
+        <Textbox value={currentPath} block />
       </Flex>
-
       <ScrollArea className={styles.entryList}>
         {loading && <p className={styles.hint}>Loading…</p>}
         {!loading && error && <p className={styles.browserError}>{error}</p>}

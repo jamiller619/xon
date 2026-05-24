@@ -1,5 +1,17 @@
 import { useAuthStore } from '~/store/authStore'
 
+export async function getAPIError(
+  res: Response,
+  fallbackMessage: string,
+): Promise<string> {
+  try {
+    const body = (await res.json()) as { error?: string }
+    return body.error ?? fallbackMessage
+  } catch {
+    return fallbackMessage
+  }
+}
+
 /**
  * fetch wrapper that injects the current access token as a Bearer header.
  * Falls back to unauthenticated for public endpoints (e.g. /api/health).

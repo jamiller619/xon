@@ -10,6 +10,7 @@
     "appdata.path",
     "appdata.dbPath",
     "appdata.cachePath",
+    "appdata.cacheQuota",
     "appdata.logsPath",
     "appdata.pluginsPath",
     "network.httpPort",
@@ -54,20 +55,24 @@
     "appdata.dbPath": {
       "title": "Application Database Path",
       "type": "string",
-      "description": "The file system path where application databases are stored.",
-      "alias": ["db.path"]
+      "description": "The file system path where application databases are stored."
     },
     "appdata.cachePath": {
       "title": "Application Cache Path",
       "type": "string",
-      "description": "The file system path where application cache is stored.",
-      "alias": ["cache.path"]
+      "description": "The file system path where application cache is stored."
+    },
+    "appdata.cacheQuota": {
+      "title": "Application Cache Quota",
+      "type": "integer",
+      "minimum": 0,
+      "default": 0,
+      "description": "The amount of local disk space to use for storing cache files."
     },
     "appdata.logsPath": {
       "title": "Application Logs Path",
       "type": "string",
-      "description": "The file system path where application logs are stored.",
-      "alias": ["logs.path"]
+      "description": "The file system path where application logs are stored."
     },
     "appdata.pluginsPath": {
       "title": "Application Plugins Path",
@@ -80,12 +85,6 @@
       "minimum": 1,
       "maximum": 65535,
       "default": 6018
-    },
-    "server.storageLimit": {
-      "title": "Storage Limit",
-      "type": "integer",
-      "minimum": 0,
-      "default": 0
     },
     "network.httpPort": {
       "title": "HTTP Port",
@@ -104,8 +103,7 @@
     "network.sslPath": {
       "title": "SSL Certificates Path",
       "type": "string",
-      "description": "The file system path where SSL certificates are stored.",
-      "alias": ["certs.path"]
+      "description": "The file system path where SSL certificates are stored."
     },
     "network.remoteEnabled": {
       "title": "Enable Remote Access",
@@ -123,7 +121,7 @@
       "items": {
         "type": "string"
       },
-      "default": ["*"]
+      "default": ["http://localhost:6019", "https://localhost:6020"]
     },
     "session.ttlDays": {
       "title": "Session TTL Days",
@@ -150,7 +148,7 @@
       "title": "Allow Anonymous Logins",
       "type": "boolean",
       "default": true,
-      "description": "Controls whether accounts are required to login to the server. If disabled, accounts will be required to login."
+      "description": "By default, Xon does not require an account to login. This makes Xon very easy to use, especially for people that don't need the additional security features. If, however, you want to require accounts, simply turn this off."
     }
   }
 }

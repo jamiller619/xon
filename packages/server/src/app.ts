@@ -1,11 +1,11 @@
 import { UserRole } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
-import { cors } from 'hono/cors'
+// import { cors } from 'hono/cors'
 import { makeSessionMiddleware } from './auth/middleware.ts'
 import { requireRole } from './auth/rbac.js'
 import { makeConfigRouter } from './config/config.router.js'
-import config from './config.ts'
+// import config from './config.ts'
 import { onError, onNotFound } from './http/errorMiddleware.js'
 import { makeLoggingMiddleware } from './http/loggingMiddleware.js'
 import { makeRateLimitMiddleware } from './http/rateLimitMiddleware.js'
@@ -39,8 +39,6 @@ import { makeStatsRouter } from './routes/stats.ts'
 import { makeSyncRouter } from './routes/sync.js'
 import { makeThemesRouter } from './routes/themes.js'
 import { makeUsersRouter } from './routes/users.js'
-
-const SERVER_SETTINGS_ID = 'default'
 
 export function createApp(
   db?: LibSQLDatabase,

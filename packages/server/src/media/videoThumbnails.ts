@@ -2,6 +2,7 @@ import { spawn } from 'node:child_process'
 import { unlink } from 'node:fs/promises'
 import { join } from 'node:path'
 import { MediaCategory } from '@xon/shared'
+import config from '../config.ts'
 import { createLogger } from '../logger.js'
 import { ffmpegPath, ffprobePath } from './binaries.js'
 import { type ThumbnailPaths, writeThumbnailImages } from './images.js'
@@ -113,11 +114,11 @@ export async function generateVideoThumbnails(
   const timestamp = duration !== null ? duration * 0.1 : 0
   logger.debug(`Extracting frame at ${timestamp.toFixed(1)}s: ${filePath}`)
 
-  if (!process.env.DATA_DIR) {
-    throw new Error('DATA_DIR environment variable not set')
-  }
-
-  const tmpPath = join(process.env.DATA_DIR, '.tmp', `${mediaItemId}_tmp.jpg`)
+  const tmpPath = join(
+    config.get('appdata.path'),
+    '.tmp',
+    `${mediaItemId}_tmp.jpg`,
+  )
   const frameExtracted = await extractFrame(filePath, timestamp, tmpPath)
   if (!frameExtracted) {
     return undefined

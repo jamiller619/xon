@@ -1,70 +1,30 @@
-import { type MediaCategory, UserRole } from '@xon/shared'
-import { and, asc, desc, eq, inArray, sql } from 'drizzle-orm'
+import {
+  DataSourceType,
+  MediaCategory,
+  type MediaItem,
+  UserRole,
+} from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { requireRole } from '../auth/rbac.js'
 import { appCache, computeETag } from '../cache.js'
-import {
-  dataSources,
-  getAllowedRatings,
-  libraries,
-  // libraryAccess,
-  mediaItems,
-  users,
-} from '../db/schema.js'
 import { validate } from '../http/validate.js'
-// import { withThumbnailUrls } from './media.js'
+import * as libraryService from '../services/libraryService.js'
 import { makeLibraryThumbnailRouter } from './libraryThumbnail.js'
-import { makeScanRouter } from './scan.js'
-import { makeSourcesRouter } from './sources.js'
+import { makeScanRouter, triggerLibraryScan } from './scan.js'
+
+// import { makeSourcesRouter } from './sources.js'
 
 const LIBRARIES_ALL_KEY = 'libraries:all'
-
-// const PRIVILEGED_ROLES = ['admin', UserRole.User] as const
-
-/** Returns library IDs accessible to the requesting user. Admins/managers see all. */
-// async function getAccessibleLibraryIds(
-//   db: LibSQLDatabase,
-//   userId: string,
-//   role: string,
-// ): Promise<string[] | null> {
-//   if ((PRIVILEGED_ROLES as readonly string[]).includes(role)) return null // null = all
-//   const rows = await db
-//     .select({ libraryId: libraryAccess.libraryId })
-//     .from(libraryAccess)
-//     .where(eq(libraryAccess.userId, userId))
-//   return rows.map((r) => r.libraryId)
-// }
-
-/** Builds a Drizzle WHERE condition restricting media items by the user's maxContentRating. */
-// async function getContentRatingCondition(db: LibSQLDatabase, userId: string) {
-//   const userRows = await db
-//     .select({ maxContentRating: users.maxContentRating })
-//     .from(users)
-//     .where(eq(users.id, userId))
-//   const maxRating = userRows[0]?.maxContentRating ?? 'none'
-//   const allowed = getAllowedRatings(maxRating)
-//   if (allowed === null) return null // no restriction
-//   if (allowed.length === 0) return isNull(mediaItems.contentRating)
-//   const unratedAllowed = (allowed as string[]).includes('unrated')
-//   if (unratedAllowed) {
-//     return or(
-//       isNull(mediaItems.contentRating),
-//       inArray(mediaItems.contentRating, allowed),
-//     ) as SQL<unknown>
-//   }
-//   return inArray(mediaItems.contentRating, allowed)
-// }
 
 const libraryMediaQuerySchema = z.object({
   mediaCategory: z.string().optional(),
   mimeType: z.string().optional(),
-  drmProtected: z.enum(['true', 'false']).optional(),
   sortBy: z
     .enum(['title', 'fileSize', 'releaseDate', 'rating', 'createdAt'])
     .optional(),
-  order: z.enum(['asc', 'desc']).optional(),
+  order: z.enum(['asc', 'desc']),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 })
@@ -72,14 +32,16 @@ const libraryMediaQuerySchema = z.object({
 const createLibrarySchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  mediaTypes: z.array(z.string()).optional().default([]),
-})
-
-const updateLibrarySchema = z.object({
-  name: z.string().min(1).optional(),
-  description: z.string().optional(),
-  mediaTypes: z.array(z.string()).optional(),
-  hideDRMItems: z.boolean().optional(),
+  mediaCategories: z.array(z.enum(MediaCategory)),
+  scanSchedule: z.string().optional(),
+  dataSources: z.array(
+    z.object({
+      path: z.string().min(1),
+      type: z.enum(DataSourceType),
+      pluginId: z.string().optional(),
+      watchEnabled: z.boolean().optional(),
+    }),
+  ),
 })
 
 export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
@@ -92,22 +54,20 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
     validate('json', createLibrarySchema),
     async (c) => {
       const body = c.req.valid('json')
-      const id = crypto.randomUUID()
-      const now = new Date()
+      // biome-ignore lint/style/noNonNullAssertion: middleware
+      const user = c.get('user')!
 
-      await db.insert(libraries).values({
-        id,
-        name: body.name,
-        description: body.description,
-        mediaCategories: body.mediaTypes as MediaCategory[],
-        lastScanDuration: null,
-        lastScanResult: null,
-        createdAt: now,
-        updatedAt: now,
+      const id = await libraryService.createLibrary(db, {
+        ...body,
+        userId: user.id,
       })
+
       appCache.invalidate(LIBRARIES_ALL_KEY)
-      const rows = await db.select().from(libraries).where(eq(libraries.id, id))
-      return c.json(rows[0], 201)
+      const library = await libraryService.getLibraryById(db, id)
+
+      triggerLibraryScan(db, id)
+
+      return c.json(library, 201)
     },
   )
 
@@ -119,29 +79,13 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
       return c.json({ error: 'Not authenticated' }, 401)
     }
 
-    // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+    const libraries = await libraryService.getLibrariesByUserId(db, user.id)
 
-    // if (accessibleIds === null) {
-    //   // Admin/manager: serve from cache
-    //   let rows =
-    //     appCache.get<(typeof libraries.$inferSelect)[]>(LIBRARIES_ALL_KEY)
-    //   if (!rows) {
-    //     rows = await db.select().from(libraries)
-    //     appCache.set(LIBRARIES_ALL_KEY, rows, 60_000)
-    //   }
-    //   const etag = computeETag(rows)
-    //   if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
-    //   c.header('ETag', etag)
-    //   return c.json(rows)
-    // }
-
-    // if (accessibleIds.length === 0) return c.json([])
-    const rows = await db.select().from(libraries)
-    // .where(inArray(libraries.id, accessibleIds))
-    const etag = computeETag(rows)
+    const etag = computeETag(libraries)
     if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
     c.header('ETag', etag)
-    return c.json(rows)
+
+    return c.json(libraries)
   })
 
   // GET /libraries/:id — get single library with data sources (access-checked)
@@ -153,71 +97,61 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
       return c.json({ error: 'Not authenticated' }, 401)
     }
 
-    const rows = await db.select().from(libraries).where(eq(libraries.id, id))
-    if (rows.length === 0) return c.json({ error: 'Not found' }, 404)
+    const library = await libraryService.getLibraryById(db, id)
 
-    // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
-    // if (accessibleIds !== null && !accessibleIds.includes(id)) {
-    //   return c.json({ error: 'Not found' }, 404)
-    // }
+    if (library == null) return c.json({ error: 'Not found' }, 404)
 
-    const sources = await db
-      .select()
-      .from(dataSources)
-      .where(eq(dataSources.libraryId, id))
-    const payload = { ...rows[0], dataSources: sources }
-    const etag = computeETag(payload)
+    const etag = computeETag(library)
+
     if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
     c.header('ETag', etag)
-    return c.json(payload)
+
+    return c.json(library)
   })
 
   // PUT /libraries/:id — update library (manager+)
-  router.put(
-    '/:id',
-    requireRole(UserRole.User),
-    validate('json', updateLibrarySchema),
-    async (c) => {
-      const id = c.req.param('id')
-      const body = c.req.valid('json')
-      const existing = await db
-        .select()
-        .from(libraries)
-        .where(eq(libraries.id, id))
-      if (existing.length === 0) return c.json({ error: 'Not found' }, 404)
+  // router.put(
+  //   '/:id',
+  //   requireRole(UserRole.User),
+  //   validate('json', updateLibrarySchema),
+  //   async (c) => {
+  //     const id = c.req.param('id')
+  //     const body = c.req.valid('json')
+  //     const existing = await db
+  //       .select()
+  //       .from(libraries)
+  //       .where(eq(libraries.id, id))
+  //     if (existing.length === 0) return c.json({ error: 'Not found' }, 404)
 
-      const updates: Partial<typeof libraries.$inferInsert> = {
-        updatedAt: new Date(),
-      }
-      if (body.name !== undefined) updates.name = body.name
-      if (body.description !== undefined) updates.description = body.description
-      if (body.mediaTypes !== undefined) {
-        updates.mediaCategories = body.mediaTypes as MediaCategory[]
-      }
-      if (body.hideDRMItems !== undefined)
-        updates.hideDRMItems = body.hideDRMItems
+  //     const updates: Partial<typeof libraries.$inferInsert> = {
+  //       updatedAt: new Date(),
+  //     }
+  //     if (body.name !== undefined) updates.name = body.name
+  //     if (body.description !== undefined) updates.description = body.description
+  //     if (body.mediaTypes !== undefined) {
+  //       updates.mediaCategories = body.mediaTypes as MediaCategory[]
+  //     }
+  //     if (body.hideDRMItems !== undefined)
+  //       updates.hideDRMItems = body.hideDRMItems
 
-      await db.update(libraries).set(updates).where(eq(libraries.id, id))
-      appCache.invalidate(LIBRARIES_ALL_KEY)
-      const updated = await db
-        .select()
-        .from(libraries)
-        .where(eq(libraries.id, id))
-      return c.json(updated[0])
-    },
-  )
+  //     await db.update(libraries).set(updates).where(eq(libraries.id, id))
+  //     appCache.invalidate(LIBRARIES_ALL_KEY)
+  //     const updated = await db
+  //       .select()
+  //       .from(libraries)
+  //       .where(eq(libraries.id, id))
+  //     return c.json(updated[0])
+  //   },
+  // )
 
   // DELETE /libraries/:id — delete library and associated data sources (manager+)
   router.delete('/:id', requireRole(UserRole.User), async (c) => {
     const id = c.req.param('id')
-    const existing = await db
-      .select()
-      .from(libraries)
-      .where(eq(libraries.id, id))
-    if (existing.length === 0) return c.json({ error: 'Not found' }, 404)
-    await db.delete(libraries).where(eq(libraries.id, id))
+    const result = await libraryService.deleteLibraryById(db, id)
+
     appCache.invalidate(LIBRARIES_ALL_KEY)
-    return c.json({ success: true })
+
+    return c.json({ success: result })
   })
 
   // GET /libraries/:libraryId/media — list media items with filtering, sorting, pagination
@@ -232,104 +166,40 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
         return c.json({ error: 'Not authenticated' }, 401)
       }
 
-      const lib = await db
-        .select()
-        .from(libraries)
-        .where(eq(libraries.id, libraryId))
-      if (lib.length === 0) return c.json({ error: 'Not found' }, 404)
+      const { sortBy, order, page, limit } = c.req.valid('query')
+      const pageProps = {
+        pageNumber: page,
+        pageSize: limit,
+      }
 
-      // const accessibleIds = await getAccessibleLibraryIds(
-      //   db,
-      //   user.id,
-      //   user.role,
-      // )
-      // if (accessibleIds !== null && !accessibleIds.includes(libraryId)) {
-      //   return c.json({ error: 'Not found' }, 404)
-      // }
-
-      const {
-        mediaCategory,
-        mimeType,
-        drmProtected,
-        sortBy,
+      const sortProps = {
+        field: sortBy as keyof MediaItem,
         order,
-        page,
-        limit,
-      } = c.req.valid('query')
-
-      const pageNum = page
-      const limitNum = limit
-      const offset = (pageNum - 1) * limitNum
-
-      // const ratingCond = await getContentRatingCondition(db, user.id)
-
-      // Check if DRM items should be hidden (per library or per user preference)
-      // const userRows = await db
-      //   .select({ hideDRMItems: users.hideDRMItems })
-      //   .from(users)
-      //   .where(eq(users.id, user.id))
-      //   .limit(1)
-      // const userHidesDrm = userRows[0]?.hideDRMItems ?? false
-      // const libHidesDrm = lib[0]?.hideDRMItems ?? false
-
-      const conditions = [eq(mediaItems.libraryId, libraryId)]
-      if (mediaCategory)
-        if (mimeType)
-          // conditions.push(eq(mediaItems.mediaCategory, mediaCategory))
-          conditions.push(eq(mediaItems.mimeType, mimeType))
-      if (drmProtected !== undefined) {
-        conditions.push(eq(mediaItems.drmProtected, drmProtected === 'true'))
-        // } else if (userHidesDrm || libHidesDrm) {
-        //   conditions.push(eq(mediaItems.drmProtected, false))
       }
-      // if (ratingCond !== null) conditions.push(ratingCond)
 
-      const sortDir = order === 'desc' ? desc : asc
-      const orderExpr =
-        sortBy === 'title'
-          ? sortDir(mediaItems.title)
-          : sortBy === 'fileSize'
-            ? sortDir(mediaItems.fileSize)
-            : sortBy === 'releaseDate'
-              ? sortDir(
-                  sql`json_extract(${mediaItems.metadata}, '$.releaseDate')`,
-                )
-              : sortBy === 'rating'
-                ? sortDir(sql`json_extract(${mediaItems.metadata}, '$.rating')`)
-                : sortDir(mediaItems.createdAt)
+      const results = await libraryService.getMediaByLibraryId(
+        db,
+        libraryId,
+        pageProps,
+        sortProps,
+      )
 
-      const rows = await db
-        .select()
-        .from(mediaItems)
-        .where(and(...conditions))
-        .orderBy(orderExpr)
-        .limit(limitNum)
-        .offset(offset)
+      c.header('X-Total-Count', String(results.total))
 
-      // Fetch or serve total count from cache for this library
-      const countKey = `media:count:${libraryId}`
-      let totalCount = appCache.get<number>(countKey)
-      if (totalCount === undefined) {
-        const countRows = await db
-          .select({ total: sql<number>`count(*)` })
-          .from(mediaItems)
-          .where(eq(mediaItems.libraryId, libraryId))
-        totalCount = countRows[0]?.total ?? 0
-        appCache.set(countKey, totalCount, 60_000)
+      const etag = computeETag(results.data)
+
+      if (c.req.header('If-None-Match') === etag) {
+        return c.body(null, 304)
       }
-      c.header('X-Total-Count', String(totalCount))
 
-      // const items = rows.map(withThumbnailUrls)
-      const items = rows
-      const etag = computeETag(items)
-      if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
       c.header('ETag', etag)
-      return c.json(items)
+
+      return c.json(results.data)
     },
   )
 
   router.route('/', makeLibraryThumbnailRouter(db))
-  router.route('/:libraryId/sources', makeSourcesRouter(db))
+  // router.route('/:libraryId/sources', makeSourcesRouter(db))
   router.route('/:libraryId/scan', makeScanRouter(db))
 
   return router

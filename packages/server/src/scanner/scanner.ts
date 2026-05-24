@@ -1,3 +1,4 @@
+import fsp from 'node:fs/promises'
 import path, { extname } from 'node:path'
 import {
   CATEGORY_DEFINITIONS,
@@ -6,9 +7,10 @@ import {
 } from '@xon/shared'
 import fileEntryCache from 'file-entry-cache'
 import klaw from 'klaw'
+import config from '../config.ts'
 import { createLogger } from '../logger.js'
 import { getMediaProviderPlugin } from '../plugins/mediaProviderPluginRegistry.js'
-import { type FileEntry, createFileEntry } from './fileEntry.js'
+import { createFileEntry, type FileEntry } from './fileEntry.js'
 
 const logger = createLogger('scanner')
 
@@ -53,17 +55,17 @@ async function* localSource(
   }
 }
 
+const scanCacheDir = path.join(config.get('appdata.cachePath'))
+const scanCacheFilePath = path.join(scanCacheDir, 'scanner')
+
+await fsp.mkdir(scanCacheDir, { recursive: true })
+
 function createScannerCache(cacheId: string) {
-  const cache = fileEntryCache.create(
-    cacheId,
-    // biome-ignore lint/style/noNonNullAssertion: <explanation>
-    path.join(process.env.DATA_DIR!, 'cache', 'scanner'),
-    {
-      useAbsolutePathAsKey: true,
-      restrictAccessToCwd: false,
-      useCheckSum: true,
-    },
-  )
+  const cache = fileEntryCache.create(cacheId, scanCacheFilePath, {
+    useAbsolutePathAsKey: true,
+    restrictAccessToCwd: false,
+    useCheckSum: true,
+  })
 
   const previous = new Set(cache.cache.keys())
 
@@ -84,6 +86,7 @@ function createScannerCache(cacheId: string) {
 }
 
 export async function scanDataSource(
+  libraryId: string,
   dataSource: DataSource,
   mediaCategories: MediaCategory[],
 ): Promise<ScanResult> {
@@ -113,7 +116,7 @@ export async function scanDataSource(
   const currentPaths = new Set<string>()
 
   if (dataSource.type !== 'plugin') {
-    const cacheId = `${dataSource.libraryId}-${dataSource.id}`
+    const cacheId = `${libraryId}-${dataSource.path}`
     cache = createScannerCache(cacheId)
   }
 

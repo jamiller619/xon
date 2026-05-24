@@ -213,29 +213,17 @@ CREATE TABLE `groups` (
 );
 --> statement-breakpoint
 CREATE INDEX `groups_parent_group_id_idx` ON `groups` (`parent_group_id`);--> statement-breakpoint
-CREATE TABLE `data_sources` (
-	`id` text PRIMARY KEY NOT NULL,
-	`created_at` integer NOT NULL,
-	`updated_at` integer,
-	`library_id` text NOT NULL,
-	`type` text NOT NULL,
-	`path` text NOT NULL,
-	`plugin_id` text,
-	FOREIGN KEY (`library_id`) REFERENCES `libraries`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
 CREATE TABLE `libraries` (
 	`id` text PRIMARY KEY NOT NULL,
 	`created_at` integer NOT NULL,
 	`updated_at` integer,
+	`user_id` text NOT NULL,
 	`name` text NOT NULL,
 	`description` text,
 	`media_categories` text NOT NULL,
 	`scan_schedule` text,
-	`watch_enabled` integer DEFAULT true NOT NULL,
-	`last_scan_result` text,
-	`last_scan_duration` integer,
-	`hide_drm_items` integer DEFAULT false NOT NULL
+	`data_sources` text NOT NULL,
+	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
 CREATE TABLE `media_items` (

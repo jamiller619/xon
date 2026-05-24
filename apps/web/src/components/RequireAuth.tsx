@@ -42,19 +42,43 @@ export default function RequireAuth({
   }, [navigate])
 
   useEffect(() => {
-    if (!areAnonLoginsEnabled || isPending || data?.user) return
+    if (
+      !areAnonLoginsEnabled ||
+      isPending ||
+      isRefetching ||
+      isLoading ||
+      error ||
+      sessionError ||
+      (data && data?.user != null)
+    )
+      return
     loginAnonymously()
-  }, [loginAnonymously, areAnonLoginsEnabled, data, isPending])
+  }, [
+    loginAnonymously,
+    areAnonLoginsEnabled,
+    data,
+    isPending,
+    isRefetching,
+    isLoading,
+    error,
+    sessionError,
+  ])
 
-  const isAuthenticated = !!(!error && data?.user)
+  useEffect(() => {
+    if (isPending || isRefetching || isLoading) return
+
+    const isAuthenticated = !!(!error && !sessionError && data?.user)
+
+    // Anon logins are enabled and no error yet — let the first effect attempt sign-in
+    if (!isAuthenticated && areAnonLoginsEnabled && !error && !sessionError) return
+
+    if (!isAuthenticated) {
+      navigate('/login', { replace: true })
+    }
+  }, [data, error, sessionError, isPending, isRefetching, isLoading, areAnonLoginsEnabled, navigate])
 
   if (isLoading || isPending || isRefetching) return <p>Loading...</p>
   if (error || sessionError) return <p>{error ?? sessionError?.message}</p>
-  if (!isAuthenticated) {
-    navigate('/login', { replace: true })
-
-    return 'Redirecting...'
-  }
 
   return <>{children}</>
 }

@@ -17,13 +17,16 @@
   letter-spacing: 0.03em;
   cursor: pointer;
   user-select: none;
+  transition: transform 0.1s ease;
 
   &:hover:not([data-disabled]) {
     background: var(--color-gray-4);
+    transform: scale(1.02);
   }
 
   &:active:not([data-disabled]) {
     background: var(--color-gray-3);
+    transform: scale(0.97);
   }
 
   &[data-disabled] {

@@ -20,6 +20,14 @@
   }
 }
 
+.block {
+  width: 100%;
+
+  input {
+    width: stretch;
+  }
+}
+
 .icon {
   position: absolute;
   left: calc(var(--padding) / 2);

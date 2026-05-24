@@ -47,23 +47,20 @@ export interface Library {
   description: string | null
   mediaCategories: MediaCategory[]
   scanSchedule: string | null
-  watchEnabled: boolean
-  lastScanResult: string | null
-  lastScanDuration: number | null
-  hideDRMItems: boolean
-  dataSources?: DataSource[]
+  dataSources: DataSource[]
 }
 
-export type DataSourceType = 'local' | 'network' | 'plugin'
+export enum DataSourceType {
+  local = 'local',
+  network = 'network',
+  plugin = 'plugin',
+}
 
 export interface DataSource {
-  id: string
-  libraryId: string
-  pluginId: string | null
+  pluginId?: string | null | undefined
   type: DataSourceType
   path: string
-  createdAt: Date
-  updatedAt: Date | null
+  watchEnabled?: boolean | undefined
 }
 
 export const MPARatings = ['G', 'PG', 'PG-13', 'R', 'NC-17', 'NR'] as const

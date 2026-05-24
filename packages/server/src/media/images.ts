@@ -1,6 +1,7 @@
 import { mkdir } from 'node:fs/promises'
-import { extname, join } from 'node:path'
+import path, { extname, join } from 'node:path'
 import sharp from 'sharp'
+import config from '../config.ts'
 import type { Logger } from '../logger.js'
 import { convertRawToJpeg } from './raw.js'
 
@@ -21,7 +22,8 @@ export async function writeThumbnailImages(
   sharpInput: string,
   logger: Logger,
 ): Promise<ThumbnailPaths | undefined> {
-  const dataDir = process.env.DATA_DIR
+  const dataDir = path.join(config.get('appdata.cachePath'), 'thumbnails')
+  // const dataDir = process.env.DATA_DIR
 
   if (!dataDir) {
     throw new Error('DATA_DIR environment variable not set')
