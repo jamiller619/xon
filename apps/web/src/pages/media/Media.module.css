@@ -3,14 +3,23 @@
   background-size: contain;
 }
 
+.logo {
+  /* position: absolute;
+  right: 50px;
+  bottom: 100px; */
+  max-width: 300px;
+  z-index: 1;
+}
+
 .content {
   display: flex;
   flex-direction: column;
   background: var(--color-gray-1);
 }
 
-.page {
-  padding: 24px;
+.container {
+  /* position: relative; */
+  padding: var(--space-6);
   max-width: 1100px;
   margin: 0 auto;
 }
@@ -49,9 +58,11 @@
 /* Hero */
 .hero {
   display: flex;
-  gap: 32px;
-  align-items: flex-start;
-  margin-bottom: 40px;
+  gap: var(--space-6);
+  margin-bottom: var(--space-5);
+  width: stretch;
+  justify-content: space-between;
+  align-items: start;
 }
 
 @media (max-width: 768px) {
@@ -62,16 +73,14 @@
 
 /* Poster */
 .poster {
-  position: relative;
   flex-shrink: 0;
   width: 280px;
   aspect-ratio: 2 / 3;
   background: #1a1a2e;
   overflow: hidden;
   border-radius: var(--border-radius-4);
-  /* biome-ignore lint/correctness/noUnknownProperty: <explanation> */
   corner-shape: var(--corner-shape);
-  outline: 2px solid transparent;
+  box-shadow: var(--shadow-4);
 }
 
 @media (max-width: 768px) {
@@ -221,7 +230,9 @@
   color: #ccc;
   font-size: 0.85rem;
   cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
 }
 
 .btnSecondary:hover {
@@ -294,7 +305,9 @@
   color: #aaa;
   font-size: 0.8rem;
   cursor: pointer;
-  transition: border-color 0.15s ease, color 0.15s ease;
+  transition:
+    border-color 0.15s ease,
+    color 0.15s ease;
   margin-top: 4px;
 }
 
@@ -671,7 +684,9 @@
   border-radius: 6px;
   font-size: 0.85rem;
   cursor: pointer;
-  transition: background 0.15s, border-color 0.15s;
+  transition:
+    background 0.15s,
+    border-color 0.15s;
 }
 
 .btnReject:hover:not(:disabled) {

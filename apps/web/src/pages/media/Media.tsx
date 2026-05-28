@@ -7,6 +7,7 @@ import {
 } from '@fluentui/react-icons'
 import type { MediaItem } from '@xon/shared'
 import { Button } from '@xon/ui'
+import clsx from 'clsx'
 import humanizeDuration from 'humanize-duration'
 import {
   Fragment,
@@ -21,7 +22,7 @@ import PluginSlot from '~/components/PluginSlot'
 import { apiFetch, apiUrl } from '~/lib/apiFetch'
 import basename from '~/lib/basename'
 import { useAudioStore } from '~/store/audioStore'
-import styles from './MediaDetail.module.css'
+import styles from './Media.module.css'
 
 // Player/viewer components loaded on demand — separate JS chunks
 const ArchiveViewer = lazy(() => import('~/components/viewers/ArchiveViewer'))
@@ -392,7 +393,7 @@ export default function MediaDetail() {
 
   return (
     <>
-      <div className={styles.page}>
+      <div className={styles.container}>
         {showImageViewer && item.id && (
           <Suspense fallback={null}>
             <ImageViewer
@@ -431,9 +432,9 @@ export default function MediaDetail() {
                     <span className={styles.lockIcon}>🔒</span>
                   </div>
                 )}
-                {item.metadata.images?.thumbnail ? (
+                {item.metadata.images?.poster ? (
                   <img
-                    src={apiUrl(item.metadata.images?.thumbnail)}
+                    src={apiUrl(item.metadata.images.poster)}
                     alt={item.title ?? fileName}
                     loading="lazy"
                     className={`${styles.posterImg} ${isImage && !item.drmProtected ? styles.posterImgClickable : ''}`}
@@ -504,297 +505,14 @@ export default function MediaDetail() {
               </>
             )}
           </div>
-
-          {/* Title + actions */}
-          <div className={styles.heroInfo}>
-            {editing ? (
-              <div className={styles.editForm}>
-                <div className={styles.editField}>
-                  <label className={styles.editLabel} htmlFor="edit-title">
-                    Title
-                  </label>
-                  <input
-                    id="edit-title"
-                    className={styles.editInput}
-                    type="text"
-                    value={editTitle}
-                    onChange={(e) => setEditTitle(e.target.value)}
-                  />
-                </div>
-                <div className={styles.editField}>
-                  <label
-                    className={styles.editLabel}
-                    htmlFor="edit-description"
-                  >
-                    Description
-                  </label>
-                  <textarea
-                    id="edit-description"
-                    className={styles.editTextarea}
-                    value={editDescription}
-                    onChange={(e) => setEditDescription(e.target.value)}
-                    rows={3}
-                  />
-                </div>
-                <div className={styles.editField}>
-                  <label className={styles.editLabel} htmlFor="edit-tags">
-                    Tags (comma-separated)
-                  </label>
-                  <input
-                    id="edit-tags"
-                    className={styles.editInput}
-                    type="text"
-                    value={editTags}
-                    onChange={(e) => setEditTags(e.target.value)}
-                    placeholder="e.g. action, drama, sci-fi"
-                  />
-                </div>
-                {saveError && <p className={styles.saveError}>{saveError}</p>}
-                <div className={styles.editActions}>
-                  <button
-                    type="button"
-                    className={styles.btnSave}
-                    onClick={saveEditing}
-                    disabled={saving}
-                  >
-                    {saving ? 'Saving…' : 'Save'}
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.btnCancel}
-                    onClick={cancelEditing}
-                    disabled={saving}
-                  >
-                    Cancel
-                  </button>
-                </div>
-              </div>
-            ) : (
-              <>
-                <div className={styles.titleRow}>
-                  <h1 className={styles.title}>{item.title ?? fileName}</h1>
-                </div>
-
-                {item.drmProtected && (
-                  <div className={styles.drmNotice}>
-                    <span className={styles.drmBadge}>DRM Protected</span>
-                    <p className={styles.drmText}>
-                      This item is protected by digital rights management and
-                      cannot be played in the browser.
-                    </p>
-                  </div>
-                )}
-
-                <span>{year ? `(${year})` : ''}</span>
-
-                {item.mimeType && (
-                  <span className={styles.categoryBadge}>{item.mimeType}</span>
-                )}
-
-                {description && <p>{description}</p>}
-
-                {tags.length > 0 && (
-                  <div className={styles.tags}>
-                    {tags.map((tag) => (
-                      <span key={tag} className={styles.tag}>
-                        {tag}
-                      </span>
-                    ))}
-                  </div>
-                )}
-
-                {/* {aiTags.length > 0 && (
-                  <div className={styles.aiTagsSection}>
-                    <p className={styles.aiTagsLabel}>AI Suggested Tags</p>
-                    <div className={styles.aiTags}>
-                      {aiTags.map((tag) => (
-                        <span key={tag.text} className={styles.aiTag}>
-                          <span className={styles.aiTagText}>{tag.text}</span>
-                          <span className={styles.aiTagConfidence}>
-                            {tag.confidence}%
-                          </span>
-                          <button
-                            type="button"
-                            className={styles.aiTagAccept}
-                            title="Accept tag"
-                            onClick={() => handleAiTag('accept', tag.text)}
-                          >
-                            ✓
-                          </button>
-                          <button
-                            type="button"
-                            className={styles.aiTagReject}
-                            title="Reject tag"
-                            onClick={() => handleAiTag('reject', tag.text)}
-                          >
-                            ✕
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )} */}
-              </>
-            )}
-            {/* Action buttons */}
-            <div className={styles.actions}>
-              {isImage ? (
-                <button
-                  type="button"
-                  className={`${styles.btnPlay} ${item.drmProtected ? styles.btnDisabled : ''}`}
-                  disabled={item.drmProtected}
-                  title={
-                    item.drmProtected
-                      ? 'Viewing unavailable — DRM protected'
-                      : 'View image'
-                  }
-                  onClick={() => setShowImageViewer(true)}
-                >
-                  🖼 View
-                </button>
-                // ) : isPdf ? (
-                //   <button
-                //     type="button"
-                //     className={`${styles.btnPlay} ${item.drmProtected ? (styles.btnDisabled) : ''}`}
-                //     disabled={item.drmProtected}
-                //     title={
-                //       item.drmProtected
-                //         ? 'Viewing unavailable — DRM protected'
-                //         : 'Open PDF'
-                //     }
-                //     onClick={() => setShowPdfViewer(true)}
-                //   >
-                //     📄 Open
-                //   </button>
-                // ) : isEpub ? (
-                //   <button
-                //     type="button"
-                //     className={`${styles.btnPlay} ${item.drmProtected ? (styles.btnDisabled) : ''}`}
-                //     disabled={item.drmProtected}
-                //     title={
-                //       item.drmProtected
-                //         ? 'Reading unavailable — DRM protected'
-                //         : 'Read ebook'
-                //     }
-                //     onClick={() => setShowEpubViewer(true)}
-                //   >
-                //     📖 Read
-                //   </button>
-                // ) : isFont ? (
-                //   <button
-                //     type="button"
-                //     className={`${styles.btnPlay} ${item.drmProtected ? (styles.btnDisabled) : ''}`}
-                //     disabled={item.drmProtected}
-                //     title={
-                //       item.drmProtected
-                //         ? 'Preview unavailable — DRM protected'
-                //         : 'Preview font'
-                //     }
-                //     onClick={() => setShowFontViewer(true)}
-                //   >
-                //     🔤 Preview
-                //   </button>
-                // ) : isArchive ? (
-                //   <button
-                //     type="button"
-                //     className={styles.btnPlay}
-                //     title="Browse archive contents"
-                //     onClick={() => setShowArchiveViewer(true)}
-                //   >
-                //     📦 Browse
-                //   </button>
-              ) : item.mimeType?.startsWith('audio/') ? (
-                <>
-                  <Button
-                    // className={styles.btnPlay}
-                    variant="primary"
-                    disabled={item.drmProtected}
-                    title={
-                      item.drmProtected
-                        ? 'Playback unavailable — DRM protected'
-                        : 'Play'
-                    }
-                    onClick={() => {
-                      if (!item.drmProtected && item.id) {
-                        playTrack({
-                          id: item.id,
-                          title: item.title ?? fileName,
-                          mimeType: item.mimeType ?? 'audio/mpeg',
-                        })
-                      }
-                    }}
-                  >
-                    ▶ Play
-                  </Button>
-                  <button
-                    type="button"
-                    className={styles.btnSecondary}
-                    disabled={item.drmProtected}
-                    title="Add to queue"
-                    onClick={() => {
-                      if (!item.drmProtected && item.id) {
-                        addToQueue({
-                          id: item.id,
-                          title: item.title ?? fileName,
-                          mimeType: item.mimeType ?? 'audio/mpeg',
-                        })
-                      }
-                    }}
-                  >
-                    + Queue
-                  </button>
-                </>
-              ) : (
-                <Button
-                  variant="primary"
-                  disabled={
-                    item.drmProtected || !item.mimeType?.startsWith('video/')
-                  }
-                  title={
-                    item.drmProtected
-                      ? 'Playback unavailable — DRM protected'
-                      : !item.mimeType?.startsWith('video/')
-                        ? 'Playback not supported for this media type'
-                        : 'Play'
-                  }
-                  onClick={() => setShowPlayer(true)}
-                >
-                  <PlayIcon /> <span>Play</span>
-                </Button>
-              )}
-              {item.mimeType.startsWith('video/') && (
-                <Button onClick={startEditing} title="Edit metadata">
-                  <EditIcon />
-                </Button>
-              )}
-              <Button
-                title={
-                  isFavorited ? 'Remove from favorites' : 'Add to favorites'
-                }
-                onClick={toggleFavorite}
-              >
-                {isFavorited ? <HeartIcon /> : <HeartStrokeIcon />}
-              </Button>
-              <Button
-                title={
-                  isWatchlisted ? 'Remove from watchlist' : 'Add to watchlist'
-                }
-                onClick={toggleWatchlist}
-              >
-                {isWatchlisted ? (
-                  <>
-                    <EditIcon />
-                    <span>Watchlisted</span>
-                  </>
-                ) : (
-                  <>
-                    <AddIcon />
-                    <span>Watchlist</span>
-                  </>
-                )}
-              </Button>
-            </div>
-          </div>
+          {item.metadata.images?.logo && (
+            <img
+              src={apiUrl(item.metadata.images.logo)}
+              alt={item.title ?? fileName}
+              loading="lazy"
+              className={styles.logo}
+            />
+          )}
         </div>
 
         {/* Suggested match banner */}
@@ -892,7 +610,292 @@ export default function MediaDetail() {
           }}
         />
       </div>
-      <div className={styles.content}>
+      <div className={clsx(styles.content, styles.container)}>
+        {/* Title + actions */}
+        <div className={styles.heroInfo}>
+          {editing ? (
+            <div className={styles.editForm}>
+              <div className={styles.editField}>
+                <label className={styles.editLabel} htmlFor="edit-title">
+                  Title
+                </label>
+                <input
+                  id="edit-title"
+                  className={styles.editInput}
+                  type="text"
+                  value={editTitle}
+                  onChange={(e) => setEditTitle(e.target.value)}
+                />
+              </div>
+              <div className={styles.editField}>
+                <label className={styles.editLabel} htmlFor="edit-description">
+                  Description
+                </label>
+                <textarea
+                  id="edit-description"
+                  className={styles.editTextarea}
+                  value={editDescription}
+                  onChange={(e) => setEditDescription(e.target.value)}
+                  rows={3}
+                />
+              </div>
+              <div className={styles.editField}>
+                <label className={styles.editLabel} htmlFor="edit-tags">
+                  Tags (comma-separated)
+                </label>
+                <input
+                  id="edit-tags"
+                  className={styles.editInput}
+                  type="text"
+                  value={editTags}
+                  onChange={(e) => setEditTags(e.target.value)}
+                  placeholder="e.g. action, drama, sci-fi"
+                />
+              </div>
+              {saveError && <p className={styles.saveError}>{saveError}</p>}
+              <div className={styles.editActions}>
+                <button
+                  type="button"
+                  className={styles.btnSave}
+                  onClick={saveEditing}
+                  disabled={saving}
+                >
+                  {saving ? 'Saving…' : 'Save'}
+                </button>
+                <button
+                  type="button"
+                  className={styles.btnCancel}
+                  onClick={cancelEditing}
+                  disabled={saving}
+                >
+                  Cancel
+                </button>
+              </div>
+            </div>
+          ) : (
+            <>
+              <div className={styles.titleRow}>
+                <h1 className={styles.title}>{item.title ?? fileName}</h1>
+              </div>
+
+              {item.drmProtected && (
+                <div className={styles.drmNotice}>
+                  <span className={styles.drmBadge}>DRM Protected</span>
+                  <p className={styles.drmText}>
+                    This item is protected by digital rights management and
+                    cannot be played in the browser.
+                  </p>
+                </div>
+              )}
+
+              <span>{year ? `(${year})` : ''}</span>
+
+              {item.mimeType && (
+                <span className={styles.categoryBadge}>{item.mimeType}</span>
+              )}
+
+              {description && <p>{description}</p>}
+
+              {tags.length > 0 && (
+                <div className={styles.tags}>
+                  {tags.map((tag) => (
+                    <span key={tag} className={styles.tag}>
+                      {tag}
+                    </span>
+                  ))}
+                </div>
+              )}
+
+              {/* {aiTags.length > 0 && (
+                  <div className={styles.aiTagsSection}>
+                    <p className={styles.aiTagsLabel}>AI Suggested Tags</p>
+                    <div className={styles.aiTags}>
+                      {aiTags.map((tag) => (
+                        <span key={tag.text} className={styles.aiTag}>
+                          <span className={styles.aiTagText}>{tag.text}</span>
+                          <span className={styles.aiTagConfidence}>
+                            {tag.confidence}%
+                          </span>
+                          <button
+                            type="button"
+                            className={styles.aiTagAccept}
+                            title="Accept tag"
+                            onClick={() => handleAiTag('accept', tag.text)}
+                          >
+                            ✓
+                          </button>
+                          <button
+                            type="button"
+                            className={styles.aiTagReject}
+                            title="Reject tag"
+                            onClick={() => handleAiTag('reject', tag.text)}
+                          >
+                            ✕
+                          </button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )} */}
+            </>
+          )}
+          {/* Action buttons */}
+          <div className={styles.actions}>
+            {isImage ? (
+              <button
+                type="button"
+                className={`${styles.btnPlay} ${item.drmProtected ? styles.btnDisabled : ''}`}
+                disabled={item.drmProtected}
+                title={
+                  item.drmProtected
+                    ? 'Viewing unavailable — DRM protected'
+                    : 'View image'
+                }
+                onClick={() => setShowImageViewer(true)}
+              >
+                🖼 View
+              </button>
+              // ) : isPdf ? (
+              //   <button
+              //     type="button"
+              //     className={`${styles.btnPlay} ${item.drmProtected ? (styles.btnDisabled) : ''}`}
+              //     disabled={item.drmProtected}
+              //     title={
+              //       item.drmProtected
+              //         ? 'Viewing unavailable — DRM protected'
+              //         : 'Open PDF'
+              //     }
+              //     onClick={() => setShowPdfViewer(true)}
+              //   >
+              //     📄 Open
+              //   </button>
+              // ) : isEpub ? (
+              //   <button
+              //     type="button"
+              //     className={`${styles.btnPlay} ${item.drmProtected ? (styles.btnDisabled) : ''}`}
+              //     disabled={item.drmProtected}
+              //     title={
+              //       item.drmProtected
+              //         ? 'Reading unavailable — DRM protected'
+              //         : 'Read ebook'
+              //     }
+              //     onClick={() => setShowEpubViewer(true)}
+              //   >
+              //     📖 Read
+              //   </button>
+              // ) : isFont ? (
+              //   <button
+              //     type="button"
+              //     className={`${styles.btnPlay} ${item.drmProtected ? (styles.btnDisabled) : ''}`}
+              //     disabled={item.drmProtected}
+              //     title={
+              //       item.drmProtected
+              //         ? 'Preview unavailable — DRM protected'
+              //         : 'Preview font'
+              //     }
+              //     onClick={() => setShowFontViewer(true)}
+              //   >
+              //     🔤 Preview
+              //   </button>
+              // ) : isArchive ? (
+              //   <button
+              //     type="button"
+              //     className={styles.btnPlay}
+              //     title="Browse archive contents"
+              //     onClick={() => setShowArchiveViewer(true)}
+              //   >
+              //     📦 Browse
+              //   </button>
+            ) : item.mimeType?.startsWith('audio/') ? (
+              <>
+                <Button
+                  // className={styles.btnPlay}
+                  variant="primary"
+                  disabled={item.drmProtected}
+                  title={
+                    item.drmProtected
+                      ? 'Playback unavailable — DRM protected'
+                      : 'Play'
+                  }
+                  onClick={() => {
+                    if (!item.drmProtected && item.id) {
+                      playTrack({
+                        id: item.id,
+                        title: item.title ?? fileName,
+                        mimeType: item.mimeType ?? 'audio/mpeg',
+                      })
+                    }
+                  }}
+                >
+                  ▶ Play
+                </Button>
+                <button
+                  type="button"
+                  className={styles.btnSecondary}
+                  disabled={item.drmProtected}
+                  title="Add to queue"
+                  onClick={() => {
+                    if (!item.drmProtected && item.id) {
+                      addToQueue({
+                        id: item.id,
+                        title: item.title ?? fileName,
+                        mimeType: item.mimeType ?? 'audio/mpeg',
+                      })
+                    }
+                  }}
+                >
+                  + Queue
+                </button>
+              </>
+            ) : (
+              <Button
+                variant="primary"
+                disabled={
+                  item.drmProtected || !item.mimeType?.startsWith('video/')
+                }
+                title={
+                  item.drmProtected
+                    ? 'Playback unavailable — DRM protected'
+                    : !item.mimeType?.startsWith('video/')
+                      ? 'Playback not supported for this media type'
+                      : 'Play'
+                }
+                onClick={() => setShowPlayer(true)}
+              >
+                <PlayIcon /> <span>Play</span>
+              </Button>
+            )}
+            {item.mimeType.startsWith('video/') && (
+              <Button onClick={startEditing} title="Edit metadata">
+                <EditIcon />
+              </Button>
+            )}
+            <Button
+              title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
+              onClick={toggleFavorite}
+            >
+              {isFavorited ? <HeartIcon /> : <HeartStrokeIcon />}
+            </Button>
+            <Button
+              title={
+                isWatchlisted ? 'Remove from watchlist' : 'Add to watchlist'
+              }
+              onClick={toggleWatchlist}
+            >
+              {isWatchlisted ? (
+                <>
+                  <EditIcon />
+                  <span>Watchlisted</span>
+                </>
+              ) : (
+                <>
+                  <AddIcon />
+                  <span>Watchlist</span>
+                </>
+              )}
+            </Button>
+          </div>
+        </div>
         {/* Core metadata table */}
         {!editing && (
           <table className={styles.metaTable}>

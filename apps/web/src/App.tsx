@@ -34,7 +34,7 @@ const LibraryBrowser = lazy(
   () => import('~/pages/library-browser/LibraryBrowser'),
 )
 const Login = lazy(() => import('~/pages/login/Login'))
-const MediaDetail = lazy(() => import('~/pages/media-detail/MediaDetail'))
+const Media = lazy(() => import('~/pages/media/Media'))
 const NotFound = lazy(() => import('~/pages/not-found/NotFound'))
 const Search = lazy(() => import('~/pages/search/Search'))
 const Settings = lazy(() => import('~/pages/settings/Settings'))
@@ -78,7 +78,7 @@ export default function App() {
             >
               <Route path="/" element={<Dashboard />} />
               <Route path="/libraries/:id" element={<LibraryBrowser />} />
-              <Route path="/media/:title/:id" element={<MediaDetail />} />
+              <Route path="/media/:title/:id" element={<Media />} />
               <Route path="/groups/:id" element={<GroupDetail />} />
               <Route path="/search" element={<Search />} />
               <Route path="/admin/libraries" element={<AdminLibraries />} />
