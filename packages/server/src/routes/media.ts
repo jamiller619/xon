@@ -2,6 +2,7 @@ import { createReadStream } from 'node:fs'
 import { readdir, readFile, stat } from 'node:fs/promises'
 import { basename, dirname, extname, join } from 'node:path'
 import { Readable } from 'node:stream'
+import TmdbMetadataPlugin from '@xon/plugin-tmdb-metadata'
 import type { GroupType } from '@xon/shared'
 import { and, asc, desc, eq, inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
@@ -35,6 +36,8 @@ import {
   spawnTranscodeSegment,
 } from '../media/transcode.ts'
 import { getPluginMetadataForItem } from '../plugins/pluginManager.ts'
+
+const tmdbPlugin = new TmdbMetadataPlugin()
 
 const VALID_SIZES = ['small', 'medium', 'large'] as const
 type ThumbnailSize = (typeof VALID_SIZES)[number]
@@ -97,15 +100,30 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     const pageNum = Math.max(1, Number(page) || 1)
     const limitNum = Math.min(Math.max(1, Number(limit) || 20), 100)
     const offset = (pageNum - 1) * limitNum
-    const user = c.get('user')
+    // const user = c.get('user')
 
     const sortDir = order === 'asc' ? asc : desc
-    const orderExpr =
-      sortBy === 'title'
-        ? sortDir(mediaItems.title)
-        : sortBy === 'fileSize'
-          ? sortDir(mediaItems.fileSize)
-          : sortDir(mediaItems.createdAt)
+    const orderExpr = sortDir(mediaItems[(sortBy as keyof MediaItem) || 'id'])
+
+    const items = await db
+      .select()
+      .from(mediaItems)
+      .orderBy(orderExpr)
+      .limit(limitNum)
+      .offset(offset)
+
+    const etag = computeETag(items)
+    if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
+
+    c.header('ETag', etag)
+
+    return c.json(items)
+    // const orderExpr =
+    //   sortBy === 'title'
+    //     ? sortDir(mediaItems.title)
+    //     : sortBy === 'fileSize'
+    //       ? sortDir(mediaItems.fileSize)
+    //       : sortDir(mediaItems.createdAt)
 
     // const accessibleIds = await getAccessibleLibraryIds(user.id, user.role)
     // if (accessibleIds !== null && accessibleIds.length === 0) {
@@ -121,7 +139,7 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     // const whereClause = and(libraryFilter, ratingCond ?? undefined)
     // const whereClause = and(libraryFilter, undefined)
 
-    const baseQuery = db.select().from(mediaItems)
+    // const baseQuery = db.select().from(mediaItems)
     // const scopedQuery = whereClause ? baseQuery.where(whereClause) : baseQuery
     // const rows = await scopedQuery
     //   .orderBy(orderExpr)
@@ -311,6 +329,17 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     // MediaItem))
 
     return c.json(updated[0] as MediaItem)
+  })
+
+  router.get('/find-match', async (c) => {
+    const title = c.req.query('title')
+
+    if (!title) return c.json({ error: 'Missing title' }, 400)
+
+    const year = c.req.query('year')
+    const results = await tmdbPlugin.findMatch(title, year)
+
+    return c.json(results)
   })
 
   const bulkSchema = z.object({

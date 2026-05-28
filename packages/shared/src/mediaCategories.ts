@@ -49,6 +49,19 @@ export function getMimeTypeForExtension(
   }
 }
 
+export function getCategoryForExtension(
+  extension: string,
+): MediaCategory | undefined {
+  for (const category in CATEGORY_DEFINITIONS) {
+    const data =
+      CATEGORY_DEFINITIONS[category as keyof typeof CATEGORY_DEFINITIONS]
+
+    if (data[extension as Extension]) {
+      return category as MediaCategory
+    }
+  }
+}
+
 export const CATEGORY_DEFINITIONS: Record<MediaCategory, MediaCategoryInfo> = {
   [MediaCategory.Movies]: {
     '.mp4': 'video/mp4',

@@ -1,12 +1,11 @@
 :root {
-  --header-height: 64px;
-  --sidebar-width: 240px;
+  --header-height: 48px;
+  --sidebar-width: 48px;
 }
 
 .shell {
   display: flex;
   height: 100vh;
-  /* overflow: hidden; */
 }
 
 .overlay {
@@ -18,15 +17,45 @@
 }
 
 .sidebar {
-  width: var(--sidebar-width);
+  width: 48px;
+  overflow: hidden;
+  /* transition: width 0.2s ease-in-out; */
+
+  a {
+    gap: 0;
+    padding-inline: 0;
+    flex-direction: column;
+    padding: calc(var(--space-3) + var(--space-2));
+
+    span {
+      opacity: 0;
+    }
+  }
+
+  &.open {
+    width: 220px;
+
+    a {
+      flex-direction: row;
+      gap: var(--space-3);
+      span {
+        opacity: 1;
+      }
+    }
+  }
+  /* width: var(--sidebar-width);
+
+  &.open {
+    --sidebar-width: 256px;
+  } */
 }
 
 .main {
   flex: 1;
-  display: flex;
+  /* display: flex;
   flex-direction: column;
-  min-width: 0;
-  margin-left: var(--sidebar-width);
+  min-width: 0; */
+  /* margin-left: var(--sidebar-width); */
   /* overflow: hidden; */
 }
 

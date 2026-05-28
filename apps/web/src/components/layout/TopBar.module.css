@@ -13,15 +13,14 @@
 }
 
 .menuButton {
-  display: none;
+  /* border: none;
   background: none;
-  border: none;
   color: #ccc;
   cursor: pointer;
   padding: 6px;
   border-radius: 4px;
   font-size: 20px;
-  line-height: 1;
+  line-height: 1; */
 }
 
 .menuButton:hover {

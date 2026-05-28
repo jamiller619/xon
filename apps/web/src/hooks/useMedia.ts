@@ -9,32 +9,35 @@ type UseMediaProps = {
 }
 
 export default function useMedia(props: UseMediaProps) {
-  const [media, setMedia] = useState<MediaItem[]>([])
-  const [isLoading, setIsLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  // const [media, setMedia] = useState<MediaItem[]>([])
+  // const [isLoading, setIsLoading] = useState(false)
+  // const [error, setError] = useState<string | null>(null)
 
-  useEffect(() => {
-    const fetchData = async () => {
-      const libraryId = props.libraryId
-      const order = props.order ?? 'desc'
-      const limit = props.limit ?? 10
-      const baseURL = libraryId
-        ? `/api/libraries/${libraryId}/media`
-        : '/api/media'
+  // useEffect(() => {
+  //   const fetchData = async () => {
+  //     const libraryId = props.libraryId
+  //     const order = props.order ?? 'desc'
+  //     const limit = props.limit ?? 10
+  //     const baseURL = libraryId
+  //       ? `/api/libraries/${libraryId}/media`
+  //       : '/api/media'
 
-      setIsLoading(true)
+  //     setIsLoading(true)
 
-      const res = await apiFetch(`${baseURL}?order=${order}&limit=${limit}`)
-      const data = (await res.json()) as MediaItem[]
+  //     const res = await apiFetch(`${baseURL}?order=${order}&limit=${limit}`)
+  //     const data = (await res.json()) as MediaItem[]
 
-      setMedia(data)
-      setIsLoading(false)
-    }
+  //     setMedia(data)
+  //     setIsLoading(false)
+  //   }
 
-    fetchData()
-      .catch(setError)
-      .finally(() => setIsLoading(false))
-  }, [props.libraryId, props.order, props.limit])
+  //   fetchData()
+  //     .catch(setError)
+  //     .finally(() => setIsLoading(false))
+  // }, [props.libraryId, props.order, props.limit])
+  const media = [] as MediaItem[]
+  const isLoading = false
+  const error = null
 
   return {
     media,

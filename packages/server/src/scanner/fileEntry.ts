@@ -1,28 +1,25 @@
+import fsp from 'node:fs/promises'
 import path, { extname } from 'node:path'
+import type { MediaProviderFile } from '@xon/plugin-sdk'
 import { fileTypeFromFile } from 'file-type'
 
-export type FileEntry = {
-  filePath: string
-  fileName: string
-  fileSize: number
-  extension: string
-  mimeType: string | undefined
+export type FileEntry = MediaProviderFile & {
+  ext: string
 }
 
-export async function createFileEntry(file: {
-  path: string
-  size: number
-  name?: string
-  mimeType?: string
-}): Promise<FileEntry | undefined> {
-  const ext = extname(file.path).toLowerCase()
-  const mimeType = await getMimeType(file.path, file.mimeType)
+export async function createFileEntry(filePath: string): Promise<FileEntry> {
+  const ext = extname(filePath).toLowerCase()
+  const mimeType = await getMimeType(filePath)
+  const stats = await fsp.stat(filePath)
 
   return {
-    filePath: file.path,
-    fileName: file.name ?? path.basename(file.path),
-    fileSize: file.size,
-    extension: ext,
+    id: filePath,
+    path: filePath,
+    name: path.basename(filePath),
+    size: stats.size,
+    createdAt: stats.birthtime,
+    modifiedAt: stats.mtime,
+    ext,
     mimeType,
   }
 }

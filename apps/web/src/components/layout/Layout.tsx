@@ -1,8 +1,9 @@
+import { Flex, ScrollArea } from '@xon/ui'
+import clsx from 'clsx'
 import { Outlet } from 'react-router-dom'
 import AudioPlayer from '~/components/viewers/AudioPlayer'
 import { useAppStore } from '~/store/appStore'
 import { useAudioStore } from '~/store/audioStore'
-import Backdrop from '../backdrop/Backdrop'
 import styles from './Layout.module.css'
 import Sidebar from './Sidebar'
 import TopBar from './TopBar'
@@ -13,29 +14,20 @@ export default function Layout() {
   const hasQueue = useAudioStore((s) => s.queue.length > 0)
 
   return (
-    <>
-      {/* <Backdrop /> */}
-      <div className={styles.shell}>
-        <Sidebar
-          className={styles.sidebar}
-          open={sidebarOpen}
-          onMenuClick={() => setSidebarOpen(!sidebarOpen)}
-        />
-        {/* <div
-        className={`${styles.overlay}${sidebarOpen ? ` ${styles.visible}` : ''}`}
-        onClick={() => setSidebarOpen(false)}
-        aria-hidden="true"
-      /> */}
-        <div className={styles.main}>
-          <TopBar />
-          <main
-            className={`${styles.content}${hasQueue ? ` ${styles.contentWithPlayer}` : ''}`}
-          >
-            <Outlet />
-          </main>
-        </div>
-        <AudioPlayer />
+    <Flex>
+      <Sidebar
+        className={clsx(styles.sidebar, sidebarOpen && styles.open)}
+        isOpen={sidebarOpen}
+      />
+      <div className={styles.main}>
+        <TopBar onMenuClick={() => setSidebarOpen(!sidebarOpen)} />
+        <ScrollArea
+          className={`${styles.content}${hasQueue ? ` ${styles.contentWithPlayer}` : ''}`}
+        >
+          <Outlet />
+        </ScrollArea>
       </div>
-    </>
+      <AudioPlayer />
+    </Flex>
   )
 }

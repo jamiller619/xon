@@ -96,3 +96,15 @@ export async function getMediaByLibraryId(
     total: total[0]?.count ?? 0,
   }
 }
+
+export async function updateLibrary(
+  db: LibSQLDatabase,
+  id: string,
+  updates: Partial<Library>,
+): Promise<Library | undefined> {
+  await db.update(libraries).set(updates).where(eq(libraries.id, id))
+
+  const results = await db.select().from(libraries).where(eq(libraries.id, id))
+
+  return results[0]
+}

@@ -5,7 +5,7 @@ import type { PluginContext, PluginManifest } from './types.js'
  * Plugin authors should extend this class and override lifecycle methods.
  */
 export abstract class BasePlugin {
-  abstract readonly manifest: PluginManifest
+  // abstract readonly manifest: PluginManifest
 
   /**
    * Called once when the plugin is first loaded.

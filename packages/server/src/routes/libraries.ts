@@ -1,5 +1,6 @@
 import {
   DataSourceType,
+  type Library,
   MediaCategory,
   type MediaItem,
   UserRole,
@@ -10,11 +11,10 @@ import { z } from 'zod'
 import { requireRole } from '../auth/rbac.ts'
 import { appCache, computeETag } from '../cache.ts'
 import { validate } from '../http/validate.ts'
+import type { ScannerHandle } from '../scanner/scannerHandle.ts'
 import * as libraryService from '../services/libraryService.ts'
 import { makeLibraryThumbnailRouter } from './libraryThumbnail.ts'
 import { makeScanRouter, triggerLibraryScan } from './scan.ts'
-
-// import { makeSourcesRouter } from './sources.ts'
 
 const LIBRARIES_ALL_KEY = 'libraries:all'
 
@@ -44,7 +44,26 @@ const createLibrarySchema = z.object({
   ),
 })
 
-export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
+const updateLibrarySchema = z.object({
+  name: z.string().min(1).optional(),
+  description: z.string().optional(),
+  scanSchedule: z.string().optional(),
+  dataSources: z
+    .array(
+      z.object({
+        path: z.string().min(1).optional(),
+        type: z.enum(DataSourceType).optional(),
+        pluginId: z.string().optional(),
+        watchEnabled: z.boolean().optional(),
+      }),
+    )
+    .optional(),
+})
+
+export function makeLibrariesRouter(
+  db: LibSQLDatabase,
+  scannerHandle: ScannerHandle,
+): Hono {
   const router = new Hono()
 
   // POST /libraries — create library (manager+)
@@ -65,7 +84,7 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
       appCache.invalidate(LIBRARIES_ALL_KEY)
       const library = await libraryService.getLibraryById(db, id)
 
-      triggerLibraryScan(db, id)
+      triggerLibraryScan(scannerHandle, id)
 
       return c.json(library, 201)
     },
@@ -110,39 +129,30 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
   })
 
   // PUT /libraries/:id — update library (manager+)
-  // router.put(
-  //   '/:id',
-  //   requireRole(UserRole.User),
-  //   validate('json', updateLibrarySchema),
-  //   async (c) => {
-  //     const id = c.req.param('id')
-  //     const body = c.req.valid('json')
-  //     const existing = await db
-  //       .select()
-  //       .from(libraries)
-  //       .where(eq(libraries.id, id))
-  //     if (existing.length === 0) return c.json({ error: 'Not found' }, 404)
+  router.put(
+    '/:id',
+    requireRole(UserRole.User),
+    validate('json', updateLibrarySchema),
+    async (c) => {
+      const id = c.req.param('id')
+      const body = c.req.valid('json')
+      const existing = await libraryService.getLibraryById(db, id)
 
-  //     const updates: Partial<typeof libraries.$inferInsert> = {
-  //       updatedAt: new Date(),
-  //     }
-  //     if (body.name !== undefined) updates.name = body.name
-  //     if (body.description !== undefined) updates.description = body.description
-  //     if (body.mediaTypes !== undefined) {
-  //       updates.mediaCategories = body.mediaTypes as MediaCategory[]
-  //     }
-  //     if (body.hideDRMItems !== undefined)
-  //       updates.hideDRMItems = body.hideDRMItems
+      if (!existing) return c.json({ error: 'Not found' }, 404)
 
-  //     await db.update(libraries).set(updates).where(eq(libraries.id, id))
-  //     appCache.invalidate(LIBRARIES_ALL_KEY)
-  //     const updated = await db
-  //       .select()
-  //       .from(libraries)
-  //       .where(eq(libraries.id, id))
-  //     return c.json(updated[0])
-  //   },
-  // )
+      const updates: Partial<Library> = {
+        updatedAt: new Date(),
+      }
+      if (body.name != null) updates.name = body.name
+      if (body.description != null) updates.description = body.description
+
+      const updated = await libraryService.updateLibrary(db, id, updates)
+
+      appCache.invalidate(LIBRARIES_ALL_KEY)
+
+      return c.json(updated)
+    },
+  )
 
   // DELETE /libraries/:id — delete library and associated data sources (manager+)
   router.delete('/:id', requireRole(UserRole.User), async (c) => {
@@ -200,7 +210,7 @@ export function makeLibrariesRouter(db: LibSQLDatabase): Hono {
 
   router.route('/', makeLibraryThumbnailRouter(db))
   // router.route('/:libraryId/sources', makeSourcesRouter(db))
-  router.route('/:libraryId/scan', makeScanRouter(db))
+  router.route('/:libraryId/scan', makeScanRouter(db, scannerHandle))
 
   return router
 }

@@ -39,6 +39,18 @@ export enum GroupType {
   PhotoDate = 'Photo Date',
 }
 
+export type Group = {
+  id: string
+  createdAt: Date
+  updatedAt: Date | null
+  type: GroupType
+  title: string
+  parentCollectionId?: string | null
+  // biome-ignore lint/suspicious/noExplicitAny: valid
+  metadata: Record<string, any>
+  mediaItems?: MediaItem[]
+}
+
 export interface Library {
   id: string
   createdAt: Date
@@ -73,6 +85,7 @@ export type Metadata<T = Record<string, any>> = T & {
     backdrop?: string[] | string
     poster?: string[] | string
     thumbnail?: string[] | string
+    logo?: string[] | string
   }
 }
 

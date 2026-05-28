@@ -4,12 +4,17 @@ import { serve } from '@hono/node-server'
 // import { DEFAULT_PORT } from '@xon/shared'
 import { Hono } from 'hono'
 import { createApp } from './app.ts'
-import { client, db } from './db/db.ts'
+import db, { client } from './db/db.ts'
 import { migrateDatabase } from './db/migrate.ts'
 // import { serverSettings } from './db/schema.ts'
 // import { acquireAcmeCert, loadManualCerts } from './http/httpsManager.ts'
 import { makeStaticMiddleware } from './http/staticFiles.ts'
-import { createLogger, initLogger, setLogLevel } from './logger.ts'
+import {
+  closeLogger,
+  createLogger,
+  initLogger,
+  setLogLevel,
+} from './logger.ts'
 
 // process.loadEnvFile('./.env')
 
@@ -25,6 +30,7 @@ import {
   setPluginDatabase,
 } from './plugins/pluginManager.ts'
 import { createWsServer, WS_PATH } from './routes/ws.ts'
+import { startScannerChild } from './scanner/scannerHandle.ts'
 import { startScheduler } from './scanner/scheduler.ts'
 
 // import { initializeUsers } from './users.ts'
@@ -89,10 +95,15 @@ export async function boot(): Promise<void> {
     // const httpsConfig = settingsRows[0]
     // logger.log('Server settings loaded')
 
-    const { handleUpgrade } = createWsServer()
+    const { wss, handleUpgrade } = createWsServer()
     logger.log('WebSocket server created')
 
-    const scheduler = await startScheduler(db)
+    const scannerHandle = await startScannerChild()
+    logger.log('Scanner child process ready')
+
+    const scheduler = await startScheduler(db, (_, id) =>
+      scannerHandle.startScan(id),
+    )
     logger.log('Scheduler started')
 
     let tlsCert: string | undefined
@@ -143,7 +154,7 @@ export async function boot(): Promise<void> {
     // }
 
     const isHttps = !!(tlsCert && tlsKey)
-    const apiApp = createApp(db, { isHttps })
+    const apiApp = createApp(db, { isHttps, scannerHandle })
     const app = new Hono()
 
     app.route('/', apiApp)
@@ -183,15 +194,32 @@ export async function boot(): Promise<void> {
       }
     })
 
-    function shutdown(): void {
+    let shuttingDown = false
+    async function shutdown(): Promise<void> {
+      if (shuttingDown) return
+      shuttingDown = true
       logger.log('Shutting down')
       emitPluginEvent('server:shutdown', {})
       scheduler.stop()
-      server.close(() => {
+      await scannerHandle.stop()
+
+      for (const ws of wss.clients) ws.terminate()
+      wss.close()
+
+      const forceExit = setTimeout(() => {
+        logger.warn('Shutdown timed out; forcing exit')
+        process.exit(1)
+      }, 5000)
+      forceExit.unref()
+
+      server.close(async () => {
+        clearTimeout(forceExit)
         client.close()
         logger.log('Shutdown complete')
+        await closeLogger()
         process.exit(0)
       })
+      ;(server as { closeAllConnections?: () => void }).closeAllConnections?.()
     }
 
     process.on('SIGTERM', shutdown)

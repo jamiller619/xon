@@ -1,4 +1,4 @@
-import type { MediaCategory, MediaItem, Metadata } from '@xon/shared'
+import type { MediaCategory, Metadata } from '@xon/shared'
 import { BasePlugin } from './BasePlugin.js'
 
 /**
@@ -25,11 +25,11 @@ export abstract class MetadataSourcePlugin extends BasePlugin {
 
   /**
    * Enrich the metadata of a media item.
-   * @param mediaItem - The media item to enrich
    * @returns The enriched metadata
    */
   abstract enrich(
     filePath: string,
     category: MediaCategory,
+    lang?: string,
   ): Promise<Metadata | undefined | null>
 }

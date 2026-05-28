@@ -25,6 +25,8 @@ if (dbUrl !== ':memory:' && !dbUrl.includes(':memory:')) {
   logger.log('WAL mode enabled')
 }
 
-export const db = drizzle(client)
+const db = drizzle(client)
+
+export default db
 
 logger.log('Database ready')

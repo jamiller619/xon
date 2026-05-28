@@ -1,3 +1,4 @@
+import { availableParallelism } from 'node:os'
 import type { MediaCategory, MediaItem, Metadata } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import pLimit from 'p-limit'
@@ -7,14 +8,14 @@ import type { FileEntry } from './fileEntry.ts'
 export type PipelineContext = {
   db: LibSQLDatabase
   libraryId: string
-  dataDir: string
   logger: Logger
+  onJobComplete?: (processed: number, currentFile: string) => void
 }
 
 export type MediaJobItem = Partial<
   Exclude<
     MediaItem,
-    'id' | 'createdAt' | 'updatedAt' | 'filePath' | 'fileSize' | 'scannedAt'
+    'createdAt' | 'updatedAt' | 'filePath' | 'fileSize' | 'scannedAt'
   >
 >
 
@@ -27,9 +28,9 @@ export type PipelineStage = {
 
 export type MediaJob = {
   // The ID of the job, NOT the media item!
-  id: string
+  // id: string
   type: 'new' | 'changed'
-  entry: FileEntry
+  file: FileEntry
 
   // mediaItemId?: string
   mediaCategories: MediaCategory[]
@@ -54,34 +55,34 @@ export async function runPipeline(
   ctx: PipelineContext,
   jobs: MediaJob[],
   stages: PipelineStage[],
-  concurrency = 5,
+  concurrency = availableParallelism(),
 ) {
   const limit = pLimit(concurrency)
+  let processed = 0
 
   await Promise.all(
     jobs.map((job) =>
       limit(async () => {
         for await (const stage of stages) {
+          const errorsBefore = job.errors.length
           const result = await runStage(ctx, job, stage)
 
-          if (job.errors.length > 0) {
+          if (job.errors.length > errorsBefore) {
             ctx.logger.error(`Stage failed: ${stage.name}`, {
-              jobId: job.id,
-              errors: job.errors.map((err) => err.message),
+              jobId: job.data.id,
+              file: job.file.path,
+              errors: job.errors.slice(errorsBefore).map((err) => err.message),
             })
-
             continue
           }
-
-          ctx.logger.log(`Stage completed: ${stage.name}`, {
-            jobId: job.id,
-            result,
-          })
 
           if (result) {
             Object.assign(job.data, result)
           }
         }
+
+        processed += 1
+        ctx.onJobComplete?.(processed, job.file.path)
       }),
     ),
   )

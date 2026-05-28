@@ -1,28 +1,16 @@
-import {
-  MetadataSourcePlugin,
-  type PluginContext,
-  type PluginManifest,
-} from '@xon/plugin-sdk'
-import { MediaCategory } from '@xon/shared'
+import { MetadataSourcePlugin, type PluginContext } from '@xon/plugin-sdk'
+import { MediaCategory, MediaItem } from '@xon/shared'
 import { parseMediaTitle } from './titleParser.js'
-import { TmdbClient } from './tmdbClient.js'
+import {
+  type ImageResult,
+  type MovieSearchResult,
+  type PersonImageResult,
+  TmdbClient,
+} from './tmdbClient.js'
+
+export type { ImageResult, PersonImageResult }
 
 export default class TmdbMetadataPlugin extends MetadataSourcePlugin {
-  override readonly manifest: PluginManifest = {
-    id: 'tmdb-metadata',
-    name: 'TMDb Metadata',
-    version: '1.0.0',
-    description:
-      'Fetches movie and TV show metadata from The Movie Database (TMDb)',
-    author: 'Xon',
-    category: 'MetadataSource',
-    mediaCategories: [MediaCategory.Movies, MediaCategory.TVShows],
-    main: 'dist/index.js',
-    permissions: {
-      network: ['api.themoviedb.org'],
-    },
-  }
-
   #client: TmdbClient | null = null
   #ctx: PluginContext | null = null
 
@@ -41,12 +29,29 @@ export default class TmdbMetadataPlugin extends MetadataSourcePlugin {
     this.#client = new TmdbClient(apiKey, context.fetch)
   }
 
-  override async enrich(filePath: string, category: MediaCategory) {
+  async findMatch(
+    title: string,
+    year?: string,
+  ): Promise<MovieSearchResult[] | undefined> {
+    return this.#client?.searchMovies(title, year)
+  }
+
+  async fetchPersonImage(
+    personId: number,
+  ): Promise<PersonImageResult | undefined> {
+    return this.#client?.fetchPersonImage(personId)
+  }
+
+  override async enrich(
+    filePath: string,
+    category: MediaCategory,
+    lang?: string,
+  ) {
     const parsed = parseMediaTitle(filePath)
 
     try {
       if (parsed.type === 'movie' && category === MediaCategory.Movies) {
-        return this.#client?.fetchMovieMetadata(parsed.title, parsed.year)
+        return this.#client?.fetchMovieMetadata(parsed.title, parsed.year, lang)
       }
 
       if (parsed.type === 'tv' && category === MediaCategory.TVShows) {

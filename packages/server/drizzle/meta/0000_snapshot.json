@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "7a95162a-6165-4687-946e-a9964daf4309",
+  "id": "e0bb4d08-0741-47a2-8fd8-3186750ab031",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "media_progress": {
@@ -1484,10 +1484,17 @@
         }
       },
       "indexes": {
-        "groups_parent_group_id_idx": {
-          "name": "groups_parent_group_id_idx",
+        "groups_type_idx": {
+          "name": "groups_type_idx",
           "columns": [
-            "parent_group_id"
+            "type"
+          ],
+          "isUnique": false
+        },
+        "groups_title_idx": {
+          "name": "groups_title_idx",
+          "columns": [
+            "title"
           ],
           "isUnique": false
         }
@@ -1708,7 +1715,7 @@
           "columns": [
             "file_path"
           ],
-          "isUnique": false
+          "isUnique": true
         }
       },
       "foreignKeys": {
@@ -1795,6 +1802,133 @@
         }
       },
       "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "people": {
+      "name": "people",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "name": {
+          "name": "name",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "description": {
+          "name": "description",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "avatar_url": {
+          "name": "avatar_url",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        },
+        "metadata": {
+          "name": "metadata",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false,
+          "default": "'{}'"
+        }
+      },
+      "indexes": {
+        "people_name_idx": {
+          "name": "people_name_idx",
+          "columns": [
+            "name"
+          ],
+          "isUnique": true
+        }
+      },
+      "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "checkConstraints": {}
+    },
+    "people_media": {
+      "name": "people_media",
+      "columns": {
+        "person_id": {
+          "name": "person_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "media_id": {
+          "name": "media_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "role": {
+          "name": "role",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "order": {
+          "name": "order",
+          "type": "integer",
+          "primaryKey": false,
+          "notNull": false,
+          "autoincrement": false
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "people_media_person_id_people_id_fk": {
+          "name": "people_media_person_id_people_id_fk",
+          "tableFrom": "people_media",
+          "tableTo": "people",
+          "columnsFrom": [
+            "person_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "people_media_media_id_media_items_id_fk": {
+          "name": "people_media_media_id_media_items_id_fk",
+          "tableFrom": "people_media",
+          "tableTo": "media_items",
+          "columnsFrom": [
+            "media_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {
+        "people_media_person_id_media_id_pk": {
+          "columns": [
+            "person_id",
+            "media_id"
+          ],
+          "name": "people_media_person_id_media_id_pk"
+        }
+      },
       "uniqueConstraints": {},
       "checkConstraints": {}
     },

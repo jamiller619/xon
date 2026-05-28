@@ -23,7 +23,10 @@ export const groups = sqliteTable(
     parentGroupId: text('parent_group_id'),
     metadata: text('metadata').notNull().default('{}'),
   },
-  (table) => [index('groups_parent_group_id_idx').on(table.parentGroupId)],
+  (table) => [
+    index('groups_type_idx').on(table.type),
+    index('groups_title_idx').on(table.title),
+  ],
 )
 
 export const groupItems = sqliteTable(

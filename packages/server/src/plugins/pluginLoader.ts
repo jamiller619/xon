@@ -1,5 +1,5 @@
 import type { Dirent } from 'node:fs'
-import { readFile, readdir } from 'node:fs/promises'
+import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { PluginManifest } from '@xon/plugin-sdk'
 
@@ -38,14 +38,14 @@ function validateManifest(data: unknown, source: string): PluginManifest {
     'version',
     'description',
     'author',
+    'mediaCategories',
+    'main',
     'category',
   ]
 
   const optional: Array<keyof PluginManifest> = [
     'displayName',
-    'mediaCategories',
     'minServerVersion',
-    'main',
     'themeAssets',
     'permissions',
   ]
@@ -55,7 +55,10 @@ function validateManifest(data: unknown, source: string): PluginManifest {
       (data as Record<string, unknown>)[field] ??
       ('xon' in data && (data.xon as Record<string, unknown>)[field])
 
-    if (typeof value !== 'string' || (value as string).trim() === '') {
+    if (
+      !Array.isArray(value) &&
+      (typeof value !== 'string' || (value as string).trim() === '')
+    ) {
       throw new Error(`${source}: missing or invalid required field "${field}"`)
     }
 

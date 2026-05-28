@@ -1,5 +1,5 @@
 import { Dialog as BaseDialog } from '@base-ui/react'
-import { DataSourceType, type Library, MediaCategory } from '@xon/shared'
+import { DataSourceType, MediaCategory } from '@xon/shared'
 import {
   Button,
   Checkbox,
@@ -12,30 +12,16 @@ import {
 } from '@xon/ui'
 import clsx from 'clsx'
 import { type SubmitEvent, useEffect, useState } from 'react'
-import { apiFetch, getAPIError } from '~/lib/apiFetch'
+import * as api from '~/lib/api'
+import { apiFetch } from '~/lib/apiFetch'
 import styles from './CreateLibraryForm.module.css'
 
 const ALL_MEDIA_TYPES: { label: MediaCategory; emoji: string }[] = [
   { label: MediaCategory.Movies, emoji: '🎬' },
   { label: MediaCategory.TVShows, emoji: '📺' },
-  // { label: 'Clips', emoji: '🎞️' },
   { label: MediaCategory.Music, emoji: '🎵' },
-  // { label: 'Audiobooks', emoji: '🎧' },
-  // { label: 'Audio Clips', emoji: '🔊' },
-  // { label: 'Podcasts', emoji: '🎙️' },
   { label: MediaCategory.Pictures, emoji: '🖼️' },
-  // { label: 'Images', emoji: '📷' },
-  // { label: 'Textures', emoji: '🎨' },
   { label: MediaCategory.HomeVideos, emoji: '📹' },
-  // { label: 'Games', emoji: '🎮' },
-  // { label: 'Interactive Media', emoji: '💻' },
-  // { label: 'Documents', emoji: '📄' },
-  // { label: 'Web Media', emoji: '🌐' },
-  // { label: 'Design Files', emoji: '✏️' },
-  // { label: '3D Models', emoji: '🧊' },
-  // { label: 'Archives', emoji: '🗜️' },
-  // { label: 'Fonts', emoji: '🔤' },
-  // { label: 'Icons', emoji: '🔷' },
 ]
 
 interface CreateLibraryFormProps {
@@ -68,33 +54,21 @@ export function CreateLibraryForm({
     setLoading(true)
 
     try {
-      const libRes = await apiFetch('/api/libraries', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          name,
-          description: description.trim() || undefined,
-          mediaCategories,
-          dataSources: [
-            {
-              type: DataSourceType.local,
-              path: sourcePath.trim(),
-            },
-          ],
-        }),
-      })
-
-      if (!libRes.ok) {
-        setError(await getAPIError(libRes, 'Failed to create library'))
-
-        return
+      const dataSource = {
+        type: DataSourceType.local,
+        path: sourcePath.trim(),
       }
 
-      const library = (await libRes.json()) as Library
+      const library = await api.createLibrary({
+        name,
+        description: description.trim() || undefined,
+        mediaCategories,
+        dataSources: [dataSource],
+      })
 
       onSuccess(library.id)
-    } catch {
-      setError('Network error — please try again')
+    } catch (err) {
+      setError(`Failed to create library: ${err}`)
     } finally {
       setLoading(false)
     }

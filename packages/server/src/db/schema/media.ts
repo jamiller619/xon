@@ -1,6 +1,12 @@
 import { type Metadata, type MPARating, MPARatings } from '@xon/shared'
 import { sql } from 'drizzle-orm'
-import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import {
+  index,
+  integer,
+  sqliteTable,
+  text,
+  uniqueIndex,
+} from 'drizzle-orm/sqlite-core'
 import { libraries } from './libraries.ts'
 import { keys, timestamps } from './shared.ts'
 
@@ -43,7 +49,7 @@ export const mediaItems = sqliteTable(
   (table) => [
     index('media_items_library_id_idx').on(table.libraryId),
     index('media_items_mime_type_idx').on(table.mimeType),
-    index('media_items_file_path_idx').on(table.filePath),
+    uniqueIndex('media_items_file_path_idx').on(table.filePath),
   ],
 )
 

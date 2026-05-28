@@ -9,20 +9,26 @@ import useMedia from '~/hooks/useMedia'
 import styles from './Dashboard.module.css'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
+import { useQuery } from '@tanstack/react-query'
 import useLibraries from '~/hooks/useLibraries'
-import System from './System'
+import System from './cards/System'
 
 export default function Dashboard() {
   const { width, containerRef, mounted } = useContainerWidth()
   const { libraries } = useLibraries()
-  const { media: recentMedia, isLoading: isRecentMediaLoading } = useMedia({
-    order: 'desc',
-    limit: 20,
+  const {
+    isPending,
+    error,
+    data: recentMedia,
+  } = useQuery<MediaItem[]>({
+    queryKey: ['recent-media'],
+    queryFn: () =>
+      fetch(`/api/media?sortBy=createdAt&order=desc&page=1&limit=10`).then(
+        (r) => r.json(),
+      ),
   })
 
-  const isLoading = isRecentMediaLoading
-
-  if (isLoading) {
+  if (isPending) {
     return (
       <div className={styles.loading}>
         <p>Loading...</p>
@@ -41,7 +47,7 @@ export default function Dashboard() {
   return (
     <div ref={containerRef}>
       <PluginSlot injectionPoint="dashboard-widget" />
-      {mounted && isLoading === false && (
+      {mounted && isPending === false && (
         <ReactGridLayout
           layout={layout}
           width={width}
@@ -105,7 +111,7 @@ function DashboardSection({
 }
 
 type MediaSectionProps = DashboardSectionProps & {
-  media?: MediaItem[]
+  media?: MediaItem[] | undefined
 }
 
 function MediaSection({ title, media, ...props }: MediaSectionProps) {

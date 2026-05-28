@@ -186,9 +186,11 @@ export interface MediaProviderFile {
   /** File size in bytes */
   size: number
   /** MIME type of the file, if known */
-  mimeType?: string
+  mimeType?: string | undefined
   /** Last modified timestamp */
-  modifiedAt?: Date
+  modifiedAt?: Date | undefined
+  /** Creation timestamp */
+  createdAt?: Date | undefined
 }
 
 /** Callback invoked by MediaProviderPlugin.watch() when files change */

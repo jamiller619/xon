@@ -20,11 +20,16 @@
     "vitest": "^2.1.0"
   },
   "xon": {
-    "displayName": "TMDb Metadata",
+    "displayName": "TMDb",
     "category": "MetadataSource",
-    "mediaCategories": ["Movies", "TV Shows"],
+    "mediaCategories": [
+      "Movies",
+      "TV Shows"
+    ],
     "permissions": {
-      "network": ["api.themoviedb.org"]
+      "network": [
+        "api.themoviedb.org"
+      ]
     }
   }
 }

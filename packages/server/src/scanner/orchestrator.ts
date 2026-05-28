@@ -1,13 +1,16 @@
-import { CATEGORY_DEFINITIONS } from '@xon/shared'
-import { eq } from 'drizzle-orm'
+import { CATEGORY_DEFINITIONS, DataSourceType } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
-import config from '../config.ts'
-import { libraries } from '../db/schema.ts'
 import { createLogger } from '../logger.ts'
-import { type MediaJob, type PipelineContext, runPipeline } from './pipeline.ts'
-import { scanDataSource } from './scanner.ts'
-import MetadataStage from './stages/MetadataStage.ts'
-import { DRMStage, PersistStage, ThumbnailStage, TitleStage } from './stages.ts'
+import * as libraryService from '../services/libraryService.ts'
+import { LocalDiscoverer } from './discoverers/LocalDiscoverer.ts'
+import type {
+  DiscoveryContext,
+  MediaDiscoverer,
+} from './discoverers/MediaDiscoverer.ts'
+import { PluginDiscoverer } from './discoverers/PluginDiscoverer.ts'
+import { type PipelineContext, runPipeline } from './pipeline.ts'
+import { toLocalPath } from './scanner.ts'
+import * as stage from './stages.ts'
 
 const logger = createLogger('orchestrator')
 
@@ -24,116 +27,131 @@ export type ScanSummary = {
   updatedItems: number
   removedItems: number
   totalDiscovered: number
-  duration: number
+}
+
+const pipelineStages = [
+  stage.title,
+  stage.drm,
+  stage.metadata,
+  stage.persist,
+  stage.person,
+  stage.thumbnail,
+]
+
+const discoverers: Partial<Record<DataSourceType, MediaDiscoverer>> = {
+  [DataSourceType.local]: new LocalDiscoverer(),
+  [DataSourceType.plugin]: new PluginDiscoverer(),
 }
 
 export async function scanLibrary(
   db: LibSQLDatabase,
   libraryId: string,
-  // onProgress?: (progress: ScanProgress) => void,
-  // dataDir?: string,
+  onProgress?: (progress: ScanProgress) => void,
 ): Promise<ScanSummary> {
   const scanStart = Date.now()
-  const resolvedDataDir = config.get('appdata.path')
-  const libraryRows = await db
-    .select()
-    .from(libraries)
-    .where(eq(libraries.id, libraryId))
+  const library = await libraryService.getLibraryById(db, libraryId)
 
-  if (libraryRows.length === 0 || libraryRows[0] == null) {
+  if (!library) {
     throw new Error(`Library not found: ${libraryId}`)
   }
 
-  const library = libraryRows[0]
-  const mediaTypes = library.mediaCategories ?? []
-  const hasTypeFilter = mediaTypes.length > 0
+  const { mediaCategories, dataSources } = library
 
-  logger.log(`Scan started: "${library.name}"`, {
-    libraryId,
-    sources: library.dataSources.length,
-    typeFilter: hasTypeFilter ? mediaTypes : 'none',
-  })
-
-  const ctx: PipelineContext = {
-    db,
-    libraryId,
-    dataDir: resolvedDataDir,
-    logger,
+  if (dataSources.length === 0) {
+    throw new Error(`No data sources found for library: ${libraryId}`)
   }
+
+  const extSet = new Set(
+    mediaCategories.flatMap((c) => Object.keys(CATEGORY_DEFINITIONS[c])),
+  )
 
   let totalNew = 0
   let totalUpdated = 0
   let totalRemoved = 0
   let totalDiscovered = 0
 
-  for await (const source of library.dataSources) {
-    const mediaCategories =
-      library.mediaCategories ?? Object.keys(CATEGORY_DEFINITIONS)
-    const result = await scanDataSource(library.id, source, mediaCategories)
+  for await (const dataSource of dataSources) {
+    const sourceLabel =
+      dataSource.type === DataSourceType.plugin
+        ? `${dataSource.pluginId}:${dataSource.path}`
+        : toLocalPath(dataSource.path)
 
-    totalNew += result.newFiles.length
-    totalUpdated += result.changedFiles.length
-    totalRemoved += result.removedFilePaths.length
-    totalDiscovered += result.discovered.length
+    logger.log(`Scanning data source: ${sourceLabel}`)
 
-    // for await (const file of result.newFiles) {
-    //   onProgress?.({
-    //     dataSourceId: source.id,
-    //     totalFiles: result.newFiles.length,
-    //     processedFiles: totalNew,
-    //     currentFile: file.fileName,
-    //   })
-    // }
+    const discoverer = discoverers[dataSource.type]
 
-    const jobs: MediaJob[] = [
-      ...result.newFiles.map(
-        (f) =>
-          ({
-            id: crypto.randomUUID(),
-            type: 'new',
-            entry: f,
-            errors: [],
-            data: {
-              metadata: {},
-            },
-            mediaCategories,
-          }) as MediaJob,
-      ),
-      ...result.changedFiles.map(
-        (f) =>
-          ({
-            id: crypto.randomUUID(),
-            type: 'changed',
-            entry: f,
-            errors: [],
-            data: {
-              metadata: {},
-            },
-            mediaCategories,
-          }) as MediaJob,
-      ),
-    ]
+    if (!discoverer) {
+      logger.warn(`Unsupported data source type: ${dataSource.type}`)
+      continue
+    }
 
-    await runPipeline(ctx, jobs, [
-      TitleStage,
-      DRMStage,
-      MetadataStage,
-      PersistStage,
-      ThumbnailStage,
-    ])
+    const discoveryCtx: DiscoveryContext = {
+      db,
+      libraryId,
+      dataSource,
+      extSet,
+      mediaCategories,
+    }
+
+    const discovery = await discoverer.discover(discoveryCtx)
+
+    if (!discovery) continue
+
+    totalDiscovered += discovery.totalDiscovered
+    totalRemoved += discovery.removedCount
+
+    if (discovery.jobs.length === 0) {
+      logger.log(`No new or changed files found in data source: ${sourceLabel}`)
+      discovery.reconcile()
+      continue
+    }
+
+    for (const job of discovery.jobs) {
+      if (job.type === 'new') totalNew += 1
+      else totalUpdated += 1
+    }
+
+    const totalFiles = discovery.jobs.length
+
+    onProgress?.({
+      dataSourceId: dataSource.path,
+      totalFiles,
+      processedFiles: 0,
+      currentFile: null,
+    })
+
+    const ctx: PipelineContext = { db, libraryId, logger }
+
+    if (onProgress) {
+      ctx.onJobComplete = (processed, currentFile) => {
+        onProgress({
+          dataSourceId: dataSource.path,
+          totalFiles,
+          processedFiles: processed,
+          currentFile,
+        })
+      }
+    }
+
+    logger.log(`Beginning pipeline stage for ${library.name} / ${sourceLabel}`)
+
+    await runPipeline(ctx, discovery.jobs, pipelineStages)
+
+    discovery.reconcile()
   }
 
-  const duration = Date.now() - scanStart
   const summary: ScanSummary = {
     libraryId,
     newItems: totalNew,
     updatedItems: totalUpdated,
     removedItems: totalRemoved,
     totalDiscovered,
-    duration,
   }
 
-  logger.log(`Scan finished: "${library.name}"`, summary)
+  logger.log(`Scan finished: "${library.name}"`, {
+    ...summary,
+    duration: Date.now() - scanStart,
+  })
 
   return summary
 }

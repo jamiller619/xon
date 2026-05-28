@@ -1,5 +1,8 @@
-import { Search20Filled as SearchIcon } from '@fluentui/react-icons'
-import { Textbox } from '@xon/ui'
+import {
+  Navigation20Filled as MenuIcon,
+  Search20Filled as SearchIcon,
+} from '@fluentui/react-icons'
+import { Button, IconButton, Textbox } from '@xon/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiFetch, apiUrl } from '~/lib/apiFetch'
@@ -31,7 +34,11 @@ function saveHistory(query: string) {
   localStorage.setItem(HISTORY_KEY, JSON.stringify(next))
 }
 
-export default function TopBar() {
+type TopBarProps = {
+  onMenuClick?: () => void
+}
+
+export default function TopBar({ onMenuClick }: TopBarProps) {
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [suggestions, setSuggestions] = useState<SuggestionItem[]>([])
@@ -129,15 +136,13 @@ export default function TopBar() {
 
   return (
     <header className={styles.header}>
-      <span></span>
-      {/* <button
-        type="button"
-        className={styles.menuButton}
+      <IconButton
+        // variant="ghost"
         onClick={onMenuClick}
         aria-label="Toggle sidebar"
       >
-        ☰
-      </button> */}
+        <MenuIcon />
+      </IconButton>
       <div className={styles.searchWrapper} ref={wrapperRef}>
         <Textbox
           type="search"

@@ -2,8 +2,8 @@ import { watch } from 'node:fs'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { createLogger } from '../logger.ts'
 import * as libraryService from '../services/libraryService.ts'
+import { scanLibrary } from './orchestrator.ts'
 import { toLocalPath } from './scanner.ts'
-import { spawnScan } from './spawnScan.ts'
 
 const logger = createLogger('scheduler')
 
@@ -43,7 +43,7 @@ const DEBOUNCE_MS = 2000
 
 export async function startScheduler(
   db: LibSQLDatabase,
-  trigger: TriggerFn = (_d, id) => spawnScan(id),
+  trigger: TriggerFn = (d, id) => scanLibrary(d, id),
 ): Promise<SchedulerHandle> {
   const intervalTimers: ReturnType<typeof setInterval>[] = []
   const debounceTimers = new Map<string, ReturnType<typeof setTimeout>>()

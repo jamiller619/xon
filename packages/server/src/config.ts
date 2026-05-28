@@ -7,7 +7,6 @@ import envPaths from 'env-paths'
 import { findUp } from 'find-up-simple'
 import { z } from 'zod'
 import ConfigStore from './config/ConfigStore.ts'
-import { createLogger } from './logger.ts'
 
 export type { Config, ConfigStore }
 
@@ -19,21 +18,20 @@ const paths = envPaths('xon', {
   suffix: '',
 })
 
-const logger = createLogger('config')
+console.log('Looking for .env file...')
 
-logger.log('Looking for .env file...')
 const envFile = await findUp('.env')
 
 let startingConfig: Partial<Config> = {}
 
 if (envFile) {
-  logger.log('Found .env file:', envFile)
+  console.log('Found .env file:', envFile)
 
   loadEnvFile(envFile)
 
   startingConfig = (await parseEnvFile(envFile)) ?? {}
 } else {
-  logger.log('No .env file found')
+  console.log('No .env file found')
 }
 
 const configFilePath =
@@ -137,16 +135,16 @@ async function parseEnvFile(
     const parsed = configSchema.safeParse(raw)
 
     if (!parsed.success) {
-      logger.log('Failed to parse .env file')
+      console.log('Failed to parse .env file')
 
       return
     }
 
-    logger.log('Successfully parsed .env file')
+    console.log('Successfully parsed .env file')
 
     return parsed.data as Partial<Config>
   } catch (error) {
-    logger.log('Failed to parse .env file', error)
+    console.log('Failed to parse .env file', error)
   }
 }
 

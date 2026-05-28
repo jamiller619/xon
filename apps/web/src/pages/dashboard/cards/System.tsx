@@ -1,10 +1,9 @@
-import NumberFlow from '@number-flow/react'
 import type { StatsPayload } from '@xon/shared'
 import { Progress } from '@xon/ui'
 import prettyBytes from 'pretty-bytes'
 import prettyMs from 'pretty-ms'
 import { type HTMLAttributes, useEffect, useState } from 'react'
-import dashboardStyles from './Dashboard.module.css'
+import dashboardStyles from '../Dashboard.module.css'
 import styles from './System.module.css'
 
 type SystemProps = HTMLAttributes<HTMLDivElement>

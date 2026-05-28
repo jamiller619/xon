@@ -10,8 +10,8 @@ import { emitEvent } from '../events.ts'
 import { validate } from '../http/validate.ts'
 import { emitPluginEvent } from '../plugins/pluginManager.ts'
 import { type ScanState, scanRegistry } from '../scanner/scanRegistry.ts'
+import type { ScannerHandle } from '../scanner/scannerHandle.ts'
 import { parseCronInterval } from '../scanner/scheduler.ts'
-import { spawnScan } from '../scanner/spawnScan.ts'
 
 const scheduleSchema = z.object({
   scanSchedule: z
@@ -32,7 +32,7 @@ const watchSchema = z.object({
  * Returns false if a scan is already running, true if one was started.
  */
 export function triggerLibraryScan(
-  _db: LibSQLDatabase,
+  scannerHandle: ScannerHandle,
   libraryId: string,
 ): boolean {
   const current = scanRegistry.get(libraryId)
@@ -46,40 +46,14 @@ export function triggerLibraryScan(
     error: null,
   }
   scanRegistry.set(libraryId, state)
+
   emitPluginEvent('scan:start', { libraryId })
 
-  const scanStartedAt = Date.now()
-
-  // scanLibrary(db, libraryId, (progress) => {
-  //   state.progress = progress
-  //   const percentComplete =
-  //     progress.totalFiles > 0
-  //       ? Math.round((progress.processedFiles / progress.totalFiles) * 100)
-  //       : 0
-  //   emitEvent({
-  //     type: 'scan:progress',
-  //     payload: {
-  //       libraryId,
-  //       fileCount: progress.totalFiles,
-  //       currentFile: progress.currentFile,
-  //       percentComplete,
-  //     },
-  //   })
-  // })
-  spawnScan(libraryId)
-    .then(async (summary) => {
-      const duration = Date.now() - scanStartedAt
+  scannerHandle
+    .startScan(libraryId)
+    .then((summary) => {
       state.status = 'completed'
       state.summary = summary
-
-      // await db
-      //   .update(libraries)
-      //   .set({
-      //     lastScanResult: 'completed',
-      //     lastScanDuration: duration,
-      //     updatedAt: new Date(),
-      //   })
-      //   .where(eq(libraries.id, libraryId))
 
       appCache.invalidate(`media:count:${libraryId}`)
       appCache.invalidate('libraries:all')
@@ -99,19 +73,10 @@ export function triggerLibraryScan(
         itemsFound: summary.totalDiscovered,
       })
     })
-    .catch(async (err: unknown) => {
-      const duration = Date.now() - scanStartedAt
-      state.status = 'failed'
+    .catch((err: unknown) => {
       const errorMessage = err instanceof Error ? err.message : String(err)
+      state.status = 'failed'
       state.error = errorMessage
-      // await db
-      //   .update(libraries)
-      //   .set({
-      //     lastScanResult: 'failed',
-      //     lastScanDuration: duration,
-      //     updatedAt: new Date(),
-      //   })
-      //   .where(eq(libraries.id, libraryId))
       emitEvent({
         type: 'scan:error',
         payload: { libraryId, error: errorMessage },
@@ -121,13 +86,16 @@ export function triggerLibraryScan(
   return true
 }
 
-export function makeScanRouter(db: LibSQLDatabase): Hono {
+export function makeScanRouter(
+  db: LibSQLDatabase,
+  scannerHandle: ScannerHandle,
+): Hono {
   const router = new Hono()
 
   // POST / — trigger scan (mounted at /:libraryId/scan) (manager+)
   router.post('/', requireRole(UserRole.User), (c) => {
     const libraryId = c.req.param('libraryId') as string
-    const started = triggerLibraryScan(db, libraryId)
+    const started = triggerLibraryScan(scannerHandle, libraryId)
     if (!started) {
       return c.json({ status: 'already_running' }, 409)
     }

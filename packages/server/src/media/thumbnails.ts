@@ -1,12 +1,13 @@
+import config from '../config.ts'
 import { createLogger } from '../logger.ts'
 import { type ThumbnailPaths, writeThumbnailImages } from './images.ts'
 
+const dataDir = config.get('appdata.cachePath')
 const logger = createLogger('thumbnails')
 
 export async function generateThumbnails(
   filePath: string,
   mediaItemId: string,
-  dataDir: string,
 ): Promise<ThumbnailPaths | undefined> {
   logger.debug(`Generating thumbnails: ${filePath}`)
 

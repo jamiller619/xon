@@ -121,7 +121,6 @@
   background: var(--color-gray-2);
   padding: var(--space-3);
   border-radius: var(--border-radius-3);
-  /* biome-ignore lint/correctness/noUnknownProperty: <explanation> */
   corner-shape: var(--corner-shape);
 }
 
@@ -149,7 +148,6 @@
 .checkbox {
   padding: var(--space-3);
   border-radius: var(--border-radius-2);
-  /* biome-ignore lint/correctness/noUnknownProperty: <explanation> */
   corner-shape: var(--corner-shape);
 
   &:hover {

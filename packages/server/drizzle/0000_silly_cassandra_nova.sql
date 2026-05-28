@@ -212,7 +212,8 @@ CREATE TABLE `groups` (
 	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE INDEX `groups_parent_group_id_idx` ON `groups` (`parent_group_id`);--> statement-breakpoint
+CREATE INDEX `groups_type_idx` ON `groups` (`type`);--> statement-breakpoint
+CREATE INDEX `groups_title_idx` ON `groups` (`title`);--> statement-breakpoint
 CREATE TABLE `libraries` (
 	`id` text PRIMARY KEY NOT NULL,
 	`created_at` integer NOT NULL,
@@ -244,7 +245,7 @@ CREATE TABLE `media_items` (
 --> statement-breakpoint
 CREATE INDEX `media_items_library_id_idx` ON `media_items` (`library_id`);--> statement-breakpoint
 CREATE INDEX `media_items_mime_type_idx` ON `media_items` (`mime_type`);--> statement-breakpoint
-CREATE INDEX `media_items_file_path_idx` ON `media_items` (`file_path`);--> statement-breakpoint
+CREATE UNIQUE INDEX `media_items_file_path_idx` ON `media_items` (`file_path`);--> statement-breakpoint
 CREATE TABLE `reading_positions` (
 	`id` text PRIMARY KEY NOT NULL,
 	`media_item_id` text NOT NULL,
@@ -255,6 +256,25 @@ CREATE TABLE `reading_positions` (
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `reading_positions_media_item_id_unique` ON `reading_positions` (`media_item_id`);--> statement-breakpoint
+CREATE TABLE `people` (
+	`id` text PRIMARY KEY NOT NULL,
+	`name` text NOT NULL,
+	`description` text,
+	`avatar_url` text,
+	`metadata` text DEFAULT '{}' NOT NULL
+);
+--> statement-breakpoint
+CREATE UNIQUE INDEX `people_name_idx` ON `people` (`name`);--> statement-breakpoint
+CREATE TABLE `people_media` (
+	`person_id` text NOT NULL,
+	`media_id` text NOT NULL,
+	`role` text NOT NULL,
+	`order` integer,
+	PRIMARY KEY(`person_id`, `media_id`),
+	FOREIGN KEY (`person_id`) REFERENCES `people`(`id`) ON UPDATE no action ON DELETE cascade,
+	FOREIGN KEY (`media_id`) REFERENCES `media_items`(`id`) ON UPDATE no action ON DELETE cascade
+);
+--> statement-breakpoint
 CREATE TABLE `sync_profiles` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,

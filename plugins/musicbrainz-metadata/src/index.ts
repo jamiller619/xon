@@ -5,20 +5,20 @@ import { MusicBrainzClient } from './musicBrainzClient.js'
 import { parseMusicPath } from './musicParser.js'
 
 export class MusicBrainzMetadataPlugin extends BasePlugin {
-  override readonly manifest: PluginManifest = {
-    id: 'musicbrainz-metadata',
-    name: 'MusicBrainz Metadata',
-    version: '1.0.0',
-    description:
-      'Fetches music metadata from MusicBrainz and cover art from the Cover Art Archive',
-    author: 'Xon',
-    category: 'MetadataSource',
-    mediaCategories: [MediaCategory.Music],
-    main: 'dist/index.js',
-    permissions: {
-      network: ['musicbrainz.org', 'coverartarchive.org'],
-    },
-  }
+  // override readonly manifest: PluginManifest = {
+  //   id: 'musicbrainz-metadata',
+  //   name: 'MusicBrainz Metadata',
+  //   version: '1.0.0',
+  //   description:
+  //     'Fetches music metadata from MusicBrainz and cover art from the Cover Art Archive',
+  //   author: 'Xon',
+  //   category: 'MetadataSource',
+  //   mediaCategories: [MediaCategory.Music],
+  //   main: 'dist/index.js',
+  //   permissions: {
+  //     network: ['musicbrainz.org', 'coverartarchive.org'],
+  //   },
+  // }
 
   private client: MusicBrainzClient | null = null
   private ctx: PluginContext | null = null
@@ -49,7 +49,8 @@ export class MusicBrainzMetadataPlugin extends BasePlugin {
     context.on(
       'media:created',
       async ({ mediaId, filePath, mediaCategory }) => {
-        if (!this.manifest.mediaCategories?.includes(mediaCategory)) return
+        if (mediaCategory !== MediaCategory.Music) return
+        // if (!this.manifest.mediaCategories?.includes(mediaCategory)) return
         await this.enrichMedia(mediaId, filePath)
       },
     )
@@ -57,7 +58,8 @@ export class MusicBrainzMetadataPlugin extends BasePlugin {
     context.on(
       'media:updated',
       async ({ mediaId, filePath, mediaCategory }) => {
-        if (!this.manifest.mediaCategories?.includes(mediaCategory)) return
+        if (mediaCategory !== MediaCategory.Music) return
+        // if (!this.manifest.mediaCategories?.includes(mediaCategory)) return
         await this.enrichMedia(mediaId, filePath)
       },
     )

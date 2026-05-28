@@ -1,5 +1,11 @@
 import type { Metadata } from '@xon/shared'
-import { backdropSizes, posterSizes, secureBaseURL } from './config.js'
+import {
+  backdropSizes,
+  logoSizes,
+  posterSizes,
+  profileSizes,
+  secureBaseURL,
+} from './config.js'
 
 const TMDB_BASE = 'https://api.themoviedb.org/3'
 const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
@@ -113,18 +119,36 @@ interface SearchResponse<T> {
   results: T[]
 }
 
-interface TmdbPersonImage {
-  file_path: string
+interface TmdbPersonImagesResult {
+  profiles: ImageResult[]
+}
+
+export interface ImageResult {
   aspect_ratio: number
-  width: number
+  file_path: string
   height: number
   iso_639_1: string
   vote_average: number
   vote_count: number
+  width: number
 }
 
-interface TmdbPersonImagesResult {
-  profiles: TmdbPersonImage[]
+export interface PersonImageResult {
+  url: string
+  personId: number
+}
+
+interface TmdbMovieImagesResult {
+  backdrops: ImageResult[]
+  logos: ImageResult[]
+  posters: ImageResult[]
+}
+
+export interface MovieSearchResult {
+  tmdbId: number
+  title: string
+  poster: string
+  releaseDate: string
 }
 
 const KEY_JOBS = new Set([
@@ -169,33 +193,61 @@ export class TmdbClient {
     return data
   }
 
-  async fetchPersonImages(personId: number) {
-    return this.#get<TmdbPersonImagesResult>(`/person/${personId}/images`)
+  async fetchPersonImage(
+    personId: number,
+  ): Promise<PersonImageResult | undefined> {
+    const results = await this.#get<TmdbPersonImagesResult>(
+      `/person/${personId}/images`,
+    )
+
+    const result = [...(results?.profiles ?? [])]
+      .sort(
+        (a, b) =>
+          b.vote_average - a.vote_average ||
+          b.vote_count - a.vote_count ||
+          b.width - a.width,
+      )
+      .at(0)
+
+    if (result) {
+      return {
+        url: constructURL(profileSizes.medium, result.file_path),
+        personId,
+      }
+    }
   }
 
   async searchMovies(
     title: string,
-    year?: number,
-  ): Promise<SearchResponse<TmdbMovieSearchResult> | null> {
+    year?: string,
+  ): Promise<MovieSearchResult[] | undefined> {
     const params: Record<string, string> = { query: title }
-    if (year !== undefined) params.year = String(year)
+    if (year != null) params.year = year
 
-    return this.#get<SearchResponse<TmdbMovieSearchResult>>(
+    const resp = await this.#get<SearchResponse<TmdbMovieSearchResult>>(
       '/search/movie',
       params,
     )
+
+    return resp?.results.map((result) => ({
+      tmdbId: result.id,
+      title: result.title,
+      poster: constructURL(posterSizes.medium, result.poster_path),
+      releaseDate: result.release_date,
+    }))
   }
 
   async fetchMovieMetadata(
     title: string,
     year?: number,
+    lang?: string,
   ): Promise<Metadata | null> {
-    const search = await this.searchMovies(title, year)
-    const first = search?.results[0]
+    const search = await this.searchMovies(title, String(year))
+    const first = search?.[0]
     if (!first) return null
 
     const details = await this.#get<TmdbMovieDetailsResult>(
-      `/movie/${first.id}`,
+      `/movie/${first.tmdbId}`,
       {
         append_to_response: 'credits',
       },
@@ -229,17 +281,27 @@ export class TmdbClient {
         })),
     }
 
-    if (details.backdrop_path) {
-      data.images ??= {}
-      data.images.backdrop = constructURL(
-        backdropSizes.large,
-        details.backdrop_path,
-      )
+    data.images ??= {}
+    const images = await this.fetchMovieImages(first.tmdbId, lang)
+
+    if (images?.backdrops) {
+      data.images.backdrop = images.backdrops
+        .slice(0, 5)
+        .map((i) => constructURL(backdropSizes.large, i.file_path))
     }
 
-    if (details.poster_path) {
-      data.images ??= {}
-      data.images.poster = constructURL(posterSizes.xlarge, details.poster_path)
+    if (images?.posters) {
+      data.images.poster = images.posters
+        .slice(0, 5)
+        .map((i) => constructURL(posterSizes.xlarge, i.file_path))
+    }
+
+    if (images?.logos) {
+      const logo = images.logos.at(0)
+
+      if (logo) {
+        data.images.logo = constructURL(logoSizes.original, logo.file_path)
+      }
     }
 
     return data
@@ -325,11 +387,21 @@ export class TmdbClient {
     return metadata
   }
 
+  async fetchMovieImages(movieId: number, lang?: string) {
+    const url = `/movie/${movieId}/images${lang ? `?language=${lang}` : ''}`
+
+    const images = await this.#get<TmdbMovieImagesResult>(url)
+
+    return images
+  }
+
   clearCache(): void {
     this.#cache.clear()
   }
 }
 
-function constructURL(size: string, imagePath: string) {
+function constructURL(size: string, imagePath?: string | null | undefined) {
+  if (!imagePath) return ''
+
   return new URL(`${size}${imagePath}`, secureBaseURL).href
 }

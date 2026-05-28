@@ -1,5 +1,5 @@
 export { app } from './app.ts'
-export { hashPassword, verifyPassword } from './auth/password.ts'
+// export { hashPassword, verifyPassword } from './auth/password.ts'
 export type { LibSQLDatabase } from './db/db.ts'
 export { migrateDatabase } from './db/migrate.ts'
 export {
@@ -199,10 +199,7 @@ export {
 } from './routes/adminBackupTargets.ts'
 export { computeChecksum, runVerifyJob } from './routes/adminBackupVerify.ts'
 export { runSyncJob } from './routes/sync.ts'
-export {
-  type ScanResult,
-  scanDataSource,
-} from './scanner/scanner.ts'
+export type { ScanResult } from './scanner/scanner.ts'
 export {
   parseCronInterval,
   type SchedulerHandle,

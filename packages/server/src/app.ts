@@ -11,6 +11,7 @@ import { makeLoggingMiddleware } from './http/loggingMiddleware.ts'
 import { makeRateLimitMiddleware } from './http/rateLimitMiddleware.ts'
 import { makeSecurityHeadersMiddleware } from './http/securityHeadersMiddleware.ts'
 import { pluginRouteDispatcher } from './plugins/pluginRoutes.ts'
+import type { ScannerHandle } from './scanner/scannerHandle.ts'
 import { makeAdminAiSettingsRouter } from './routes/adminAiSettings.ts'
 import {
   makeAdminBackupRouter,
@@ -42,7 +43,7 @@ import { makeUsersRouter } from './routes/users.ts'
 
 export function createApp(
   db?: LibSQLDatabase,
-  options?: { isHttps?: boolean },
+  options?: { isHttps?: boolean; scannerHandle?: ScannerHandle },
 ): Hono {
   // const app = new Hono().basePath('/api/v1')
   const app = new Hono().basePath('/api')
@@ -126,7 +127,9 @@ export function createApp(
   if (db) {
     app.route('/auth', makeAuthRouter())
     app.route('/fs', makeFsRouter(db))
-    app.route('/libraries', makeLibrariesRouter(db))
+    if (options?.scannerHandle) {
+      app.route('/libraries', makeLibrariesRouter(db, options.scannerHandle))
+    }
     app.route('/groups', makeGroupsRouter(db))
     app.route('/ai', makeAiRouter(db))
     app.route('/matching', makeMatchingRouter(db))

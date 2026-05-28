@@ -4,7 +4,7 @@ import { drizzleAdapter } from 'better-auth/adapters/drizzle'
 import { anonymous } from 'better-auth/plugins'
 import { generateName } from 'namejam'
 import config from '../config.ts'
-import { db } from '../db/db.ts'
+import db from '../db/db.ts'
 import * as schema from '../db/schema.ts'
 import * as userService from '../services/userService.ts'
 

@@ -5,19 +5,19 @@ import { parseBookPath } from './bookParser.js'
 import { OpenLibraryClient } from './openLibraryClient.js'
 
 export class OpenLibraryMetadataPlugin extends BasePlugin {
-  override readonly manifest: PluginManifest = {
-    id: 'openlibrary-metadata',
-    name: 'OpenLibrary Metadata',
-    version: '1.0.0',
-    description: 'Fetches book and document metadata from OpenLibrary',
-    author: 'Xon',
-    category: 'MetadataSource',
-    // mediaCategories: [MediaCategory.Documents],
-    main: 'dist/index.js',
-    permissions: {
-      network: ['openlibrary.org', 'covers.openlibrary.org'],
-    },
-  }
+  // override readonly manifest: PluginManifest = {
+  //   id: 'openlibrary-metadata',
+  //   name: 'OpenLibrary Metadata',
+  //   version: '1.0.0',
+  //   description: 'Fetches book and document metadata from OpenLibrary',
+  //   author: 'Xon',
+  //   category: 'MetadataSource',
+  //   // mediaCategories: [MediaCategory.Documents],
+  //   main: 'dist/index.js',
+  //   permissions: {
+  //     network: ['openlibrary.org', 'covers.openlibrary.org'],
+  //   },
+  // }
 
   private client: OpenLibraryClient | null = null
   private ctx: PluginContext | null = null

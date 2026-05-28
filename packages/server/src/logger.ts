@@ -20,8 +20,12 @@ const LEVEL_RANK: Record<LogLevel, number> = {
   error: 3,
 }
 
+type Mode =
+  | { kind: 'file'; stream: RotatingFileStream | null }
+  | { kind: 'ipc'; send: (line: string) => void }
+
 let currentLevel: LogLevel = 'info'
-let stream: RotatingFileStream | null = null
+let mode: Mode = { kind: 'file', stream: null }
 
 function serializeArg(arg: unknown): Record<string, unknown> {
   if (arg instanceof Error) {
@@ -62,8 +66,9 @@ function buildEntry(
   return `${JSON.stringify(entry)}\n`
 }
 
-function writeToFile(line: string): void {
-  stream?.write(line)
+function writeLine(line: string): void {
+  if (mode.kind === 'file') mode.stream?.write(line)
+  else mode.send(line)
 }
 
 function shouldLog(level: LogLevel): boolean {
@@ -85,7 +90,7 @@ function makeHandler(
   return (...args: unknown[]): void => {
     if (!shouldLog(level)) return
     orig(...args)
-    writeToFile(buildEntry(level, args, base))
+    writeLine(buildEntry(level, args, base))
   }
 }
 
@@ -113,9 +118,17 @@ export function createLogger(component: string): Logger {
   }
 }
 
+function pad(n: number): string {
+  return String(n).padStart(2, '0')
+}
+
 /**
- * Initialise the logger. Must be called once at server startup.
- * - Creates logs directory.
+ * Initialise the logger for the parent process. Creates the logs directory and
+ * opens the rotating file stream. Must be called once at startup.
+ *
+ * Child processes should call `initChildLogger` instead so they forward log
+ * lines to the parent via IPC; otherwise concurrent rotations would race on
+ * the same file and lose data.
  */
 export async function initLogger(): Promise<void> {
   const logsDir = config.get('appdata.logsPath')
@@ -130,15 +143,18 @@ export async function initLogger(): Promise<void> {
 
   const retentionDays = config.get('log.retentionDays')
 
-  stream = createStream(
-    (time: number | Date | null) => {
+  const stream = createStream(
+    (time: number | Date | null, index?: number) => {
       if (!time) return 'current.jsonl'
       const d = time instanceof Date ? time : new Date(time)
-      return `${d.toISOString().slice(0, 10)}.jsonl`
+      const date = `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`
+      const suffix = index && index > 1 ? `.${index}` : ''
+      return `${date}${suffix}.jsonl`
     },
     {
       interval: '1d',
       intervalBoundary: true,
+      initialRotation: true,
       path: logsDir,
       maxFiles: retentionDays,
     },
@@ -146,5 +162,55 @@ export async function initLogger(): Promise<void> {
 
   stream.on('error', (err) => {
     origError('Logger stream error:', err)
+  })
+
+  mode = { kind: 'file', stream }
+}
+
+/**
+ * Initialise logging for a forked child process. Log lines are forwarded to
+ * the parent via IPC; the parent owns the rotating file stream so there is a
+ * single writer per file. Falls back to stderr if no IPC channel is present
+ * (e.g. running the child entry directly for debugging).
+ */
+export function initChildLogger(): void {
+  const send = process.send?.bind(process)
+
+  if (send) {
+    mode = {
+      kind: 'ipc',
+      send: (line) => {
+        send({ type: 'log', line })
+      },
+    }
+  } else {
+    mode = {
+      kind: 'ipc',
+      send: (line) => {
+        process.stderr.write(line)
+      },
+    }
+  }
+}
+
+/**
+ * Accept a pre-serialized log line from a child process and write it to the
+ * rotating stream. The child already filtered and formatted; we just append.
+ */
+export function acceptChildLogLine(line: string): void {
+  if (mode.kind === 'file') mode.stream?.write(line)
+}
+
+/**
+ * Flush and close the rotating stream. Call on graceful shutdown so the final
+ * entries reach disk before the process exits.
+ */
+export async function closeLogger(): Promise<void> {
+  if (mode.kind !== 'file') return
+  const stream = mode.stream
+  mode = { kind: 'file', stream: null }
+  if (!stream) return
+  await new Promise<void>((resolve) => {
+    stream.end(() => resolve())
   })
 }
