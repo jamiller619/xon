@@ -1,6 +1,5 @@
 import type { PluginContext, PluginManifest } from '@xon/plugin-sdk'
 import { BasePlugin } from '@xon/plugin-sdk'
-import { MediaCategory } from '@xon/shared'
 
 export class ModelViewerPlugin extends BasePlugin {
   // override readonly manifest: PluginManifest = {

@@ -1,9 +1,10 @@
 import react from '@vitejs/plugin-react'
+import { inlineCssModules } from 'inline-css-modules/vite'
 import { defineConfig } from 'vite'
 import dts from 'vite-plugin-dts'
 
 export default defineConfig({
-  plugins: [react(), dts()],
+  plugins: [react(), dts(), inlineCssModules()],
   build: {
     target: 'es2022',
     lib: {

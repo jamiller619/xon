@@ -1,5 +1,5 @@
 import type { MetadataSourcePlugin } from '@xon/plugin-sdk'
-import { getCategoryForExtension, type Metadata } from '@xon/shared'
+import type { MediaType, Metadata } from '@xon/shared'
 import { extractExiftoolMetadata } from '../../media/exiftool.js'
 import { extractFfprobeMetadata } from '../../media/ffprobe.js'
 import { extractMusicTags } from '../../media/musictags.js'
@@ -13,43 +13,47 @@ export default {
   retry: 1,
   run: async (_, job) => {
     if (job.type === 'changed') {
-      console.log(`Skipping metadata for changed file: ${job.file.path}`)
+      if (Object.keys(job.data.metadata).length > 0) {
+        console.log(
+          `Skipping metadata stage with existing data for changed file: ${job.file.path}`,
+        )
 
-      return
+        return
+      }
     }
 
-    const fileCategory = getCategoryForExtension(job.file.ext)
+    // const fileCategory = getCategoryForExtension(job.file.ext)
 
-    if (!fileCategory) {
-      console.log(
-        `No matching media category for ${job.file.path}; skipping metadata`,
-      )
-      return
-    }
+    // if (!fileCategory) {
+    //   console.log(
+    //     `No matching media category for ${job.file.path}; skipping metadata`,
+    //   )
+    //   return
+    // }
 
     console.log(`Parsing metadata for ${job.file.path}`)
 
-    const meta = { ...job.data.metadata }
+    const jobMetadataCopy = { ...job.data.metadata }
     const fileMeta = await parseMetadataFromFile(job.file)
 
     if (fileMeta) {
       console.log(
         `Parsed metadata from file only for ${job.file.path}: ${JSON.stringify(fileMeta, null, 2)}`,
       )
-      Object.assign(meta, fileMeta)
+      Object.assign(jobMetadataCopy, fileMeta)
     }
 
     const metadataPlugins =
       getPluginsByCategory<MetadataSourcePlugin>('MetadataSource')
     const plugins = metadataPlugins.filter((p) =>
-      p.manifest.mediaCategories?.includes(fileCategory),
+      p.manifest.mediaTypes.includes(job.file.mediaType as MediaType.MainType),
     )
 
     for await (const plugin of plugins) {
       try {
         const pluginMeta = await plugin.instance.enrich(
           job.file.path,
-          fileCategory,
+          job.mediaTypes,
         )
 
         if (pluginMeta) {
@@ -57,10 +61,11 @@ export default {
             `Plugin metadata for ${job.file.path}: ${JSON.stringify(pluginMeta, null, 2)}`,
           )
 
-          Object.assign(meta, pluginMeta)
+          Object.assign(jobMetadataCopy, pluginMeta)
 
           return {
-            metadata: meta,
+            title: 'title' in pluginMeta ? pluginMeta.title : job.data.title,
+            metadata: jobMetadataCopy,
           }
         }
       } catch (err) {
@@ -68,22 +73,22 @@ export default {
       }
     }
 
-    return { metadata: meta }
+    return { metadata: jobMetadataCopy }
   },
 } satisfies PipelineStage
 
 async function parseMetadataFromFile(
   file: FileEntry,
 ): Promise<Metadata | null | undefined> {
-  if (isAudio(file.mimeType)) {
+  if (file.mediaType.startsWith('audio')) {
     return extractMusicTags(file.path)
   }
 
-  if (isVideo(file.mimeType)) {
+  if (file.mediaType.startsWith('video')) {
     return extractFfprobeMetadata(file.path)
   }
 
-  if (isImage(file.mimeType)) {
+  if (file.mediaType.startsWith('image')) {
     return extractExiftoolMetadata(file.path)
   }
 }

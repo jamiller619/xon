@@ -14,22 +14,17 @@
   background: var(--color-gray-3);
   padding: var(--space-4) var(--space-5) var(--space-5);
   border-radius: var(--border-radius-5);
-  /* biome-ignore lint/correctness/noUnknownProperty: <explanation> */
   corner-shape: var(--corner-shape);
   box-shadow: 0 0 18px rgb(0 0 0 / 40%);
 }
 
 .title {
-  font-size: var(--font-size-4);
+  font-size: var(--font-size-3);
   font-weight: 500;
-  margin-inline: 0;
-  margin-block-start: 0;
-  margin-block-end: var(--space-3);
 }
 
 .close {
   border-radius: 1000px;
-  /* biome-ignore lint/correctness/noUnknownProperty: <explanation> */
   corner-shape: round;
   display: flex;
   padding: var(--space-3);

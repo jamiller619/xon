@@ -1,8 +1,10 @@
 import {
   DataSourceType,
   type Library,
-  MediaCategory,
-  type MediaItem,
+  LibraryType,
+  MediaType,
+  // MediaCategory,
+  // type MediaItem,
   UserRole,
 } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
@@ -10,6 +12,7 @@ import { Hono } from 'hono'
 import { z } from 'zod'
 import { requireRole } from '../auth/rbac.ts'
 import { appCache, computeETag } from '../cache.ts'
+import type { MediaItem } from '../db/schema.ts'
 import { validate } from '../http/validate.ts'
 import type { ScannerHandle } from '../scanner/scannerHandle.ts'
 import * as libraryService from '../services/libraryService.ts'
@@ -19,8 +22,7 @@ import { makeScanRouter, triggerLibraryScan } from './scan.ts'
 const LIBRARIES_ALL_KEY = 'libraries:all'
 
 const libraryMediaQuerySchema = z.object({
-  mediaCategory: z.string().optional(),
-  mimeType: z.string().optional(),
+  types: z.array(z.enum(LibraryType)).optional(),
   sortBy: z
     .enum(['title', 'fileSize', 'releaseDate', 'rating', 'createdAt'])
     .optional(),
@@ -32,7 +34,7 @@ const libraryMediaQuerySchema = z.object({
 const createLibrarySchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  mediaCategories: z.array(z.enum(MediaCategory)),
+  types: z.array(z.enum(LibraryType)),
   scanSchedule: z.string().optional(),
   dataSources: z.array(
     z.object({
@@ -66,10 +68,9 @@ export function makeLibrariesRouter(
 ): Hono {
   const router = new Hono()
 
-  // POST /libraries — create library (manager+)
   router.post(
     '/',
-    requireRole(UserRole.User),
+    // requireRole(UserRole.User),
     validate('json', createLibrarySchema),
     async (c) => {
       const body = c.req.valid('json')

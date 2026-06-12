@@ -2,7 +2,7 @@ import { basename, extname } from 'node:path'
 import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { libraries, mediaItems } from '../db/schema.ts'
-import { isImageCategory } from './exiftool.ts'
+import * as libraryService from '../services/libraryService.ts'
 // import { isDocumentCategory } from './miscmeta.ts'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -45,7 +45,7 @@ function filenameWords(filePath: string): string[] {
   const name = basename(filePath, extname(filePath))
   return name
     .toLowerCase()
-    .replace(/[_\-\.]/g, ' ')
+    .replace(/[_\-.]/g, ' ')
     .split(/\s+/)
     .filter((w) => w.length >= 3)
 }
@@ -381,23 +381,21 @@ export async function autoTagMediaItems(
   db: LibSQLDatabase,
   libraryId: string,
 ): Promise<void> {
-  const rows = await db
-    // .select({
-    //   id: mediaItems.id,
-    //   filePath: mediaItems.filePath,
-    //   // mediaCategory: mediaItems.media,
-    //   metadata: mediaItems.metadata,
-    // })
-    .select()
-    .from(mediaItems)
-    .leftJoin(libraries, eq(libraries.id, libraryId))
-    .where(eq(mediaItems.libraryId, libraryId))
+  // const rows = await db
+  //   // .select({
+  //   //   id: mediaItems.id,
+  //   //   filePath: mediaItems.filePath,
+  //   //   // mediaCategory: mediaItems.media,
+  //   //   metadata: mediaItems.metadata,
+  //   // })
+  //   .select()
+  //   .from(mediaItems)
+  //   .leftJoin(libraries, eq(libraries.id, libraryId))
+  //   .where(eq(mediaItems.libraryId, libraryId))
+  const rows = await libraryService.getMediaByLibraryId(db, libraryId)
 
   // Filter to supported categories
-  const supported = rows.filter(
-    (r) => isImageCategory(...(r.libraries?.mediaCategories ?? [])),
-    // isImageCategory(...(r.libraries?.mediaCategories ?? [])) || isDocumentCategory(r.mediaCategory),
-  )
+  const supported = rows.data.filter((r) => r.mediaType.startsWith('image/'))
 
   const now = new Date()
   const idsToUpdate: string[] = []

@@ -2,7 +2,7 @@ import {
   Navigation20Filled as MenuIcon,
   Search20Filled as SearchIcon,
 } from '@fluentui/react-icons'
-import { Button, IconButton, Textbox } from '@xon/ui'
+import { Button, Textbox } from '@xon/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiFetch, apiUrl } from '~/lib/apiFetch'
@@ -136,13 +136,13 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
 
   return (
     <header className={styles.header}>
-      <IconButton
+      <Button.Icon
         // variant="ghost"
         onClick={onMenuClick}
         aria-label="Toggle sidebar"
       >
         <MenuIcon />
-      </IconButton>
+      </Button.Icon>
       <div className={styles.searchWrapper} ref={wrapperRef}>
         <Textbox
           type="search"

@@ -1,4 +1,4 @@
-import { GroupType, UserRole } from '@xon/shared'
+import { GroupType, MediaType, UserRole } from '@xon/shared'
 import { and, asc, eq, inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
@@ -118,7 +118,8 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
         sortOrder: groupItems.sortOrder,
         title: mediaItems.title,
         // mediaCategory: mediaItems.mediaCategory,
-        mimeType: mediaItems.mimeType,
+        // mimeType: mediaItems.mimeType,
+        mediaType: mediaItems.mediaType,
         fileSize: mediaItems.fileSize,
         createdAt: mediaItems.createdAt,
         // thumbnailPaths: mediaItems.thumbnailPaths,

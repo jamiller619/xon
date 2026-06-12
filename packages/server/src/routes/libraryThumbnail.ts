@@ -5,6 +5,7 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import sharp from 'sharp'
 import { libraries, mediaItems } from '../db/schema.ts'
+import { getMediaByLibraryId } from '../services/libraryService.ts'
 
 const CELL_W = 150
 const CELL_H = 225
@@ -13,7 +14,6 @@ const ROWS = 4
 const GAP = 6
 const GRID_W = COLS * CELL_W + (COLS - 1) * GAP
 const GRID_H = ROWS * CELL_H + (ROWS - 1) * GAP
-
 
 function extractPosterUrl(metadata: Metadata): string | null {
   const poster = metadata.images?.poster
@@ -67,7 +67,6 @@ async function buildGrid(posters: Buffer[]): Promise<Buffer> {
     .toBuffer()
 }
 
-
 export function makeLibraryThumbnailRouter(db: LibSQLDatabase): Hono {
   const router = new Hono()
 
@@ -80,15 +79,14 @@ export function makeLibraryThumbnailRouter(db: LibSQLDatabase): Hono {
       .where(eq(libraries.id, id))
     if (!library) return c.json({ error: 'Not found' }, 404)
 
-    const rows = await db
-      .select({ metadata: mediaItems.metadata })
-      .from(mediaItems)
-      .where(eq(mediaItems.libraryId, id))
-      .limit(200)
+    const rows = await getMediaByLibraryId(db, id, {
+      pageNumber: 1,
+      pageSize: 200,
+    })
 
     const posterUrls = [
       ...new Set(
-        rows
+        rows.data
           .map((r) => extractPosterUrl(r.metadata))
           .filter((u): u is string => u !== null),
       ),

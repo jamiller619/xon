@@ -1,8 +1,13 @@
 import crypto from 'node:crypto'
-import type { Library } from '@xon/shared'
-import { asc, count, desc, eq } from 'drizzle-orm'
+import type { Library, MediaType } from '@xon/shared'
+import { and, asc, count, desc, eq, like } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
-import { libraries, type MediaItem, mediaItems } from '../db/schema.ts'
+import {
+  libraries,
+  libraryMediaItems,
+  type MediaItem,
+  mediaItems,
+} from '../db/schema.ts'
 import { createLogger } from '../logger.ts'
 
 const logger = createLogger('library-service')
@@ -80,21 +85,41 @@ export async function getMediaByLibraryId(
 
   const results = await db
     .select()
-    .from(mediaItems)
-    .where(eq(mediaItems.libraryId, id))
+    .from(libraryMediaItems)
+    .where(eq(libraryMediaItems.libraryId, id))
+    .innerJoin(mediaItems, eq(mediaItems.id, libraryMediaItems.mediaItemId))
     .orderBy(sortDir(mediaItems[sortProps?.field ?? 'id']))
     .limit(pageSize)
     .offset(offset)
+    .then((rows) => rows.map((row) => row.media_items))
 
   const total = await db
     .select({ count: count() })
-    .from(mediaItems)
-    .where(eq(mediaItems.libraryId, id))
+    .from(libraryMediaItems)
+    .where(eq(libraryMediaItems.libraryId, id))
 
   return {
     data: results,
     total: total[0]?.count ?? 0,
   }
+}
+
+export async function getMediaByTypeAndLibraryId(
+  db: LibSQLDatabase,
+  mediaType: MediaType.MainType,
+  libraryId: string,
+) {
+  return db
+    .select()
+    .from(libraryMediaItems)
+    .where(
+      and(
+        eq(libraryMediaItems.libraryId, libraryId),
+        like(mediaItems.mediaType, `${mediaType}/%`),
+      ),
+    )
+    .innerJoin(mediaItems, eq(mediaItems.id, libraryMediaItems.mediaItemId))
+    .then((rows) => rows.map((row) => row.media_items))
 }
 
 export async function updateLibrary(

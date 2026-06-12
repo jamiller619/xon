@@ -1,6 +1,6 @@
 import { Button as UIButton } from '@base-ui/react'
 import clsx from 'clsx'
-import type { ReactNode } from 'react'
+import surfaceStyles from '../surface/Surface.module.css'
 import type { Variant } from '../types.js'
 import styles from './Button.module.css'
 
@@ -21,16 +21,25 @@ export default function Button({
     <UIButton
       type="button"
       {...props}
-      className={clsx(styles.button, className, variant && styles[variant], {
-        [styles.small as string]: size === 'small',
-        [styles.block as string]: block,
-      })}
+      className={clsx(
+        styles.button,
+        surfaceStyles.surface,
+        className,
+        variant && styles[variant],
+        {
+          [styles.large as string]: size === 'large',
+          [styles.small as string]: size === 'small',
+          [styles.block as string]: block,
+        },
+      )}
     />
   )
 }
 
-type IconButtonProps = ButtonProps & {
-  children: ReactNode
+Button.Icon = function IconButton(props: ButtonProps) {
+  return (
+    <Button {...props} className={clsx(styles.iconButton, props.className)} />
+  )
 }
 
 export function IconButton({
@@ -38,7 +47,7 @@ export function IconButton({
   className,
   variant,
   ...props
-}: IconButtonProps) {
+}: ButtonProps) {
   return (
     <Button
       {...props}

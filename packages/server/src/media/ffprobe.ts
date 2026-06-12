@@ -1,23 +1,22 @@
 import { spawn } from 'node:child_process'
-import { MediaCategory } from '@xon/shared'
 import { createLogger } from '../logger.ts'
 import { ffprobePath } from './binaries.ts'
 
 const logger = createLogger('ffprobe')
 
-const VIDEO_CATEGORIES = new Set<string>([
-  MediaCategory.Movies,
-  MediaCategory.TVShows,
-  // MediaCategory.Clips,
-  MediaCategory.HomeVideos,
-])
+// const VIDEO_CATEGORIES = new Set<string>([
+//   MediaCategory.Movies,
+//   MediaCategory.TVShows,
+//   // MediaCategory.Clips,
+//   MediaCategory.HomeVideos,
+// ])
 
-const AUDIO_CATEGORIES = new Set<string>([
-  MediaCategory.Music,
-  // MediaCategory.Audiobooks,
-  // MediaCategory.AudioClips,
-  // MediaCategory.Podcasts,
-])
+// const AUDIO_CATEGORIES = new Set<string>([
+//   MediaCategory.Music,
+//   // MediaCategory.Audiobooks,
+//   // MediaCategory.AudioClips,
+//   // MediaCategory.Podcasts,
+// ])
 
 export type FfprobeMetadata = {
   duration?: number
@@ -37,10 +36,11 @@ export type StreamTrack = {
   title?: string
 }
 
-export function isAudioVideoCategory(category: string | null): boolean {
-  if (!category) return false
-  return VIDEO_CATEGORIES.has(category) || AUDIO_CATEGORIES.has(category)
-}
+// export function isAudioVideoCategory(mediaType: string | null): boolean {
+//   if (!mediaType) return false
+
+//   return mediaType.startsWith('video/') || mediaType.startsWith('audio/')
+// }
 
 export async function extractStreamTracks(
   filePath: string,

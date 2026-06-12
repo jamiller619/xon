@@ -14,7 +14,7 @@
   --space-11: 12rem;
   --space-12: 16rem;
 
-  --font-size-1: 0.5rem;
+  /* --font-size-1: 0.5rem;
   --font-size-2: 0.625rem;
   --font-size-3: 0.75rem;
   --font-size-4: 0.875rem;
@@ -25,7 +25,21 @@
   --font-size-9: 1.875rem;
   --font-size-10: 2.25rem;
   --font-size-11: 3rem;
-  --font-size-12: 4rem;
+  --font-size-12: 8rem; */
+
+  /* Modular scale, ratio ≈ 1.2401 — anchored 0.75rem → 8rem over 12 steps */
+  --font-size-1: 0.75rem;
+  --font-size-2: 0.93rem;
+  --font-size-3: 1.153rem;
+  --font-size-4: 1.43rem;
+  --font-size-5: 1.774rem;
+  --font-size-6: 2.2rem;
+  --font-size-7: 2.728rem;
+  --font-size-8: 3.383rem;
+  --font-size-9: 4.195rem;
+  --font-size-10: 5.202rem;
+  --font-size-11: 6.451rem;
+  --font-size-12: 8rem;
 
   --border-radius-1: 0.25rem;
   --border-radius-2: 0.75rem;
@@ -36,10 +50,10 @@
 
   --shadow-1: 0 1px 2px rgba(0, 0, 0, 0.05);
   --shadow-2: 0 1px 2px rgba(0, 0, 0, 0.1);
-  --shadow-3: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px
-    rgba(0, 0, 0, 0.06);
-  --shadow-4: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px
-    rgba(0, 0, 0, 0.05);
-  --shadow-5: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px
-    rgba(0, 0, 0, 0.1);
+  --shadow-3:
+    0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-4:
+    0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-5:
+    0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.1);
 }

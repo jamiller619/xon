@@ -1,4 +1,4 @@
-import type { MediaCategory } from './mediaCategories.js'
+import type { MediaType } from './mediaTypes.ts'
 
 export type StatsPayload = {
   cpu: number
@@ -24,19 +24,19 @@ export type StatsPayload = {
 }
 
 export enum GroupType {
-  Series = 'Series',
-  Season = 'Season',
-  Album = 'Album',
-  Artist = 'Artist',
-  BookSeries = 'Book Series',
-  Collection = 'Collection',
-  Favorites = 'Favorites',
-  Watchlist = 'Watchlist',
-  Playlist = 'Playlist',
-  Shelf = 'Shelf',
-  Folder = 'Folder',
-  PhotoLocation = 'Photo Location',
-  PhotoDate = 'Photo Date',
+  Series = 'series',
+  Season = 'season',
+  Album = 'album',
+  Artist = 'artist',
+  BookSeries = 'book_series',
+  Collection = 'collection',
+  Favorites = 'favorites',
+  Watchlist = 'watchlist',
+  Playlist = 'playlist',
+  Shelf = 'shelf',
+  Folder = 'folder',
+  PhotoLocation = 'photo_location',
+  PhotoDate = 'photo_date',
 }
 
 export type Group = {
@@ -45,10 +45,18 @@ export type Group = {
   updatedAt: Date | null
   type: GroupType
   title: string
-  parentCollectionId?: string | null
+  parentGroupID?: string | null
   // biome-ignore lint/suspicious/noExplicitAny: valid
   metadata: Record<string, any>
   mediaItems?: MediaItem[]
+}
+
+export enum LibraryType {
+  Movies = 'movies',
+  TVShows = 'series',
+  Music = 'music',
+  Photos = 'photos',
+  HomeVideos = 'home_videos',
 }
 
 export interface Library {
@@ -57,14 +65,13 @@ export interface Library {
   updatedAt: Date | null
   name: string
   description: string | null
-  mediaCategories: MediaCategory[]
+  types: LibraryType[]
   scanSchedule: string | null
   dataSources: DataSource[]
 }
 
 export enum DataSourceType {
   local = 'local',
-  network = 'network',
   plugin = 'plugin',
 }
 
@@ -89,19 +96,42 @@ export type Metadata<T = Record<string, any>> = T & {
   }
 }
 
+export type MetadataMovie = Metadata<{
+  title: string
+  releaseDate?: string
+  rating?: MPARating
+  genres?: string[]
+  cast?: CastMember[]
+  director?: string
+  duration?: number
+}>
+
+export interface CastMember {
+  id: string
+  name: string
+  description?: string | null
+  avatarUrl?: string | null
+  metadata: Record<string, unknown>
+  role: string
+  order?: number | null
+}
+
 export interface MediaItem {
   id: string
   createdAt: Date
   updatedAt: Date | null
-  libraryId: string
   filePath: string
   fileSize: number
-  mimeType: string
+  mediaType: string
   title: string
   description: string | null
   metadata: Metadata
   drmProtected: boolean
   scannedAt: Date
+  genres: string[]
+
+  // video mediaType
+  cast?: CastMember[]
 }
 
 export enum UserRole {

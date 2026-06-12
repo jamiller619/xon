@@ -1,4 +1,4 @@
-import type { MediaCategory, Metadata } from '@xon/shared'
+import type { MediaType, Metadata } from '@xon/shared'
 import { BasePlugin } from './BasePlugin.js'
 
 /**
@@ -6,22 +6,7 @@ import { BasePlugin } from './BasePlugin.js'
  * Implement this to integrate with services like TMDB, MusicBrainz, etc.
  */
 export abstract class MetadataSourcePlugin extends BasePlugin {
-  /**
-   * Media categories this plugin can match.
-   * Only items whose mediaCategory is in this list will be sent to match().
-   */
-  // abstract readonly supportedCategories: MediaCategory[]
-
-  /**
-   * Attempt to find a match for the given media item.
-   * @param fileName - Filename without extension (e.g. "Almost Famous EXTENDED 2000")
-   * @param mediaCategory - The media category of the item
-   * @returns The best match found, or null if no confident match
-   */
-  // abstract match(
-  //   fileName: string,
-  //   mediaCategory: MediaCategory,
-  // ): Promise<MatchResult | null>
+  abstract readonly mediaTypes: MediaType.MainType[]
 
   /**
    * Enrich the metadata of a media item.
@@ -29,7 +14,6 @@ export abstract class MetadataSourcePlugin extends BasePlugin {
    */
   abstract enrich(
     filePath: string,
-    category: MediaCategory,
-    lang?: string,
+    types: MediaType.MainType[],
   ): Promise<Metadata | undefined | null>
 }

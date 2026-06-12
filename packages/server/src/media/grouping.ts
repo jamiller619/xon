@@ -1,8 +1,10 @@
 import path, { basename, dirname, extname } from 'node:path'
-import { GroupType, getMimeTypesForCategory, MediaCategory } from '@xon/shared'
+import { GroupType, MediaType } from '@xon/shared'
+// import { GroupType, getMediaTypesForCategory, MediaCategory } from '@xon/shared'
 import { and, eq, inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { groupItems, groups, mediaItems } from '../db/schema.ts'
+import * as libraryService from '../services/libraryService.ts'
 
 export interface TvEpisodeInfo {
   seriesName: string | null
@@ -107,14 +109,11 @@ export async function groupTvEpisodes(
   userId: string,
 ): Promise<void> {
   // Fetch all TV Show items for this library
-  const tvItems = await db
-    .select({
-      id: mediaItems.id,
-      filePath: mediaItems.filePath,
-      // fileName: mediaItems.fileName,
-    })
-    .from(mediaItems)
-    .where(eq(mediaItems.libraryId, libraryId))
+  const tvItems = await libraryService.getMediaByTypeAndLibraryId(
+    db,
+    MediaType.MainType.Video,
+    libraryId,
+  )
 
   // Filter to only TV episodes
   const episodes: Array<{
@@ -345,18 +344,11 @@ export async function groupMusicTracks(
   userId: string,
 ): Promise<void> {
   // Fetch all Music category items for this library
-  const musicItems = await db
-    .select({ id: mediaItems.id, metadata: mediaItems.metadata })
-    .from(mediaItems)
-    .where(
-      and(
-        eq(mediaItems.libraryId, libraryId),
-        inArray(
-          mediaItems.mimeType,
-          getMimeTypesForCategory(MediaCategory.Music),
-        ),
-      ),
-    )
+  const musicItems = await libraryService.getMediaByTypeAndLibraryId(
+    db,
+    MediaType.MainType.Audio,
+    libraryId,
+  )
 
   if (musicItems.length === 0) return
 
@@ -567,18 +559,11 @@ export async function groupPhotos(
   libraryId: string,
   userId: string,
 ): Promise<void> {
-  const photoItems = await db
-    .select({ id: mediaItems.id, metadata: mediaItems.metadata })
-    .from(mediaItems)
-    .where(
-      and(
-        eq(mediaItems.libraryId, libraryId),
-        // inArray(mediaItems.mediaCategory, [
-        //   MediaCategory.Pictures,
-        //   MediaCategory.Images,
-        // ]),
-      ),
-    )
+  const photoItems = await libraryService.getMediaByTypeAndLibraryId(
+    db,
+    MediaType.MainType.Image,
+    libraryId,
+  )
 
   if (photoItems.length === 0) return
 

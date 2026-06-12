@@ -18,7 +18,7 @@ const FILE_ENTRY_CONCURRENCY = 32
 
 export class LocalDiscoverer implements MediaDiscoverer {
   async discover(ctx: DiscoveryContext): Promise<Discovery> {
-    const { libraryId, dataSource, extSet, mediaCategories } = ctx
+    const { libraryId, dataSource, extSet } = ctx
     const sourcePath = toLocalPath(dataSource.path)
 
     const filePaths = await new fdir()
@@ -58,7 +58,7 @@ export class LocalDiscoverer implements MediaDiscoverer {
 
             const isNew = !previouslySeen.has(filePath)
 
-            return createMediaJob(file, mediaCategories, isNew)
+            return createMediaJob(ctx.db, file, isNew)
           }),
         ),
       )

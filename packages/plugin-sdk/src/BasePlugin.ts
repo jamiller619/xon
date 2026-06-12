@@ -1,4 +1,4 @@
-import type { PluginContext, PluginManifest } from './types.js'
+import type { PluginContext } from './types.js'
 
 /**
  * Base class for all Xon plugins.

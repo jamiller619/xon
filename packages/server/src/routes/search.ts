@@ -2,11 +2,11 @@ import { eq, type SQL, sql } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
-import {
-  getAllowedRatings,
-  // libraryAccess,
-  users,
-} from '../db/schema.ts'
+// import {
+//   getAllowedRatings,
+//   // libraryAccess,
+//   users,
+// } from '../db/schema.ts'
 import { validate } from '../http/validate.ts'
 
 const searchQuerySchema = z.object({

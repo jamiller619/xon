@@ -11,7 +11,7 @@ import {
   groups,
   // favorites,
   mediaItems,
-  mediaProgress,
+  // mediaProgress,
   users,
   // watchlist,
 } from '../db/schema.ts'
@@ -169,40 +169,49 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
 
     if (!user) return c.json({ error: 'Not authenticated' }, 401)
 
-    const rows = await db
-      .select({
-        userId: mediaProgress.userId,
-        mediaItemId: mediaProgress.mediaItemId,
-        position: mediaProgress.position,
-        duration: mediaProgress.duration,
-        completed: mediaProgress.completed,
-        updatedAt: mediaProgress.updatedAt,
-        mediaItem: mediaItems,
-      })
-      .from(mediaProgress)
-      .innerJoin(mediaItems, eq(mediaProgress.mediaItemId, mediaItems.id))
-      .where(
-        and(
-          eq(mediaProgress.userId, user.id),
-          or(
-            eq(mediaProgress.completed, false),
-            isNull(mediaProgress.completed),
-          ),
-        ),
-      )
-      .orderBy(desc(mediaProgress.updatedAt))
+    // const rows = await db
+    //   .select({
+    //     userId: mediaProgress.userId,
+    //     mediaItemId: mediaProgress.mediaItemId,
+    //     position: mediaProgress.position,
+    //     duration: mediaProgress.duration,
+    //     completed: mediaProgress.completed,
+    //     updatedAt: mediaProgress.updatedAt,
+    //     mediaItem: mediaItems,
+    //   })
+    //   .from(mediaProgress)
+    //   .innerJoin(mediaItems, eq(mediaProgress.mediaItemId, mediaItems.id))
+    //   .where(
+    //     and(
+    //       eq(mediaProgress.userId, user.id),
+    //       or(
+    //         eq(mediaProgress.completed, false),
+    //         isNull(mediaProgress.completed),
+    //       ),
+    //     ),
+    //   )
+    //   .orderBy(desc(mediaProgress.updatedAt))
 
-    return c.json(
-      rows.map((r) => ({
-        mediaItemId: r.mediaItemId,
-        position: r.position,
-        duration: r.duration,
-        completed: r.completed,
-        updatedAt: r.updatedAt,
-        // mediaItem: withThumbnailUrls(r.mediaItem),
-        mediaItem: r.mediaItem,
-      })),
-    )
+    // return c.json(
+    //   rows.map((r) => ({
+    //     mediaItemId: r.mediaItemId,
+    //     position: r.position,
+    //     duration: r.duration,
+    //     completed: r.completed,
+    //     updatedAt: r.updatedAt,
+    //     // mediaItem: withThumbnailUrls(r.mediaItem),
+    //     mediaItem: r.mediaItem,
+    //   })),
+    // )
+  })
+
+  // GET /users/me/group
+  router.get('/me/groups', async (c) => {
+    const user = c.get('user')
+
+    if (!user) return c.json({ error: 'Not authenticated' }, 401)
+
+    // const data = await
   })
 
   // GET /users/me/favorites — list favorited items for the current user

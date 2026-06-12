@@ -1,7 +1,7 @@
 export { BackupTargetPlugin } from './BackupTargetPlugin.js'
 export { BasePlugin } from './BasePlugin.js'
 export { MediaProviderPlugin } from './MediaProviderPlugin.js'
-export { MetadataSourcePlugin } from './MetadataSourcePlugin.js'
+export * from './MetadataSourcePlugin.js'
 export type {
   BackupTargetConfigField,
   BackupTargetConfigSchema,

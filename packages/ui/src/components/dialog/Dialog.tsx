@@ -1,6 +1,6 @@
 import { Dialog as UIDialog } from '@base-ui/react'
 import type { ReactNode } from 'react'
-import { Button, type ButtonProps, Flex, IconButton } from '../../index.js'
+import { Button, type ButtonProps, Flex } from '../../index.js'
 import styles from './Dialog.module.css'
 
 type DialogProps = Omit<UIDialog.Root.Props, 'children'> & {
@@ -28,10 +28,10 @@ export default function Dialog({
       <UIDialog.Portal>
         <UIDialog.Backdrop className={styles.backdrop} />
         <UIDialog.Popup className={styles.popup}>
-          <Flex align="baseline" gap="3" className={styles.header}>
+          <Flex align="center" gap="3" className={styles.header}>
             <UIDialog.Close
               className={styles.close}
-              render={(props) => <IconButton {...props}>🗙</IconButton>}
+              render={(props) => <Button.Icon {...props}>🗙</Button.Icon>}
             />
             <UIDialog.Title className={styles.title}>{title}</UIDialog.Title>
           </Flex>

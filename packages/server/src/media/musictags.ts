@@ -1,10 +1,10 @@
-import { MediaCategory } from '@xon/shared'
+// import { MediaCategory } from '@xon/shared'
 import { parseFile } from 'music-metadata'
 
-const MUSIC_CATEGORIES = new Set<string>([
-  MediaCategory.Music,
-  // MediaCategory.Audiobooks,
-])
+// const MUSIC_CATEGORIES = new Set<string>([
+//   MediaCategory.Music,
+//   // MediaCategory.Audiobooks,
+// ])
 
 export type MusicTagsMetadata = {
   title?: string
@@ -24,7 +24,8 @@ export type MusicTagsMetadata = {
 
 export function isMusicCategory(category: string | null): boolean {
   if (!category) return false
-  return MUSIC_CATEGORIES.has(category)
+  return category.startsWith('audio/')
+  // return MUSIC_CATEGORIES.has(category)
 }
 
 export async function extractMusicTags(

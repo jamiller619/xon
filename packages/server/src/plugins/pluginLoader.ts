@@ -38,7 +38,7 @@ function validateManifest(data: unknown, source: string): PluginManifest {
     'version',
     'description',
     'author',
-    'mediaCategories',
+    'mediaTypes',
     'main',
     'category',
   ]
@@ -83,10 +83,7 @@ function validateManifest(data: unknown, source: string): PluginManifest {
     )
   }
 
-  if (
-    resp.mediaCategories !== undefined &&
-    !Array.isArray(resp.mediaCategories)
-  ) {
+  if (resp.mediaTypes !== undefined && !Array.isArray(resp.mediaTypes)) {
     throw new Error(`${source}: "mediaCategories" must be an array`)
   }
   if (

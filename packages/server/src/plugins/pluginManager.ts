@@ -1,6 +1,7 @@
 import { basename, join } from 'node:path'
 import type { Client } from '@libsql/client'
 import type {
+  MetadataSourcePlugin,
   PluginCategory,
   PluginContext,
   PluginEvent,
@@ -10,7 +11,6 @@ import type {
   UIComponent,
 } from '@xon/plugin-sdk'
 import { BasePlugin } from '@xon/plugin-sdk'
-import { createPluginDatabaseAccess } from './pluginDb.ts'
 import { discoverPluginManifests } from './pluginLoader.ts'
 import { createSandboxedFetch, createSandboxedFs } from './pluginSandbox.ts'
 
@@ -43,7 +43,7 @@ export const registry = new Map<string, PluginEntry>()
 
 export function getPluginsByCategory<T extends BasePlugin = BasePlugin>(
   category: PluginCategory,
-) {
+): PluginEntry<T>[] {
   return Array.from(registry.values()).filter(
     (plugin) => plugin.manifest.category === category,
   ) as PluginEntry<T>[]
@@ -90,11 +90,11 @@ export async function emitPluginEvent<E extends PluginEvent>(
 }
 
 function buildContext(entry: PluginEntry): PluginContext {
-  const db = _pluginClient
-    ? createPluginDatabaseAccess(entry.manifest.id, _pluginClient)
-    : {
-        query: async (_sql: string, _params?: unknown[]) => [],
-      }
+  // const db = _pluginClient
+  //   ? createPluginDatabaseAccess(entry.manifest.id, _pluginClient)
+  //   : {
+  //       query: async (_sql: string, _params?: unknown[]) => [],
+  //     }
 
   const allowedFsPaths = entry.manifest.permissions?.filesystem ?? []
   const allowedDomains = entry.manifest.permissions?.network ?? []
@@ -107,7 +107,7 @@ function buildContext(entry: PluginEntry): PluginContext {
 
   return {
     manifest: entry.manifest,
-    db,
+    // db,
     fs: sandboxedFs,
     fetch: sandboxedFetch,
     on<E extends PluginEvent>(

@@ -1,5 +1,5 @@
 import { createServer as createHttpsServer } from 'node:https'
-import { fileURLToPath, pathToFileURL } from 'node:url'
+import { fileURLToPath } from 'node:url'
 import { serve } from '@hono/node-server'
 // import { DEFAULT_PORT } from '@xon/shared'
 import { Hono } from 'hono'
@@ -9,12 +9,7 @@ import { migrateDatabase } from './db/migrate.ts'
 // import { serverSettings } from './db/schema.ts'
 // import { acquireAcmeCert, loadManualCerts } from './http/httpsManager.ts'
 import { makeStaticMiddleware } from './http/staticFiles.ts'
-import {
-  closeLogger,
-  createLogger,
-  initLogger,
-  setLogLevel,
-} from './logger.ts'
+import { closeLogger, createLogger, initLogger, setLogLevel } from './logger.ts'
 
 // process.loadEnvFile('./.env')
 

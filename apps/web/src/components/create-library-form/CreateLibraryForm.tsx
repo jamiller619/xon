@@ -1,27 +1,23 @@
-import { Dialog as BaseDialog } from '@base-ui/react'
-import { DataSourceType, MediaCategory } from '@xon/shared'
+import { DataSourceType, MediaType } from '@xon/shared'
 import {
   Button,
   Checkbox,
   Dialog,
   Flex,
   Label,
-  ScrollArea,
   Surface,
   Textbox,
 } from '@xon/ui'
 import clsx from 'clsx'
-import { type SubmitEvent, useEffect, useState } from 'react'
+import { type SubmitEvent, useState } from 'react'
 import * as api from '~/lib/api'
-import { apiFetch } from '~/lib/apiFetch'
 import styles from './CreateLibraryForm.module.css'
+import MediaFolderBrowser from './MediaFolderBrowser'
 
-const ALL_MEDIA_TYPES: { label: MediaCategory; emoji: string }[] = [
-  { label: MediaCategory.Movies, emoji: '🎬' },
-  { label: MediaCategory.TVShows, emoji: '📺' },
-  { label: MediaCategory.Music, emoji: '🎵' },
-  { label: MediaCategory.Pictures, emoji: '🖼️' },
-  { label: MediaCategory.HomeVideos, emoji: '📹' },
+const ALL_MEDIA_TYPES: { label: MediaType.MainType; emoji: string }[] = [
+  { label: MediaType.MainType.Video, emoji: '📺' },
+  { label: MediaType.MainType.Audio, emoji: '🎵' },
+  { label: MediaType.MainType.Image, emoji: '🖼️' },
 ]
 
 interface CreateLibraryFormProps {
@@ -37,12 +33,14 @@ export function CreateLibraryForm({
 }: CreateLibraryFormProps) {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
-  const [mediaCategories, setMediaCategories] = useState<MediaCategory[]>([])
+  const [mediaCategories, setMediaCategories] = useState<MediaType.MainType[]>(
+    [],
+  )
   const [sourcePath, setSourcePath] = useState('')
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
-  function toggleMediaType(type: MediaCategory) {
+  function toggleMediaType(type: MediaType.MainType) {
     setMediaCategories((prev) =>
       prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type],
     )
@@ -134,95 +132,4 @@ export function CreateLibraryForm({
       </Button>
     </form>
   )
-}
-
-interface BrowseResult {
-  path: string
-  entries: { name: string; path: string }[]
-}
-
-function MediaFolderBrowser({
-  onSelect,
-}: {
-  onSelect: (path: string) => void
-}) {
-  const [currentPath, setCurrentPath] = useState('/')
-  const [entries, setEntries] = useState<{ name: string; path: string }[]>([])
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    setLoading(true)
-    setError(null)
-    apiFetch(`/api/fs/browse?path=${encodeURIComponent(currentPath)}`)
-      .then((r) => r.json())
-      .then((data: BrowseResult | { error: string }) => {
-        if ('error' in data) {
-          setError(data.error)
-          setEntries([])
-        } else {
-          setCurrentPath(data.path)
-          setEntries(data.entries)
-        }
-      })
-      .catch(() => setError('Network error — please try again'))
-      .finally(() => setLoading(false))
-  }, [currentPath])
-
-  return (
-    <div className={styles.browser}>
-      <Flex align="center" gap="3">
-        <button
-          type="button"
-          className={styles.upBtn}
-          disabled={currentPath === '/'}
-          onClick={() => setCurrentPath(parentPath(currentPath))}
-          title="Go up"
-        >
-          ⮤
-        </button>
-        <Textbox value={currentPath} block />
-      </Flex>
-      <ScrollArea className={styles.entryList}>
-        {loading && <p className={styles.hint}>Loading…</p>}
-        {!loading && error && <p className={styles.browserError}>{error}</p>}
-        {!loading && !error && entries.length === 0 && (
-          <p className={styles.hint}>No subfolders found.</p>
-        )}
-        {!loading &&
-          entries.map((entry) => (
-            <button
-              type="button"
-              key={entry.path}
-              className={styles.entry}
-              onClick={() => setCurrentPath(entry.path)}
-            >
-              <span>📁</span>
-              {entry.name}
-            </button>
-          ))}
-      </ScrollArea>
-      <div className={styles.browserActions}>
-        <BaseDialog.Close
-          onClick={() => onSelect(currentPath)}
-          render={(props) => (
-            <Button
-              {...props}
-              size="small"
-              variant="primary"
-              style={{ flex: 1 }}
-            />
-          )}
-        >
-          Select This Folder
-        </BaseDialog.Close>
-      </div>
-    </div>
-  )
-}
-
-function parentPath(p: string): string {
-  const trimmed = p.endsWith('/') ? p.slice(0, -1) : p
-  const idx = trimmed.lastIndexOf('/')
-  return idx <= 0 ? '/' : trimmed.slice(0, idx)
 }

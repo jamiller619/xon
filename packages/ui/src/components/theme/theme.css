@@ -1,8 +1,11 @@
+@import "./reset.css";
 @import "./colors.css";
 @import "./variables.css";
 
 :root {
   color-scheme: light dark;
+  /* Enable keyword sizing animations globally */
+  interpolate-size: allow-keywords;
 }
 
 * {
@@ -14,7 +17,8 @@ body {
   background: var(--color-gray-1);
   color: var(--color-gray-12);
   position: relative;
-  /* overflow: hidden; */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 #root {
@@ -28,4 +32,8 @@ a {
   &:hover {
     text-decoration: underline;
   }
+}
+
+h1 {
+  line-height: 1.3;
 }

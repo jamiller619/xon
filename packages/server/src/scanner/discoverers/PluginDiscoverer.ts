@@ -16,91 +16,92 @@ const logger = createLogger('plugin-discoverer')
 
 export class PluginDiscoverer implements MediaDiscoverer {
   async discover(ctx: DiscoveryContext): Promise<Discovery | null> {
-    const { db, libraryId, dataSource, extSet, mediaCategories } = ctx
+    return null
+    // const { db, libraryId, dataSource, extSet, mediaTypes } = ctx
 
-    if (!dataSource.pluginId) {
-      logger.warn(`Plugin data source missing pluginId: ${dataSource.path}`)
-      return null
-    }
+    // if (!dataSource.pluginId) {
+    //   logger.warn(`Plugin data source missing pluginId: ${dataSource.path}`)
+    //   return null
+    // }
 
-    const plugin = getMediaProviderPlugin(dataSource.pluginId)
-    if (!plugin) {
-      logger.warn(`MediaProvider plugin not registered: ${dataSource.pluginId}`)
-      return null
-    }
+    // const plugin = getMediaProviderPlugin(dataSource.pluginId)
+    // if (!plugin) {
+    //   logger.warn(`MediaProvider plugin not registered: ${dataSource.pluginId}`)
+    //   return null
+    // }
 
-    const listed = await plugin.listFiles(dataSource.path)
-    const files = listed.filter((f) =>
-      extSet.has(path.extname(f.name || f.path).toLowerCase()),
-    )
+    // const listed = await plugin.listFiles(dataSource.path)
+    // const files = listed
+    //   .filter((f) => f.mediaType != null)
+    //   .filter((f) => extSet.has(path.extname(f.name || f.path).toLowerCase()))
 
-    const filePaths = files.map((f) => f.path)
-    const existing = filePaths.length
-      ? await db
-          .select({
-            filePath: mediaItems.filePath,
-            scannedAt: mediaItems.scannedAt,
-          })
-          .from(mediaItems)
-          .where(
-            and(
-              eq(mediaItems.libraryId, libraryId),
-              inArray(mediaItems.filePath, filePaths),
-            ),
-          )
-      : []
+    // const filePaths = files.map((f) => f.path)
+    // const existing = filePaths.length
+    //   ? await db
+    //       .select({
+    //         filePath: mediaItems.filePath,
+    //         scannedAt: mediaItems.scannedAt,
+    //       })
+    //       .from(mediaItems)
+    //       .where(
+    //         and(
+    //           // eq(mediaItems.libraryId, libraryId),
+    //           inArray(mediaItems.filePath, filePaths),
+    //         ),
+    //       )
+    //   : []
 
-    const existingByPath = new Map(
-      existing.map((e) => [e.filePath, e.scannedAt]),
-    )
+    // const existingByPath = new Map(
+    //   existing.map((e) => [e.filePath, e.scannedAt]),
+    // )
 
-    const jobs: MediaJob[] = []
-    for (const f of files) {
-      const ext = path.extname(f.name || f.path).toLowerCase()
-      const file: FileEntry = {
-        id: f.id,
-        path: f.path,
-        name: f.name,
-        size: f.size,
-        mimeType: f.mimeType,
-        createdAt: f.createdAt,
-        modifiedAt: f.modifiedAt,
-        ext,
-      }
+    // const jobs: MediaJob[] = []
+    // for (const f of files) {
+    //   const ext = path.extname(f.name || f.path).toLowerCase()
+    //   const file: FileEntry = {
+    //     id: f.id,
+    //     path: f.path,
+    //     name: f.name,
+    //     size: f.size,
+    //     mediaType: f.mediaType,
+    //     createdAt: f.createdAt,
+    //     modifiedAt: f.modifiedAt,
+    //     ext,
+    //   }
 
-      const prevScannedAt = existingByPath.get(f.path)
-      const isNew = prevScannedAt === undefined
+    //   const prevScannedAt = existingByPath.get(f.path)
+    //   const isNew = prevScannedAt === undefined
 
-      if (
-        !isNew &&
-        f.modifiedAt &&
-        prevScannedAt &&
-        f.modifiedAt.getTime() <= prevScannedAt.getTime()
-      ) {
-        // Unchanged since last scan — skip.
-        continue
-      }
+    //   if (
+    //     !isNew &&
+    //     f.modifiedAt &&
+    //     prevScannedAt &&
+    //     f.modifiedAt.getTime() <= prevScannedAt.getTime()
+    //   ) {
+    //     // Unchanged since last scan — skip.
+    //     continue
+    //   }
 
-      jobs.push(createMediaJob(file, mediaCategories, isNew))
-    }
+    //   jobs.push(await createMediaJob(db, file, isNew))
+    // }
 
-    // Count removed: media items in DB for this library whose filePath starts
-    // with the data source's root path but is not in the current listing.
-    const listedSet = new Set(filePaths)
-    const allForSource = await db
-      .select({ filePath: mediaItems.filePath })
-      .from(mediaItems)
-      .where(eq(mediaItems.libraryId, libraryId))
-    const removedCount = allForSource.filter(
-      (m) =>
-        m.filePath.startsWith(dataSource.path) && !listedSet.has(m.filePath),
-    ).length
+    // // Count removed: media items in DB for this library whose filePath starts
+    // // with the data source's root path but is not in the current listing.
+    // const listedSet = new Set(filePaths)
+    // const allForSource = await db
+    //   .select({ filePath: mediaItems.filePath })
+    //   .from(mediaItems)
+    //   // .where(eq(mediaItems.libraryId, libraryId))
+    // const removedCount = allForSource.filter(
+    //   (m) =>
+    //     m.filePath.startsWith(dataSource.path) && !listedSet.has(m.filePath),
+    // ).length
 
-    return {
-      jobs,
-      removedCount,
-      totalDiscovered: files.length,
-      reconcile: () => {},
-    }
+    // return {
+    //   jobs,
+    //   removedCount,
+    //   totalDiscovered: files.length,
+    //   reconcile: () => {},
+    // }
   }
 }

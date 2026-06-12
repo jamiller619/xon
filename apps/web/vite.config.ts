@@ -1,9 +1,19 @@
 import react from '@vitejs/plugin-react'
+import { inlineCssModules } from 'inline-css-modules/vite'
 import { defineConfig } from 'vite'
+import { analyzer } from 'vite-bundle-analyzer'
 import tsconfigPaths from 'vite-tsconfig-paths'
 
 export default defineConfig({
-  plugins: [react(), tsconfigPaths()],
+  plugins: [
+    react(),
+    tsconfigPaths(),
+    inlineCssModules(),
+    analyzer({
+      analyzerMode: 'static',
+      // biome-ignore lint/suspicious/noExplicitAny: build tool
+    }) as any,
+  ],
   server: {
     proxy: {
       '/api': {

@@ -30,7 +30,7 @@ export const groups = sqliteTable(
 )
 
 export const groupItems = sqliteTable(
-  'group_members',
+  'group_items',
   {
     groupId: text('group_id')
       .notNull()

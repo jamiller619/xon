@@ -8,7 +8,7 @@ import { eq } from 'drizzle-orm'
 import pLimit from 'p-limit'
 import { mediaItems, people, peopleMedia } from '../../db/schema.js'
 import { registry } from '../../plugins/pluginManager.js'
-import type { PipelineStage } from '../pipeline.js'
+import type { MediaJobItem, PipelineStage } from '../pipeline.js'
 
 type TmdbCastMember = {
   character: string
@@ -20,7 +20,7 @@ type TmdbCastMember = {
 export default {
   name: 'person',
   retry: 1,
-  async run(ctx, job) {
+  async run(ctx, job): Promise<MediaJobItem | undefined> {
     if (job.type === 'changed') return
     const tmdbPlugin = registry.get('@xon/plugin-tmdb-metadata')?.instance as
       | TmdbMetadataPlugin

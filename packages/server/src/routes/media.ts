@@ -12,14 +12,14 @@ import { z } from 'zod'
 import { computeETag } from '../cache.ts'
 import type { MediaItem } from '../db/schema.ts'
 import {
-  getAllowedRatings,
+  // getAllowedRatings,
   groupItems,
   groups,
   // libraryAccess,
-  matchingQueue,
+  // matchingQueue,
   mediaItems,
-  mediaProgress,
-  readingPositions,
+  // mediaProgress,
+  // readingPositions,
   users,
 } from '../db/schema.ts'
 import { validate } from '../http/validate.ts'
@@ -36,6 +36,7 @@ import {
   spawnTranscodeSegment,
 } from '../media/transcode.ts'
 import { getPluginMetadataForItem } from '../plugins/pluginManager.ts'
+import * as mediaService from '../services/mediaService.ts'
 
 const tmdbPlugin = new TmdbMetadataPlugin()
 
@@ -158,9 +159,9 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
   router.get('/:id', async (c) => {
     const id = c.req.param('id')
     // const user = c.get('user')
-    const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
-    const item = rows[0]
-    if (!item) return c.json({ error: 'Not found' }, 404)
+    const data = await mediaService.getMediaById(db, id)
+
+    if (!data) return c.json({ error: 'Not found' }, 404)
 
     // const accessibleIds = await getAccessibleLibraryIds(user.id, user.role)
     // if (accessibleIds !== null && !accessibleIds.includes(item.libraryId)) {
@@ -178,56 +179,56 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     // }
 
     // const itemWithUrls = withThumbnailUrls(item)
-    const pluginMetadata = await getPluginMetadataForItem(id)
-    const etag = `"${item.updatedAt?.getTime()}"`
+    // const pluginMetadata = await getPluginMetadataForItem(id)
+    const etag = `"${data.updatedAt?.getTime()}"`
     if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
     c.header('ETag', etag)
     // return c.json({ ...itemWithUrls, pluginMetadata })
-    return c.json({ ...item, pluginMetadata })
+    return c.json(data)
   })
 
   // GET /media/:id/match — get pending match for a media item
-  router.get('/:id/match', async (c) => {
-    const id = c.req.param('id')
-    // const user = c.get('user')
+  // router.get('/:id/match', async (c) => {
+  //   const id = c.req.param('id')
+  //   // const user = c.get('user')
 
-    const rows = await db
-      .select({ libraryId: mediaItems.libraryId })
-      .from(mediaItems)
-      .where(eq(mediaItems.id, id))
-    const item = rows[0]
-    if (!item) return c.json({ error: 'Not found' }, 404)
+  //   const rows = await db
+  //     .select({ libraryId: mediaItems.libraryId })
+  //     .from(mediaItems)
+  //     .where(eq(mediaItems.id, id))
+  //   const item = rows[0]
+  //   if (!item) return c.json({ error: 'Not found' }, 404)
 
-    // const accessibleIds = await getAccessibleLibraryIds(user.id, user.role)
-    // if (accessibleIds !== null && !accessibleIds.includes(item.libraryId)) {
-    //   return c.json({ error: 'Not found' }, 404)
-    // }
+  //   // const accessibleIds = await getAccessibleLibraryIds(user.id, user.role)
+  //   // if (accessibleIds !== null && !accessibleIds.includes(item.libraryId)) {
+  //   //   return c.json({ error: 'Not found' }, 404)
+  //   // }
 
-    const matchRows = await db
-      .select()
-      .from(matchingQueue)
-      .where(
-        and(
-          eq(matchingQueue.mediaItemId, id),
-          eq(matchingQueue.status, 'pending'),
-        ),
-      )
-      .limit(1)
+  //   const matchRows = await db
+  //     .select()
+  //     .from(matchingQueue)
+  //     .where(
+  //       and(
+  //         eq(matchingQueue.mediaItemId, id),
+  //         eq(matchingQueue.status, 'pending'),
+  //       ),
+  //     )
+  //     .limit(1)
 
-    const match = matchRows[0]
-    if (!match) return c.json(null)
+  //   const match = matchRows[0]
+  //   if (!match) return c.json(null)
 
-    return c.json({
-      ...match,
-      suggestedMetadata: (() => {
-        try {
-          return JSON.parse(match.suggestedMetadata) as Record<string, unknown>
-        } catch {
-          return {}
-        }
-      })(),
-    })
-  })
+  //   return c.json({
+  //     ...match,
+  //     suggestedMetadata: (() => {
+  //       try {
+  //         return JSON.parse(match.suggestedMetadata) as Record<string, unknown>
+  //       } catch {
+  //         return {}
+  //       }
+  //     })(),
+  //   })
+  // })
 
   const updateMediaSchema = z.object({
     title: z.string().min(1).optional(),
@@ -477,7 +478,6 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     }
 
     const range = c.req.header('Range')
-    const mimeType = item.mimeType ?? 'application/octet-stream'
 
     if (range) {
       const match = /bytes=(\d+)-(\d*)/.exec(range)
@@ -499,7 +499,7 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
         'Content-Range': `bytes ${start}-${end}/${item.fileSize}`,
         'Accept-Ranges': 'bytes',
         'Content-Length': String(chunkSize),
-        'Content-Type': mimeType,
+        'Content-Type': item.mediaType,
       })
     }
 
@@ -509,7 +509,7 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     return c.body(webStream, 200, {
       'Accept-Ranges': 'bytes',
       'Content-Length': String(item.fileSize),
-      'Content-Type': mimeType,
+      'Content-Type': item.mediaType,
     })
   })
 
@@ -817,140 +817,140 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
   // })
 
   // GET /media/:id/archive-contents — list files inside a ZIP, TAR, or 7z archive
-  router.get('/:id/archive-contents', async (c) => {
-    const id = c.req.param('id')
-    const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
-    const item = rows[0]
-    if (!item) return c.json({ error: 'Not found' }, 404)
+  // router.get('/:id/archive-contents', async (c) => {
+  //   const id = c.req.param('id')
+  //   const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
+  //   const item = rows[0]
+  //   if (!item) return c.json({ error: 'Not found' }, 404)
 
-    const entries = await listArchiveContents(item.filePath)
-    return c.json({ entries })
-  })
+  //   const entries = await listArchiveContents(item.filePath)
+  //   return c.json({ entries })
+  // })
 
-  // GET /media/:id/reading-position — retrieve saved reading position
-  router.get('/:id/reading-position', async (c) => {
-    const id = c.req.param('id')
-    const rows = await db
-      .select()
-      .from(readingPositions)
-      .where(eq(readingPositions.mediaItemId, id))
-    const pos = rows[0]
-    if (!pos) return c.json(null)
-    return c.json({ cfi: pos.cfi, chapterTitle: pos.chapterTitle })
-  })
+  // // GET /media/:id/reading-position — retrieve saved reading position
+  // router.get('/:id/reading-position', async (c) => {
+  //   const id = c.req.param('id')
+  //   const rows = await db
+  //     .select()
+  //     .from(readingPositions)
+  //     .where(eq(readingPositions.mediaItemId, id))
+  //   const pos = rows[0]
+  //   if (!pos) return c.json(null)
+  //   return c.json({ cfi: pos.cfi, chapterTitle: pos.chapterTitle })
+  // })
 
-  const readingPositionSchema = z.object({
-    cfi: z.string().min(1),
-    chapterTitle: z.string().optional(),
-  })
+  // const readingPositionSchema = z.object({
+  //   cfi: z.string().min(1),
+  //   chapterTitle: z.string().optional(),
+  // })
 
-  // PUT /media/:id/reading-position — upsert reading position
-  router.put(
-    '/:id/reading-position',
-    validate('json', readingPositionSchema),
-    async (c) => {
-      const id = c.req.param('id')
-      const body = c.req.valid('json')
+  // // PUT /media/:id/reading-position — upsert reading position
+  // router.put(
+  //   '/:id/reading-position',
+  //   validate('json', readingPositionSchema),
+  //   async (c) => {
+  //     const id = c.req.param('id')
+  //     const body = c.req.valid('json')
 
-      // Verify media item exists
-      const itemRows = await db
-        .select()
-        .from(mediaItems)
-        .where(eq(mediaItems.id, id))
-      if (!itemRows[0]) return c.json({ error: 'Not found' }, 404)
+  //     // Verify media item exists
+  //     const itemRows = await db
+  //       .select()
+  //       .from(mediaItems)
+  //       .where(eq(mediaItems.id, id))
+  //     if (!itemRows[0]) return c.json({ error: 'Not found' }, 404)
 
-      const existing = await db
-        .select()
-        .from(readingPositions)
-        .where(eq(readingPositions.mediaItemId, id))
+  //     const existing = await db
+  //       .select()
+  //       .from(readingPositions)
+  //       .where(eq(readingPositions.mediaItemId, id))
 
-      if (existing[0]) {
-        await db
-          .update(readingPositions)
-          .set({
-            cfi: body.cfi,
-            ...(body.chapterTitle !== undefined
-              ? { chapterTitle: body.chapterTitle }
-              : {}),
-            updatedAt: new Date(),
-          })
-          .where(eq(readingPositions.mediaItemId, id))
-      } else {
-        const crypto = await import('node:crypto')
-        await db.insert(readingPositions).values({
-          id: crypto.randomUUID(),
-          mediaItemId: id,
-          cfi: body.cfi,
-          ...(body.chapterTitle !== undefined
-            ? { chapterTitle: body.chapterTitle }
-            : {}),
-        })
-      }
+  //     if (existing[0]) {
+  //       await db
+  //         .update(readingPositions)
+  //         .set({
+  //           cfi: body.cfi,
+  //           ...(body.chapterTitle !== undefined
+  //             ? { chapterTitle: body.chapterTitle }
+  //             : {}),
+  //           updatedAt: new Date(),
+  //         })
+  //         .where(eq(readingPositions.mediaItemId, id))
+  //     } else {
+  //       const crypto = await import('node:crypto')
+  //       await db.insert(readingPositions).values({
+  //         id: crypto.randomUUID(),
+  //         mediaItemId: id,
+  //         cfi: body.cfi,
+  //         ...(body.chapterTitle !== undefined
+  //           ? { chapterTitle: body.chapterTitle }
+  //           : {}),
+  //       })
+  //     }
 
-      return c.json({ ok: true })
-    },
-  )
+  //     return c.json({ ok: true })
+  //   },
+  // )
 
-  const progressSchema = z.object({
-    position: z.number().int().min(0),
-    duration: z.number().int().min(0).optional(),
-    completed: z.boolean().optional(),
-  })
+  // const progressSchema = z.object({
+  //   position: z.number().int().min(0),
+  //   duration: z.number().int().min(0).optional(),
+  //   completed: z.boolean().optional(),
+  // })
 
-  // PUT /media/:id/progress — save playback/reading position
-  router.put('/:id/progress', validate('json', progressSchema), async (c) => {
-    const id = c.req.param('id')
-    const user = c.get('user')
+  // // PUT /media/:id/progress — save playback/reading position
+  // router.put('/:id/progress', validate('json', progressSchema), async (c) => {
+  //   const id = c.req.param('id')
+  //   const user = c.get('user')
 
-    if (!user) return c.json({ error: 'Unauthorized' }, 401)
+  //   if (!user) return c.json({ error: 'Unauthorized' }, 401)
 
-    const body = c.req.valid('json')
+  //   const body = c.req.valid('json')
 
-    const rows = await db
-      .select({ id: mediaItems.id })
-      .from(mediaItems)
-      .where(eq(mediaItems.id, id))
-    if (!rows[0]) return c.json({ error: 'Not found' }, 404)
+  //   const rows = await db
+  //     .select({ id: mediaItems.id })
+  //     .from(mediaItems)
+  //     .where(eq(mediaItems.id, id))
+  //   if (!rows[0]) return c.json({ error: 'Not found' }, 404)
 
-    const existing = await db
-      .select()
-      .from(mediaProgress)
-      .where(
-        and(
-          eq(mediaProgress.userId, user.id),
-          eq(mediaProgress.mediaItemId, id),
-        ),
-      )
+  //   const existing = await db
+  //     .select()
+  //     .from(mediaProgress)
+  //     .where(
+  //       and(
+  //         eq(mediaProgress.userId, user.id),
+  //         eq(mediaProgress.mediaItemId, id),
+  //       ),
+  //     )
 
-    if (existing[0]) {
-      await db
-        .update(mediaProgress)
-        .set({
-          position: body.position,
-          ...(body.duration !== undefined ? { duration: body.duration } : {}),
-          ...(body.completed !== undefined
-            ? { completed: body.completed }
-            : {}),
-          updatedAt: new Date(),
-        })
-        .where(
-          and(
-            eq(mediaProgress.userId, user.id),
-            eq(mediaProgress.mediaItemId, id),
-          ),
-        )
-    } else {
-      await db.insert(mediaProgress).values({
-        userId: user.id,
-        mediaItemId: id,
-        position: body.position,
-        duration: body.duration ?? 0,
-        completed: body.completed ?? false,
-      })
-    }
+  //   if (existing[0]) {
+  //     await db
+  //       .update(mediaProgress)
+  //       .set({
+  //         position: body.position,
+  //         ...(body.duration !== undefined ? { duration: body.duration } : {}),
+  //         ...(body.completed !== undefined
+  //           ? { completed: body.completed }
+  //           : {}),
+  //         updatedAt: new Date(),
+  //       })
+  //       .where(
+  //         and(
+  //           eq(mediaProgress.userId, user.id),
+  //           eq(mediaProgress.mediaItemId, id),
+  //         ),
+  //       )
+  //   } else {
+  //     await db.insert(mediaProgress).values({
+  //       userId: user.id,
+  //       mediaItemId: id,
+  //       position: body.position,
+  //       duration: body.duration ?? 0,
+  //       completed: body.completed ?? false,
+  //     })
+  //   }
 
-    return c.json({ ok: true })
-  })
+  //   return c.json({ ok: true })
+  // })
 
   // POST /media/:id/favorite — add to favorites
   // (idempotent)

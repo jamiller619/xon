@@ -241,10 +241,10 @@ export class TmdbClient {
     title: string,
     year?: number,
     lang?: string,
-  ): Promise<Metadata | null> {
+  ): Promise<Metadata | undefined> {
     const search = await this.searchMovies(title, String(year))
     const first = search?.[0]
-    if (!first) return null
+    if (!first) return
 
     const details = await this.#get<TmdbMovieDetailsResult>(
       `/movie/${first.tmdbId}`,
@@ -253,7 +253,7 @@ export class TmdbClient {
       },
     )
 
-    if (!details) return null
+    if (!details) return
 
     const data: Metadata = {
       adult: details.adult,
@@ -311,7 +311,7 @@ export class TmdbClient {
     seriesTitle: string,
     season: number,
     episode: number,
-  ): Promise<Metadata | null> {
+  ): Promise<Metadata | undefined> {
     const search = await this.#get<SearchResponse<TmdbTvSearchResult>>(
       '/search/tv',
       {
@@ -319,12 +319,12 @@ export class TmdbClient {
       },
     )
     const first = search?.results[0]
-    if (!first) return null
+    if (!first) return
 
     const details = await this.#get<TmdbTvDetailsResult>(`/tv/${first.id}`, {
       append_to_response: 'credits',
     })
-    if (!details) return null
+    if (!details) return
 
     const episodeDetails = await this.#get<TmdbEpisodeResult>(
       `/tv/${first.id}/season/${season}/episode/${episode}`,

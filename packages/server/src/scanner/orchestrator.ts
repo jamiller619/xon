@@ -1,4 +1,4 @@
-import { CATEGORY_DEFINITIONS, DataSourceType } from '@xon/shared'
+import { DataSourceType, LIBRARY_TYPE_DEFINITIONS } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { createLogger } from '../logger.ts'
 import * as libraryService from '../services/libraryService.ts'
@@ -30,9 +30,9 @@ export type ScanSummary = {
 }
 
 const pipelineStages = [
-  stage.title,
   stage.drm,
   stage.metadata,
+  stage.title,
   stage.persist,
   stage.person,
   stage.thumbnail,
@@ -55,14 +55,14 @@ export async function scanLibrary(
     throw new Error(`Library not found: ${libraryId}`)
   }
 
-  const { mediaCategories, dataSources } = library
+  const { types, dataSources } = library
 
   if (dataSources.length === 0) {
     throw new Error(`No data sources found for library: ${libraryId}`)
   }
 
   const extSet = new Set(
-    mediaCategories.flatMap((c) => Object.keys(CATEGORY_DEFINITIONS[c])),
+    types.flatMap((c) => Object.keys(LIBRARY_TYPE_DEFINITIONS[c])),
   )
 
   let totalNew = 0
@@ -85,59 +85,65 @@ export async function scanLibrary(
       continue
     }
 
-    const discoveryCtx: DiscoveryContext = {
-      db,
-      libraryId,
-      dataSource,
-      extSet,
-      mediaCategories,
-    }
-
-    const discovery = await discoverer.discover(discoveryCtx)
-
-    if (!discovery) continue
-
-    totalDiscovered += discovery.totalDiscovered
-    totalRemoved += discovery.removedCount
-
-    if (discovery.jobs.length === 0) {
-      logger.log(`No new or changed files found in data source: ${sourceLabel}`)
-      discovery.reconcile()
-      continue
-    }
-
-    for (const job of discovery.jobs) {
-      if (job.type === 'new') totalNew += 1
-      else totalUpdated += 1
-    }
-
-    const totalFiles = discovery.jobs.length
-
-    onProgress?.({
-      dataSourceId: dataSource.path,
-      totalFiles,
-      processedFiles: 0,
-      currentFile: null,
-    })
-
-    const ctx: PipelineContext = { db, libraryId, logger }
-
-    if (onProgress) {
-      ctx.onJobComplete = (processed, currentFile) => {
-        onProgress({
-          dataSourceId: dataSource.path,
-          totalFiles,
-          processedFiles: processed,
-          currentFile,
-        })
+    for await (const libraryType of library.types) {
+      const discoveryCtx: DiscoveryContext = {
+        db,
+        libraryId,
+        dataSource,
+        extSet,
+        libraryType,
       }
+
+      const discovery = await discoverer.discover(discoveryCtx)
+
+      if (!discovery) continue
+
+      totalDiscovered += discovery.totalDiscovered
+      totalRemoved += discovery.removedCount
+
+      if (discovery.jobs.length === 0) {
+        logger.log(
+          `No new or changed files found in data source: ${sourceLabel}`,
+        )
+        discovery.reconcile()
+        continue
+      }
+
+      for (const job of discovery.jobs) {
+        if (job.type === 'new') totalNew += 1
+        else totalUpdated += 1
+      }
+
+      const totalFiles = discovery.jobs.length
+
+      onProgress?.({
+        dataSourceId: dataSource.path,
+        totalFiles,
+        processedFiles: 0,
+        currentFile: null,
+      })
+
+      const ctx: PipelineContext = { db, libraryId, logger }
+
+      if (onProgress) {
+        ctx.onJobComplete = (processed, currentFile) => {
+          onProgress({
+            dataSourceId: dataSource.path,
+            totalFiles,
+            processedFiles: processed,
+            currentFile,
+          })
+        }
+      }
+
+      logger.log(
+        `Beginning pipeline stage for ${library.name} / ${sourceLabel}`,
+      )
+
+      await runPipeline(ctx, discovery.jobs, pipelineStages)
+
+      discovery.reconcile()
     }
-
-    logger.log(`Beginning pipeline stage for ${library.name} / ${sourceLabel}`)
-
-    await runPipeline(ctx, discovery.jobs, pipelineStages)
-
-    discovery.reconcile()
   }
 
   const summary: ScanSummary = {

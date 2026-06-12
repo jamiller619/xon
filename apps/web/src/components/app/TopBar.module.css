@@ -7,8 +7,8 @@
   justify-content: space-between;
   padding-inline: var(--space-3);
   height: var(--header-height);
-  background: rgb(from var(--color-gray-1) r g b / 70%);
-  backdrop-filter: blur(20px) saturate(180%);
+  /* background: rgb(from var(--color-gray-1) r g b / 70%); */
+  /* backdrop-filter: blur(20px) saturate(180%); */
   flex-shrink: 0;
 }
 

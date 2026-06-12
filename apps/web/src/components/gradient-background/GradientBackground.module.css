@@ -1,0 +1,31 @@
+.gradient {
+  position: absolute;
+  inset: 0;
+  /* Cover at least the viewport even when the page content is short. */
+  min-height: 100%;
+  pointer-events: none;
+  /*
+   * Three stacked layers, all scrolling with the page (the element is
+   * absolutely positioned, not fixed):
+   *
+   *   1. Diagonal wash — clear at the top-left, shaded toward the bottom-right,
+   *      giving the "top-left transparent → bottom-right gray-1" character.
+   *   2. Vertical fade over the first screen — guarantees the bottom of the
+   *      first viewport is *fully* --color-gray-1 across its whole width, so it
+   *      meets the solid fill below with no visible seam.
+   *   3. Solid fill — everything below the first screen is opaque gray-1.
+   *
+   * The top-left stays fully transparent (both gradient layers are transparent
+   * there), so anything behind the page shows through near the top. Scroll one
+   * screen down and the viewport is entirely gray-1; scroll back up and the
+   * transparency returns.
+   */
+  background-image:
+    linear-gradient(to bottom right, transparent 0%, var(--color-gray-1) 100%),
+    linear-gradient(to bottom, transparent 0%, var(--color-gray-1) 100%),
+    linear-gradient(var(--color-gray-1), var(--color-gray-1));
+  background-repeat: no-repeat;
+  background-position: top, top, bottom;
+  /* +1px overlap avoids a subpixel gap where the fade meets the solid fill. */
+  background-size: 100% 100vh, 100% 100vh, 100% calc(100% - 100vh + 1px);
+}

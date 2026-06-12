@@ -4,7 +4,9 @@
     "rootDir": "src",
     "outDir": "dist",
     "allowImportingTsExtensions": true,
-    "rewriteRelativeImportExtensions": true
+    "rewriteRelativeImportExtensions": true,
+    "jsx": "react-jsx",
+    "jsxImportSource": "hono/jsx"
   },
   "include": ["src/**/*", "src/**/*.json"],
   "references": [{ "path": "../shared" }, { "path": "../plugin-sdk" }]

@@ -1,5 +1,6 @@
 import clsx from 'clsx'
 import type { HTMLAttributes, PropsWithChildren } from 'react'
+import Tooltip from '../tooltip/Tooltip.jsx'
 import type { Variant } from '../types.js'
 import styles from './Badge.module.css'
 
@@ -14,12 +15,13 @@ export default function Badge({
   ...props
 }: BadgeProps) {
   return (
-    <div
-      className={clsx(styles.badge, className, variant && styles[variant])}
-      {...props}
-      title={String(children)}
-    >
-      {children}
-    </div>
+    <Tooltip content={String(children)}>
+      <div
+        className={clsx(styles.badge, className, variant && styles[variant])}
+        {...props}
+      >
+        {children}
+      </div>
+    </Tooltip>
   )
 }

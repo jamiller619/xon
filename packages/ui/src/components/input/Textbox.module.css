@@ -6,7 +6,7 @@
 }
 
 .textbox {
-  background: var(--color-gray-5);
+  background-color: var(--color-gray-5);
   border: none;
   font: inherit;
   border-radius: var(--border-radius-3);
@@ -17,6 +17,10 @@
 
   &[type="search"] {
     corner-shape: round;
+  }
+
+  &:-webkit-autofill {
+    -webkit-box-shadow: 0 0 0px 1000px var(--color-gray-5) inset;
   }
 }
 

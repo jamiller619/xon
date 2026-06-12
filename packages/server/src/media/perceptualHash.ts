@@ -1,8 +1,10 @@
 import { eq, inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import sharp from 'sharp'
-import { duplicateCandidates, imageHashes, mediaItems } from '../db/schema.ts'
-import { isImage, isImageCategory } from './exiftool.ts'
+import { mediaItems } from '../db/schema.ts'
+import * as libraryService from '../services/libraryService.ts'
+// import { duplicateCandidates, imageHashes, mediaItems } from '../db/schema.ts'
+import { isImage } from './exiftool.ts'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -146,21 +148,20 @@ export async function scanLibraryForDuplicates(
   threshold = 10,
 ): Promise<number> {
   // Load all image media items for this library
-  const items = await db
-    .select()
-    .from(mediaItems)
-    .where(eq(mediaItems.libraryId, libraryId))
+  const items = await libraryService.getMediaByLibraryId(db, libraryId)
 
-  const imageItems = items.filter((item) => isImage(item.mimeType))
+  const imageItems = items.data.filter((item) => isImage(item.mediaType))
   if (imageItems.length === 0) return 0
 
   const itemIds = imageItems.map((i) => i.id)
 
   // Load existing hashes
-  const existingHashes = await db
-    .select()
-    .from(imageHashes)
-    .where(inArray(imageHashes.mediaItemId, itemIds))
+  // biome-ignore lint/suspicious/noExplicitAny: <explanation>
+  const existingHashes: any[] = []
+  // const existingHashes = await db
+  //   .select()
+  //   .from(imageHashes)
+  //   .where(inArray(imageHashes.mediaItemId, itemIds))
 
   const hashMap = new Map<string, string>()
   for (const row of existingHashes) {
@@ -184,63 +185,63 @@ export async function scanLibraryForDuplicates(
     }
   }
 
-  if (newHashRows.length > 0) {
-    for (const row of newHashRows) {
-      await db
-        .insert(imageHashes)
-        .values(row)
-        .onConflictDoUpdate({
-          target: imageHashes.mediaItemId,
-          set: { hash: row.hash },
-        })
-    }
-  }
+  // if (newHashRows.length > 0) {
+  //   for (const row of newHashRows) {
+  //     await db
+  //       .insert(imageHashes)
+  //       .values(row)
+  //       .onConflictDoUpdate({
+  //         target: imageHashes.mediaItemId,
+  //         set: { hash: row.hash },
+  //       })
+  //   }
+  // }
 
   // Load existing candidates to avoid duplicates
-  const existingCandidates = await db
-    .select({
-      mediaItemId1: duplicateCandidates.mediaItemId1,
-      mediaItemId2: duplicateCandidates.mediaItemId2,
-    })
-    .from(duplicateCandidates)
-    .where(eq(duplicateCandidates.libraryId, libraryId))
+  // const existingCandidates = await db
+  //   .select({
+  //     mediaItemId1: duplicateCandidates.mediaItemId1,
+  //     mediaItemId2: duplicateCandidates.mediaItemId2,
+  //   })
+  //   .from(duplicateCandidates)
+  //   .where(eq(duplicateCandidates.libraryId, libraryId))
 
-  const existingPairs = new Set(
-    existingCandidates.map((r) => `${r.mediaItemId1}:${r.mediaItemId2}`),
-  )
+  // const existingPairs = new Set(
+  //   existingCandidates.map((r) => `${r.mediaItemId1}:${r.mediaItemId2}`),
+  // )
 
   // Compare all pairs
-  const itemsWithHashes = imageItems.filter((i) => hashMap.has(i.id))
-  let found = 0
+  // const itemsWithHashes = imageItems.filter((i) => hashMap.has(i.id))
+  const found = 0
 
-  for (let i = 0; i < itemsWithHashes.length; i++) {
-    for (let j = i + 1; j < itemsWithHashes.length; j++) {
-      const a = itemsWithHashes[i]
-      const b = itemsWithHashes[j]
-      if (!a || !b) continue
-      const hashA = hashMap.get(a.id)
-      const hashB = hashMap.get(b.id)
-      if (!hashA || !hashB) continue
+  // for (let i = 0; i < itemsWithHashes.length; i++) {
+  //   for (let j = i + 1; j < itemsWithHashes.length; j++) {
+  //     const a = itemsWithHashes[i]
+  //     const b = itemsWithHashes[j]
+  //     if (!a || !b) continue
+  //     const hashA = hashMap.get(a.id)
+  //     const hashB = hashMap.get(b.id)
+  //     if (!hashA || !hashB) continue
 
-      const dist = hammingDistance(hashA, hashB)
-      if (dist <= threshold) {
-        const pairKey = `${a.id}:${b.id}`
-        if (!existingPairs.has(pairKey)) {
-          const similarity = Math.round(((64 - dist) / 64) * 100)
-          await db.insert(duplicateCandidates).values({
-            id: `dup-${a.id}-${b.id}`,
-            libraryId,
-            mediaItemId1: a.id,
-            mediaItemId2: b.id,
-            similarity,
-            status: 'pending',
-          })
-          existingPairs.add(pairKey)
-          found++
-        }
-      }
-    }
-  }
+  //     const dist = hammingDistance(hashA, hashB)
+  //     if (dist <= threshold) {
+  //       const pairKey = `${a.id}:${b.id}`
+  //       if (!existingPairs.has(pairKey)) {
+  //         const similarity = Math.round(((64 - dist) / 64) * 100)
+  //         await db.insert(duplicateCandidates).values({
+  //           id: `dup-${a.id}-${b.id}`,
+  //           libraryId,
+  //           mediaItemId1: a.id,
+  //           mediaItemId2: b.id,
+  //           similarity,
+  //           status: 'pending',
+  //         })
+  //         existingPairs.add(pairKey)
+  //         found++
+  //       }
+  //     }
+  //   }
+  // }
 
   return found
 }

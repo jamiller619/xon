@@ -1,19 +1,23 @@
-import { UserRole } from '@xon/shared'
-import { eq, lt } from 'drizzle-orm'
+// import { UserRole } from '@xon/shared'
+// import { eq, lt } from 'drizzle-orm'
+// import type { LibSQLDatabase } from 'drizzle-orm/libsql'
+
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
-import { deleteCookie, getCookie, setCookie } from 'hono/cookie'
-import { sign, verify } from 'hono/jwt'
-import { z } from 'zod'
-import { hashPassword, verifyPassword } from '../auth/password.ts'
-// import { refreshTokens, users } from '../db/schema.ts'
-import { validate } from '../http/validate.ts'
+// import { deleteCookie, getCookie, setCookie } from 'hono/cookie'
+// import { sign, verify } from 'hono/jwt'
+// import { z } from 'zod'
+// import { hashPassword, verifyPassword } from '../auth/password.ts'
+// // import { refreshTokens, users } from '../db/schema.ts'
+// import { validate } from '../http/validate.ts'
 import auth from '../lib/auth.ts'
+import * as libraryService from '../services/libraryService.ts'
+import * as userService from '../services/userService.ts'
 
-const REFRESH_COOKIE_NAME = 'rt'
+// const REFRESH_COOKIE_NAME = 'rt'
 
 // const ACCESS_TOKEN_TTL_SECONDS = 15 * 60 // 15 minutes
-const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60 // 7 days
+// const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60 // 7 days
 
 // function getJwtSecret(): string {
 //   return process.env.JWT_SECRET ?? 'xon-dev-secret-change-in-production'
@@ -78,8 +82,20 @@ const REFRESH_TOKEN_TTL_SECONDS = 7 * 24 * 60 * 60 // 7 days
 //   }
 // }
 
-export function makeAuthRouter(): Hono {
-  const router = new Hono()
+export function makeAuthRouter(db: LibSQLDatabase): Hono {
+  const router = new Hono({
+    strict: false,
+  })
+
+  // GET /setup-status — unauthenticated, returns whether first-time setup is needed
+  router.get('/setup-status', async (c) => {
+    const users = await userService.getUsers(db)
+    const libraries = await libraryService.getAllLibraries(db)
+
+    return c.json({ users: users.length > 0, libraries: libraries.length > 0 })
+    // const existing = await db.select({ id: users.id }).from(users).limit(1)
+    // return c.json({ setupComplete: existing.length > 0 })
+  })
 
   router.on(['POST', 'GET'], '*', (c) => auth.handler(c.req.raw))
 
@@ -237,12 +253,6 @@ export function makeAuthRouter(): Hono {
   //   }
 
   //   return c.json({ message: 'Logged out' })
-  // })
-
-  // GET /setup-status — unauthenticated, returns whether first-time setup is needed
-  // router.get('/setup-status', async (c) => {
-  //   const existing = await db.select({ id: users.id }).from(users).limit(1)
-  //   return c.json({ setupComplete: existing.length > 0 })
   // })
 
   // POST /setup — unauthenticated, creates the first admin account

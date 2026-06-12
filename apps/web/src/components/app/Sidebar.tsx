@@ -12,12 +12,13 @@ import {
   PersonCircle20Filled as UsersIcon,
 } from '@fluentui/react-icons'
 import { useQuery } from '@tanstack/react-query'
-import { type Group, GroupType, type Library, MediaCategory } from '@xon/shared'
-import { Flex } from '@xon/ui'
+import { type Group, GroupType, type Library, MediaType } from '@xon/shared'
+import { Flex, Surface } from '@xon/ui'
 import clsx from 'clsx'
 import { NavLink } from 'react-router-dom'
 import Logo from '~/components/logo/Logo'
 import PluginSlot from '~/components/PluginSlot'
+import useQueryAPIHelper from '~/hooks/useQueryAPIHelper'
 import styles from './Sidebar.module.css'
 
 interface SidebarProps {
@@ -30,25 +31,21 @@ export default function Sidebar({ className, isOpen }: SidebarProps) {
     isPending,
     error,
     data: libraries,
-  } = useQuery<Library[]>({
-    queryKey: ['libraries'],
-    queryFn: () => fetch('/api/libraries').then((r) => r.json()),
-  })
+  } = useQuery<Library[]>(useQueryAPIHelper('libraries'))
 
   const {
     isPending: isPendingGroups,
     error: errorGroups,
     data: groups,
-  } = useQuery<Group[]>({
-    queryKey: ['groups'],
-    queryFn: () => fetch('/api/groups').then((r) => r.json()),
-  })
+  } = useQuery<Group[]>(useQueryAPIHelper('groups'))
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
     `${styles.navLink}${isActive ? ` ${styles.active}` : ''}`
 
   return (
-    <nav
+    <Surface
+      as="nav"
+      br="none"
       className={clsx(styles.sidebar, className, isOpen && styles.open)}
       aria-label="Main navigation"
     >
@@ -80,33 +77,35 @@ export default function Sidebar({ className, isOpen }: SidebarProps) {
 
       <Section>
         <div className={styles.sectionTitle}>Libraries</div>
-        {libraries?.map((lib) => (
-          <NavLink
-            key={lib.id}
-            to={`/libraries/${lib.id}`}
-            className={navClass}
-          >
-            <LibraryIcon type={lib.mediaCategories.at(0)} />
-            <span>{lib.name}</span>
-          </NavLink>
-        ))}
+        {Array.isArray(libraries) &&
+          libraries.map((lib) => (
+            <NavLink
+              key={lib.id}
+              to={`/libraries/${lib.id}`}
+              className={navClass}
+            >
+              <LibraryIcon type={lib.mediaTypes.at(0)} />
+              <span>{lib.name}</span>
+            </NavLink>
+          ))}
         {/* <Button>Add New Library</Button> */}
       </Section>
 
       <Section>
         <div className={styles.sectionTitle}>Collections</div>
-        {groups?.map((collection) => (
-          <NavLink
-            key={collection.id}
-            to={`/collections/${collection.id}`}
-            className={navClass}
-          >
-            <CollectionIcon type={collection.type} />
-            <span>{collection.title}</span>
-          </NavLink>
-        ))}
+        {Array.isArray(groups) &&
+          groups.map((collection) => (
+            <NavLink
+              key={collection.id}
+              to={`/collections/${collection.id}`}
+              className={navClass}
+            >
+              <CollectionIcon type={collection.type} />
+              <span>{collection.title}</span>
+            </NavLink>
+          ))}
       </Section>
-    </nav>
+    </Surface>
   )
 }
 
@@ -128,13 +127,13 @@ function CollectionIcon({ type }: { type?: GroupType | undefined }) {
   return <PlaylistIcon />
 }
 
-function LibraryIcon({ type }: { type?: MediaCategory | undefined }) {
+function LibraryIcon({ type }: { type?: MediaType.MainType | undefined }) {
   switch (type) {
-    case MediaCategory.Movies:
-      return <MoviesIcon />
-    case MediaCategory.TVShows:
+    case MediaType.MainType.Video:
+      //   return <MoviesIcon />
+      // case MediaCategory.TVShows:
       return <TVIcon />
-    case MediaCategory.Music:
+    case MediaType.MainType.Audio:
       return <MusicIcon />
   }
 }

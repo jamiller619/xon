@@ -1,4 +1,7 @@
 import type { MiddlewareHandler } from 'hono'
+import { createLogger } from '../logger.ts'
+
+const logger = createLogger('http')
 
 export function makeLoggingMiddleware(): MiddlewareHandler {
   return async (c, next) => {
@@ -8,6 +11,7 @@ export function makeLoggingMiddleware(): MiddlewareHandler {
     const { method } = c.req
     const path = c.req.path
     const status = c.res.status
-    console.log(`${method} ${path} ${status} ${ms}ms`)
+
+    logger.log(`${method} ${path} ${status} ${ms}ms`)
   }
 }

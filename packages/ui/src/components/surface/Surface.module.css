@@ -1,15 +1,27 @@
 .surface {
-  background: var(--color-gray-2);
-  border-radius: var(--border-radius-6);
-  /* biome-ignore lint/correctness/noUnknownProperty: this is valid */
+  background: var(--color-gray-a1);
+  backdrop-filter: blur(16px) saturate(150%);
   corner-shape: var(--corner-shape);
 
   .surface {
-    background: var(--color-gray-3);
+    background: var(--color-gray-4);
+    backdrop-filter: none;
     border-radius: var(--border-radius-5);
 
     .surface {
-      background: var(--color-gray-4);
+      background: var(--color-gray-a4);
     }
+  }
+
+  &.sm {
+    border-radius: var(--border-radius-4);
+  }
+
+  &.md {
+    border-radius: var(--border-radius-6);
+  }
+
+  &.lg {
+    border-radius: var(--border-radius-8);
   }
 }

@@ -5,7 +5,7 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { appCache } from '../cache.ts'
 import config from '../config.ts'
-import { libraries, mediaItems } from '../db/schema.ts'
+import { libraries, libraryMediaItems, mediaItems } from '../db/schema.ts'
 import { scanRegistry } from '../scanner/scanRegistry.ts'
 
 export function makeAdminHealthRouter(db: LibSQLDatabase): Hono {
@@ -59,53 +59,56 @@ export function makeAdminHealthRouter(db: LibSQLDatabase): Hono {
       appCache.set('libraries:all', libRows, 60_000)
     }
 
-    const libraryStats = await Promise.all(
-      libRows.map(async (lib) => {
-        // Per-library media count — serve from cache when available
-        const countKey = `media:count:${lib.id}`
-        let total = appCache.get<number>(countKey)
-        let lastScanAt: string | null = null
+    const libraryStats = {}
 
-        if (total === undefined) {
-          const rows = await db
-            .select({
-              total: sql<number>`count(*)`,
-              lastScan: sql<number | null>`max(${mediaItems.scannedAt})`,
-            })
-            .from(mediaItems)
-            .where(eq(mediaItems.libraryId, lib.id))
-          const row = rows[0]
-          total = row?.total ?? 0
-          appCache.set(countKey, total, 60_000)
-          const lastScanRaw = row?.lastScan ?? null
-          // scannedAt is stored as unix seconds by drizzle integer(timestamp)
-          lastScanAt =
-            lastScanRaw !== null
-              ? new Date(lastScanRaw * 1000).toISOString()
-              : null
-        } else {
-          // Fetch only lastScan when count was cached (inexpensive single-column query)
-          const rows = await db
-            .select({
-              lastScan: sql<number | null>`max(${mediaItems.scannedAt})`,
-            })
-            .from(mediaItems)
-            .where(eq(mediaItems.libraryId, lib.id))
-          const lastScanRaw = rows[0]?.lastScan ?? null
-          lastScanAt =
-            lastScanRaw !== null
-              ? new Date(lastScanRaw * 1000).toISOString()
-              : null
-        }
+    // const libraryStats = await Promise.all(
+    //   libRows.map(async (lib) => {
+    //     // Per-library media count — serve from cache when available
+    //     const countKey = `media:count:${lib.id}`
+    //     let total = appCache.get<number>(countKey)
+    //     let lastScanAt: string | null = null
 
-        return {
-          id: lib.id,
-          name: lib.name,
-          totalItems: total,
-          lastScanAt,
-        }
-      }),
-    )
+    //     if (total === undefined) {
+    //       const rows = await db
+    //         .select({
+    //           total: sql<number>`count(*)`,
+    //           lastScan: sql<number | null>`max(${mediaItems.scannedAt})`,
+    //         })
+    //         .from(mediaItems)
+    //         .innerJoin(mediaItems, eq(libraryMediaItems.mediaItemId))
+    //         .where(eq(mediaItems.libraryId, lib.id))
+    //       const row = rows[0]
+    //       total = row?.total ?? 0
+    //       appCache.set(countKey, total, 60_000)
+    //       const lastScanRaw = row?.lastScan ?? null
+    //       // scannedAt is stored as unix seconds by drizzle integer(timestamp)
+    //       lastScanAt =
+    //         lastScanRaw !== null
+    //           ? new Date(lastScanRaw * 1000).toISOString()
+    //           : null
+    //     } else {
+    //       // Fetch only lastScan when count was cached (inexpensive single-column query)
+    //       const rows = await db
+    //         .select({
+    //           lastScan: sql<number | null>`max(${mediaItems.scannedAt})`,
+    //         })
+    //         .from(mediaItems)
+    //         .where(eq(mediaItems.libraryId, lib.id))
+    //       const lastScanRaw = rows[0]?.lastScan ?? null
+    //       lastScanAt =
+    //         lastScanRaw !== null
+    //           ? new Date(lastScanRaw * 1000).toISOString()
+    //           : null
+    //     }
+
+    //     return {
+    //       id: lib.id,
+    //       name: lib.name,
+    //       totalItems: total,
+    //       lastScanAt,
+    //     }
+    //   }),
+    // )
 
     return c.json({
       uptime: uptimeSeconds,

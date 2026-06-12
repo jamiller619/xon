@@ -10,7 +10,7 @@ import type {
 export default {
   name: 'persist',
   retry: 1,
-  async run(ctx, job) {
+  async run(ctx, job): Promise<MediaJobItem | undefined> {
     if (job.type === 'new') return saveNewMediaItem(ctx, job)
     if (job.type === 'changed') return saveChangedMediaItem(ctx, job)
   },
@@ -69,13 +69,13 @@ async function saveNewMediaItem(
     .insert(mediaItems)
     .values({
       id: job.data.id,
-      libraryId: ctx.libraryId,
       filePath: job.file.path,
       fileSize: job.file.size,
-      mimeType: job.data.mimeType ?? job.file.mimeType,
+      mediaType: job.data.mediaType ?? job.file.mediaType,
       metadata: job.data.metadata,
       drmProtected: job.data.drmProtected,
       title: job.data.title,
+      description: job.data.description,
       scannedAt: new Date(),
     })
     .returning({

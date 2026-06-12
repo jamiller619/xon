@@ -1,9 +1,8 @@
 import clsx from 'clsx'
 import {
-  type ElementType,
-  type HTMLAttributes,
-  type ReactElement,
+  type ComponentPropsWithoutRef,
   createElement,
+  type ElementType,
 } from 'react'
 import styles from './Flex.module.css'
 
@@ -17,15 +16,18 @@ type FlexAlign =
   | 'anchor-center'
 type FlexJustify = 'start' | 'center' | 'end' | 'between' | 'around' | 'evenly'
 
-type FlexProps = React.HTMLAttributes<HTMLDivElement> & {
+type FlexOwnProps<C extends ElementType> = {
   dir?: FlexDirection
   gap?: number | string
   align?: FlexAlign
   justify?: FlexJustify
-  as?: ElementType | ((props: HTMLAttributes<HTMLDivElement>) => ReactElement)
+  as?: C
 }
 
-export default function Flex({
+type FlexProps<C extends ElementType> = FlexOwnProps<C> &
+  Omit<ComponentPropsWithoutRef<C>, keyof FlexOwnProps<C>>
+
+export default function Flex<C extends ElementType = 'div'>({
   dir,
   gap,
   align,
@@ -35,27 +37,17 @@ export default function Flex({
   children,
   as,
   ...props
-}: FlexProps) {
-  if (as) {
-    return createElement(
-      as,
-      {
-        className: clsx(styles.flex, className),
-        style: resolveStyle({ ...style }, dir, gap, align, justify),
-        ...props,
-      },
-      children,
-    )
-  }
+}: FlexProps<C>) {
+  const Component = as ?? 'div'
 
-  return (
-    <div
-      className={clsx(styles.flex, className)}
-      style={resolveStyle({ ...style }, dir, gap, align, justify)}
-      {...props}
-    >
-      {children}
-    </div>
+  return createElement(
+    Component,
+    {
+      className: clsx(styles.flex, className),
+      style: resolveStyle({ ...style }, dir, gap, align, justify),
+      ...props,
+    },
+    children,
   )
 }
 

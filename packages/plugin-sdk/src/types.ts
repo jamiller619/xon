@@ -1,4 +1,6 @@
-import type { MediaCategory } from '@xon/shared'
+// import type { MediaCategory } from '@xon/shared'
+
+import type { MediaType } from '@xon/shared'
 
 // Plugin category types
 export type PluginCategory =
@@ -20,7 +22,7 @@ export interface PluginManifest {
   author: string
   category: PluginCategory
   /** Media categories this plugin handles (for MediaProvider/FormatHandler) */
-  mediaCategories?: MediaCategory[]
+  mediaTypes: MediaType.MainType[]
   /** Minimum Xon server version required */
   minServerVersion?: string
   /** Entry point relative to plugin root (default: index.js) */
@@ -57,19 +59,19 @@ export interface PluginEventPayloads {
   'media:created': {
     mediaId: string
     filePath: string
-    mediaCategory: MediaCategory
+    mediaType: MediaType
     libraryId: string
   }
   'media:updated': {
     mediaId: string
     filePath: string
-    mediaCategory: MediaCategory
+    mediaType: MediaType
     libraryId: string
   }
   'media:deleted': {
     mediaId: string
     filePath: string
-    mediaCategory: MediaCategory
+    mediaType: MediaType
     libraryId: string
   }
   'server:boot': Record<string, never>
@@ -185,8 +187,8 @@ export interface MediaProviderFile {
   path: string
   /** File size in bytes */
   size: number
-  /** MIME type of the file, if known */
-  mimeType?: string | undefined
+  /** MIME type of the file */
+  mediaType: string
   /** Last modified timestamp */
   modifiedAt?: Date | undefined
   /** Creation timestamp */
@@ -231,7 +233,7 @@ export interface PluginContext {
   /** Plugin's own manifest */
   manifest: PluginManifest
   /** Scoped database access */
-  db: PluginDatabaseAccess
+  // db: PluginDatabaseAccess
   /** Register an event hook */
   on: <E extends PluginEvent>(
     event: E,

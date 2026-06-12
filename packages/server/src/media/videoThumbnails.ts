@@ -1,25 +1,25 @@
 import { spawn } from 'node:child_process'
 import { unlink } from 'node:fs/promises'
 import { join } from 'node:path'
-import { MediaCategory } from '@xon/shared'
+// import { MediaCategory } from '@xon/shared'
 import config from '../config.ts'
 import { createLogger } from '../logger.ts'
 import { ffmpegPath, ffprobePath } from './binaries.ts'
-import { type ThumbnailPaths, writeThumbnailImages } from './images.ts'
+import { type ThumbnailPaths, writeThumbnailImages } from './thumbnails.ts'
 
 const logger = createLogger('video-thumbnails')
 
-const VIDEO_CATEGORIES = new Set<string>([
-  MediaCategory.Movies,
-  MediaCategory.TVShows,
-  // MediaCategory.Clips,
-  MediaCategory.HomeVideos,
-])
+// const VIDEO_CATEGORIES = new Set<string>([
+//   MediaCategory.Movies,
+//   MediaCategory.TVShows,
+//   // MediaCategory.Clips,
+//   MediaCategory.HomeVideos,
+// ])
 
-export function isVideoCategory(category: string | null): boolean {
-  if (!category) return false
-  return VIDEO_CATEGORIES.has(category)
-}
+// export function isVideoCategory(category: string | null): boolean {
+//   if (!category) return false
+//   return VIDEO_CATEGORIES.has(category)
+// }
 
 function getVideoDuration(filePath: string): Promise<number | null> {
   return new Promise((resolve) => {
@@ -124,7 +124,7 @@ export async function generateVideoThumbnails(
     return undefined
   }
 
-  const paths = await writeThumbnailImages(mediaItemId, tmpPath, logger)
+  const paths = await writeThumbnailImages(mediaItemId, tmpPath)
 
   try {
     await unlink(tmpPath)

@@ -1,35 +1,27 @@
-import {
-  AddCircle16Filled as AddIcon,
-  Edit16Filled as EditIcon,
-  Heart20Filled as HeartIcon,
-  Heart20Regular as HeartStrokeIcon,
-  Play16Filled as PlayIcon,
-} from '@fluentui/react-icons'
 import type { MediaItem } from '@xon/shared'
-import { Button } from '@xon/ui'
+import { Badge, Button, Flex, Surface, XScroller } from '@xon/ui'
 import clsx from 'clsx'
 import humanizeDuration from 'humanize-duration'
-import {
-  Fragment,
-  lazy,
-  type ReactNode,
-  Suspense,
-  useEffect,
-  useState,
-} from 'react'
+import prettyBytes from 'pretty-bytes'
+import { lazy, type ReactNode, Suspense, useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
+import { BackgroundSlideshow } from '~/components/background-slideshow/BackgroundSlideshow'
+import Breadcrumbs from '~/components/breadcrumbs/Breadcrumbs'
+import { GradientBackground } from '~/components/gradient-background/GradientBackground'
 import PluginSlot from '~/components/PluginSlot'
 import { apiFetch, apiUrl } from '~/lib/apiFetch'
 import basename from '~/lib/basename'
 import { useAudioStore } from '~/store/audioStore'
+import ActionButtons from './components/ActionButtons'
+import Resolution from './components/Resolution'
 import styles from './Media.module.css'
 
 // Player/viewer components loaded on demand — separate JS chunks
-const ArchiveViewer = lazy(() => import('~/components/viewers/ArchiveViewer'))
-const EpubViewer = lazy(() => import('~/components/viewers/EpubViewer'))
-const FontViewer = lazy(() => import('~/components/viewers/FontViewer'))
+// const ArchiveViewer = lazy(() => import('~/components/viewers/ArchiveViewer'))
+// const EpubViewer = lazy(() => import('~/components/viewers/EpubViewer'))
+// const FontViewer = lazy(() => import('~/components/viewers/FontViewer'))
 const ImageViewer = lazy(() => import('~/components/viewers/ImageViewer'))
-const PdfViewer = lazy(() => import('~/components/viewers/PdfViewer'))
+// const PdfViewer = lazy(() => import('~/components/viewers/PdfViewer'))
 const VideoPlayer = lazy(() => import('~/components/viewers/VideoPlayer'))
 
 interface ImageSibling {
@@ -47,14 +39,14 @@ interface PendingMatch {
   matchSource: string | null
 }
 
-function formatBytes(bytes: number | null): string {
-  if (bytes == null) return '—'
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  if (bytes < 1024 * 1024 * 1024)
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
-}
+// function formatBytes(bytes: number | null): string {
+//   if (bytes == null) return '—'
+//   if (bytes < 1024) return `${bytes} B`
+//   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+//   if (bytes < 1024 * 1024 * 1024)
+//     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+//   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
+// }
 
 function formatDate(ts: number | null): string {
   if (ts == null) return '—'
@@ -70,7 +62,7 @@ function MetaRow({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
-export default function MediaDetail() {
+export default function Media() {
   const { id } = useParams<{ id: string }>()
   const location = useLocation()
   const data = location.state
@@ -79,20 +71,17 @@ export default function MediaDetail() {
 
   const [showPlayer, setShowPlayer] = useState(false)
   const [showImageViewer, setShowImageViewer] = useState(false)
-  const [showPdfViewer, setShowPdfViewer] = useState(false)
-  const [showEpubViewer, setShowEpubViewer] = useState(false)
-  const [showFontViewer, setShowFontViewer] = useState(false)
-  const [showArchiveViewer, setShowArchiveViewer] = useState(false)
+  // const [showPdfViewer, setShowPdfViewer] = useState(false)
+  // const [showEpubViewer, setShowEpubViewer] = useState(false)
+  // const [showFontViewer, setShowFontViewer] = useState(false)
+  // const [showArchiveViewer, setShowArchiveViewer] = useState(false)
   const [imageSiblings, setImageSiblings] = useState<ImageSibling[]>([])
 
   const [pendingMatch, setPendingMatch] = useState<PendingMatch | null>(null)
-  const [matchActionLoading, setMatchActionLoading] = useState(false)
+  // const [matchActionLoading, setMatchActionLoading] = useState(false)
 
-  const [isFavorited, setIsFavorited] = useState(false)
-  const [isWatchlisted, setIsWatchlisted] = useState(false)
-
-  const playTrack = useAudioStore((s) => s.playTrack)
-  const addToQueue = useAudioStore((s) => s.addToQueue)
+  // const playTrack = useAudioStore((s) => s.playTrack)
+  // const addToQueue = useAudioStore((s) => s.addToQueue)
 
   // Edit state
   const [editing, setEditing] = useState(false)
@@ -103,21 +92,7 @@ export default function MediaDetail() {
   const [saveError, setSaveError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (item.metadata.images?.backdrop) {
-      // biome-ignore lint/style/noNonNullAssertion: <explanation>
-      document.body.classList.add(styles.bodyBackground!)
-      document.body.style.backgroundImage = `url(${item.metadata.images.backdrop})`
-    }
-
-    return () => {
-      // biome-ignore lint/style/noNonNullAssertion: <explanation>
-      document.body.classList.remove(styles.bodyBackground!)
-      document.body.style.backgroundImage = ''
-    }
-  }, [item.metadata.images?.backdrop])
-
-  useEffect(() => {
-    if (item) return
+    if (item.cast) return
 
     apiFetch(`/api/media/${id}`)
       .then((r) => {
@@ -130,25 +105,7 @@ export default function MediaDetail() {
       .catch(() => {
         setError('Media item not found.')
       })
-  })
-
-  // useEffect(() => {
-  //   if (!title) return
-  //   setLoading(true)
-  //   apiFetch(`/api/media/${id}`)
-  //     .then((r) => {
-  //       if (!r.ok) throw new Error('Not found')
-  //       return r.json()
-  //     })
-  //     .then((data) => {
-  //       setItem(data as MediaDetailItem)
-  //       setLoading(false)
-  //     })
-  //     .catch(() => {
-  //       setError('Media item not found.')
-  //       setLoading(false)
-  //     })
-  // }, [id])
+  }, [item, id])
 
   // Load pending match
   // useEffect(() => {
@@ -192,64 +149,29 @@ export default function MediaDetail() {
   //   setMatchActionLoading(false)
   // }
 
-  // Load favorite/watchlist state
-  useEffect(() => {
-    if (!item?.id) return
-    apiFetch('/api/users/me/favorites')
-      .then((r) => r.json())
-      .then((data: unknown) => {
-        if (Array.isArray(data)) {
-          setIsFavorited(
-            (data as { id: string }[]).some((m) => m.id === item.id),
-          )
-        }
-      })
-      .catch(() => {})
-    apiFetch('/api/users/me/watchlist')
-      .then((r) => r.json())
-      .then((data: unknown) => {
-        if (Array.isArray(data)) {
-          setIsWatchlisted(
-            (data as { id: string }[]).some((m) => m.id === item.id),
-          )
-        }
-      })
-      .catch(() => {})
-  }, [item?.id])
-
-  async function toggleFavorite() {
-    if (!item.id) return
-    const method = isFavorited ? 'DELETE' : 'POST'
-    const res = await apiFetch(`/api/media/${item.id}/favorite`, { method })
-    if (res.ok) setIsFavorited(!isFavorited)
-  }
-
-  async function toggleWatchlist() {
-    if (!item.id) return
-    const method = isWatchlisted ? 'DELETE' : 'POST'
-    const res = await apiFetch(`/api/media/${item.id}/watchlist`, { method })
-    if (res.ok) setIsWatchlisted(!isWatchlisted)
-  }
+  const isImage = item.mediaType?.startsWith('image/')
+  const isAudio = item.mediaType?.startsWith('audio/')
+  const isVideo = item.mediaType?.startsWith('video/')
 
   // Fetch sibling images from same library for slideshow
-  useEffect(() => {
-    if (!item || !item.mimeType?.startsWith('image/') || !item.libraryId) return
-    apiFetch(
-      `/api/libraries/${item.libraryId}/media?mediaCategory=${encodeURIComponent(item.mimeType ?? 'Pictures')}&limit=100`,
-    )
-      .then((r) => r.json())
-      .then((data: unknown) => {
-        if (Array.isArray(data)) {
-          const siblings: ImageSibling[] = (
-            data as { id: string; title: string | null; fileName: string }[]
-          ).map((m) => ({ id: m.id, title: m.title ?? m.fileName }))
-          setImageSiblings(siblings)
-        }
-      })
-      .catch(() => {
-        // siblings unavailable — viewer will work for single image
-      })
-  }, [item])
+  // useEffect(() => {
+  //   if (!item || !isImage) return
+  //   apiFetch(
+  //     `/api/libraries/${item.libraryId}/media?mediaCategory=${encodeURIComponent(item.mimeType ?? 'Pictures')}&limit=100`,
+  //   )
+  //     .then((r) => r.json())
+  //     .then((data: unknown) => {
+  //       if (Array.isArray(data)) {
+  //         const siblings: ImageSibling[] = (
+  //           data as { id: string; title: string | null; fileName: string }[]
+  //         ).map((m) => ({ id: m.id, title: m.title ?? m.fileName }))
+  //         setImageSiblings(siblings)
+  //       }
+  //     })
+  //     .catch(() => {
+  //       // siblings unavailable — viewer will work for single image
+  //     })
+  // }, [item, isImage])
 
   function startEditing() {
     if (!item) return
@@ -373,7 +295,6 @@ export default function MediaDetail() {
     ? (parsedMeta.aiTags as AiTagEntry[])
     : []
 
-  const isImage = item.mimeType?.startsWith('image/')
   // const isPdf = item.mimeType === 'application/pdf'
   // const isEpub =
   //   item.mimeType === 'application/epub+zip' ||
@@ -389,11 +310,23 @@ export default function MediaDetail() {
   //   item.mediaCategory === 'Archives'
   const fileName = basename(item.filePath)
   const description = item.description ?? item.metadata.overview
-  const year = String(item.metadata.year) ?? ''
 
   return (
     <>
-      <div className={styles.container}>
+      {Array.isArray(item.metadata.images?.backdrop) && (
+        <>
+          <BackgroundSlideshow
+            images={item.metadata.images.backdrop}
+            kenBurns={{
+              zoom: 1.03,
+              pan: 0,
+              easing: 'ease-out',
+            }}
+          />
+          <GradientBackground />
+        </>
+      )}
+      <div className={clsx(styles.hero, styles.container)}>
         {showImageViewer && item.id && (
           <Suspense fallback={null}>
             <ImageViewer
@@ -404,24 +337,15 @@ export default function MediaDetail() {
             />
           </Suspense>
         )}
-        <div className={styles.breadcrumb}>
-          <Link to="/" className={styles.breadcrumbLink}>
-            Dashboard
-          </Link>
-          <span className={styles.breadcrumbSep}>/</span>
-          <span className={styles.breadcrumbCurrent}>
-            {item.title ?? fileName}
-          </span>
-        </div>
+        <Breadcrumbs label={item.title ?? fileName} />
 
-        <div className={styles.hero}>
-          {/* Video player, image viewer trigger, or poster */}
+        <div className={styles.posterContainer}>
           <div className={styles.poster}>
             {showPlayer && item.id ? (
               <Suspense fallback={null}>
                 <VideoPlayer
                   mediaId={item.id}
-                  {...(item.mimeType ? { mimeType: item.mimeType } : {})}
+                  {...(item.mediaType ? { mimeType: item.mediaType } : {})}
                   onClose={() => setShowPlayer(false)}
                 />
               </Suspense>
@@ -505,14 +429,22 @@ export default function MediaDetail() {
               </>
             )}
           </div>
-          {item.metadata.images?.logo && (
-            <img
-              src={apiUrl(item.metadata.images.logo)}
-              alt={item.title ?? fileName}
-              loading="lazy"
-              className={styles.logo}
-            />
-          )}
+
+          <div className={styles.posterMeta}>
+            {/* Logo */}
+            {item.metadata.images?.logo && (
+              <img
+                src={apiUrl(item.metadata.images.logo)}
+                alt={item.title ?? fileName}
+                loading="lazy"
+                className={styles.logo}
+              />
+            )}
+            {/* Action buttons */}
+            <div className={styles.actions}>
+              <ActionButtons item={item} />
+            </div>
+          </div>
         </div>
 
         {/* Suggested match banner */}
@@ -604,15 +536,17 @@ export default function MediaDetail() {
               id: item.id,
               title: item.title,
               // mediaCategory: item.mediaCategory,
-              libraryId: item.libraryId,
+              // libraryId: item.libraryId,
             },
-            ...(item.libraryId ? { libraryId: item.libraryId } : {}),
+            // ...(item.libraryId ? { libraryId: item.libraryId } : {}),
           }}
         />
       </div>
-      <div className={clsx(styles.content, styles.container)}>
+
+      {/* Main Content Area */}
+      <Surface className={clsx(styles.content, styles.container)} br="sm">
         {/* Title + actions */}
-        <div className={styles.heroInfo}>
+        <Flex gap="3" dir="col">
           {editing ? (
             <div className={styles.editForm}>
               <div className={styles.editField}>
@@ -674,9 +608,20 @@ export default function MediaDetail() {
             </div>
           ) : (
             <>
-              <div className={styles.titleRow}>
-                <h1 className={styles.title}>{item.title ?? fileName}</h1>
-              </div>
+              <Flex justify="between" className={styles.titleRow}>
+                <h1 className={styles.title}>{item.title}</h1>
+                {item.metadata.resolution && (
+                  <div>
+                    <Badge>
+                      <Resolution
+                        height={item.metadata.resolution.height}
+                        width={item.metadata.resolution.width}
+                        layout="$n $a"
+                      />
+                    </Badge>
+                  </div>
+                )}
+              </Flex>
 
               {item.drmProtected && (
                 <div className={styles.drmNotice}>
@@ -688,20 +633,16 @@ export default function MediaDetail() {
                 </div>
               )}
 
-              <span>{year ? `(${year})` : ''}</span>
+              <span>{parseYear(item)}</span>
 
-              {item.mimeType && (
-                <span className={styles.categoryBadge}>{item.mimeType}</span>
+              {description && (
+                <p className={styles.description}>{description}</p>
               )}
-
-              {description && <p>{description}</p>}
 
               {tags.length > 0 && (
                 <div className={styles.tags}>
                   {tags.map((tag) => (
-                    <span key={tag} className={styles.tag}>
-                      {tag}
-                    </span>
+                    <Badge key={tag}>{tag}</Badge>
                   ))}
                 </div>
               )}
@@ -739,171 +680,16 @@ export default function MediaDetail() {
                 )} */}
             </>
           )}
-          {/* Action buttons */}
-          <div className={styles.actions}>
-            {isImage ? (
-              <button
-                type="button"
-                className={`${styles.btnPlay} ${item.drmProtected ? styles.btnDisabled : ''}`}
-                disabled={item.drmProtected}
-                title={
-                  item.drmProtected
-                    ? 'Viewing unavailable — DRM protected'
-                    : 'View image'
-                }
-                onClick={() => setShowImageViewer(true)}
-              >
-                🖼 View
-              </button>
-              // ) : isPdf ? (
-              //   <button
-              //     type="button"
-              //     className={`${styles.btnPlay} ${item.drmProtected ? (styles.btnDisabled) : ''}`}
-              //     disabled={item.drmProtected}
-              //     title={
-              //       item.drmProtected
-              //         ? 'Viewing unavailable — DRM protected'
-              //         : 'Open PDF'
-              //     }
-              //     onClick={() => setShowPdfViewer(true)}
-              //   >
-              //     📄 Open
-              //   </button>
-              // ) : isEpub ? (
-              //   <button
-              //     type="button"
-              //     className={`${styles.btnPlay} ${item.drmProtected ? (styles.btnDisabled) : ''}`}
-              //     disabled={item.drmProtected}
-              //     title={
-              //       item.drmProtected
-              //         ? 'Reading unavailable — DRM protected'
-              //         : 'Read ebook'
-              //     }
-              //     onClick={() => setShowEpubViewer(true)}
-              //   >
-              //     📖 Read
-              //   </button>
-              // ) : isFont ? (
-              //   <button
-              //     type="button"
-              //     className={`${styles.btnPlay} ${item.drmProtected ? (styles.btnDisabled) : ''}`}
-              //     disabled={item.drmProtected}
-              //     title={
-              //       item.drmProtected
-              //         ? 'Preview unavailable — DRM protected'
-              //         : 'Preview font'
-              //     }
-              //     onClick={() => setShowFontViewer(true)}
-              //   >
-              //     🔤 Preview
-              //   </button>
-              // ) : isArchive ? (
-              //   <button
-              //     type="button"
-              //     className={styles.btnPlay}
-              //     title="Browse archive contents"
-              //     onClick={() => setShowArchiveViewer(true)}
-              //   >
-              //     📦 Browse
-              //   </button>
-            ) : item.mimeType?.startsWith('audio/') ? (
-              <>
-                <Button
-                  // className={styles.btnPlay}
-                  variant="primary"
-                  disabled={item.drmProtected}
-                  title={
-                    item.drmProtected
-                      ? 'Playback unavailable — DRM protected'
-                      : 'Play'
-                  }
-                  onClick={() => {
-                    if (!item.drmProtected && item.id) {
-                      playTrack({
-                        id: item.id,
-                        title: item.title ?? fileName,
-                        mimeType: item.mimeType ?? 'audio/mpeg',
-                      })
-                    }
-                  }}
-                >
-                  ▶ Play
-                </Button>
-                <button
-                  type="button"
-                  className={styles.btnSecondary}
-                  disabled={item.drmProtected}
-                  title="Add to queue"
-                  onClick={() => {
-                    if (!item.drmProtected && item.id) {
-                      addToQueue({
-                        id: item.id,
-                        title: item.title ?? fileName,
-                        mimeType: item.mimeType ?? 'audio/mpeg',
-                      })
-                    }
-                  }}
-                >
-                  + Queue
-                </button>
-              </>
-            ) : (
-              <Button
-                variant="primary"
-                disabled={
-                  item.drmProtected || !item.mimeType?.startsWith('video/')
-                }
-                title={
-                  item.drmProtected
-                    ? 'Playback unavailable — DRM protected'
-                    : !item.mimeType?.startsWith('video/')
-                      ? 'Playback not supported for this media type'
-                      : 'Play'
-                }
-                onClick={() => setShowPlayer(true)}
-              >
-                <PlayIcon /> <span>Play</span>
-              </Button>
-            )}
-            {item.mimeType.startsWith('video/') && (
-              <Button onClick={startEditing} title="Edit metadata">
-                <EditIcon />
-              </Button>
-            )}
-            <Button
-              title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-              onClick={toggleFavorite}
-            >
-              {isFavorited ? <HeartIcon /> : <HeartStrokeIcon />}
-            </Button>
-            <Button
-              title={
-                isWatchlisted ? 'Remove from watchlist' : 'Add to watchlist'
-              }
-              onClick={toggleWatchlist}
-            >
-              {isWatchlisted ? (
-                <>
-                  <EditIcon />
-                  <span>Watchlisted</span>
-                </>
-              ) : (
-                <>
-                  <AddIcon />
-                  <span>Watchlist</span>
-                </>
-              )}
-            </Button>
-          </div>
-        </div>
+        </Flex>
+
         {/* Core metadata table */}
         {!editing && (
           <table className={styles.metaTable}>
             <tbody>
-              {item.mimeType && (
-                <MetaRow label="Format">{item.mimeType}</MetaRow>
+              {item.mediaType && (
+                <MetaRow label="Format">{item.mediaType}</MetaRow>
               )}
-              <MetaRow label="File size">{formatBytes(item.fileSize)}</MetaRow>
+              <MetaRow label="File size">{prettyBytes(item.fileSize)}</MetaRow>
               <MetaRow label="File name">{fileName}</MetaRow>
               <MetaRow label="Date added">
                 {new Date(item.createdAt).toLocaleString()}
@@ -939,14 +725,45 @@ export default function MediaDetail() {
           </table>
         )}
 
+        {/* Cast */}
+        {item?.cast && item.cast.length > 0 && (
+          <XScroller>
+            <section>
+              <Flex justify="between" align="center">
+                <h2 className={styles.heading}>Cast</h2>
+                <XScroller.ButtonPrev />
+                <XScroller.ButtonNext />
+              </Flex>
+              <XScroller.Viewport className={styles.castList}>
+                {item.cast.map((c) => (
+                  <div key={c.id}>
+                    <div className={styles.castImage}>
+                      {c.avatarUrl ? (
+                        <img src={c.avatarUrl} alt={c.name} />
+                      ) : (
+                        <img
+                          src={`https://api.dicebear.com/10.x/dylan/svg?seed=${c.name}-${c.role}`}
+                          alt="avatar"
+                        />
+                      )}
+                    </div>
+                    <div className={styles.castName}>{c.name}</div>
+                    <span className={styles.castRole}>as {c.role}</span>
+                  </div>
+                ))}
+              </XScroller.Viewport>
+            </section>
+          </XScroller>
+        )}
+
         {/* Related items placeholder */}
-        <section className={styles.related}>
-          <h2 className={styles.relatedTitle}>Related Items</h2>
+        <section>
+          <h2 className={styles.heading}>Related Items</h2>
           <p className={styles.relatedPlaceholder}>
             Related items will appear here.
           </p>
         </section>
-      </div>
+      </Surface>
     </>
   )
 }
@@ -976,4 +793,21 @@ function parseArray(key: string, arr: unknown[]): ReactNode {
   }
 
   return arr.map((v) => JSON.stringify(v)).join(', ')
+}
+
+function parseResolution(data: MediaItem) {
+  // if ('width' in data.metadata && 'height' in data.metadata) {
+  //   return <Resolution width={data.metadata.width} height={data.metadata.height} />
+  // }
+  // return null
+}
+
+function parseYear(data: MediaItem) {
+  if ('releaseDate' in data.metadata) {
+    if (data.metadata.releaseDate.length > 4) {
+      return new Date(data.metadata.releaseDate).getFullYear()
+    }
+
+    return data.metadata.releaseDate
+  }
 }

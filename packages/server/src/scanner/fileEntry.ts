@@ -2,14 +2,16 @@ import fsp from 'node:fs/promises'
 import path, { extname } from 'node:path'
 import type { MediaProviderFile } from '@xon/plugin-sdk'
 import { fileTypeFromFile } from 'file-type'
+import mime from 'mime-types'
 
-export type FileEntry = MediaProviderFile & {
+export type FileEntry = Omit<MediaProviderFile, 'mediaType'> & {
   ext: string
+  mediaType: string
 }
 
 export async function createFileEntry(filePath: string): Promise<FileEntry> {
   const ext = extname(filePath).toLowerCase()
-  const mimeType = await getMimeType(filePath)
+  const mediaType = await getMimeType(filePath)
   const stats = await fsp.stat(filePath)
 
   return {
@@ -20,17 +22,18 @@ export async function createFileEntry(filePath: string): Promise<FileEntry> {
     createdAt: stats.birthtime,
     modifiedAt: stats.mtime,
     ext,
-    mimeType,
+    mediaType,
   }
 }
 
-async function getMimeType(
-  filePath: string,
-  mimeType?: string,
-): Promise<string | undefined> {
-  if (mimeType) return mimeType
+async function getMimeType(filePath: string): Promise<string> {
+  const quickLookup = mime.lookup(filePath)
 
-  const result = await fileTypeFromFile(filePath)
+  if (quickLookup) return quickLookup
 
-  if (result) return result.mime
+  const slowLookup = await fileTypeFromFile(filePath)
+
+  if (slowLookup) return slowLookup.mime
+
+  throw new Error(`Could not determine mime type for ${filePath}`)
 }

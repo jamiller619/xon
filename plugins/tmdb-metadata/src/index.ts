@@ -1,5 +1,5 @@
 import { MetadataSourcePlugin, type PluginContext } from '@xon/plugin-sdk'
-import { MediaCategory, MediaItem } from '@xon/shared'
+import { MediaType, type Metadata } from '@xon/shared'
 import { parseMediaTitle } from './titleParser.js'
 import {
   type ImageResult,
@@ -11,6 +11,8 @@ import {
 export type { ImageResult, PersonImageResult }
 
 export default class TmdbMetadataPlugin extends MetadataSourcePlugin {
+  override mediaTypes = [MediaType.MainType.Video]
+
   #client: TmdbClient | null = null
   #ctx: PluginContext | null = null
 
@@ -44,17 +46,19 @@ export default class TmdbMetadataPlugin extends MetadataSourcePlugin {
 
   override async enrich(
     filePath: string,
-    category: MediaCategory,
+    types: MediaType.MainType[],
     lang?: string,
-  ) {
+  ): Promise<Metadata | undefined> {
     const parsed = parseMediaTitle(filePath)
 
+    if (!types.includes(MediaType.MainType.Video)) return
+
     try {
-      if (parsed.type === 'movie' && category === MediaCategory.Movies) {
+      if (parsed.type === 'movie') {
         return this.#client?.fetchMovieMetadata(parsed.title, parsed.year, lang)
       }
 
-      if (parsed.type === 'tv' && category === MediaCategory.TVShows) {
+      if (parsed.type === 'tv') {
         return this.#client?.fetchTvMetadata(
           parsed.seriesTitle,
           parsed.season,

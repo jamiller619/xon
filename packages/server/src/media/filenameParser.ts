@@ -4,7 +4,7 @@ import type { Metadata } from '@xon/shared'
 
 export function parseFilename(
   filePath: string,
-  isTvShow: boolean,
+  isTvShow?: boolean,
 ): {
   title: string
   metadata: Metadata

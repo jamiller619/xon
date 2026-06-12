@@ -1,32 +1,37 @@
-import type { MediaItem } from '@xon/shared'
+import type { Library, MediaItem } from '@xon/shared'
 import clsx from 'clsx'
 import type { HTMLAttributes } from 'react'
 import ReactGridLayout, { useContainerWidth } from 'react-grid-layout'
 import { Link } from 'react-router-dom'
 import MediaCard, {} from '~/components/media-card/MediaCard'
 import PluginSlot from '~/components/PluginSlot'
-import useMedia from '~/hooks/useMedia'
 import styles from './Dashboard.module.css'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 import { useQuery } from '@tanstack/react-query'
-import useLibraries from '~/hooks/useLibraries'
+import { Flex, XScroller } from '@xon/ui'
+import useQueryAPIHelper from '~/hooks/useQueryAPIHelper'
 import System from './cards/System'
+
+const layout = [
+  { i: 'featured', x: 0, y: 0, w: 12, h: 1 },
+  { i: 'my-media', x: 0, y: 1, w: 6, h: 1 },
+  { i: 'continue-watching', x: 6, y: 1, w: 6, h: 1 },
+  { i: 'recently-added', x: 0, y: 2, w: 8, h: 1 },
+  { i: 'system', x: 8, y: 3, w: 4, h: 1 },
+]
 
 export default function Dashboard() {
   const { width, containerRef, mounted } = useContainerWidth()
-  const { libraries } = useLibraries()
   const {
     isPending,
     error,
     data: recentMedia,
-  } = useQuery<MediaItem[]>({
-    queryKey: ['recent-media'],
-    queryFn: () =>
-      fetch(`/api/media?sortBy=createdAt&order=desc&page=1&limit=10`).then(
-        (r) => r.json(),
-      ),
-  })
+  } = useQuery<MediaItem[]>(useQueryAPIHelper('recentMedia'))
+
+  const { data: libraries } = useQuery<Library[]>(
+    useQueryAPIHelper('libraries'),
+  )
 
   if (isPending) {
     return (
@@ -35,14 +40,6 @@ export default function Dashboard() {
       </div>
     )
   }
-
-  const layout = [
-    { i: 'featured', x: 0, y: 0, w: 12, h: 1 },
-    { i: 'my-media', x: 0, y: 1, w: 6, h: 1 },
-    { i: 'continue-watching', x: 6, y: 1, w: 6, h: 1 },
-    { i: 'recently-added', x: 0, y: 2, w: 8, h: 1 },
-    { i: 'system', x: 8, y: 3, w: 4, h: 1 },
-  ]
 
   return (
     <div ref={containerRef}>
@@ -60,7 +57,7 @@ export default function Dashboard() {
             media={recentMedia}
           />
           <DashboardSection key="my-media" title="My Media">
-            {libraries.map((library) => (
+            {libraries?.map((library) => (
               <Link
                 key={library.id}
                 to={`/library/${library.id}`}
@@ -74,7 +71,7 @@ export default function Dashboard() {
                 />
                 <span className={styles.libraryThumbnailTitle}>
                   <h1>{library.name}</h1>
-                  <small>{library.mediaCategories[0]}</small>
+                  <small>{library.types[0]}</small>
                 </span>
               </Link>
             ))}
@@ -103,10 +100,20 @@ function DashboardSection({
   ...props
 }: DashboardSectionProps) {
   return (
-    <section className={clsx(styles.section, className)} {...props}>
-      <h2>{title}</h2>
-      <div className={styles.content}>{children}</div>
-    </section>
+    <XScroller>
+      <section className={clsx(styles.section, className)} {...props}>
+        <Flex justify="between">
+          <h2>{title}</h2>
+          <Flex gap="2">
+            <XScroller.ButtonPrev />
+            <XScroller.ButtonNext />
+          </Flex>
+        </Flex>
+        <XScroller.Viewport className={styles.content}>
+          {children}
+        </XScroller.Viewport>
+      </section>
+    </XScroller>
   )
 }
 

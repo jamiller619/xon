@@ -1,5 +1,5 @@
 import { availableParallelism } from 'node:os'
-import type { MediaCategory, MediaItem, Metadata } from '@xon/shared'
+import type { MediaItem, MediaType, Metadata } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import pLimit from 'p-limit'
 import type { Logger } from '../logger.ts'
@@ -27,13 +27,10 @@ export type PipelineStage = {
 }
 
 export type MediaJob = {
-  // The ID of the job, NOT the media item!
-  // id: string
+  id: string
   type: 'new' | 'changed'
   file: FileEntry
-
-  // mediaItemId?: string
-  mediaCategories: MediaCategory[]
+  mediaTypes: MediaType.MainType[]
 
   // mutable state through pipeline
   data: MediaJobItem & {

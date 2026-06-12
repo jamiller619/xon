@@ -1,17 +1,24 @@
-import type { HTMLAttributes, PropsWithChildren } from 'react'
 import clsx from 'clsx'
+import type { ComponentPropsWithoutRef, ElementType } from 'react'
 import styles from './Surface.module.css'
 
-export type SurfaceProps = PropsWithChildren<HTMLAttributes<HTMLDivElement>>
+export type SurfaceProps<T extends ElementType = 'div'> = {
+  as?: T
+  br?: 'sm' | 'md' | 'lg' | 'none'
+} & Omit<ComponentPropsWithoutRef<T>, 'as'>
 
-export default function Surface({
-  children,
+export default function Surface<T extends ElementType = 'div'>({
+  as,
   className,
+  br,
   ...props
-}: SurfaceProps) {
+}: SurfaceProps<T>) {
+  const Component = as ?? 'div'
+
   return (
-    <div className={clsx(styles.surface, className)} {...props}>
-      {children}
-    </div>
+    <Component
+      className={clsx(styles.surface, className, br ? styles[br] : styles.md)}
+      {...props}
+    />
   )
 }
