@@ -1,6 +1,7 @@
 export { default as Badge } from './components/badge/Badge.jsx'
 export * from './components/button/Button.jsx'
 export { default as Button } from './components/button/Button.jsx'
+export { default as CheckboxGroup } from './components/CheckboxGroup.jsx'
 export { default as Collapsible } from './components/Collapsible.jsx'
 export { default as Dialog } from './components/dialog/Dialog.jsx'
 export { default as Field } from './components/Field.js'

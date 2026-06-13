@@ -11,7 +11,6 @@ export default function RequireSetup({ children }: { children: ReactNode }) {
   }>(useQueryAPIHelper('setupStatus'))
 
   useEffect(() => {
-    console.log(data?.users, data?.libraries)
     if (!data?.users || !data.libraries) {
       navigate('/setup', { replace: true })
     }

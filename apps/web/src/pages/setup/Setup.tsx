@@ -2,7 +2,8 @@ import { useQuery } from '@tanstack/react-query'
 import { Flex, Surface } from '@xon/ui'
 import clsx from 'clsx'
 import { css } from 'inline-css-modules'
-import { useEffect } from 'react'
+import { useCallback, useEffect, useState } from 'react'
+import { flushSync } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
 import Logo from '~/components/logo/Logo'
 import useQueryAPIHelper from '~/hooks/useQueryAPIHelper'
@@ -111,8 +112,22 @@ export default function Setup() {
     libraries: boolean
     users: boolean
   }>(useQueryAPIHelper('setupStatus'))
+  const [step, setStep] = useState(data?.users ? 2 : 1)
 
-  const step = data?.users ? 2 : 1
+  // Wrap the step change in a view transition so the setup-card and
+  // step-indicator animate between steps. A plain setState won't trigger
+  // one — the browser only captures a transition around a startViewTransition
+  // callback, and flushSync forces React to apply the update synchronously
+  // inside it.
+  const goToStep = useCallback((next: number) => {
+    if (!document.startViewTransition) {
+      setStep(next)
+      return
+    }
+    document.startViewTransition(() => {
+      flushSync(() => setStep(next))
+    })
+  }, [])
 
   // If we have both libraries and users, setup is complete
   // and we can redirect to the main page
@@ -121,6 +136,15 @@ export default function Setup() {
       navigate('/', { replace: true })
     }
   }, [data, navigate])
+
+  // The step state should be set to 2 if we have users but,
+  // in the event that doesn't happen, this effect will
+  // correct it
+  useEffect(() => {
+    if (data?.users) {
+      goToStep(2)
+    }
+  }, [data?.users, goToStep])
 
   return (
     <Flex
@@ -141,7 +165,12 @@ export default function Setup() {
             <Steps step={step} />
           </header>
           <Surface className={styles.card}>
-            {step === 1 && <CreateUser styles={styles} />}
+            {step === 1 && (
+              <CreateUser
+                styles={styles}
+                navigateNextStep={() => goToStep(2)}
+              />
+            )}
             {step === 2 && <CreateLibrary />}
           </Surface>
         </>
@@ -150,15 +179,13 @@ export default function Setup() {
   )
 }
 
-const STEPS = ['1. Account', '2. Library']
+const STEPS = ['Account', 'Library']
 
 function Steps({ step }: { step: number }) {
   return (
     <div className={styles.steps}>
       {STEPS.map((s, index) => (
-        <a
-          // biome-ignore lint/a11y/useValidAnchor: <explanation>
-          href={'#'}
+        <div
           key={s}
           className={clsx(
             styles.stepDot,
@@ -166,8 +193,8 @@ function Steps({ step }: { step: number }) {
             step > index + 1 && styles.done,
           )}
         >
-          {s}
-        </a>
+          {index + 1}.&nbsp;{s}
+        </div>
       ))}
     </div>
   )

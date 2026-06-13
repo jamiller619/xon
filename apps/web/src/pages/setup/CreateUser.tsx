@@ -1,27 +1,20 @@
 import { Button, Field, Flex, HorizontalRule, Textbox } from '@xon/ui'
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+// import { useNavigate } from 'react-router-dom'
 import { AppleIcon, GoogleIcon } from '~/components/icons/brands'
 import authClient from '~/lib/authClient'
 
 export default function CreateUser({
   styles,
+  navigateNextStep,
 }: {
   styles: Record<string, string>
+  navigateNextStep: () => void
 }) {
-  const navigate = useNavigate()
   const [name, setName] = useState<string>('')
   const [email, setEmail] = useState<string>('')
   const [password, setPassword] = useState<string>('')
   const [error, setError] = useState<string | null>(null)
-
-  const handleTransition = () => {
-    setError(null)
-    navigate('/setup', {
-      replace: true,
-      viewTransition: true,
-    })
-  }
 
   const handleSignUp = async () => {
     await authClient.signUp.email(
@@ -31,7 +24,7 @@ export default function CreateUser({
         name: email.split('@').at(0) ?? 'User',
       },
       {
-        onSuccess: handleTransition,
+        onSuccess: navigateNextStep,
         onError(e) {
           setError(
             `Failed to sign up: ${e.error} ${JSON.stringify(e.request, null, 2)}, ${JSON.stringify(e.response, null, 2)}`,
@@ -47,7 +40,7 @@ export default function CreateUser({
         provider: 'google',
       },
       {
-        onSuccess: handleTransition,
+        onSuccess: navigateNextStep,
         onError(e) {
           setError(
             `Failed to sign in with Google: ${e.error} ${JSON.stringify(e.request, null, 2)}, ${JSON.stringify(e.response, null, 2)}`,
@@ -60,7 +53,7 @@ export default function CreateUser({
   const handleSkip = async () => {
     await authClient.signIn.anonymous({
       fetchOptions: {
-        onSuccess: handleTransition,
+        onSuccess: navigateNextStep,
         onError(e) {
           setError(
             `Failed to sign in anonymously: ${e.error} ${JSON.stringify(e.request, null, 2)}, ${JSON.stringify(e.response, null, 2)}`,
@@ -83,7 +76,7 @@ export default function CreateUser({
         </p>
         {error && <p className={styles.error}>{error}</p>}
       </div>
-      <form className={styles.form} onSubmit={handleSignUp}>
+      <form className={styles.form} action={handleSignUp}>
         <Field
           label="Name"
           description="Can be anything, or nothing at all. It's not required."
@@ -93,6 +86,7 @@ export default function CreateUser({
             onChange={(e) => setName(e.target.value)}
             value={name}
             block
+            autoComplete="username"
           />
         </Field>
         <Field
@@ -106,6 +100,7 @@ export default function CreateUser({
             value={email}
             block
             required
+            autoComplete="home email"
           />
         </Field>
         <Field

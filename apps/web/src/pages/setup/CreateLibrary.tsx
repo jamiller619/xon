@@ -1,16 +1,8 @@
 import { useMutation } from '@tanstack/react-query'
-import { MediaType } from '@xon/shared'
-import {
-  Button,
-  Collapsible,
-  Dialog,
-  Field,
-  Flex,
-  RadioGroup,
-  Textbox,
-} from '@xon/ui'
+import { LibraryType } from '@xon/shared'
+import { Button, CheckboxGroup, Dialog, Field, Flex, Textbox } from '@xon/ui'
 import { css } from 'inline-css-modules'
-import { type SubmitEvent, useEffect, useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MediaFolderBrowser from '~/components/create-library-form/MediaFolderBrowser'
 import { useMutationHelper } from '~/hooks/useQueryAPIHelper'
@@ -20,27 +12,27 @@ const LIBRARY_TYPES = [
   {
     label: 'Movies',
     icon: '🍿',
-    value: 'movies',
+    value: LibraryType.Movies,
   },
   {
     label: 'TV Shows',
     icon: '📺',
-    value: 'series',
+    value: LibraryType.TVShows,
   },
   {
     label: 'Music',
     icon: '🎶',
-    value: 'music',
+    value: LibraryType.Music,
   },
   {
     label: 'Photos',
     icon: '🖼️',
-    value: 'photos',
+    value: LibraryType.Photos,
   },
   {
     label: 'Home Videos',
     icon: '📹',
-    value: 'home_videos',
+    value: LibraryType.HomeVideos,
   },
 ]
 
@@ -66,11 +58,11 @@ export default function CreateLibrary() {
   const [name, setName] = useState<string>('')
   const [description, setDescription] = useState<string>('')
   const [sourcePath, setSourcePath] = useState('')
-  const [mediaType, setMediaType] = useState<string>('')
+  const [mediaTypes, setMediaTypes] = useState<string[]>([])
   const mutation = useMutation(useMutationHelper('libraries'))
 
   const canFormSubmit =
-    name.trim() !== '' && mediaType !== '' && sourcePath.trim() !== ''
+    name.trim() !== '' && mediaTypes.length > 0 && sourcePath.trim() !== ''
 
   useEffect(() => {
     if (mutation.isSuccess) {
@@ -78,12 +70,14 @@ export default function CreateLibrary() {
     }
   }, [mutation, navigate])
 
-  async function handleSubmit(e: SubmitEvent) {
-    e.preventDefault()
-
-    mutation.mutate({
+  // A React 19 form action: useFormStatus tracks the returned promise, so the
+  // submit button drives its own spinner while this is in flight.
+  async function handleSubmit() {
+    await mutation.mutateAsync({
       name,
-      mediaTypes: [mediaType],
+      description,
+      mediaTypes,
+      dataSources: [{ type: 'local', path: sourcePath }],
     })
   }
 
@@ -93,7 +87,7 @@ export default function CreateLibrary() {
       align="start"
       justify="center"
       gap="6"
-      onSubmit={handleSubmit}
+      action={handleSubmit}
     >
       <div className={styles.column}>
         <h1 className={setupStyles.heading}>Create your first Library.</h1>
@@ -125,10 +119,10 @@ export default function CreateLibrary() {
           />
         </Field>
         <Field label="Media Type(s)">
-          <RadioGroup
+          <CheckboxGroup
             items={LIBRARY_TYPES}
-            value={mediaType}
-            onChange={setMediaType}
+            value={mediaTypes}
+            onChange={setMediaTypes}
           />
         </Field>
         <Field label="Location">
