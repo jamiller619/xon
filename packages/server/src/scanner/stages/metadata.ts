@@ -6,7 +6,6 @@ import { extractMusicTags } from '../../media/musictags.js'
 import { getPluginsByCategory } from '../../plugins/pluginManager.js'
 import type { FileEntry } from '../fileEntry.js'
 import type { PipelineStage } from '../pipeline.js'
-import { isAudio, isImage, isVideo } from './shared.ts'
 
 export default {
   name: 'metadata',
@@ -21,15 +20,6 @@ export default {
         return
       }
     }
-
-    // const fileCategory = getCategoryForExtension(job.file.ext)
-
-    // if (!fileCategory) {
-    //   console.log(
-    //     `No matching media category for ${job.file.path}; skipping metadata`,
-    //   )
-    //   return
-    // }
 
     console.log(`Parsing metadata for ${job.file.path}`)
 

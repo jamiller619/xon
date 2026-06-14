@@ -1,17 +1,17 @@
 // import { generateThumbnails } from '../../media/thumbnails.ts'
-import type { MediaJob, MediaJobItem, PipelineStage } from '../pipeline.ts'
+import type { PipelineStage } from '../pipeline.ts'
 
 export default {
   name: 'thumbnails',
   retry: 1,
-  async run(_, job): Promise<MediaJobItem | undefined> {
+  async run(_, job) {
     if (job.type === 'changed') return
     if (!job.data.id) {
       job.errors.push(
         new Error('Missing required media item id for thumbnails job'),
       )
 
-      return
+      return undefined
     }
 
     // const imageMimeTypes = getMimeTypesForCategory(MediaCategory.Pictures)

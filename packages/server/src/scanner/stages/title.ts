@@ -1,10 +1,10 @@
 import { parseFilename } from '../../media/filenameParser.ts'
-import type { MediaJobItem, PipelineStage } from '../pipeline.js'
+import type { PipelineStage } from '../pipeline.js'
 
 export default {
   name: 'title',
   retry: 1,
-  run: async (_, job): Promise<MediaJobItem | undefined> => {
+  run: async (_, job) => {
     if (job.data.title) return
 
     const { title, metadata } = parseFilename(job.file.path)

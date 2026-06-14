@@ -11,10 +11,12 @@ export default function RequireSetup({ children }: { children: ReactNode }) {
   }>(useQueryAPIHelper('setupStatus'))
 
   useEffect(() => {
+    if (isPending || error) return
+
     if (!data?.users || !data.libraries) {
       navigate('/setup', { replace: true })
     }
-  }, [data, navigate])
+  }, [data, navigate, isPending, error])
 
   if (isPending) return <p>Loading...</p>
   if (error) return <p>Error: {error.message}</p>

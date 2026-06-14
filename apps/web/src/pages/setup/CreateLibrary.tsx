@@ -58,11 +58,11 @@ export default function CreateLibrary() {
   const [name, setName] = useState<string>('')
   const [description, setDescription] = useState<string>('')
   const [sourcePath, setSourcePath] = useState('')
-  const [mediaTypes, setMediaTypes] = useState<string[]>([])
+  const [libraryTypes, setLibraryTypes] = useState<string[]>([])
   const mutation = useMutation(useMutationHelper('libraries'))
 
   const canFormSubmit =
-    name.trim() !== '' && mediaTypes.length > 0 && sourcePath.trim() !== ''
+    name.trim() !== '' && libraryTypes.length > 0 && sourcePath.trim() !== ''
 
   useEffect(() => {
     if (mutation.isSuccess) {
@@ -76,7 +76,7 @@ export default function CreateLibrary() {
     await mutation.mutateAsync({
       name,
       description,
-      mediaTypes,
+      types: libraryTypes,
       dataSources: [{ type: 'local', path: sourcePath }],
     })
   }
@@ -121,8 +121,8 @@ export default function CreateLibrary() {
         <Field label="Media Type(s)">
           <CheckboxGroup
             items={LIBRARY_TYPES}
-            value={mediaTypes}
-            onChange={setMediaTypes}
+            value={libraryTypes}
+            onChange={setLibraryTypes}
           />
         </Field>
         <Field label="Location">

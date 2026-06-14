@@ -23,6 +23,7 @@ export class LocalDiscoverer implements MediaDiscoverer {
 
     const filePaths = await new fdir()
       .withFullPaths()
+      .exclude((dirName) => dirName.startsWith('.'))
       .filter(
         (fp, isDir) => !isDir && extSet.has(path.extname(fp).toLowerCase()),
       )

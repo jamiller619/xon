@@ -1,13 +1,9 @@
 import { EventEmitter } from 'node:events'
+import type { ScanProgress } from './scanner/orchestrator.ts'
 
 export type ScanProgressEvent = {
   type: 'scan:progress'
-  payload: {
-    libraryId: string
-    fileCount: number
-    currentFile: string | null
-    percentComplete: number
-  }
+  payload: { libraryId: string } & ScanProgress
 }
 
 export type ScanCompleteEvent = {
@@ -111,6 +107,12 @@ export type BackupVerifyErrorEvent = {
   payload: { jobId: string; error: string }
 }
 
+export type LogLineEvent = {
+  type: 'log:line'
+  /** A single serialized log entry (parsed JSONL object from the logger). */
+  payload: Record<string, unknown>
+}
+
 export type XonEvent =
   | ScanProgressEvent
   | ScanCompleteEvent
@@ -129,6 +131,7 @@ export type XonEvent =
   | BackupVerifyProgressEvent
   | BackupVerifyCompleteEvent
   | BackupVerifyErrorEvent
+  | LogLineEvent
 
 export const eventBus = new EventEmitter()
 

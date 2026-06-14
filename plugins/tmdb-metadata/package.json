@@ -22,7 +22,7 @@
   "xon": {
     "displayName": "TMDb",
     "category": "MetadataSource",
-    "mediaCategories": [
+    "mediaTypes": [
       "Movies",
       "TV Shows"
     ],

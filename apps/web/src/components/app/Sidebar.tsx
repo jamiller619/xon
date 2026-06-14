@@ -7,12 +7,19 @@ import {
   TextBulletList20Filled as PlaylistIcon,
   // CircleSmall20Filled as LibraryIcon,
   PlugDisconnected20Filled as PluginsIcon,
+  WindowConsole20Filled as ServerOutputIcon,
   Settings20Filled as SettingsIcon,
   Tv20Filled as TVIcon,
   PersonCircle20Filled as UsersIcon,
 } from '@fluentui/react-icons'
 import { useQuery } from '@tanstack/react-query'
-import { type Group, GroupType, type Library, MediaType } from '@xon/shared'
+import {
+  type Group,
+  GroupType,
+  type Library,
+  LibraryType,
+  MediaType,
+} from '@xon/shared'
 import { Flex, Surface } from '@xon/ui'
 import clsx from 'clsx'
 import { NavLink } from 'react-router-dom'
@@ -68,6 +75,10 @@ export default function Sidebar({ className, isOpen }: SidebarProps) {
           <UsersIcon />
           <span>Users</span>
         </NavLink>
+        <NavLink to="/admin/logs" className={navClass}>
+          <ServerOutputIcon />
+          <span>Server Output</span>
+        </NavLink>
         <NavLink to="/settings" className={navClass}>
           <SettingsIcon />
           <span>Settings</span>
@@ -84,7 +95,7 @@ export default function Sidebar({ className, isOpen }: SidebarProps) {
               to={`/libraries/${lib.id}`}
               className={navClass}
             >
-              <LibraryIcon type={lib.mediaTypes.at(0)} />
+              <LibraryIcon type={lib.types.at(0)} />
               <span>{lib.name}</span>
             </NavLink>
           ))}
@@ -127,13 +138,14 @@ function CollectionIcon({ type }: { type?: GroupType | undefined }) {
   return <PlaylistIcon />
 }
 
-function LibraryIcon({ type }: { type?: MediaType.MainType | undefined }) {
+function LibraryIcon({ type }: { type?: LibraryType | undefined }) {
   switch (type) {
-    case MediaType.MainType.Video:
-      //   return <MoviesIcon />
-      // case MediaCategory.TVShows:
+    case LibraryType.Movies:
+      return <MoviesIcon />
+    case LibraryType.TVShows:
+    case LibraryType.HomeVideos:
       return <TVIcon />
-    case MediaType.MainType.Audio:
+    case LibraryType.Music:
       return <MusicIcon />
   }
 }

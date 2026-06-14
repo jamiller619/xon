@@ -1,5 +1,4 @@
-import { type Metadata, type MPARating, MPARatings } from '@xon/shared'
-import { sql } from 'drizzle-orm'
+import type { Metadata } from '@xon/shared'
 import {
   index,
   integer,
@@ -8,20 +7,6 @@ import {
   uniqueIndex,
 } from 'drizzle-orm/sqlite-core'
 import { keys, timestamps } from './shared.ts'
-
-/**
- * Returns an array of allowed content ratings for the given maxContentRating,
- * or null if there is no restriction (maxContentRating === "none").
- */
-// export function getAllowedRatings(
-//   maxContentRating: MPARating | 'none' | 'unrated',
-// ): MPARating[] | null {
-//   if (maxContentRating === 'none') return null
-//   const idx = MPARatings.indexOf(maxContentRating as MPARating)
-//   if (idx === -1) return null
-
-//   return MPARatings.slice(0, idx + 1)
-// }
 
 export const mediaItems = sqliteTable(
   'media_items',
@@ -53,20 +38,5 @@ export const mediaItems = sqliteTable(
   ],
 )
 
-// export const readingPositions = sqliteTable('reading_positions', {
-//   ...keys,
-//   mediaItemId: text('media_item_id')
-//     .notNull()
-//     .unique()
-//     .references(() => mediaItems.id, { onDelete: 'cascade' }),
-//   cfi: text('cfi').notNull(),
-//   chapterTitle: text('chapter_title'),
-//   updatedAt: integer('updated_at', { mode: 'timestamp' })
-//     .notNull()
-//     .default(sql`(unixepoch())`),
-// })
-
 export type MediaItem = typeof mediaItems.$inferSelect
 export type NewMediaItem = typeof mediaItems.$inferInsert
-// export type ReadingPosition = typeof readingPositions.$inferSelect
-// export type NewReadingPosition = typeof readingPositions.$inferInsert

@@ -10,10 +10,15 @@
     "description": "Fetches music metadata from MusicBrainz and cover art from the Cover Art Archive",
     "author": "Xon",
     "category": "MetadataSource",
-    "mediaCategories": ["Music"],
+    "mediaTypes": [
+      "Music"
+    ],
     "main": "dist/index.js",
     "permissions": {
-      "network": ["musicbrainz.org", "coverartarchive.org"]
+      "network": [
+        "musicbrainz.org",
+        "coverartarchive.org"
+      ]
     }
   },
   "scripts": {

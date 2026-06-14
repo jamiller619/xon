@@ -1,5 +1,5 @@
 import { eq } from 'drizzle-orm'
-import { mediaItems } from '../../db/schema.ts'
+import { libraryMediaItems, mediaItems } from '../../db/schema.ts'
 import type {
   MediaJob,
   MediaJobItem,
@@ -58,16 +58,14 @@ async function saveNewMediaItem(
   ctx: PipelineContext,
   job: MediaJob,
 ): Promise<MediaJobItem | undefined> {
-  if (!ctx.libraryId || job.data.drmProtected == null || !job.data.title) {
-    ctx.logger.error('Missing required fields: ', ctx, job.data)
-    job.errors.push(new Error('Persist stage: Missing required fields'))
+  await ctx.db.transaction(async (tx) => {
+    if (job.data.drmProtected == null || !job.data.title) {
+      ctx.logger.error('Missing required fields: ', ctx, job.data)
 
-    return
-  }
+      return
+    }
 
-  const [result] = await ctx.db
-    .insert(mediaItems)
-    .values({
+    await tx.insert(mediaItems).values({
       id: job.data.id,
       filePath: job.file.path,
       fileSize: job.file.size,
@@ -78,17 +76,14 @@ async function saveNewMediaItem(
       description: job.data.description,
       scannedAt: new Date(),
     })
-    .returning({
-      id: mediaItems.id,
+
+    await tx.insert(libraryMediaItems).values({
+      libraryId: ctx.libraryId,
+      mediaItemId: job.data.id,
     })
-
-  if (!result) {
-    job.errors.push(new Error('Persist stage: Failed to insert media item'))
-
-    return
-  }
+  })
 
   return {
-    id: result.id,
+    id: job.data.id,
   }
 }

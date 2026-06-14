@@ -1,3 +1,4 @@
+import { basename } from 'node:path'
 import { DataSourceType, LIBRARY_TYPE_DEFINITIONS } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { createLogger } from '../logger.ts'
@@ -8,17 +9,29 @@ import type {
   MediaDiscoverer,
 } from './discoverers/MediaDiscoverer.ts'
 import { PluginDiscoverer } from './discoverers/PluginDiscoverer.ts'
-import { type PipelineContext, runPipeline } from './pipeline.ts'
+import {
+  type PipelineContext,
+  type PipelineStage,
+  runPipeline,
+} from './pipeline.ts'
 import { toLocalPath } from './scanner.ts'
 import * as stage from './stages.ts'
 
 const logger = createLogger('orchestrator')
 
+export type ScanPhase = 'discovering' | 'processing' | 'done'
+
 export type ScanProgress = {
   dataSourceId: string
+  phase: ScanPhase
+  /** Total files found on disk by the discoverer for this data source. */
+  discoveredFiles: number
+  /** Files that need processing (new or changed). */
   totalFiles: number
   processedFiles: number
   currentFile: string | null
+  /** Human-readable status line for the UI banner. */
+  message: string
 }
 
 export type ScanSummary = {
@@ -29,7 +42,7 @@ export type ScanSummary = {
   totalDiscovered: number
 }
 
-const pipelineStages = [
+const pipelineStages: PipelineStage[] = [
   stage.drm,
   stage.metadata,
   stage.title,
@@ -94,6 +107,16 @@ export async function scanLibrary(
         libraryType,
       }
 
+      onProgress?.({
+        dataSourceId: dataSource.path,
+        phase: 'discovering',
+        discoveredFiles: 0,
+        totalFiles: 0,
+        processedFiles: 0,
+        currentFile: null,
+        message: `Discovering files in ${sourceLabel}`,
+      })
+
       const discovery = await discoverer.discover(discoveryCtx)
 
       if (!discovery) continue
@@ -101,10 +124,21 @@ export async function scanLibrary(
       totalDiscovered += discovery.totalDiscovered
       totalRemoved += discovery.removedCount
 
-      if (discovery.jobs.length === 0) {
+      const totalFiles = discovery.jobs.length
+
+      if (totalFiles === 0) {
         logger.log(
           `No new or changed files found in data source: ${sourceLabel}`,
         )
+        onProgress?.({
+          dataSourceId: dataSource.path,
+          phase: 'processing',
+          discoveredFiles: discovery.totalDiscovered,
+          totalFiles: 0,
+          processedFiles: 0,
+          currentFile: null,
+          message: `Found ${discovery.totalDiscovered} files, none to process in ${sourceLabel}`,
+        })
         discovery.reconcile()
         continue
       }
@@ -114,13 +148,14 @@ export async function scanLibrary(
         else totalUpdated += 1
       }
 
-      const totalFiles = discovery.jobs.length
-
       onProgress?.({
         dataSourceId: dataSource.path,
+        phase: 'processing',
+        discoveredFiles: discovery.totalDiscovered,
         totalFiles,
         processedFiles: 0,
         currentFile: null,
+        message: `Found ${discovery.totalDiscovered} files, ${totalFiles} to process in ${sourceLabel}`,
       })
 
       const ctx: PipelineContext = { db, libraryId, logger }
@@ -129,9 +164,12 @@ export async function scanLibrary(
         ctx.onJobComplete = (processed, currentFile) => {
           onProgress({
             dataSourceId: dataSource.path,
+            phase: 'processing',
+            discoveredFiles: discovery.totalDiscovered,
             totalFiles,
             processedFiles: processed,
             currentFile,
+            message: `Processing ${processed}/${totalFiles}: ${basename(currentFile)}`,
           })
         }
       }

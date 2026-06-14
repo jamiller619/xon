@@ -15,13 +15,18 @@ export type PipelineContext = {
 export type MediaJobItem = Partial<
   Exclude<
     MediaItem,
-    'createdAt' | 'updatedAt' | 'filePath' | 'fileSize' | 'scannedAt'
+    'createdAt' | 'updatedAt' | 'filePath' | 'fileSize' | 'scannedAt' | 'id'
   >
->
+> & {
+  id: string
+}
 
 export type PipelineStage = {
   name: string
-  run(ctx: PipelineContext, job: MediaJob): Promise<MediaJobItem | undefined>
+  run(
+    ctx: PipelineContext,
+    job: MediaJob,
+  ): Promise<Partial<MediaJobItem> | undefined>
   retry?: number
   timeoutMs?: number
 }

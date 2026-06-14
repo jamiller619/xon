@@ -1,16 +1,8 @@
-import type { DataSource } from '@xon/shared'
+import type { DataSource, LibraryType } from '@xon/shared'
 import { primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import { mediaItems } from './media.ts'
 import { keys, timestamps } from './shared.ts'
 import { users } from './users.ts'
-
-export enum LibraryType {
-  Movies = 'movies',
-  TVShows = 'series',
-  Music = 'music',
-  Photos = 'photos',
-  HomeVideos = 'home_videos',
-}
 
 export const libraries = sqliteTable('libraries', {
   ...keys,

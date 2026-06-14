@@ -1,5 +1,3 @@
-import type { MediaType } from './mediaTypes.ts'
-
 export type StatsPayload = {
   cpu: number
   memory: {

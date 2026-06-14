@@ -1,5 +1,6 @@
 import { type ChildProcess, fork } from 'node:child_process'
 import { fileURLToPath } from 'node:url'
+import { emitEvent } from '../events.ts'
 import { acceptChildLogLine, createLogger } from '../logger.ts'
 import type { ChildToParent, ParentToChild, ScanJobId } from './ipc.ts'
 import type { ScanSummary } from './orchestrator.ts'
@@ -52,6 +53,10 @@ export async function startScannerChild(): Promise<ScannerHandle> {
       case 'progress': {
         const state = scanRegistry.get(msg.libraryId)
         if (state) state.progress = msg.progress
+        emitEvent({
+          type: 'scan:progress',
+          payload: { libraryId: msg.libraryId, ...msg.progress },
+        })
         break
       }
       case 'complete': {
@@ -108,9 +113,7 @@ export async function startScannerChild(): Promise<ScannerHandle> {
         logger.warn(
           `Scanner child exited unexpectedly (code=${code}, signal=${signal})`,
         )
-        failPendingJobs(
-          `Scanner child exited (code=${code}, signal=${signal})`,
-        )
+        failPendingJobs(`Scanner child exited (code=${code}, signal=${signal})`)
 
         const now = Date.now()
         while (

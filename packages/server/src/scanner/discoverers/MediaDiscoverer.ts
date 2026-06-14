@@ -28,27 +28,28 @@ export async function createMediaJob(
   file: FileEntry,
   isNew: boolean,
 ): Promise<MediaJob> {
-  const result: MediaJob = {
+  const job: MediaJob = {
     id: crypto.randomUUID(),
     type: isNew ? 'new' : 'changed',
     file,
     errors: [],
     mediaTypes: [], // This will be filled in later based on the file extension
     data: {
+      id: crypto.randomUUID(),
       metadata: {},
     },
   }
 
   if (isNew) {
-    return result
+    return job
   }
 
   const data = (await mediaService.getMediaByPath(db, file.path)) ?? {}
 
   return {
-    ...result,
+    ...job,
     data: {
-      ...result.data,
+      ...job.data,
       ...data,
     },
   }

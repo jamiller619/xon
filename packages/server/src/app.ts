@@ -22,6 +22,7 @@ import {
 // import { makeAdminBackupVerifyRouter } from './routes/adminBackupVerify.ts'
 import { makeAdminHealthRouter } from './routes/adminHealth.ts'
 import { makeAdminLibraryAccessRouter } from './routes/adminLibraryAccess.ts'
+import { makeAdminLogsRouter } from './routes/adminLogs.ts'
 import { makeAdminPluginsRouter } from './routes/adminPlugins.ts'
 import { makeAdminServerSettingsRouter } from './routes/adminServerSettings.ts'
 import { makeAdminSettingsRouter } from './routes/adminSettings.ts'
@@ -138,6 +139,7 @@ export function createApp(
     app.route('/admin/server-settings', makeAdminServerSettingsRouter())
     app.route('/admin/settings', makeAdminSettingsRouter())
     app.route('/admin/health', makeAdminHealthRouter(db))
+    app.route('/admin/logs', makeAdminLogsRouter())
   }
 
   // Admin: plugin management

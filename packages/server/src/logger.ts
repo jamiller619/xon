@@ -2,6 +2,7 @@ import { mkdir } from 'node:fs/promises'
 import { hostname } from 'node:os'
 import { createStream, type RotatingFileStream } from 'rotating-file-stream'
 import config from './config.ts'
+import { emitEvent } from './events.ts'
 
 export type LogLevel = 'debug' | 'info' | 'warn' | 'error'
 
@@ -66,9 +67,32 @@ function buildEntry(
   return `${JSON.stringify(entry)}\n`
 }
 
+/**
+ * Forward a serialized log line to the event bus (and on to connected admin
+ * WebSocket clients). Only runs in the parent (`file`) process, which owns the
+ * single source of truth for all console + child output. The reentrancy guard
+ * prevents an infinite loop if any event listener were to log while handling a
+ * `log:line` event.
+ */
+let emittingLogLine = false
+function emitLogLine(line: string): void {
+  if (emittingLogLine) return
+  emittingLogLine = true
+  try {
+    const entry = JSON.parse(line) as Record<string, unknown>
+    emitEvent({ type: 'log:line', payload: entry })
+  } catch {
+    // Non-JSON line — skip streaming; it is still written to disk.
+  } finally {
+    emittingLogLine = false
+  }
+}
+
 function writeLine(line: string): void {
-  if (mode.kind === 'file') mode.stream?.write(line)
-  else mode.send(line)
+  if (mode.kind === 'file') {
+    mode.stream?.write(line)
+    emitLogLine(line)
+  } else mode.send(line)
 }
 
 function shouldLog(level: LogLevel): boolean {
@@ -198,7 +222,10 @@ export function initChildLogger(): void {
  * rotating stream. The child already filtered and formatted; we just append.
  */
 export function acceptChildLogLine(line: string): void {
-  if (mode.kind === 'file') mode.stream?.write(line)
+  if (mode.kind === 'file') {
+    mode.stream?.write(line)
+    emitLogLine(line)
+  }
 }
 
 /**
