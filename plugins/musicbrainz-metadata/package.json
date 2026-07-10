@@ -10,8 +10,8 @@
     "description": "Fetches music metadata from MusicBrainz and cover art from the Cover Art Archive",
     "author": "Xon",
     "category": "MetadataSource",
-    "mediaTypes": [
-      "Music"
+    "libraryTypes": [
+      "music"
     ],
     "main": "dist/index.js",
     "permissions": {

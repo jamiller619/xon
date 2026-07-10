@@ -1,6 +1,14 @@
 import { useMutation } from '@tanstack/react-query'
 import { LibraryType } from '@xon/shared'
-import { Button, CheckboxGroup, Dialog, Field, Flex, Textbox } from '@xon/ui'
+import {
+  Button,
+  CheckboxGroup,
+  Dialog,
+  Field,
+  Flex,
+  RadioGroup,
+  Textbox,
+} from '@xon/ui'
 import { css } from 'inline-css-modules'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
@@ -58,11 +66,13 @@ export default function CreateLibrary() {
   const [name, setName] = useState<string>('')
   const [description, setDescription] = useState<string>('')
   const [sourcePath, setSourcePath] = useState('')
-  const [libraryTypes, setLibraryTypes] = useState<string[]>([])
+  const [libraryType, setLibraryType] = useState<string | undefined>()
   const mutation = useMutation(useMutationHelper('libraries'))
 
   const canFormSubmit =
-    name.trim() !== '' && libraryTypes.length > 0 && sourcePath.trim() !== ''
+    name.trim() !== '' &&
+    (libraryType?.length || 0) > 0 &&
+    sourcePath.trim() !== ''
 
   useEffect(() => {
     if (mutation.isSuccess) {
@@ -76,7 +86,7 @@ export default function CreateLibrary() {
     await mutation.mutateAsync({
       name,
       description,
-      types: libraryTypes,
+      type: libraryType,
       dataSources: [{ type: 'local', path: sourcePath }],
     })
   }
@@ -118,11 +128,11 @@ export default function CreateLibrary() {
             block
           />
         </Field>
-        <Field label="Media Type(s)">
-          <CheckboxGroup
+        <Field label="Media Type">
+          <RadioGroup
             items={LIBRARY_TYPES}
-            value={libraryTypes}
-            onChange={setLibraryTypes}
+            value={libraryType ?? ''}
+            onChange={setLibraryType}
           />
         </Field>
         <Field label="Location">

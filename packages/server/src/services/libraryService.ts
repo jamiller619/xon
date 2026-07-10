@@ -1,13 +1,8 @@
 import crypto from 'node:crypto'
-import type { Library, MediaType } from '@xon/shared'
+import type { Library, MediaType, PageProps, SortProps } from '@xon/shared'
 import { and, asc, count, desc, eq, like } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
-import {
-  libraries,
-  libraryMediaItems,
-  type MediaItem,
-  mediaItems,
-} from '../db/schema.ts'
+import { libraries, type MediaItem, mediaItems } from '../db/schema.ts'
 import { createLogger } from '../logger.ts'
 
 const logger = createLogger('library-service')
@@ -47,7 +42,7 @@ export async function getLibrariesByUserId(
   db: LibSQLDatabase,
   userId: string,
 ): Promise<Library[] | undefined> {
-  return db.select().from(libraries).where(eq(libraries.userId, userId))
+  return db.select().from(libraries).where(eq(libraries.ownerId, userId))
 }
 
 export async function deleteLibraryById(db: LibSQLDatabase, id: string) {
@@ -60,16 +55,6 @@ export async function deleteLibraryById(db: LibSQLDatabase, id: string) {
 
     return false
   }
-}
-
-type PageProps = {
-  pageNumber: number
-  pageSize: number
-}
-
-type SortProps<T> = {
-  field: keyof T
-  order: 'asc' | 'desc'
 }
 
 export async function getMediaByLibraryId(
@@ -85,18 +70,16 @@ export async function getMediaByLibraryId(
 
   const results = await db
     .select()
-    .from(libraryMediaItems)
-    .where(eq(libraryMediaItems.libraryId, id))
-    .innerJoin(mediaItems, eq(mediaItems.id, libraryMediaItems.mediaItemId))
+    .from(mediaItems)
+    .where(eq(mediaItems.libraryId, id))
     .orderBy(sortDir(mediaItems[sortProps?.field ?? 'id']))
     .limit(pageSize)
     .offset(offset)
-    .then((rows) => rows.map((row) => row.media_items))
 
   const total = await db
     .select({ count: count() })
-    .from(libraryMediaItems)
-    .where(eq(libraryMediaItems.libraryId, id))
+    .from(mediaItems)
+    .where(eq(mediaItems.libraryId, id))
 
   return {
     data: results,
@@ -111,15 +94,13 @@ export async function getMediaByTypeAndLibraryId(
 ) {
   return db
     .select()
-    .from(libraryMediaItems)
+    .from(mediaItems)
     .where(
       and(
-        eq(libraryMediaItems.libraryId, libraryId),
+        eq(mediaItems.libraryId, libraryId),
         like(mediaItems.mediaType, `${mediaType}/%`),
       ),
     )
-    .innerJoin(mediaItems, eq(mediaItems.id, libraryMediaItems.mediaItemId))
-    .then((rows) => rows.map((row) => row.media_items))
 }
 
 export async function updateLibrary(

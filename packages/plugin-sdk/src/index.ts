@@ -10,7 +10,6 @@ export type {
   MediaProviderConfigField,
   MediaProviderConfigSchema,
   MediaProviderFile,
-  PluginCategory,
   PluginComponentProps,
   PluginContext,
   PluginDatabaseAccess,

@@ -18,7 +18,7 @@ export default function RequireSetup({ children }: { children: ReactNode }) {
     }
   }, [data, navigate, isPending, error])
 
-  if (isPending) return <p>Loading...</p>
+  // if (isPending) return <p>Loading...</p>
   if (error) return <p>Error: {error.message}</p>
 
   return children

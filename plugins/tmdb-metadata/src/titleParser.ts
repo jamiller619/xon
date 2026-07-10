@@ -1,3 +1,5 @@
+import path from 'node:path'
+
 export interface ParsedMovie {
   type: 'movie'
   title: string
@@ -90,8 +92,7 @@ function parseMovie(name: string): ParsedMovie {
  * and extract the title/year or series/season/episode information.
  */
 export function parseMediaTitle(filePath: string): ParsedMedia {
-  const parts = filePath.split('/')
-  const filename = parts[parts.length - 1] ?? filePath
+  const filename = path.basename(filePath)
   const nameWithoutExt = filename.replace(/\.[^.]+$/, '')
 
   const tvResult = parseTvShow(nameWithoutExt)

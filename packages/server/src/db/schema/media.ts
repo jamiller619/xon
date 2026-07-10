@@ -1,11 +1,6 @@
 import type { Metadata } from '@xon/shared'
-import {
-  index,
-  integer,
-  sqliteTable,
-  text,
-  uniqueIndex,
-} from 'drizzle-orm/sqlite-core'
+import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { libraries } from './libraries.ts'
 import { keys, timestamps } from './shared.ts'
 
 export const mediaItems = sqliteTable(
@@ -13,8 +8,14 @@ export const mediaItems = sqliteTable(
   {
     ...keys,
     ...timestamps,
+    libraryId: text('library_id')
+      .notNull()
+      .references(() => libraries.id),
     filePath: text('file_path').notNull(),
     fileSize: integer('file_size').notNull(),
+    fileMetadata: text('file_metadata', { mode: 'json' })
+      .$type<Metadata>()
+      .notNull(),
     mediaType: text('media_type').notNull().default('application/octet-stream'),
     title: text('title').notNull(),
     description: text('description'),
@@ -26,14 +27,14 @@ export const mediaItems = sqliteTable(
       .notNull()
       .default(false),
     scannedAt: integer('scanned_at', { mode: 'timestamp' }).notNull(),
-    genres: text('genres', { mode: 'json' })
+    tags: text('tags', { mode: 'json' })
       .$type<string[]>()
       .notNull()
       .default([]),
   },
   (table) => [
     index('media_items_media_type_idx').on(table.mediaType),
-    uniqueIndex('media_items_file_path_idx').on(table.filePath),
+    index('media_items_file_path_idx').on(table.filePath),
     index('media_items_title_idx').on(table.title),
   ],
 )

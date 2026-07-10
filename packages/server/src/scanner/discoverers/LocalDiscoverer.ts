@@ -18,14 +18,18 @@ const FILE_ENTRY_CONCURRENCY = 32
 
 export class LocalDiscoverer implements MediaDiscoverer {
   async discover(ctx: DiscoveryContext): Promise<Discovery> {
-    const { libraryId, dataSource, extSet } = ctx
+    const { libraryId, libraryType, dataSource, extSet } = ctx
     const sourcePath = toLocalPath(dataSource.path)
 
     const filePaths = await new fdir()
       .withFullPaths()
       .exclude((dirName) => dirName.startsWith('.'))
       .filter(
-        (fp, isDir) => !isDir && extSet.has(path.extname(fp).toLowerCase()),
+        (fp, isDir) =>
+          !isDir &&
+          !fp.startsWith('.') &&
+          !path.basename(fp).startsWith('.') &&
+          extSet.has(path.extname(fp).toLowerCase()),
       )
       .crawl(sourcePath)
       .withPromise()
@@ -59,7 +63,14 @@ export class LocalDiscoverer implements MediaDiscoverer {
 
             const isNew = !previouslySeen.has(filePath)
 
-            return createMediaJob(ctx.db, file, isNew)
+            return createMediaJob(
+              ctx.db,
+              file,
+              isNew,
+              libraryId,
+              libraryType,
+              dataSource.path,
+            )
           }),
         ),
       )

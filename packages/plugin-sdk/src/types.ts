@@ -1,16 +1,4 @@
-// import type { MediaCategory } from '@xon/shared'
-
-import type { MediaType } from '@xon/shared'
-
-// Plugin category types
-export type PluginCategory =
-  | 'MediaProvider'
-  | 'MetadataSource'
-  | 'FormatHandler'
-  | 'Processor'
-  | 'Theme'
-  | 'UIExtension'
-  | 'BackupTarget'
+import type { LibraryType, MediaType, PluginCategory } from '@xon/shared'
 
 // Plugin manifest matching the package.json xon field schema
 export interface PluginManifest {
@@ -21,8 +9,10 @@ export interface PluginManifest {
   description: string
   author: string
   category: PluginCategory
-  /** Media categories this plugin handles (for MediaProvider/FormatHandler) */
-  mediaTypes: MediaType.MainType[]
+  /** Library types this plugin handles */
+  libraryTypes: (LibraryType | string)[]
+  /** Media types this plugin handles */
+  mediaTypes?: (MediaType | string)[]
   /** Minimum Xon server version required */
   minServerVersion?: string
   /** Entry point relative to plugin root (default: index.js) */

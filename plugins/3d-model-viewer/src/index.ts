@@ -1,4 +1,4 @@
-import type { PluginContext, PluginManifest } from '@xon/plugin-sdk'
+import type { PluginContext } from '@xon/plugin-sdk'
 import { BasePlugin } from '@xon/plugin-sdk'
 
 export class ModelViewerPlugin extends BasePlugin {

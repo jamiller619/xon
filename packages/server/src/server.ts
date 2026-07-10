@@ -1,24 +1,18 @@
 import { createServer as createHttpsServer } from 'node:https'
 import { fileURLToPath } from 'node:url'
 import { serve } from '@hono/node-server'
-// import { DEFAULT_PORT } from '@xon/shared'
 import { Hono } from 'hono'
 import { createApp } from './app.ts'
 import db, { client } from './db/db.ts'
 import { migrateDatabase } from './db/migrate.ts'
-// import { serverSettings } from './db/schema.ts'
-// import { acquireAcmeCert, loadManualCerts } from './http/httpsManager.ts'
 import { makeStaticMiddleware } from './http/staticFiles.ts'
 import { closeLogger, createLogger, initLogger, setLogLevel } from './logger.ts'
-
-// process.loadEnvFile('./.env')
 
 const logger = createLogger('server')
 
 import type { AddressInfo } from 'node:net'
 import path from 'node:path'
 import config from './config.ts'
-// import { initializeGroups } from './groups.ts'
 import {
   discoverAndActivatePlugins,
   emitPluginEvent,
@@ -28,15 +22,11 @@ import { createWsServer, WS_PATH } from './routes/ws.ts'
 import { startScannerChild } from './scanner/scannerHandle.ts'
 import { startScheduler } from './scanner/scheduler.ts'
 
-// import { initializeUsers } from './users.ts'
-
 // Bundled plugins ship alongside the server package, two levels up from packages/server/
 const BUNDLED_PLUGINS_DIR = path.join(
   path.dirname(fileURLToPath(import.meta.url)),
   '../../../plugins',
 )
-
-// const SERVER_SETTINGS_ID = 'default'
 
 // Catch uncaught exceptions and unhandled rejections so the process doesn't crash silently.
 // These are registered once at module load time, not per boot() call.
@@ -69,9 +59,6 @@ export async function boot(): Promise<void> {
 
     logger.log('Migrations complete')
 
-    // logger.log('Initializing groups')
-    // await initializeGroups(db)
-
     setPluginDatabase(client)
     logger.log('Plugin database configured')
 
@@ -81,14 +68,6 @@ export async function boot(): Promise<void> {
     const userPluginsDir = config.get('appdata.pluginsPath')
     logger.log(`Loading user plugins from ${userPluginsDir}`)
     await discoverAndActivatePlugins(userPluginsDir)
-
-    // Load server settings (HTTPS config, log level, etc.)
-    // const settingsRows = await db
-    //   .select()
-    //   .from(serverSettings)
-    //   .where(eq(serverSettings.id, SERVER_SETTINGS_ID))
-    // const httpsConfig = settingsRows[0]
-    // logger.log('Server settings loaded')
 
     const { wss, handleUpgrade } = createWsServer()
     logger.log('WebSocket server created')

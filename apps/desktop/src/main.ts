@@ -1,11 +1,11 @@
 import { boot } from '@xon/server'
-import { DEFAULT_PORT } from '@xon/shared'
-import { BrowserWindow, app, screen } from 'electron'
+// import { DEFAULT_PORT } from '@xon/shared'
+import { app, BrowserWindow, screen } from 'electron'
 import {
-  type NotificationManager,
   createNotificationManager,
+  type NotificationManager,
 } from './notifications.js'
-import { type TrayHandle, createTray } from './tray.js'
+import { createTray, type TrayHandle } from './tray.js'
 
 const headless =
   process.env.XON_HEADLESS === '1' || process.env.XON_HEADLESS === 'true'
@@ -27,7 +27,7 @@ function createWindow(): void {
     },
   })
 
-  const port = Number(process.env.PORT ?? DEFAULT_PORT)
+  const port = Number(process.env.PORT)
   mainWindow.loadURL(`http://localhost:${port}`)
 
   mainWindow.on('closed', () => {

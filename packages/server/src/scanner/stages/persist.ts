@@ -1,29 +1,26 @@
-import { eq } from 'drizzle-orm'
-import { libraryMediaItems, mediaItems } from '../../db/schema.ts'
-import type {
-  MediaJob,
-  MediaJobItem,
-  PipelineContext,
-  PipelineStage,
-} from '../pipeline.ts'
+import { and, eq } from 'drizzle-orm'
+import { mediaItems } from '../../db/schema.ts'
+import type { MediaJob, PipelineContext, PipelineStage } from '../pipeline.ts'
 
 export default {
   name: 'persist',
   retry: 1,
-  async run(ctx, job): Promise<MediaJobItem | undefined> {
+  async run(ctx, job) {
     if (job.type === 'new') return saveNewMediaItem(ctx, job)
     if (job.type === 'changed') return saveChangedMediaItem(ctx, job)
   },
 } satisfies PipelineStage
 
-async function saveChangedMediaItem(
-  ctx: PipelineContext,
-  job: MediaJob,
-): Promise<MediaJobItem | undefined> {
+async function saveChangedMediaItem(ctx: PipelineContext, job: MediaJob) {
   const [mediaItem] = await ctx.db
-    .select({ id: mediaItems.id, metadata: mediaItems.metadata })
+    .select()
     .from(mediaItems)
-    .where(eq(mediaItems.filePath, job.file.path))
+    .where(
+      and(
+        eq(mediaItems.filePath, job.file.path),
+        eq(mediaItems.libraryId, job.libraryId),
+      ),
+    )
 
   if (!mediaItem) {
     job.errors.push(
@@ -54,10 +51,7 @@ async function saveChangedMediaItem(
   return mediaItem
 }
 
-async function saveNewMediaItem(
-  ctx: PipelineContext,
-  job: MediaJob,
-): Promise<MediaJobItem | undefined> {
+async function saveNewMediaItem(ctx: PipelineContext, job: MediaJob) {
   await ctx.db.transaction(async (tx) => {
     if (job.data.drmProtected == null || !job.data.title) {
       ctx.logger.error('Missing required fields: ', ctx, job.data)
@@ -67,19 +61,16 @@ async function saveNewMediaItem(
 
     await tx.insert(mediaItems).values({
       id: job.data.id,
+      libraryId: job.libraryId,
       filePath: job.file.path,
       fileSize: job.file.size,
+      fileMetadata: job.data.fileMetadata ?? {},
       mediaType: job.data.mediaType ?? job.file.mediaType,
-      metadata: job.data.metadata,
+      metadata: job.data.metadata ?? {},
       drmProtected: job.data.drmProtected,
       title: job.data.title,
       description: job.data.description,
       scannedAt: new Date(),
-    })
-
-    await tx.insert(libraryMediaItems).values({
-      libraryId: ctx.libraryId,
-      mediaItemId: job.data.id,
     })
   })
 

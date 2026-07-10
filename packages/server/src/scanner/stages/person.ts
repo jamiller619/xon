@@ -22,6 +22,13 @@ export default {
   retry: 1,
   async run(ctx, job) {
     if (job.type === 'changed') return
+
+    // If there's no cast in the metadata, then nothing to
+    // do here, carry on...
+    if (job.data.metadata?.cast == null || job.data.metadata.cast.length < 1) {
+      return
+    }
+
     const tmdbPlugin = registry.get('@xon/plugin-tmdb-metadata')?.instance as
       | TmdbMetadataPlugin
       | undefined
@@ -32,19 +39,9 @@ export default {
       return
     }
 
-    if (job.data.metadata?.cast == null || job.data.metadata.cast.length < 1) {
-      return
-    }
-
     const { cast, ...metadata } = job.data.metadata as {
-      cast?: TmdbCastMember[]
+      cast: TmdbCastMember[]
     } & Metadata
-
-    if (!cast) {
-      return {
-        metadata,
-      }
-    }
 
     // A person may appear multiple times in the cast (different characters).
     // Group by tmdb id so each person is saved once, with a credit per character.

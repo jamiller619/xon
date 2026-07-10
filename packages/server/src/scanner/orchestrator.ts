@@ -42,15 +42,6 @@ export type ScanSummary = {
   totalDiscovered: number
 }
 
-const pipelineStages: PipelineStage[] = [
-  stage.drm,
-  stage.metadata,
-  stage.title,
-  stage.persist,
-  stage.person,
-  stage.thumbnail,
-]
-
 const discoverers: Partial<Record<DataSourceType, MediaDiscoverer>> = {
   [DataSourceType.local]: new LocalDiscoverer(),
   [DataSourceType.plugin]: new PluginDiscoverer(),
@@ -68,15 +59,13 @@ export async function scanLibrary(
     throw new Error(`Library not found: ${libraryId}`)
   }
 
-  const { types, dataSources } = library
+  const { dataSources } = library
 
   if (dataSources.length === 0) {
     throw new Error(`No data sources found for library: ${libraryId}`)
   }
 
-  const extSet = new Set(
-    types.flatMap((c) => Object.keys(LIBRARY_TYPE_DEFINITIONS[c])),
-  )
+  const extSet = new Set(Object.keys(LIBRARY_TYPE_DEFINITIONS[library.type]))
 
   let totalNew = 0
   let totalUpdated = 0
@@ -98,90 +87,84 @@ export async function scanLibrary(
       continue
     }
 
-    for await (const libraryType of library.types) {
-      const discoveryCtx: DiscoveryContext = {
-        db,
-        libraryId,
-        dataSource,
-        extSet,
-        libraryType,
-      }
+    const discoveryCtx: DiscoveryContext = {
+      db,
+      libraryId,
+      dataSource,
+      extSet,
+      libraryType: library.type,
+    }
 
-      onProgress?.({
-        dataSourceId: dataSource.path,
-        phase: 'discovering',
-        discoveredFiles: 0,
-        totalFiles: 0,
-        processedFiles: 0,
-        currentFile: null,
-        message: `Discovering files in ${sourceLabel}`,
-      })
+    onProgress?.({
+      dataSourceId: dataSource.path,
+      phase: 'discovering',
+      discoveredFiles: 0,
+      totalFiles: 0,
+      processedFiles: 0,
+      currentFile: null,
+      message: `Discovering files in ${sourceLabel}`,
+    })
 
-      const discovery = await discoverer.discover(discoveryCtx)
+    const discovery = await discoverer.discover(discoveryCtx)
 
-      if (!discovery) continue
+    if (!discovery) continue
 
-      totalDiscovered += discovery.totalDiscovered
-      totalRemoved += discovery.removedCount
+    totalDiscovered += discovery.totalDiscovered
+    totalRemoved += discovery.removedCount
 
-      const totalFiles = discovery.jobs.length
+    const totalFiles = discovery.jobs.length
 
-      if (totalFiles === 0) {
-        logger.log(
-          `No new or changed files found in data source: ${sourceLabel}`,
-        )
-        onProgress?.({
-          dataSourceId: dataSource.path,
-          phase: 'processing',
-          discoveredFiles: discovery.totalDiscovered,
-          totalFiles: 0,
-          processedFiles: 0,
-          currentFile: null,
-          message: `Found ${discovery.totalDiscovered} files, none to process in ${sourceLabel}`,
-        })
-        discovery.reconcile()
-        continue
-      }
-
-      for (const job of discovery.jobs) {
-        if (job.type === 'new') totalNew += 1
-        else totalUpdated += 1
-      }
-
+    if (totalFiles === 0) {
+      logger.log(`No new or changed files found in data source: ${sourceLabel}`)
       onProgress?.({
         dataSourceId: dataSource.path,
         phase: 'processing',
         discoveredFiles: discovery.totalDiscovered,
-        totalFiles,
+        totalFiles: 0,
         processedFiles: 0,
         currentFile: null,
-        message: `Found ${discovery.totalDiscovered} files, ${totalFiles} to process in ${sourceLabel}`,
+        message: `Found ${discovery.totalDiscovered} files, none to process in ${sourceLabel}`,
       })
-
-      const ctx: PipelineContext = { db, libraryId, logger }
-
-      if (onProgress) {
-        ctx.onJobComplete = (processed, currentFile) => {
-          onProgress({
-            dataSourceId: dataSource.path,
-            phase: 'processing',
-            discoveredFiles: discovery.totalDiscovered,
-            totalFiles,
-            processedFiles: processed,
-            currentFile,
-            message: `Processing ${processed}/${totalFiles}: ${basename(currentFile)}`,
-          })
-        }
-      }
-
-      logger.log(
-        `Beginning pipeline stage for ${library.name} / ${sourceLabel}`,
-      )
-
-      await runPipeline(ctx, discovery.jobs, pipelineStages)
-
       discovery.reconcile()
+      continue
     }
+
+    for (const job of discovery.jobs) {
+      if (job.type === 'new') totalNew += 1
+      else totalUpdated += 1
+    }
+
+    onProgress?.({
+      dataSourceId: dataSource.path,
+      phase: 'processing',
+      discoveredFiles: discovery.totalDiscovered,
+      totalFiles,
+      processedFiles: 0,
+      currentFile: null,
+      message: `Found ${discovery.totalDiscovered} files, ${totalFiles} to process in ${sourceLabel}`,
+    })
+
+    const ctx: PipelineContext = { db, libraryId, logger }
+
+    if (onProgress) {
+      ctx.onJobComplete = (processed, currentFile) => {
+        onProgress({
+          dataSourceId: dataSource.path,
+          phase: 'processing',
+          discoveredFiles: discovery.totalDiscovered,
+          totalFiles,
+          processedFiles: processed,
+          currentFile,
+          message: `Processing ${processed}/${totalFiles}: ${basename(currentFile)}`,
+        })
+      }
+    }
+
+    logger.log(`Beginning pipeline stage for ${library.name} / ${sourceLabel}`)
+
+    await runPipeline(ctx, discovery.jobs)
+
+    discovery.reconcile()
   }
 
   const summary: ScanSummary = {

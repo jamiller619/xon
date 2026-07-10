@@ -2,9 +2,6 @@ import {
   DataSourceType,
   type Library,
   LibraryType,
-  MediaType,
-  // MediaCategory,
-  // type MediaItem,
   UserRole,
 } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
@@ -34,7 +31,7 @@ const libraryMediaQuerySchema = z.object({
 const createLibrarySchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  types: z.array(z.enum(LibraryType)),
+  type: z.enum(LibraryType),
   scanSchedule: z.string().optional(),
   dataSources: z.array(
     z.object({
@@ -79,7 +76,7 @@ export function makeLibrariesRouter(
 
       const id = await libraryService.createLibrary(db, {
         ...body,
-        userId: user.id,
+        ownerId: user.id,
       })
 
       appCache.invalidate(LIBRARIES_ALL_KEY)

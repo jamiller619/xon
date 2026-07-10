@@ -27,7 +27,7 @@ export default function MediaCard({
 }: MediaCardProps) {
   const playTrack = useAudioStore((s) => s.playTrack)
   const addToQueue = useAudioStore((s) => s.addToQueue)
-  const isAudio = item.mimeType?.startsWith('audio/') ?? false
+  const isAudio = item.mediaType?.startsWith('audio/') ?? false
   const link = `/media/${encodeURIComponent(item.title.toLowerCase().replaceAll(' ', '-'))}/${item.id}`
 
   function handlePlay(e: React.MouseEvent) {
@@ -36,7 +36,7 @@ export default function MediaCard({
     playTrack({
       id: item.id,
       title: item.title,
-      mimeType: item.mimeType ?? 'audio/mpeg',
+      mimeType: item.mediaType ?? 'audio/mpeg',
     })
   }
 
@@ -46,7 +46,7 @@ export default function MediaCard({
     addToQueue({
       id: item.id,
       title: item.title,
-      mimeType: item.mimeType ?? 'audio/mpeg',
+      mimeType: item.mediaType ?? 'audio/mpeg',
     })
   }
 
@@ -70,13 +70,7 @@ export default function MediaCard({
   }
 
   const cardContent = (
-    <motion.div
-      title={item.title}
-      initial={{ opacity: 0, scale: 0.9 }}
-      animate={{ opacity: 1, scale: 1 }}
-      whileHover={{ scale: 1.05 }}
-      whileTap={{ scale: 0.95 }}
-    >
+    <>
       <div className={styles.thumb}>
         {item.metadata.images?.poster ? (
           <img
@@ -141,7 +135,7 @@ export default function MediaCard({
           <span>{item.metadata.year}</span>
         </div>
       </div>
-    </motion.div>
+    </>
   )
 
   if (selectMode) {

@@ -37,3 +37,16 @@ a {
 h1 {
   line-height: 1.3;
 }
+
+/*
+ * Glowing focus ring on the focused element (document.activeElement).
+ * :focus-visible limits it to keyboard/remote navigation so mouse clicks
+ * don't flash a glow. The box-shadow follows each element's border-radius.
+ */
+:focus-visible {
+  outline: 2px solid var(--color-accent-a2);
+  outline-offset: 1px;
+  box-shadow:
+    0 0 8px 2px var(--color-accent-a3),
+    0 0 20px 5px var(--color-accent-a4);
+}

@@ -5,7 +5,7 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { appCache } from '../cache.ts'
 import config from '../config.ts'
-import { libraries, libraryMediaItems, mediaItems } from '../db/schema.ts'
+import { libraries, mediaItems } from '../db/schema.ts'
 import { scanRegistry } from '../scanner/scanRegistry.ts'
 
 export function makeAdminHealthRouter(db: LibSQLDatabase): Hono {

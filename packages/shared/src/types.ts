@@ -21,6 +21,21 @@ export type StatsPayload = {
   }
 }
 
+const pluginCategories = [
+  'MediaProvider',
+  'MetadataSource',
+  'FormatHandler',
+  'Theme',
+  // | 'FormatHandler'
+  // | 'Processor'
+  // | 'Theme'
+  // | 'UIExtension'
+  // | 'BackupTarget'
+] as const
+export type PluginCategory = (typeof pluginCategories)[number]
+
+export const PLUGIN_CATEGORIES = new Set(pluginCategories)
+
 export enum GroupType {
   Series = 'series',
   Season = 'season',
@@ -51,19 +66,21 @@ export type Group = {
 
 export enum LibraryType {
   Movies = 'movies',
-  TVShows = 'series',
+  TVShows = 'tv_shows',
   Music = 'music',
   Photos = 'photos',
   HomeVideos = 'home_videos',
+  VideoClips = 'video_clips',
 }
 
 export interface Library {
   id: string
   createdAt: Date
   updatedAt: Date | null
+  ownerId: string
   name: string
   description: string | null
-  types: LibraryType[]
+  type: LibraryType
   scanSchedule: string | null
   dataSources: DataSource[]
 }
@@ -85,24 +102,27 @@ export const MPARatings = ['G', 'PG', 'PG-13', 'R', 'NC-17', 'NR'] as const
 export type MPARating = (typeof MPARatings)[number]
 
 // biome-ignore lint/suspicious/noExplicitAny: We want <any>
-export type Metadata<T = Record<string, any>> = T & {
-  images?: {
-    backdrop?: string[] | string
-    poster?: string[] | string
-    thumbnail?: string[] | string
-    logo?: string[] | string
-  }
-}
+// export type Metadata<T = Record<string, any>> = T & {
+//   images?: {
+//     backdrop?: string[] | string
+//     poster?: string[] | string
+//     thumbnail?: string[] | string
+//     logo?: string[] | string
+//   }
+// }
 
-export type MetadataMovie = Metadata<{
-  title: string
-  releaseDate?: string
-  rating?: MPARating
-  genres?: string[]
-  cast?: CastMember[]
-  director?: string
-  duration?: number
-}>
+// biome-ignore lint/suspicious/noExplicitAny: any is correct
+export type Metadata = Record<string, any>
+
+// export type MetadataMovie = Metadata<{
+//   title: string
+//   releaseDate?: string
+//   rating?: MPARating
+//   genres?: string[]
+//   cast?: CastMember[]
+//   director?: string
+//   duration?: number
+// }>
 
 export interface CastMember {
   id: string
@@ -120,15 +140,14 @@ export interface MediaItem {
   updatedAt: Date | null
   filePath: string
   fileSize: number
+  fileMetadata: Metadata
   mediaType: string
   title: string
   description: string | null
   metadata: Metadata
   drmProtected: boolean
   scannedAt: Date
-  genres: string[]
-
-  // video mediaType
+  tags: string[]
   cast?: CastMember[]
 }
 
@@ -145,4 +164,14 @@ export interface User {
   role: UserRole
   createdAt: Date
   updatedAt: Date
+}
+
+export type PageProps = {
+  pageNumber: number
+  pageSize: number
+}
+
+export type SortProps<T> = {
+  field: keyof T
+  order: 'asc' | 'desc'
 }

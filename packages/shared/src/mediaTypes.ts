@@ -182,6 +182,7 @@ export const LIBRARY_TYPE_DEFINITIONS: Record<LibraryType, MediaCategoryInfo> =
     [LibraryType.Music]: MEDIA_TYPE_DEFINITIONS[MediaType.MainType.Audio],
     [LibraryType.Photos]: MEDIA_TYPE_DEFINITIONS[MediaType.MainType.Image],
     [LibraryType.HomeVideos]: MEDIA_TYPE_DEFINITIONS[MediaType.MainType.Video],
+    [LibraryType.VideoClips]: MEDIA_TYPE_DEFINITIONS[MediaType.MainType.Video],
   }
 
 // export const CATEGORY_DEFINITIONS: Record<MediaCategory, MediaCategoryInfo> = {

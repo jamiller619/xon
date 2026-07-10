@@ -11,20 +11,19 @@
 }
 
 .card {
+  /* Each card is its own query container so its contents (title, meta,
+     padding) can adapt to whatever width the card actually gets. */
+  container: media-card / inline-size;
   display: flex;
   flex-direction: column;
+  min-width: 0;
   text-decoration: none;
   color: var(--color-gray-11);
-  min-width: 180px;
 
   .thumbImg {
-    width: 102%;
-    height: 102%;
+    width: 100%;
     object-fit: cover;
-    object-position: 60%;
-    transition:
-      width 0.15s ease,
-      height 0.15s ease;
+    /* object-position: 60%; */
   }
 
   &:hover {
@@ -34,14 +33,40 @@
     .thumb {
       /* box-shadow: var(--shadow-5); */
       box-shadow:
-        0 14px 28px rgba(0, 0, 0, 0.25),
-        0 10px 10px rgba(0, 0, 0, 0.22);
+        0 0 38px 22px rgba(0, 0, 0, 0.25),
+        0 0 18px 16px rgba(0, 0, 0, 0.22);
     }
 
-    .thumbImg {
+    /* .thumbImg {
       width: 100%;
       height: 100%;
+    } */
+  }
+
+  /* Move the global focus glow (theme.css) onto the rounded poster instead
+     of outlining the whole card + text block */
+  &:focus-visible {
+    outline: none;
+    box-shadow: none;
+
+    .thumb {
+      box-shadow:
+        0 0 0 2px var(--color-accent-a2),
+        0 0 22px 6px var(--color-accent-a4);
     }
+  }
+}
+
+/*
+ * Horizontal shelves (Dashboard) declare an inline-size container named "row"
+ * on the scroller row. Card width tracks the shelf width fluidly: ~4 cards on
+ * a narrow shelf, up to ~6 on a wide one. Grid pages (Library, Search) have no
+ * "row" ancestor, so this never matches there and the grid cell sizes the
+ * card instead.
+ */
+@container row (width > 0) {
+  .card {
+    flex: 0 0 clamp(140px, 16cqw, 220px);
   }
 }
 
@@ -77,6 +102,19 @@
   font-size: var(--font-size-3);
   opacity: 0.7;
   /* color: var(--color-gray-11); */
+}
+
+/* Compact treatment when a card ends up narrow */
+@container media-card (width < 160px) {
+  .info {
+    padding: 6px 8px;
+    gap: 2px;
+  }
+
+  .title,
+  .meta {
+    font-size: var(--font-size-1);
+  }
 }
 
 .badge {

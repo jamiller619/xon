@@ -80,40 +80,35 @@ CREATE TABLE `libraries` (
 	`id` text PRIMARY KEY NOT NULL,
 	`created_at` integer NOT NULL,
 	`updated_at` integer,
-	`user_id` text NOT NULL,
+	`owner_id` text NOT NULL,
 	`name` text NOT NULL,
 	`description` text,
-	`types` text NOT NULL,
+	`type` text NOT NULL,
 	`scan_schedule` text,
 	`data_sources` text NOT NULL,
-	FOREIGN KEY (`user_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
-);
---> statement-breakpoint
-CREATE TABLE `library_media_items` (
-	`library_id` text NOT NULL,
-	`media_item_id` text NOT NULL,
-	PRIMARY KEY(`library_id`, `media_item_id`),
-	FOREIGN KEY (`library_id`) REFERENCES `libraries`(`id`) ON UPDATE no action ON DELETE cascade,
-	FOREIGN KEY (`media_item_id`) REFERENCES `media_items`(`id`) ON UPDATE no action ON DELETE no action
+	FOREIGN KEY (`owner_id`) REFERENCES `users`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
 CREATE TABLE `media_items` (
 	`id` text PRIMARY KEY NOT NULL,
 	`created_at` integer NOT NULL,
 	`updated_at` integer,
+	`library_id` text NOT NULL,
 	`file_path` text NOT NULL,
 	`file_size` integer NOT NULL,
+	`file_metadata` text NOT NULL,
 	`media_type` text DEFAULT 'application/octet-stream' NOT NULL,
 	`title` text NOT NULL,
 	`description` text,
 	`metadata` text DEFAULT '{}' NOT NULL,
 	`drm_protected` integer DEFAULT false NOT NULL,
 	`scanned_at` integer NOT NULL,
-	`genres` text DEFAULT '[]' NOT NULL
+	`tags` text DEFAULT '[]' NOT NULL,
+	FOREIGN KEY (`library_id`) REFERENCES `libraries`(`id`) ON UPDATE no action ON DELETE no action
 );
 --> statement-breakpoint
 CREATE INDEX `media_items_media_type_idx` ON `media_items` (`media_type`);--> statement-breakpoint
-CREATE UNIQUE INDEX `media_items_file_path_idx` ON `media_items` (`file_path`);--> statement-breakpoint
+CREATE INDEX `media_items_file_path_idx` ON `media_items` (`file_path`);--> statement-breakpoint
 CREATE INDEX `media_items_title_idx` ON `media_items` (`title`);--> statement-breakpoint
 CREATE TABLE `people` (
 	`id` text PRIMARY KEY NOT NULL,

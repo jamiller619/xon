@@ -2,20 +2,11 @@ import type { Dirent } from 'node:fs'
 import { readdir, readFile } from 'node:fs/promises'
 import { join } from 'node:path'
 import type { PluginManifest } from '@xon/plugin-sdk'
+import { PLUGIN_CATEGORIES } from '@xon/shared'
 
 export type PluginLoadResult =
   | { success: true; pluginDir: string; manifest: PluginManifest }
   | { success: false; pluginDir: string; error: string }
-
-const VALID_CATEGORIES = new Set([
-  'MediaProvider',
-  'MetadataSource',
-  'FormatHandler',
-  'Processor',
-  'Theme',
-  'UIExtension',
-  'BackupTarget',
-])
 
 function validateManifest(data: unknown, source: string): PluginManifest {
   if (typeof data !== 'object' || data === null) {
@@ -38,7 +29,7 @@ function validateManifest(data: unknown, source: string): PluginManifest {
     'version',
     'description',
     'author',
-    'mediaTypes',
+    'libraryTypes',
     'main',
     'category',
   ]
@@ -77,9 +68,9 @@ function validateManifest(data: unknown, source: string): PluginManifest {
     }
   }
 
-  if (!VALID_CATEGORIES.has(resp.category as string)) {
+  if (!PLUGIN_CATEGORIES.has(resp.category)) {
     throw new Error(
-      `${source}: invalid category "${resp.category}". Must be one of: ${[...VALID_CATEGORIES].join(', ')}`,
+      `${source}: invalid category "${resp.category}". Must be one of: ${[...PLUGIN_CATEGORIES].join(', ')}`,
     )
   }
 

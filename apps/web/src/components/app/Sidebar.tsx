@@ -95,7 +95,7 @@ export default function Sidebar({ className, isOpen }: SidebarProps) {
               to={`/libraries/${lib.id}`}
               className={navClass}
             >
-              <LibraryIcon type={lib.types.at(0)} />
+              <LibraryIcon type={lib.type} />
               <span>{lib.name}</span>
             </NavLink>
           ))}

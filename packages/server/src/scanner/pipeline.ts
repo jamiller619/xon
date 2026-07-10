@@ -1,65 +1,23 @@
 import { availableParallelism } from 'node:os'
-import type { MediaItem, MediaType, Metadata } from '@xon/shared'
+import type { LibraryType, MediaItem } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import pLimit from 'p-limit'
 import type { Logger } from '../logger.ts'
 import type { FileEntry } from './fileEntry.ts'
+import * as stage from './stages.ts'
 
-export type PipelineContext = {
-  db: LibSQLDatabase
-  libraryId: string
-  logger: Logger
-  onJobComplete?: (processed: number, currentFile: string) => void
-}
+const stages: PipelineStage[] = [
+  stage.drm,
+  stage.title,
+  stage.fileMetadata,
+  stage.libraryMetadata,
+  stage.persist,
+  stage.person,
+  stage.thumbnail,
+]
 
-export type MediaJobItem = Partial<
-  Exclude<
-    MediaItem,
-    'createdAt' | 'updatedAt' | 'filePath' | 'fileSize' | 'scannedAt' | 'id'
-  >
-> & {
-  id: string
-}
-
-export type PipelineStage = {
-  name: string
-  run(
-    ctx: PipelineContext,
-    job: MediaJob,
-  ): Promise<Partial<MediaJobItem> | undefined>
-  retry?: number
-  timeoutMs?: number
-}
-
-export type MediaJob = {
-  id: string
-  type: 'new' | 'changed'
-  file: FileEntry
-  mediaTypes: MediaType.MainType[]
-
-  // mutable state through pipeline
-  data: MediaJobItem & {
-    metadata: Metadata
-  }
-
-  // mutable state through pipeline
-  // libraryId?: string
-  // mediaCategory?: MediaCategory
-  // mimeType?: string
-  // mediaItemId?: string
-  // metadata?: Metadata
-  // drmProtected?: boolean
-
-  errors: Error[]
-}
-
-export async function runPipeline(
-  ctx: PipelineContext,
-  jobs: MediaJob[],
-  stages: PipelineStage[],
-  concurrency = availableParallelism(),
-) {
-  const limit = pLimit(concurrency)
+export async function runPipeline(ctx: PipelineContext, jobs: MediaJob[]) {
+  const limit = pLimit(availableParallelism())
   let processed = 0
 
   await Promise.all(
@@ -80,6 +38,11 @@ export async function runPipeline(
 
           if (result) {
             Object.assign(job.data, result)
+
+            ctx.logger.log(`${stage.name} stage complete`, {
+              file: job.file.path,
+              result: job.data,
+            })
           }
         }
 
@@ -88,6 +51,55 @@ export async function runPipeline(
       }),
     ),
   )
+}
+
+export type PipelineContext = {
+  db: LibSQLDatabase
+  libraryId: string
+  logger: Logger
+  onJobComplete?: (processed: number, currentFile: string) => void
+}
+
+export type MediaJobData = Partial<
+  Omit<
+    MediaItem,
+    'createdAt' | 'updatedAt' | 'filePath' | 'fileSize' | 'scannedAt' | 'id'
+  >
+> & {
+  id: string
+}
+
+export type PipelineStage = {
+  name: string
+  run(
+    ctx: PipelineContext,
+    job: MediaJob,
+  ): Promise<Partial<MediaJobData> | undefined>
+  retry?: number
+  timeoutMs?: number
+}
+
+export type MediaJob = {
+  id: string
+  type: 'new' | 'changed'
+  file: FileEntry
+  libraryId: string
+  libraryType: LibraryType
+  mediaTypes: string[]
+  dataSourcePath: string
+
+  // mutable state through pipeline
+  data: MediaJobData
+
+  // mutable state through pipeline
+  // libraryId?: string
+  // mediaCategory?: MediaCategory
+  // mimeType?: string
+  // mediaItemId?: string
+  // metadata?: Metadata
+  // drmProtected?: boolean
+
+  errors: Error[]
 }
 
 async function runStage(

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "38799acc-38c6-474a-9838-6afc57d5a3d7",
+  "id": "9882fdd5-7072-4099-a65d-216cbe30cca6",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "accounts": {
@@ -559,8 +559,8 @@
           "notNull": false,
           "autoincrement": false
         },
-        "user_id": {
-          "name": "user_id",
+        "owner_id": {
+          "name": "owner_id",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -580,8 +580,8 @@
           "notNull": false,
           "autoincrement": false
         },
-        "types": {
-          "name": "types",
+        "type": {
+          "name": "type",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -604,12 +604,12 @@
       },
       "indexes": {},
       "foreignKeys": {
-        "libraries_user_id_users_id_fk": {
-          "name": "libraries_user_id_users_id_fk",
+        "libraries_owner_id_users_id_fk": {
+          "name": "libraries_owner_id_users_id_fk",
           "tableFrom": "libraries",
           "tableTo": "users",
           "columnsFrom": [
-            "user_id"
+            "owner_id"
           ],
           "columnsTo": [
             "id"
@@ -619,65 +619,6 @@
         }
       },
       "compositePrimaryKeys": {},
-      "uniqueConstraints": {},
-      "checkConstraints": {}
-    },
-    "library_media_items": {
-      "name": "library_media_items",
-      "columns": {
-        "library_id": {
-          "name": "library_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        },
-        "media_item_id": {
-          "name": "media_item_id",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false
-        }
-      },
-      "indexes": {},
-      "foreignKeys": {
-        "library_media_items_library_id_libraries_id_fk": {
-          "name": "library_media_items_library_id_libraries_id_fk",
-          "tableFrom": "library_media_items",
-          "tableTo": "libraries",
-          "columnsFrom": [
-            "library_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "cascade",
-          "onUpdate": "no action"
-        },
-        "library_media_items_media_item_id_media_items_id_fk": {
-          "name": "library_media_items_media_item_id_media_items_id_fk",
-          "tableFrom": "library_media_items",
-          "tableTo": "media_items",
-          "columnsFrom": [
-            "media_item_id"
-          ],
-          "columnsTo": [
-            "id"
-          ],
-          "onDelete": "no action",
-          "onUpdate": "no action"
-        }
-      },
-      "compositePrimaryKeys": {
-        "library_media_items_library_id_media_item_id_pk": {
-          "columns": [
-            "library_id",
-            "media_item_id"
-          ],
-          "name": "library_media_items_library_id_media_item_id_pk"
-        }
-      },
       "uniqueConstraints": {},
       "checkConstraints": {}
     },
@@ -705,6 +646,13 @@
           "notNull": false,
           "autoincrement": false
         },
+        "library_id": {
+          "name": "library_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
         "file_path": {
           "name": "file_path",
           "type": "text",
@@ -715,6 +663,13 @@
         "file_size": {
           "name": "file_size",
           "type": "integer",
+          "primaryKey": false,
+          "notNull": true,
+          "autoincrement": false
+        },
+        "file_metadata": {
+          "name": "file_metadata",
+          "type": "text",
           "primaryKey": false,
           "notNull": true,
           "autoincrement": false
@@ -764,8 +719,8 @@
           "notNull": true,
           "autoincrement": false
         },
-        "genres": {
-          "name": "genres",
+        "tags": {
+          "name": "tags",
           "type": "text",
           "primaryKey": false,
           "notNull": true,
@@ -786,7 +741,7 @@
           "columns": [
             "file_path"
           ],
-          "isUnique": true
+          "isUnique": false
         },
         "media_items_title_idx": {
           "name": "media_items_title_idx",
@@ -796,7 +751,21 @@
           "isUnique": false
         }
       },
-      "foreignKeys": {},
+      "foreignKeys": {
+        "media_items_library_id_libraries_id_fk": {
+          "name": "media_items_library_id_libraries_id_fk",
+          "tableFrom": "media_items",
+          "tableTo": "libraries",
+          "columnsFrom": [
+            "library_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "no action",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "checkConstraints": {}

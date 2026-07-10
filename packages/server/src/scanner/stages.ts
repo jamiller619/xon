@@ -1,5 +1,6 @@
 export { default as drm } from './stages/drm.ts'
-export { default as metadata } from './stages/metadata.ts'
+export { default as fileMetadata } from './stages/fileMetadata.ts'
+export { default as libraryMetadata } from './stages/libraryMetadata.ts'
 export { default as persist } from './stages/persist.ts'
 export { default as person } from './stages/person.ts'
 export { default as thumbnail } from './stages/thumbnail.ts'

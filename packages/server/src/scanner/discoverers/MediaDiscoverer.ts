@@ -27,12 +27,18 @@ export async function createMediaJob(
   db: LibSQLDatabase,
   file: FileEntry,
   isNew: boolean,
+  libraryId: string,
+  libraryType: LibraryType,
+  dataSourcePath: string,
 ): Promise<MediaJob> {
   const job: MediaJob = {
     id: crypto.randomUUID(),
     type: isNew ? 'new' : 'changed',
     file,
     errors: [],
+    libraryId,
+    libraryType,
+    dataSourcePath,
     mediaTypes: [], // This will be filled in later based on the file extension
     data: {
       id: crypto.randomUUID(),
@@ -44,7 +50,9 @@ export async function createMediaJob(
     return job
   }
 
-  const data = (await mediaService.getMediaByPath(db, file.path)) ?? {}
+  const data =
+    (await mediaService.getMediaByPathAndLibrary(db, file.path, libraryId)) ??
+    {}
 
   return {
     ...job,

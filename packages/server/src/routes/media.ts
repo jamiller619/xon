@@ -97,21 +97,27 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
 
   // GET /media — list media items scoped to accessible libraries
   router.get('/', async (c) => {
+    const user = c.get('user')
+
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
     const { sortBy, order, page, limit } = c.req.query()
     const pageNum = Math.max(1, Number(page) || 1)
     const limitNum = Math.min(Math.max(1, Number(limit) || 20), 100)
     const offset = (pageNum - 1) * limitNum
-    // const user = c.get('user')
 
     const sortDir = order === 'asc' ? asc : desc
     const orderExpr = sortDir(mediaItems[(sortBy as keyof MediaItem) || 'id'])
 
-    const items = await db
-      .select()
-      .from(mediaItems)
-      .orderBy(orderExpr)
-      .limit(limitNum)
-      .offset(offset)
+    const items = await mediaService.getMediaByUser(db, user.id)
+
+    // const items = await db
+    //   .select()
+    //   .from(mediaItems)
+    //   .orderBy(orderExpr)
+    //   .limit(limitNum)
+    //   .offset(offset)
 
     const etag = computeETag(items)
     if (c.req.header('If-None-Match') === etag) return c.body(null, 304)

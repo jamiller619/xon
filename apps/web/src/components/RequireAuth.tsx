@@ -70,14 +70,25 @@ export default function RequireAuth({
     const isAuthenticated = !!(!error && !sessionError && data?.user)
 
     // Anon logins are enabled and no error yet — let the first effect attempt sign-in
-    if (!isAuthenticated && areAnonLoginsEnabled && !error && !sessionError) return
+    if (!isAuthenticated && areAnonLoginsEnabled && !error && !sessionError)
+      return
 
     if (!isAuthenticated) {
       navigate('/login', { replace: true })
     }
-  }, [data, error, sessionError, isPending, isRefetching, isLoading, areAnonLoginsEnabled, navigate])
+  }, [
+    data,
+    error,
+    sessionError,
+    isPending,
+    isRefetching,
+    isLoading,
+    areAnonLoginsEnabled,
+    navigate,
+  ])
 
-  if (isLoading || isPending || isRefetching) return <p>Loading...</p>
+  if (data?.user == null && (isLoading || isPending || isRefetching))
+    return <p>Loading...</p>
   if (error || sessionError) return <p>{error ?? sessionError?.message}</p>
 
   return <>{children}</>

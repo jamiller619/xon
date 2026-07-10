@@ -6,6 +6,9 @@ import mime from 'mime-types'
 
 export type FileEntry = Omit<MediaProviderFile, 'mediaType'> & {
   ext: string
+  /**
+   * MIME type of the file
+   */
   mediaType: string
 }
 

@@ -4,7 +4,7 @@ import {
   MetadataSourcePlugin,
   type PluginContext,
 } from '@xon/plugin-sdk'
-import { MediaType, type Metadata } from '@xon/shared'
+import { LibraryType, MediaType, type Metadata } from '@xon/shared'
 import { MusicBrainzClient } from './musicBrainzClient.js'
 import { parseMusicPath } from './musicParser.js'
 
@@ -67,10 +67,7 @@ export class MusicBrainzMetadataPlugin extends MetadataSourcePlugin {
     })
   }
 
-  async enrich(
-    filePath: string,
-    types: MediaType.MainType[],
-  ): Promise<Metadata | undefined | null> {
+  async enrich(filePath: string): Promise<Metadata | undefined | null> {
     if (!this.client || !this.ctx) return
 
     const parsed = parseMusicPath(filePath)

@@ -1,8 +1,6 @@
 import { basename, join } from 'node:path'
 import type { Client } from '@libsql/client'
 import type {
-  MetadataSourcePlugin,
-  PluginCategory,
   PluginContext,
   PluginEvent,
   PluginEventPayloads,
@@ -11,6 +9,7 @@ import type {
   UIComponent,
 } from '@xon/plugin-sdk'
 import { BasePlugin } from '@xon/plugin-sdk'
+import type { PluginCategory } from '@xon/shared'
 import { discoverPluginManifests } from './pluginLoader.ts'
 import { createSandboxedFetch, createSandboxedFs } from './pluginSandbox.ts'
 

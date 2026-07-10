@@ -1,4 +1,4 @@
-import type { MediaType, Metadata } from '@xon/shared'
+import type { LibraryType, MediaType, Metadata } from '@xon/shared'
 import { BasePlugin } from './BasePlugin.js'
 
 /**
@@ -14,6 +14,7 @@ export abstract class MetadataSourcePlugin extends BasePlugin {
    */
   abstract enrich(
     filePath: string,
-    types: MediaType.MainType[],
+    libraryType: LibraryType,
+    lang?: string,
   ): Promise<Metadata | undefined | null>
 }
