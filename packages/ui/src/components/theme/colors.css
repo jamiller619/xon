@@ -45,10 +45,10 @@
   --color-accent-11: var(--violet-11);
   --color-accent-12: var(--violet-12);
 
-  --color-gray-a1: oklch(from var(--color-gray-2) l c h / 0.8);
-  --color-gray-a2: oklch(from var(--color-gray-2) l c h / 0.6);
-  --color-gray-a3: oklch(from var(--color-gray-2) l c h / 0.4);
-  --color-gray-a4: oklch(from var(--color-gray-2) l c h / 0.2);
+  --color-gray-a1: oklch(from var(--color-gray-11) l c h / 0.1);
+  --color-gray-a2: oklch(from var(--color-gray-11) l c h / 0.3);
+  --color-gray-a3: oklch(from var(--color-gray-11) l c h / 0.5);
+  --color-gray-a4: oklch(from var(--color-gray-11) l c h / 0.8);
 
   --color-accent-a1: oklch(from var(--color-accent-9) l c h / 0.8);
   --color-accent-a2: oklch(from var(--color-accent-9) l c h / 0.6);

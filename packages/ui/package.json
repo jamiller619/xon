@@ -21,7 +21,7 @@
   "peerDependencies": {
     "@fluentui/react-icons": "^2.0.324",
     "clsx": "^2.1.1",
-    "inline-css-modules": "file:/home/jeff/projects/inline-css-modules",
+    "inline-css-modules": "^0.3.0",
     "motion": "^12.38.0",
     "react": "^19.0.0",
     "react-dom": "^19.0.0"

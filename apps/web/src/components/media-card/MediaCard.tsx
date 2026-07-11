@@ -1,5 +1,4 @@
 import type { MediaItem } from '@xon/shared'
-import { motion } from 'motion/react'
 import { Link } from 'react-router-dom'
 import { apiUrl } from '~/lib/apiFetch'
 import { useAudioStore } from '~/store/audioStore'

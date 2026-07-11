@@ -1,6 +1,7 @@
 const ROUTES = {
   libraries: '/api/libraries',
   groups: '/api/groups',
+  mediaByLibrary: '/api/libraries/:libraryId/media',
   recentMedia: '/api/media?sortBy=createdAt&order=desc&page=1&limit=10',
   setupStatus: '/api/auth/setup-status',
 } as const

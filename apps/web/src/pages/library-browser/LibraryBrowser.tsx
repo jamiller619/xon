@@ -1,10 +1,10 @@
+import type { MediaItem } from '@xon/shared'
+import { Select } from '@xon/ui'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import BulkEditDialog from '~/components/group-dialog/BulkEditDialog'
 import GroupDialog from '~/components/group-dialog/GroupDialog'
-import MediaCard, {
-  type MediaCardItem,
-} from '~/components/media-card/MediaCard'
+import MediaCard from '~/components/media-card/MediaCard'
 import { apiFetch } from '~/lib/apiFetch'
 import { useAppStore } from '~/store/appStore'
 import styles from './LibraryBrowser.module.css'
@@ -89,7 +89,7 @@ export default function LibraryBrowser() {
   const { id } = useParams<{ id: string }>()
   const { viewMode, setViewMode } = useAppStore()
   const [library, setLibrary] = useState<Library | null>(null)
-  const [items, setItems] = useState<MediaCardItem[]>([])
+  const [items, setItems] = useState<MediaItem[]>([])
   const [page, setPage] = useState(1)
   const [totalPages, setTotalPages] = useState(1)
   const [loading, setLoading] = useState(true)
@@ -127,7 +127,7 @@ export default function LibraryBrowser() {
     apiFetch(`/api/libraries/${id}/media?${params.toString()}`)
       .then((r) => r.json())
       .then((data) => {
-        const mediaList = data as MediaCardItem[]
+        const mediaList = data as MediaItem[]
         setItems(mediaList)
         if (mediaList.length === PAGE_SIZE) {
           setTotalPages((prev) => Math.max(prev, page + 1))
@@ -356,8 +356,9 @@ export default function LibraryBrowser() {
               >
                 Category
               </label>
-              <select
+              <Select
                 id="filter-category"
+                size="small"
                 className={styles.filterSelect ?? ''}
                 value={filterCategory}
                 onChange={(e) => handleCategoryFilter(e.target.value)}
@@ -368,15 +369,16 @@ export default function LibraryBrowser() {
                     {cat}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <div className={styles.filterGroup ?? ''}>
               <label className={styles.filterLabel ?? ''} htmlFor="filter-sort">
                 Sort
               </label>
-              <select
+              <Select
                 id="filter-sort"
+                size="small"
                 className={styles.filterSelect ?? ''}
                 value={currentSortKey}
                 onChange={(e) => handleSortOption(e.target.value)}
@@ -389,7 +391,7 @@ export default function LibraryBrowser() {
                     {opt.label}
                   </option>
                 ))}
-              </select>
+              </Select>
             </div>
 
             <div className={styles.filterGroup ?? ''}>
@@ -399,26 +401,28 @@ export default function LibraryBrowser() {
               >
                 Genre
               </label>
-              <select
+              <Select
                 id="filter-genre"
-                className={`${styles.filterSelect ?? ''} ${styles.filterDisabled ?? ''}`}
+                size="small"
+                className={styles.filterSelect ?? ''}
                 disabled
               >
                 <option value="">All</option>
-              </select>
+              </Select>
             </div>
 
             <div className={styles.filterGroup ?? ''}>
               <label className={styles.filterLabel ?? ''} htmlFor="filter-year">
                 Year
               </label>
-              <select
+              <Select
                 id="filter-year"
-                className={`${styles.filterSelect ?? ''} ${styles.filterDisabled ?? ''}`}
+                size="small"
+                className={styles.filterSelect ?? ''}
                 disabled
               >
                 <option value="">All</option>
-              </select>
+              </Select>
             </div>
 
             <div className={styles.filterGroup ?? ''}>
@@ -428,26 +432,28 @@ export default function LibraryBrowser() {
               >
                 Rating
               </label>
-              <select
+              <Select
                 id="filter-rating"
-                className={`${styles.filterSelect ?? ''} ${styles.filterDisabled ?? ''}`}
+                size="small"
+                className={styles.filterSelect ?? ''}
                 disabled
               >
                 <option value="">All</option>
-              </select>
+              </Select>
             </div>
 
             <div className={styles.filterGroup ?? ''}>
               <label className={styles.filterLabel ?? ''} htmlFor="filter-tags">
                 Tags
               </label>
-              <select
+              <Select
                 id="filter-tags"
-                className={`${styles.filterSelect ?? ''} ${styles.filterDisabled ?? ''}`}
+                size="small"
+                className={styles.filterSelect ?? ''}
                 disabled
               >
                 <option value="">All</option>
-              </select>
+              </Select>
             </div>
           </div>
 

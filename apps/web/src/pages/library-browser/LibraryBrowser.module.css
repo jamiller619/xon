@@ -45,26 +45,9 @@
   letter-spacing: 0.05em;
 }
 
+/* Look and feel come from the Select component; only sizing lives here */
 .filterSelect {
-  padding: 5px 8px;
-  background: rgba(255, 255, 255, 0.07);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 6px;
-  color: #c0c0d0;
-  font-size: 0.8125rem;
-  cursor: pointer;
   min-width: 120px;
-  appearance: auto;
-}
-
-.filterSelect:focus {
-  outline: none;
-  border-color: rgba(108, 99, 255, 0.5);
-}
-
-.filterDisabled {
-  opacity: 0.4;
-  cursor: not-allowed;
 }
 
 /* Active filter chips */

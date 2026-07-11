@@ -3531,8 +3531,10 @@ inherits@^2.0.3, inherits@~2.0.3:
   resolved "https://registry.yarnpkg.com/inherits/-/inherits-2.0.4.tgz#0fa2c64f932917c3433a0ded55363aae37416b7c"
   integrity sha512-k/vGaX4/Yla3WzyMCvTQOXYeIHvqOKtnqBduzTHpzpQZzAskKMhZ2K+EnBiSM9zGSoIFeMpXKxa4dYeZIQqewQ==
 
-"inline-css-modules@file:../inline-css-modules":
-  version "0.1.0"
+inline-css-modules@^0.3.0:
+  version "0.3.0"
+  resolved "https://registry.yarnpkg.com/inline-css-modules/-/inline-css-modules-0.3.0.tgz#a830755058433f6d4b2bc1661ab7669cfb9fa28d"
+  integrity sha512-VZ6XDa9M+g7yL9p8wexB+xbNDNiBoauJssouM5mfSeL6gSH6NOWa8dc143SffdszwNDhNhBnHfEQCoocY62DiA==
 
 is-core-module@^2.16.1:
   version "2.16.2"
