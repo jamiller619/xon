@@ -9,22 +9,43 @@
 .content {
   display: flex;
   flex-direction: column;
+  padding-block-start: var(--space-xl);
+  margin-block-start: var(--space-xl);
 }
 
 .container {
-  /* position: relative; */
-  padding: var(--space-6);
+  position: relative;
+  padding-inline: var(--space-xl);
   max-width: 1100px;
   margin: 0 auto;
 }
 
-.posterContainer {
+.header {
+  margin-block-end: var(--space-xl);
+}
+
+.logo {
+  position: absolute;
+  top: 0;
+  right: 0;
+}
+
+.subtitle {
+  font-size: var(--text-sm);
+}
+
+.description {
+  max-width: 45em;
+}
+
+.actions {
   display: flex;
-  gap: var(--space-6);
-  margin-bottom: var(--space-5);
-  width: stretch;
-  justify-content: space-between;
-  align-items: start;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+}
+
+.ratingIcon {
+  color: #ff9900;
 }
 
 @media (max-width: 768px) {
@@ -38,11 +59,12 @@
   flex-shrink: 0;
   width: 280px;
   aspect-ratio: 2 / 3;
-  background: #1a1a2e;
-  overflow: hidden;
-  border-radius: var(--border-radius-4);
-  corner-shape: var(--corner-shape);
-  box-shadow: 0 0 33px 2px #00000066;
+
+  img {
+    box-shadow: var(--shadow-2);
+    border-radius: var(--border-radius-4);
+    corner-shape: var(--corner-shape);
+  }
 }
 
 @media (max-width: 768px) {
@@ -98,16 +120,10 @@
   min-width: 0;
 } */
 
-.title {
-  line-height: 1;
-  font-size: var(--font-size-11);
-  font-weight: 600;
-}
-
 .heading {
   line-height: 1;
   font-weight: 600;
-  font-size: var(--font-size-9);
+  font-size: var(--text-5xl);
   display: inline-block;
 }
 
@@ -120,13 +136,6 @@
   font-size: 0.75rem;
   color: #a09bff;
   margin-bottom: 16px;
-}
-
-.description {
-  font-size: 0.9rem;
-  color: #aaa;
-  line-height: 1.6;
-  margin: 0 0 16px;
 }
 
 /* DRM notice */
@@ -160,13 +169,6 @@
   font-size: 0.8rem;
   color: #cc8080;
   line-height: 1.4;
-}
-
-/* Action buttons */
-.actions {
-  display: flex;
-  gap: var(--space-3);
-  flex-wrap: wrap;
 }
 
 .btnPlay {
@@ -663,7 +665,7 @@
 }
 
 .castList {
-  gap: var(--space-4);
+  gap: var(--space-md);
 }
 
 .castImage {
@@ -681,24 +683,12 @@
 
 .castName {
   line-height: 1.2;
-  margin-block: var(--space-3);
+  margin-block: var(--space-xs);
 }
 
 .castRole {
   display: inline-block;
-  font-size: var(--font-size-4);
+  font-size: var(--text-lg);
   color: var(--color-gray-10);
   line-height: 1.2;
-}
-
-.posterMeta {
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  height: stretch;
-}
-
-.description {
-  max-width: 30em;
-  line-height: 1.5;
 }

@@ -25,3 +25,10 @@
     border-radius: var(--border-radius-8);
   }
 }
+
+a.surface,
+button.surface:not([disabled]) {
+  &:hover {
+    background: var(--color-gray-a2);
+  }
+}

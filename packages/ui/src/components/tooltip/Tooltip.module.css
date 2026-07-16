@@ -7,8 +7,8 @@
   position: absolute;
   z-index: 1000;
   width: max-content;
-  max-width: var(--space-11);
-  padding: var(--space-2) var(--space-3);
+  max-width: var(--space-5xl);
+  padding: var(--space-2xs) var(--space-xs);
   background: var(--color-gray-12);
   color: var(--color-gray-1);
   border-radius: 6px;
@@ -35,23 +35,23 @@
 .top {
   bottom: 100%;
   left: 50%;
-  translate: -50% calc(-1 * var(--space-2));
+  translate: -50% calc(-1 * var(--space-2xs));
 }
 
 .bottom {
   top: 100%;
   left: 50%;
-  translate: -50% var(--space-2);
+  translate: -50% var(--space-2xs);
 }
 
 .left {
   right: 100%;
   top: 50%;
-  translate: calc(-1 * var(--space-2)) -50%;
+  translate: calc(-1 * var(--space-2xs)) -50%;
 }
 
 .right {
   left: 100%;
   top: 50%;
-  translate: var(--space-2) -50%;
+  translate: var(--space-2xs) -50%;
 }

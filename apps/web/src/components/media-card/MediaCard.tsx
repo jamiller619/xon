@@ -1,4 +1,6 @@
+import { Play16Regular as PlayIcon } from '@fluentui/react-icons'
 import type { MediaItem } from '@xon/shared'
+import { ContextMenu, type ContextMenuItem } from '@xon/ui'
 import { Link } from 'react-router-dom'
 import { apiUrl } from '~/lib/apiFetch'
 import { useAudioStore } from '~/store/audioStore'
@@ -14,6 +16,22 @@ interface MediaCardProps {
   selected?: boolean
   onToggleSelect?: (id: string) => void
 }
+
+const contextMenuItems: ContextMenuItem[] = [
+  {
+    label: 'Play',
+    icon: <PlayIcon />,
+  },
+  {
+    label: 'Add to playlist',
+  },
+  {
+    label: 'Fix match',
+  },
+  {
+    label: 'Delete',
+  },
+]
 
 export default function MediaCard({
   item,
@@ -129,7 +147,7 @@ export default function MediaCard({
         )}
       </div>
       <div className={styles.info}>
-        <h4 className={styles.title}>{item.title}</h4>
+        <span className={styles.title}>{item.title}</span>
         <div className={styles.meta}>
           <span>{item.metadata.year}</span>
         </div>
@@ -153,8 +171,10 @@ export default function MediaCard({
   }
 
   return (
-    <Link to={link} className={styles.card} state={item}>
-      {cardContent}
-    </Link>
+    <ContextMenu items={contextMenuItems}>
+      <Link to={link} className={styles.card} state={item}>
+        {cardContent}
+      </Link>
+    </ContextMenu>
   )
 }

@@ -22,8 +22,8 @@ export const styles = css`
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: var(--space-6);
-    padding-block-start: var(--space-6);
+    gap: var(--space-xl);
+    padding-block-start: var(--space-xl);
   }
 
   p {
@@ -33,7 +33,7 @@ export const styles = css`
   .card {
     width: 100%;
     max-width: 60rem;
-    padding: var(--space-6);
+    padding: var(--space-xl);
     view-transition-name: setup-card;
   }
 
@@ -41,15 +41,15 @@ export const styles = css`
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--space-4);
+    gap: var(--space-md);
   }
 
   .stepDot {
     position: relative;
     top: 4px;
-    font-size: var(--font-size-1);
+    font-size: var(--text-xs);
     font-weight: 600;
-    padding: var(--space-2) var(--space-6);
+    padding: var(--space-2xs) var(--space-xl);
     color: var(--color-text-muted);
     text-transform: uppercase;
 
@@ -77,15 +77,14 @@ export const styles = css`
 
   .heading {
     font-weight: 500;
-    white-space: nowrap;
-    margin-block-end: var(--space-4);
+    margin-block-end: var(--space-md);
   }
 
   .form {
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    gap: var(--space-5);
+    gap: var(--space-lg);
     width: stretch;
   }
 

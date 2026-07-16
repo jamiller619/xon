@@ -169,36 +169,32 @@ export default function ActionButtons({ item }: ActionButtonsProps) {
 }
 
 function determineType(item: MediaItem) {
-  const isVideo = item.mimeType?.startsWith('video/')
-
-  if (isVideo)
-    return {
-      isVideo: true,
-      isAudio: false,
-      isImage: false,
-    }
-
-  const isAudio = item.mimeType?.startsWith('audio/')
-
-  if (isAudio)
-    return {
-      isVideo: false,
-      isAudio: true,
-      isImage: false,
-    }
-
-  const isImage = item.mimeType?.startsWith('image/')
-
-  if (isImage)
-    return {
-      isVideo: false,
-      isAudio: false,
-      isImage: true,
-    }
-
-  return {
+  const resp = {
     isVideo: false,
     isAudio: false,
     isImage: false,
   }
+
+  if (item.mediaType?.startsWith('video/')) {
+    return {
+      ...resp,
+      isVideo: true,
+    }
+  }
+
+  if (item.mediaType?.startsWith('audio/')) {
+    return {
+      ...resp,
+      isAudio: true,
+    }
+  }
+
+  if (item.mediaType?.startsWith('image/')) {
+    return {
+      ...resp,
+      isImage: true,
+    }
+  }
+
+  return resp
 }

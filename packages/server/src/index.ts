@@ -198,6 +198,7 @@ export {
 // } from './routes/adminBackupTargets.ts'
 // export { computeChecksum, runVerifyJob } from './routes/adminBackupVerify.ts'
 // export { runSyncJob } from './routes/sync.ts'
+export type { LibrariesRoutes } from './routes/libraries.ts'
 export type { ScanResult } from './scanner/scanner.ts'
 export {
   parseCronInterval,

@@ -2,12 +2,12 @@
   display: flex;
   flex-direction: row;
   align-items: center;
-  gap: var(--space-3);
+  gap: var(--space-xs);
   cursor: pointer;
 }
 
 .checkbox {
-  --size: var(--space-4);
+  --size: var(--space-md);
   display: flex;
   align-items: center;
   justify-content: center;

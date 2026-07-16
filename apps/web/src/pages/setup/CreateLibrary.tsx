@@ -1,19 +1,11 @@
 import { useMutation } from '@tanstack/react-query'
-import { LibraryType } from '@xon/shared'
-import {
-  Button,
-  CheckboxGroup,
-  Dialog,
-  Field,
-  Flex,
-  RadioGroup,
-  Textbox,
-} from '@xon/ui'
+import { DataSourceType, LibraryType } from '@xon/shared'
+import { Button, Dialog, Field, Flex, RadioGroup, Textbox } from '@xon/ui'
 import { css } from 'inline-css-modules'
 import { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import MediaFolderBrowser from '~/components/create-library-form/MediaFolderBrowser'
-import { useMutationHelper } from '~/hooks/useQueryAPIHelper'
+import { createLibraryMutation } from '~/lib/librariesApi'
 import { styles as setupStyles } from './Setup'
 
 const LIBRARY_TYPES = [
@@ -50,7 +42,7 @@ const styles = css`
   }
 
   .locationTextbox {
-    margin-block-end: var(--space-2);
+    margin-block-end: var(--space-2xs);
   }
 
   .image {
@@ -66,8 +58,8 @@ export default function CreateLibrary() {
   const [name, setName] = useState<string>('')
   const [description, setDescription] = useState<string>('')
   const [sourcePath, setSourcePath] = useState('')
-  const [libraryType, setLibraryType] = useState<string | undefined>()
-  const mutation = useMutation(useMutationHelper('libraries'))
+  const [libraryType, setLibraryType] = useState<LibraryType | undefined>()
+  const mutation = useMutation(createLibraryMutation)
 
   const canFormSubmit =
     name.trim() !== '' &&
@@ -83,11 +75,13 @@ export default function CreateLibrary() {
   // A React 19 form action: useFormStatus tracks the returned promise, so the
   // submit button drives its own spinner while this is in flight.
   async function handleSubmit() {
+    if (!libraryType) return
+
     await mutation.mutateAsync({
       name,
       description,
       type: libraryType,
-      dataSources: [{ type: 'local', path: sourcePath }],
+      dataSources: [{ type: DataSourceType.local, path: sourcePath }],
     })
   }
 
@@ -100,7 +94,7 @@ export default function CreateLibrary() {
       action={handleSubmit}
     >
       <div className={styles.column}>
-        <h1 className={setupStyles.heading}>Create your first Library.</h1>
+        <h4 className={setupStyles.heading}>Create your first Library.</h4>
         <p>
           Organize your media by creating a library. Xon will scan your media to
           discover metadata and create an editorial gallery experience
@@ -132,7 +126,7 @@ export default function CreateLibrary() {
           <RadioGroup
             items={LIBRARY_TYPES}
             value={libraryType ?? ''}
-            onChange={setLibraryType}
+            onChange={(value) => setLibraryType(value as LibraryType)}
           />
         </Field>
         <Field label="Location">

@@ -4,20 +4,24 @@ import styles from './Surface.module.css'
 
 export type SurfaceProps<T extends ElementType = 'div'> = {
   as?: T
-  br?: 'sm' | 'md' | 'lg' | 'none'
+  borderRadius?: 'sm' | 'md' | 'lg' | 'none'
 } & Omit<ComponentPropsWithoutRef<T>, 'as'>
 
 export default function Surface<T extends ElementType = 'div'>({
   as,
   className,
-  br,
+  borderRadius,
   ...props
 }: SurfaceProps<T>) {
   const Component = as ?? 'div'
 
   return (
     <Component
-      className={clsx(styles.surface, className, br ? styles[br] : styles.md)}
+      className={clsx(
+        styles.surface,
+        className,
+        borderRadius ? styles[borderRadius] : styles.md,
+      )}
       {...props}
     />
   )

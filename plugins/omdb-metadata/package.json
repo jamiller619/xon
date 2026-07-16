@@ -1,0 +1,33 @@
+{
+  "name": "@xon/plugin-omdb-metadata",
+  "description": "Fetches movie and tv show metadata from The Open Movie Database",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "dist/index.js",
+  "author": "Xon",
+  "scripts": {
+    "build": "tsc --build",
+    "typecheck": "tsc --build --noEmit"
+  },
+  "dependencies": {
+    "@xon/plugin-sdk": "*",
+    "@xon/shared": "*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "*"
+  },
+  "xon": {
+    "displayName": "OMDb",
+    "category": "MetadataSource",
+    "libraryTypes": [
+      "movies",
+      "tv_shows"
+    ],
+    "permissions": {
+      "network": [
+        "omdbapi.com"
+      ]
+    }
+  }
+}

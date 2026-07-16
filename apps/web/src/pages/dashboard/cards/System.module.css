@@ -1,7 +1,7 @@
 .row {
   display: flex;
   flex-direction: row;
-  gap: var(--space-3);
+  gap: var(--space-xs);
   align-items: center;
   justify-content: space-between;
   width: 100%;
@@ -10,12 +10,12 @@
 .dlist {
   display: flex;
   flex-direction: column;
-  gap: var(--space-4);
+  gap: var(--space-md);
 
   .row {
     display: flex;
     flex-direction: row;
-    gap: var(--space-3);
+    gap: var(--space-xs);
     align-items: center;
     justify-content: space-between;
   }

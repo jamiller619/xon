@@ -1,6 +1,6 @@
 .slot {
-  width: var(--space-7);
-  height: var(--space-8);
+  width: var(--space-2xl);
+  height: var(--space-3xl);
   background: var(--mauve-5);
   border-radius: var(--border-radius-2);
   border: none;
@@ -9,7 +9,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: var(--font-size-9);
+  font-size: var(--text-5xl);
   font-family: monospace;
   font-weight: 100;
   color: currentColor;

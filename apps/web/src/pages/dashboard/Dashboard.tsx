@@ -1,35 +1,24 @@
-import type { Library, MediaItem } from '@xon/shared'
+import { useQuery } from '@tanstack/react-query'
+import type { MediaItem } from '@xon/shared'
+import { Flex, Surface, XScroller } from '@xon/ui'
 import clsx from 'clsx'
 import type { HTMLAttributes } from 'react'
 import { Link } from 'react-router-dom'
 import MediaCard, {} from '~/components/media-card/MediaCard'
 import PluginSlot from '~/components/PluginSlot'
+import useQueryAPIHelper from '~/hooks/useQueryAPIHelper'
+import { librariesQuery } from '~/lib/librariesApi'
+import System from './cards/System'
 import styles from './Dashboard.module.css'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
-import { useQuery } from '@tanstack/react-query'
-import { Flex, XScroller } from '@xon/ui'
-import useQueryAPIHelper from '~/hooks/useQueryAPIHelper'
-import System from './cards/System'
 
 export default function Dashboard() {
-  const {
-    isPending,
-    error,
-    data: recentMedia,
-  } = useQuery<MediaItem[]>(useQueryAPIHelper('recentMedia'))
-
-  const { data: libraries } = useQuery<Library[]>(
-    useQueryAPIHelper('libraries'),
+  const { data: recentMedia } = useQuery<MediaItem[]>(
+    useQueryAPIHelper('recentMedia'),
   )
 
-  // if (isPending) {
-  //   return (
-  //     <div className={styles.loading}>
-  //       <p>Loading...</p>
-  //     </div>
-  //   )
-  // }
+  const { data: libraries } = useQuery(librariesQuery)
 
   return (
     <Flex dir="col" gap="4">
@@ -41,7 +30,7 @@ export default function Dashboard() {
         media={recentMedia}
       />
       <Flex gap="4">
-        <DashboardSection key="my-media" title="My Media">
+        <DashboardSection key="my-libraries" title="Libraries">
           {libraries?.map((library) => (
             <Link
               key={library.id}
@@ -85,9 +74,13 @@ function DashboardSection({
 }: DashboardSectionProps) {
   return (
     <XScroller>
-      <section className={clsx(styles.section, className)} {...props}>
+      <Surface
+        borderRadius="sm"
+        className={clsx(styles.section, className)}
+        {...props}
+      >
         <Flex justify="between">
-          <h2>{title}</h2>
+          <h6 className={styles.title}>{title}</h6>
           <Flex gap="2">
             <XScroller.ButtonPrev />
             <XScroller.ButtonNext />
@@ -96,7 +89,7 @@ function DashboardSection({
         <XScroller.Viewport className={styles.content}>
           {children}
         </XScroller.Viewport>
-      </section>
+      </Surface>
     </XScroller>
   )
 }

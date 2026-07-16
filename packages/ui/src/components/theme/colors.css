@@ -9,16 +9,6 @@
 @import "./colors-dark.css" screen and (prefers-color-scheme: dark);
 
 :root {
-  /* --color-surface: var(--mauve-2);
-  --color-surface-hover: var(--mauve-3);
-  --color-surface-active: var(--mauve-4);
-  --color-text: var(--mauve-12);
-  --color-text-muted: var(--mauve-9);
-  --color-accent: var(--violet-10);
-  --color-text-on-accent: var(--mauve-1);
-  --color-accent-hover: var(--violet-9);
-  --color-accent-active: var(--violet-11); */
-
   --color-gray-1: var(--mauve-1);
   --color-gray-2: var(--mauve-2);
   --color-gray-3: var(--mauve-3);
@@ -45,19 +35,19 @@
   --color-accent-11: var(--violet-11);
   --color-accent-12: var(--violet-12);
 
-  --color-gray-a1: oklch(from var(--color-gray-11) l c h / 0.1);
-  --color-gray-a2: oklch(from var(--color-gray-11) l c h / 0.3);
-  --color-gray-a3: oklch(from var(--color-gray-11) l c h / 0.5);
-  --color-gray-a4: oklch(from var(--color-gray-11) l c h / 0.8);
+  --color-gray-a1: oklch(from var(--color-gray-2) l c h / 0.9);
+  --color-gray-a2: oklch(from var(--color-gray-11) l c h / 0.2);
+  /* --color-gray-a2: oklch(from var(--color-gray-2) l c h / 0.7); */
+  --color-gray-a3: oklch(from var(--color-gray-2) l c h / 0.5);
+  --color-gray-a4: oklch(from var(--color-gray-2) l c h / 0.2);
 
   --color-accent-a1: oklch(from var(--color-accent-9) l c h / 0.8);
   --color-accent-a2: oklch(from var(--color-accent-9) l c h / 0.6);
   --color-accent-a3: oklch(from var(--color-accent-9) l c h / 0.4);
   --color-accent-a4: oklch(from var(--color-accent-9) l c h / 0.2);
 
+  --color-surface: var(--color-gray-a1);
+
   --color-text: var(--color-gray-12);
   --color-text-muted: var(--color-gray-10);
-
-  /* --color-surface: var(--mauve-2);
-  --color-text: var(--mauve-12); */
 }

@@ -8,7 +8,7 @@
 
 .code {
   /* font-size: 6rem; */
-  font-size: var(--font-size-10);
+  font-size: var(--text-6xl);
   font-weight: 700;
   color: var(--color-accent);
   line-height: 1;

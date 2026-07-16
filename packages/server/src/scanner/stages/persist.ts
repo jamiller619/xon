@@ -62,6 +62,8 @@ async function saveNewMediaItem(ctx: PipelineContext, job: MediaJob) {
     await tx.insert(mediaItems).values({
       id: job.data.id,
       libraryId: job.libraryId,
+      matchId: job.data.matchId,
+      matchIdSource: job.data.matchIdSource,
       filePath: job.file.path,
       fileSize: job.file.size,
       fileMetadata: job.data.fileMetadata ?? {},

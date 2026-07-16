@@ -2,12 +2,12 @@ import { Button as UIButton } from '@base-ui/react'
 import clsx from 'clsx'
 import { useFormStatus } from 'react-dom'
 import surfaceStyles from '../surface/Surface.module.css'
-import type { Variant } from '../types.js'
+import type { Size, Variant } from '../types.js'
 import styles from './Button.module.css'
 
 export type ButtonProps = UIButton.Props & {
   variant?: Variant | undefined
-  size?: 'small' | 'large' | undefined
+  size?: Size | undefined
   block?: boolean | undefined
   /**
    * Force the loading spinner on. When omitted, a `type="submit"` button

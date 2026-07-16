@@ -44,6 +44,17 @@ export default {
           data.title = 'title' in pluginMeta ? pluginMeta.title : data.title
           data.metadata ??= {}
 
+          if ('tmdbId' in pluginMeta && pluginMeta.tmdbId != null) {
+            data.matchId = String(pluginMeta.tmdbId)
+            data.matchIdSource = 'tmdb'
+          } else if ('imdbId' in pluginMeta && pluginMeta.imdbId != null) {
+            data.matchId = pluginMeta.imdbId
+            data.matchIdSource = 'imdb'
+          } else if ('imdbID' in pluginMeta && pluginMeta.imdbID != null) {
+            data.matchId = pluginMeta.imdbID
+            data.matchIdSource = 'imdb'
+          }
+
           Object.assign(data.metadata, pluginMeta)
         }
       } catch (err) {

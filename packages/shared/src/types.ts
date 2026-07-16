@@ -11,7 +11,14 @@ export type StatsPayload = {
     size: number
   }[]
   timestamp: number
-  uptime: number
+  process: {
+    /** CPU usage as a % of total capacity across all cores, same scale as `cpu` */
+    cpu: number
+    /** Resident set size, in bytes */
+    memory: number
+    /** Seconds since the server process started */
+    uptime: number
+  }
   system: {
     model: string
     manufacturer: string
@@ -142,6 +149,8 @@ export interface MediaItem {
   fileSize: number
   fileMetadata: Metadata
   mediaType: string
+  matchId: string | null
+  matchIdSource: string | null
   title: string
   description: string | null
   metadata: Metadata

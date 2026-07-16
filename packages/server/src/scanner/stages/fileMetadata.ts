@@ -13,15 +13,14 @@ export default {
 
     const fileMetaCopy = { ...job.data.fileMetadata }
 
-    if (Object.keys(fileMetaCopy).length > 0) {
-      return undefined
-    }
-
     const fileMeta = await parseMetadataFromFile(job.file)
 
     if (fileMeta) {
       return {
-        fileMetadata: fileMeta,
+        fileMetadata: {
+          ...fileMetaCopy,
+          ...fileMeta,
+        },
       }
     }
   },

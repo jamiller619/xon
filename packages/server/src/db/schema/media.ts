@@ -11,6 +11,8 @@ export const mediaItems = sqliteTable(
     libraryId: text('library_id')
       .notNull()
       .references(() => libraries.id),
+    matchId: text('match_id'),
+    matchIdSource: text('match_id_source'),
     filePath: text('file_path').notNull(),
     fileSize: integer('file_size').notNull(),
     fileMetadata: text('file_metadata', { mode: 'json' })

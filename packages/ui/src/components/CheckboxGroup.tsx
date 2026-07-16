@@ -19,11 +19,11 @@ const styles = css`
   .container {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-3);
+    gap: var(--space-xs);
   }
 
   .icon {
-    font-size: var(--font-size-3);
+    font-size: var(--text-md);
   }
 
   .item {
@@ -31,10 +31,10 @@ const styles = css`
     flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: var(--space-2);
-    width: var(--space-9);
-    height: var(--space-9);
-    padding: var(--space-2);
+    gap: var(--space-2xs);
+    width: var(--space-4xl);
+    height: var(--space-4xl);
+    padding: var(--space-2xs);
     line-height: 1.1;
     text-align: center;
     background: var(--color-gray-1);

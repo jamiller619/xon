@@ -1,5 +1,6 @@
 import type { StatsPayload } from '@xon/shared'
-import { Progress } from '@xon/ui'
+import { Progress, Surface } from '@xon/ui'
+import clsx from 'clsx'
 import prettyBytes from 'pretty-bytes'
 import prettyMs from 'pretty-ms'
 import { type HTMLAttributes, useEffect, useState } from 'react'
@@ -31,8 +32,13 @@ export default function System({ className, ...props }: SystemProps) {
   }, [])
 
   return (
-    <section className={dashboardStyles.section} {...props}>
-      <h2>System</h2>
+    <Surface
+      as="section"
+      borderRadius="sm"
+      className={clsx(dashboardStyles.section, className)}
+      {...props}
+    >
+      <h6 className={dashboardStyles.title}>System</h6>
       <div>
         {error && <p className={styles.error}>{error}</p>}
         <dl className={styles.dlist}>
@@ -45,8 +51,8 @@ export default function System({ className, ...props }: SystemProps) {
           <div className={styles.row}>
             <dt>Uptime</dt>
             <dd>
-              {data.uptime &&
-                prettyMs(data.uptime * 1000, {
+              {data.process &&
+                prettyMs(data.process.uptime * 1000, {
                   hideSeconds: true,
                 })}
             </dd>
@@ -79,9 +85,19 @@ export default function System({ className, ...props }: SystemProps) {
               <Progress value={data.memory.used} max={data.memory.total} />
             )}
           </div>
+          <div className={styles.row}>
+            <dt>Xon CPU</dt>
+            <dd>
+              <CPUUsage value={data.process?.cpu} />
+            </dd>
+          </div>
+          <div className={styles.row}>
+            <dt>Xon Memory</dt>
+            <dd>{data.process && prettyBytes(data.process.memory)}</dd>
+          </div>
         </dl>
       </div>
-    </section>
+    </Surface>
   )
 }
 

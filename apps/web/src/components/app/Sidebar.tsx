@@ -1,31 +1,31 @@
 import {
-  Glance20Filled as DashboardIcon,
-  Heart20Filled as FavoritesIcon,
-  Folder20Filled as FolderIcon,
-  MoviesAndTv20Filled as MoviesIcon,
-  MusicNote220Filled as MusicIcon,
-  TextBulletList20Filled as PlaylistIcon,
-  // CircleSmall20Filled as LibraryIcon,
-  PlugDisconnected20Filled as PluginsIcon,
-  WindowConsole20Filled as ServerOutputIcon,
-  Settings20Filled as SettingsIcon,
-  Tv20Filled as TVIcon,
-  PersonCircle20Filled as UsersIcon,
+  Glance20Regular as DashboardIcon,
+  Glance20Filled as DashboardOnIcon,
+  Heart20Regular as FavoritesIcon,
+  Folder20Regular as FolderIcon,
+  MoviesAndTv20Regular as MoviesIcon,
+  MusicNote220Regular as MusicIcon,
+  TextBulletList20Regular as PlaylistIcon,
+  // CircleSmall20Regular as LibraryIcon,
+  PlugDisconnected20Regular as PluginsIcon,
+  PlugDisconnected20Filled as PluginsOnIcon,
+  WindowConsole20Regular as ServerOutputIcon,
+  WindowConsole20Filled as ServerOutputOnIcon,
+  Settings20Regular as SettingsIcon,
+  Settings20Filled as SettingsOnIcon,
+  Tv20Regular as TVIcon,
+  PersonCircle20Regular as UsersIcon,
+  PersonCircle20Filled as UsersOnIcon,
 } from '@fluentui/react-icons'
 import { useQuery } from '@tanstack/react-query'
-import {
-  type Group,
-  GroupType,
-  type Library,
-  LibraryType,
-  MediaType,
-} from '@xon/shared'
+import { type Group, GroupType, LibraryType } from '@xon/shared'
 import { Flex, Surface } from '@xon/ui'
 import clsx from 'clsx'
 import { NavLink } from 'react-router-dom'
 import Logo from '~/components/logo/Logo'
 import PluginSlot from '~/components/PluginSlot'
 import useQueryAPIHelper from '~/hooks/useQueryAPIHelper'
+import { librariesQuery } from '~/lib/librariesApi'
 import styles from './Sidebar.module.css'
 
 interface SidebarProps {
@@ -34,11 +34,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ className, isOpen }: SidebarProps) {
-  const {
-    isPending,
-    error,
-    data: libraries,
-  } = useQuery<Library[]>(useQueryAPIHelper('libraries'))
+  const { isPending, error, data: libraries } = useQuery(librariesQuery)
 
   const {
     isPending: isPendingGroups,
@@ -52,7 +48,7 @@ export default function Sidebar({ className, isOpen }: SidebarProps) {
   return (
     <Surface
       as="nav"
-      br="none"
+      borderRadius="none"
       className={clsx(styles.sidebar, className, isOpen && styles.open)}
       aria-label="Main navigation"
     >
@@ -64,24 +60,19 @@ export default function Sidebar({ className, isOpen }: SidebarProps) {
 
       <Section>
         <NavLink to="/" end className={navClass}>
-          <DashboardIcon />
-          <span>Dashboard</span>
+          <NavItem label="Dashboard" />
         </NavLink>
         <NavLink to="/admin/plugins" className={navClass}>
-          <PluginsIcon />
-          <span>Plugins</span>
+          <NavItem label="Plugins" />
         </NavLink>
         <NavLink to="/admin/users" className={navClass}>
-          <UsersIcon />
-          <span>Users</span>
+          <NavItem label="Users" />
         </NavLink>
         <NavLink to="/admin/logs" className={navClass}>
-          <ServerOutputIcon />
-          <span>Server Output</span>
+          <NavItem label="Server Output" />
         </NavLink>
         <NavLink to="/settings" className={navClass}>
-          <SettingsIcon />
-          <span>Settings</span>
+          <NavItem label="Settings" />
         </NavLink>
         <PluginSlot injectionPoint="nav-item" />
       </Section>
@@ -117,6 +108,45 @@ export default function Sidebar({ className, isOpen }: SidebarProps) {
           ))}
       </Section>
     </Surface>
+  )
+}
+
+const navIcons = {
+  Dashboard: {
+    default: <DashboardIcon />,
+    active: <DashboardOnIcon />,
+  },
+  Plugins: {
+    default: <PluginsIcon />,
+    active: <PluginsOnIcon />,
+  },
+  Users: {
+    default: <UsersIcon />,
+    active: <UsersOnIcon />,
+  },
+  'Server Output': {
+    default: <ServerOutputIcon />,
+    active: <ServerOutputOnIcon />,
+  },
+  Settings: {
+    default: <SettingsIcon />,
+    active: <SettingsOnIcon />,
+  },
+}
+
+type NavItemProps = {
+  label: keyof typeof navIcons
+}
+
+function NavItem({ label }: NavItemProps) {
+  const icons = navIcons[label]
+
+  return (
+    <>
+      <span className={styles.iconDefault}>{icons.default}</span>
+      <span className={styles.iconActive}>{icons.active}</span>
+      <span>{label}</span>
+    </>
   )
 }
 

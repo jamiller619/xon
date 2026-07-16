@@ -8,12 +8,12 @@ const styles = css`
     display: flex;
     flex-direction: column;
     align-items: start;
-    gap: var(--space-2);
+    gap: var(--space-2xs);
     width: stretch;
   }
 
   .label {
-    font-size: var(--font-size-3);
+    font-size: var(--text-md);
     font-weight: 500;
   }
 

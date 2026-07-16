@@ -65,7 +65,7 @@ function resolveStyle(
   }
 
   if (gap) {
-    style.gap = `var(--space-${gap})`
+    style.gap = `calc(var(--space-unit) * ${gap})`
   }
 
   if (align) {

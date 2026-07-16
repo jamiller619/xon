@@ -112,11 +112,7 @@ XScroller.ButtonPrev = function PrevButton() {
   const { canScrollPrev, scrollPrev } = useScrollerCtx()
 
   return (
-    <Button
-      onClick={scrollPrev}
-      disabled={!canScrollPrev}
-      className={styles.button}
-    >
+    <Button size="small" onClick={scrollPrev} disabled={!canScrollPrev}>
       <LeftIcon />
     </Button>
   )
@@ -126,11 +122,7 @@ XScroller.ButtonNext = function NextButton() {
   const { canScrollNext, scrollNext } = useScrollerCtx()
 
   return (
-    <Button
-      onClick={scrollNext}
-      disabled={!canScrollNext}
-      className={styles.button}
-    >
+    <Button size="small" onClick={scrollNext} disabled={!canScrollNext}>
       <RightIcon />
     </Button>
   )

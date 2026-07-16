@@ -1,8 +1,10 @@
 import {
-  Navigation20Filled as MenuIcon,
+  Navigation20Regular as MenuIcon,
   Search20Filled as SearchIcon,
+  SignOutRegular as SignOutIcon,
+  PersonCircle16Regular as UserIcon,
 } from '@fluentui/react-icons'
-import { Button, Textbox } from '@xon/ui'
+import { Button, Menu, Surface, Textbox } from '@xon/ui'
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { apiFetch, apiUrl } from '~/lib/apiFetch'
@@ -135,16 +137,13 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
   const showSuggestions = open && query.trim().length > 0
 
   return (
-    <header className={styles.header}>
-      <Button.Icon
-        // variant="ghost"
-        onClick={onMenuClick}
-        aria-label="Toggle sidebar"
-      >
+    <Surface as="header" borderRadius="none" className={styles.header}>
+      <Button.Icon onClick={onMenuClick}>
         <MenuIcon />
       </Button.Icon>
       <div className={styles.searchWrapper} ref={wrapperRef}>
         <Textbox
+          size="small"
           type="search"
           placeholder="Search media..."
           aria-label="Search"
@@ -222,12 +221,26 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
           </div>
         )}
       </div>
-      <button type="button" className={styles.userMenu} aria-label="User menu">
-        <span className={styles.avatar}>
-          {authData?.user.name.charAt(0).toUpperCase()}
-        </span>
-        <span>{authData?.user.name}</span>
-      </button>
-    </header>
+      <Menu
+        items={[
+          {
+            label: 'Sign out',
+            icon: <SignOutIcon />,
+          },
+          {
+            label: 'View account',
+            icon: <UserIcon />,
+          },
+        ]}
+        align="end"
+      >
+        <Button aria-label="User menu">
+          <span className={styles.avatar}>
+            {authData?.user.name.charAt(0).toUpperCase()}
+          </span>
+          <span>{authData?.user.name}</span>
+        </Button>
+      </Menu>
+    </Surface>
   )
 }

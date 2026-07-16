@@ -1,27 +1,24 @@
+import {
+  Calendar16Regular as CalendarIcon,
+  Clock16Regular as ClockIcon,
+  Star16Filled as StarIcon,
+} from '@fluentui/react-icons'
 import type { MediaItem } from '@xon/shared'
 import { Badge, Button, Flex, Surface, XScroller } from '@xon/ui'
 import clsx from 'clsx'
-import humanizeDuration from 'humanize-duration'
 import prettyBytes from 'pretty-bytes'
 import { lazy, type ReactNode, Suspense, useEffect, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { BackgroundSlideshow } from '~/components/background-slideshow/BackgroundSlideshow'
-import Breadcrumbs from '~/components/breadcrumbs/Breadcrumbs'
 import { GradientBackground } from '~/components/gradient-background/GradientBackground'
 import PluginSlot from '~/components/PluginSlot'
 import { apiFetch, apiUrl } from '~/lib/apiFetch'
 import basename from '~/lib/basename'
-import { useAudioStore } from '~/store/audioStore'
 import ActionButtons from './components/ActionButtons'
 import Resolution from './components/Resolution'
 import styles from './Media.module.css'
 
-// Player/viewer components loaded on demand — separate JS chunks
-// const ArchiveViewer = lazy(() => import('~/components/viewers/ArchiveViewer'))
-// const EpubViewer = lazy(() => import('~/components/viewers/EpubViewer'))
-// const FontViewer = lazy(() => import('~/components/viewers/FontViewer'))
 const ImageViewer = lazy(() => import('~/components/viewers/ImageViewer'))
-// const PdfViewer = lazy(() => import('~/components/viewers/PdfViewer'))
 const VideoPlayer = lazy(() => import('~/components/viewers/VideoPlayer'))
 
 interface ImageSibling {
@@ -39,20 +36,6 @@ interface PendingMatch {
   matchSource: string | null
 }
 
-// function formatBytes(bytes: number | null): string {
-//   if (bytes == null) return '—'
-//   if (bytes < 1024) return `${bytes} B`
-//   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-//   if (bytes < 1024 * 1024 * 1024)
-//     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-//   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
-// }
-
-function formatDate(ts: number | null): string {
-  if (ts == null) return '—'
-  return new Date(ts * 1000).toLocaleString()
-}
-
 function MetaRow({ label, children }: { label: string; children: ReactNode }) {
   return (
     <tr className={styles.metaRow}>
@@ -64,24 +47,15 @@ function MetaRow({ label, children }: { label: string; children: ReactNode }) {
 
 export default function Media() {
   const { id } = useParams<{ id: string }>()
-  const location = useLocation()
-  const data = location.state
-  const [item, setItem] = useState<MediaItem>(data)
+  const data = useLocation().state as MediaItem | undefined
+  const [item, setItem] = useState<MediaItem | undefined>(data)
   const [error, setError] = useState<string | null>(null)
 
   const [showPlayer, setShowPlayer] = useState(false)
   const [showImageViewer, setShowImageViewer] = useState(false)
-  // const [showPdfViewer, setShowPdfViewer] = useState(false)
-  // const [showEpubViewer, setShowEpubViewer] = useState(false)
-  // const [showFontViewer, setShowFontViewer] = useState(false)
-  // const [showArchiveViewer, setShowArchiveViewer] = useState(false)
   const [imageSiblings, setImageSiblings] = useState<ImageSibling[]>([])
 
   const [pendingMatch, setPendingMatch] = useState<PendingMatch | null>(null)
-  // const [matchActionLoading, setMatchActionLoading] = useState(false)
-
-  // const playTrack = useAudioStore((s) => s.playTrack)
-  // const addToQueue = useAudioStore((s) => s.addToQueue)
 
   // Edit state
   const [editing, setEditing] = useState(false)
@@ -92,7 +66,7 @@ export default function Media() {
   const [saveError, setSaveError] = useState<string | null>(null)
 
   useEffect(() => {
-    if (item.cast) return
+    if (item?.cast) return
 
     apiFetch(`/api/media/${id}`)
       .then((r) => {
@@ -107,110 +81,15 @@ export default function Media() {
       })
   }, [item, id])
 
-  // Load pending match
-  // useEffect(() => {
-  //   if (!id) return
-  //   apiFetch(`/api/media/${id}/match`)
-  //     .then((r) => (r.ok ? r.json() : null))
-  //     .then((data: unknown) => {
-  //       setPendingMatch(data as PendingMatch | null)
-  //     })
-  //     .catch(() => {})
-  // }, [id])
-
-  // async function confirmMatch() {
-  //   if (!pendingMatch) return
-  //   setMatchActionLoading(true)
-  //   const res = await apiFetch(`/api/matching/${pendingMatch.id}/confirm`, {
-  //     method: 'PUT',
-  //   }).catch(() => null)
-  //   if (res?.ok) {
-  //     setPendingMatch(null)
-  //     // Refresh media item to pick up updated title/metadata
-  //     if (id) {
-  //       apiFetch(`/api/media/${id}`)
-  //         .then((r) => (r.ok ? r.json() : null))
-  //         .then((data: unknown) => {
-  //           if (data) setItem(data as MediaDetailItem)
-  //         })
-  //         .catch(() => {})
-  //     }
-  //   }
-  //   setMatchActionLoading(false)
-  // }
-
-  // async function rejectMatch() {
-  //   if (!pendingMatch) return
-  //   setMatchActionLoading(true)
-  //   const res = await apiFetch(`/api/matching/${pendingMatch.id}/reject`, {
-  //     method: 'PUT',
-  //   }).catch(() => null)
-  //   if (res?.ok) setPendingMatch(null)
-  //   setMatchActionLoading(false)
-  // }
-
-  const isImage = item.mediaType?.startsWith('image/')
-  const isAudio = item.mediaType?.startsWith('audio/')
-  const isVideo = item.mediaType?.startsWith('video/')
-
-  // Fetch sibling images from same library for slideshow
-  // useEffect(() => {
-  //   if (!item || !isImage) return
-  //   apiFetch(
-  //     `/api/libraries/${item.libraryId}/media?mediaCategory=${encodeURIComponent(item.mimeType ?? 'Pictures')}&limit=100`,
-  //   )
-  //     .then((r) => r.json())
-  //     .then((data: unknown) => {
-  //       if (Array.isArray(data)) {
-  //         const siblings: ImageSibling[] = (
-  //           data as { id: string; title: string | null; fileName: string }[]
-  //         ).map((m) => ({ id: m.id, title: m.title ?? m.fileName }))
-  //         setImageSiblings(siblings)
-  //       }
-  //     })
-  //     .catch(() => {
-  //       // siblings unavailable — viewer will work for single image
-  //     })
-  // }, [item, isImage])
-
-  function startEditing() {
-    if (!item) return
-    setEditTitle(item.title)
-    setEditDescription(item.description ?? '')
-    let tags: string[] = []
-    try {
-      const meta = item.metadata
-      if (Array.isArray(meta.tags)) tags = meta.tags as string[]
-    } catch {
-      // ignore
-    }
-    setEditTags(tags.join(', '))
-    setSaveError(null)
-    setEditing(true)
-  }
+  const isImage = item?.mediaType?.startsWith('image/')
 
   function cancelEditing() {
     setEditing(false)
     setSaveError(null)
   }
 
-  async function handleAiTag(action: 'accept' | 'reject', tagText: string) {
-    if (!item?.id) return
-    const body =
-      action === 'accept' ? { accept: [tagText] } : { reject: [tagText] }
-    const res = await apiFetch(`/api/media/${item.id}/ai-tags`, {
-      method: 'PUT',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body),
-    }).catch(() => null)
-    if (res?.ok) {
-      const updated = (await res.json()) as MediaItem
-      setItem(updated)
-    }
-  }
-
   async function saveEditing() {
-    if (!item || !item.id) return
+    if (!item?.id) return
     setSaving(true)
     setSaveError(null)
     const tags = editTags
@@ -240,21 +119,6 @@ export default function Media() {
     }
   }
 
-  // if (loading) {
-  //   return (
-  //     <div className={styles.page ?? ''}>
-  //       <div className={styles.skeleton ?? ''}>
-  //         <div className={styles.skeletonPoster ?? ''} />
-  //         <div className={styles.skeletonInfo ?? ''}>
-  //           <div className={styles.skeletonTitle ?? ''} />
-  //           <div className={styles.skeletonLine ?? ''} />
-  //           <div className={styles.skeletonLine ?? ''} />
-  //         </div>
-  //       </div>
-  //     </div>
-  //   )
-  // }
-
   if (error || !item) {
     return (
       <div className={styles.page}>
@@ -268,12 +132,9 @@ export default function Media() {
     )
   }
 
-  const parsedMeta = item.metadata
-
-  interface AiTagEntry {
-    text: string
-    confidence: number
-    source: string
+  const parsedMeta = {
+    ...item.metadata,
+    ...item.fileMetadata,
   }
 
   const metaEntries = Object.entries(parsedMeta).filter(
@@ -291,23 +152,6 @@ export default function Media() {
   const tags = Array.isArray(parsedMeta.tags)
     ? (parsedMeta.tags as string[])
     : []
-  const aiTags = Array.isArray(parsedMeta.aiTags)
-    ? (parsedMeta.aiTags as AiTagEntry[])
-    : []
-
-  // const isPdf = item.mimeType === 'application/pdf'
-  // const isEpub =
-  //   item.mimeType === 'application/epub+zip' ||
-  //   item.mimeType === 'application/x-mobipocket-ebook' ||
-  //   item.mimeType === 'application/vnd.amazon.ebook'
-  // const isFont =
-  //   item.mimeType?.startsWith('font/') ||
-  //   item.mimeType === 'application/vnd.ms-fontobject'
-  // const isArchive =
-  //   item.mimeType === 'application/zip' ||
-  //   item.mimeType === 'application/x-7z-compressed' ||
-  //   item.mimeType === 'application/x-tar' ||
-  //   item.mediaCategory === 'Archives'
   const fileName = basename(item.filePath)
   const description = item.description ?? item.metadata.overview
 
@@ -326,225 +170,192 @@ export default function Media() {
           <GradientBackground />
         </>
       )}
-      <div className={clsx(styles.hero, styles.container)}>
-        {showImageViewer && item.id && (
-          <Suspense fallback={null}>
-            <ImageViewer
-              mediaId={item.id}
-              title={item.title ?? fileName}
-              onClose={() => setShowImageViewer(false)}
-              {...(imageSiblings.length > 1 ? { siblings: imageSiblings } : {})}
-            />
-          </Suspense>
-        )}
-        <Breadcrumbs label={item.title ?? fileName} />
 
-        <div className={styles.posterContainer}>
-          <div className={styles.poster}>
-            {showPlayer && item.id ? (
-              <Suspense fallback={null}>
-                <VideoPlayer
-                  mediaId={item.id}
-                  {...(item.mediaType ? { mimeType: item.mediaType } : {})}
-                  onClose={() => setShowPlayer(false)}
-                />
-              </Suspense>
-            ) : (
-              <>
-                {item.drmProtected && (
-                  <div className={styles.drmOverlay}>
-                    <span className={styles.lockIcon}>🔒</span>
-                  </div>
-                )}
-                {item.metadata.images?.poster ? (
-                  <img
-                    src={apiUrl(item.metadata.images.poster)}
-                    alt={item.title ?? fileName}
-                    loading="lazy"
-                    className={`${styles.posterImg} ${isImage && !item.drmProtected ? styles.posterImgClickable : ''}`}
-                    onClick={
-                      isImage && !item.drmProtected
-                        ? () => setShowImageViewer(true)
-                        : undefined
-                    }
-                    onKeyDown={
-                      isImage && !item.drmProtected
-                        ? (e) => {
-                            if (e.key === 'Enter' || e.key === ' ')
-                              setShowImageViewer(true)
-                          }
-                        : undefined
-                    }
-                    tabIndex={isImage && !item.drmProtected ? 0 : undefined}
-                  />
-                ) : isImage && !item.drmProtected ? (
-                  <Button
-                    // className={styles.posterPlaceholder}
-                    onClick={() => setShowImageViewer(true)}
-                    title="Open image viewer"
-                  >
-                    <span className={styles.posterIcon}>🖼</span>
-                  </Button>
-                  // ) : isPdf && !item.drmProtected ? (
-                  //   <button
-                  //     type="button"
-                  //     className={styles.posterPlaceholder}
-                  //     onClick={() => setShowPdfViewer(true)}
-                  //     title="Open PDF viewer"
-                  //   >
-                  //     <span className={styles.posterIcon}>📄</span>
-                  //   </button>
-                  // ) : isEpub && !item.drmProtected ? (
-                  //   <button
-                  //     type="button"
-                  //     className={styles.posterPlaceholder}
-                  //     onClick={() => setShowEpubViewer(true)}
-                  //     title="Open EPUB reader"
-                  //   >
-                  //     <span className={styles.posterIcon}>📖</span>
-                  //   </button>
-                  // ) : isFont && !item.drmProtected ? (
-                  //   <button
-                  //     type="button"
-                  //     className={styles.posterPlaceholder}
-                  //     onClick={() => setShowFontViewer(true)}
-                  //     title="Open font viewer"
-                  //   >
-                  //     <span className={styles.posterIcon}>🔤</span>
-                  //   </button>
-                  // ) : isArchive ? (
-                  //   <button
-                  //     type="button"
-                  //     className={styles.posterPlaceholder}
-                  //     onClick={() => setShowArchiveViewer(true)}
-                  //     title="Browse archive"
-                  //   >
-                  //     <span className={styles.posterIcon}>📦</span>
-                  //   </button>
-                ) : (
-                  <div className={styles.posterPlaceholder}>
-                    <span className={styles.posterIcon}>▶</span>
-                  </div>
-                )}
-              </>
-            )}
-          </div>
+      {showImageViewer && item.id && (
+        <Suspense fallback={null}>
+          <ImageViewer
+            mediaId={item.id}
+            title={item.title ?? fileName}
+            onClose={() => setShowImageViewer(false)}
+            {...(imageSiblings.length > 1 ? { siblings: imageSiblings } : {})}
+          />
+        </Suspense>
+      )}
 
-          <div className={styles.posterMeta}>
-            {/* Logo */}
-            {item.metadata.images?.logo && (
-              <img
-                src={apiUrl(item.metadata.images.logo)}
-                alt={item.title ?? fileName}
-                loading="lazy"
-                className={styles.logo}
+      <Flex
+        className={clsx(styles.container, styles.header)}
+        align="end"
+        gap="7"
+      >
+        <div className={styles.poster}>
+          {showPlayer && item.id ? (
+            <Suspense fallback={null}>
+              <VideoPlayer
+                mediaId={item.id}
+                {...(item.mediaType ? { mimeType: item.mediaType } : {})}
+                onClose={() => setShowPlayer(false)}
               />
-            )}
-            {/* Action buttons */}
-            <div className={styles.actions}>
-              <ActionButtons item={item} />
-            </div>
-          </div>
-        </div>
-
-        {/* Suggested match banner */}
-        {pendingMatch && (
-          <section className={styles.matchBanner}>
-            <div className={styles.matchHeader}>
-              <span className={styles.matchBadge}>Suggested Match</span>
-              {pendingMatch.matchSource && (
-                <span className={styles.matchSource}>
-                  {pendingMatch.matchSource}
-                </span>
+            </Suspense>
+          ) : (
+            <>
+              {item.drmProtected && (
+                <div className={styles.drmOverlay}>
+                  <span className={styles.lockIcon}>🔒</span>
+                </div>
               )}
-              <span className={styles.matchConfidence}>
-                {pendingMatch.confidence}% confidence
+              {item.metadata.images?.poster ? (
+                <img
+                  src={apiUrl(item.metadata.images.poster)}
+                  alt={item.title ?? fileName}
+                  loading="lazy"
+                  className={`${styles.posterImg} ${isImage && !item.drmProtected ? styles.posterImgClickable : ''}`}
+                  onClick={
+                    isImage && !item.drmProtected
+                      ? () => setShowImageViewer(true)
+                      : undefined
+                  }
+                  onKeyDown={
+                    isImage && !item.drmProtected
+                      ? (e) => {
+                          if (e.key === 'Enter' || e.key === ' ')
+                            setShowImageViewer(true)
+                        }
+                      : undefined
+                  }
+                  tabIndex={isImage && !item.drmProtected ? 0 : undefined}
+                />
+              ) : isImage && !item.drmProtected ? (
+                <Button
+                  onClick={() => setShowImageViewer(true)}
+                  title="Open image viewer"
+                >
+                  <span className={styles.posterIcon}>🖼</span>
+                </Button>
+              ) : (
+                <div className={styles.posterPlaceholder}>
+                  <span className={styles.posterIcon}>▶</span>
+                </div>
+              )}
+            </>
+          )}
+        </div>
+        <div className={styles.logo}>
+          {item.metadata.images?.logo && (
+            <img
+              src={apiUrl(item.metadata.images.logo)}
+              alt={item.title ?? fileName}
+              loading="lazy"
+              className={styles.logo}
+            />
+          )}
+        </div>
+        <Flex dir="col" gap="7">
+          <div>
+            <h2 className={styles.title}>{item.title}</h2>
+            <Flex gap="4" className={styles.subtitle}>
+              <Flex gap="1" align="center">
+                <CalendarIcon />
+                <span>{parseYear(item)}</span>
+              </Flex>
+              <Flex gap="1" align="center">
+                <ClockIcon />
+                <span>{parseDuration(item.fileMetadata.duration * 1000)}</span>
+              </Flex>
+              {item.fileMetadata.resolution && (
+                <Badge>
+                  <Resolution
+                    height={item.fileMetadata.resolution.height}
+                    width={item.fileMetadata.resolution.width}
+                    layout="$n $a"
+                  />
+                </Badge>
+              )}
+              <Flex gap="1" align="center">
+                <StarIcon className={styles.ratingIcon as string} />
+                <span>{item.metadata.voteAverage?.toFixed(1)}</span>
+              </Flex>
+            </Flex>
+          </div>
+          <div className={styles.actions}>
+            <ActionButtons item={item} />
+          </div>
+        </Flex>
+      </Flex>
+
+      {/* Suggested match banner */}
+      {pendingMatch && (
+        <section className={styles.matchBanner}>
+          <div className={styles.matchHeader}>
+            <span className={styles.matchBadge}>Suggested Match</span>
+            {pendingMatch.matchSource && (
+              <span className={styles.matchSource}>
+                {pendingMatch.matchSource}
               </span>
-            </div>
-            <div className={styles.matchBody}>
-              <div className={styles.matchFields}>
+            )}
+            <span className={styles.matchConfidence}>
+              {pendingMatch.confidence}% confidence
+            </span>
+          </div>
+          <div className={styles.matchBody}>
+            <div className={styles.matchFields}>
+              <div className={styles.matchField}>
+                <span className={styles.matchFieldLabel}>Title</span>
+                <span className={styles.matchFieldValue}>
+                  {pendingMatch.suggestedTitle}
+                </span>
+              </div>
+              {pendingMatch.suggestedMetadata.year != null && (
                 <div className={styles.matchField}>
-                  <span className={styles.matchFieldLabel}>Title</span>
+                  <span className={styles.matchFieldLabel}>Year</span>
                   <span className={styles.matchFieldValue}>
-                    {pendingMatch.suggestedTitle}
+                    {String(pendingMatch.suggestedMetadata.year)}
                   </span>
                 </div>
-                {pendingMatch.suggestedMetadata.year != null && (
-                  <div className={styles.matchField}>
-                    <span className={styles.matchFieldLabel}>Year</span>
+              )}
+              {Object.entries(pendingMatch.suggestedMetadata)
+                .filter(
+                  ([k, v]) =>
+                    k !== 'year' && v != null && v !== '' && !Array.isArray(v),
+                )
+                .map(([k, v]) => (
+                  <div key={k} className={styles.matchField}>
+                    <span className={styles.matchFieldLabel}>{k}</span>
+                    <span className={styles.matchFieldValue}>{String(v)}</span>
+                  </div>
+                ))}
+              {Object.entries(pendingMatch.suggestedMetadata)
+                .filter(
+                  ([, v]) => Array.isArray(v) && (v as unknown[]).length > 0,
+                )
+                .map(([k, v]) => (
+                  <div key={k} className={styles.matchField}>
+                    <span className={styles.matchFieldLabel}>{k}</span>
                     <span className={styles.matchFieldValue}>
-                      {String(pendingMatch.suggestedMetadata.year)}
+                      {(v as unknown[]).join(', ')}
                     </span>
                   </div>
-                )}
-                {Object.entries(pendingMatch.suggestedMetadata)
-                  .filter(
-                    ([k, v]) =>
-                      k !== 'year' &&
-                      v != null &&
-                      v !== '' &&
-                      !Array.isArray(v),
-                  )
-                  .map(([k, v]) => (
-                    <div key={k} className={styles.matchField}>
-                      <span className={styles.matchFieldLabel}>{k}</span>
-                      <span className={styles.matchFieldValue}>
-                        {String(v)}
-                      </span>
-                    </div>
-                  ))}
-                {Object.entries(pendingMatch.suggestedMetadata)
-                  .filter(
-                    ([, v]) => Array.isArray(v) && (v as unknown[]).length > 0,
-                  )
-                  .map(([k, v]) => (
-                    <div key={k} className={styles.matchField}>
-                      <span className={styles.matchFieldLabel}>{k}</span>
-                      <span className={styles.matchFieldValue}>
-                        {(v as unknown[]).join(', ')}
-                      </span>
-                    </div>
-                  ))}
-              </div>
-              {/* <div className={styles.matchActions}>
-              <button
-                type="button"
-                className={styles.btnConfirm}
-                disabled={matchActionLoading}
-                onClick={confirmMatch}
-              >
-                Confirm
-              </button>
-              <button
-                type="button"
-                className={styles.btnReject}
-                disabled={matchActionLoading}
-                onClick={rejectMatch}
-              >
-                Reject
-              </button>
-            </div> */}
+                ))}
             </div>
-          </section>
-        )}
+          </div>
+        </section>
+      )}
 
-        {/* Plugin-injected detail panels */}
-        <PluginSlot
-          injectionPoint="detail-panel"
-          props={{
-            mediaItem: {
-              id: item.id,
-              title: item.title,
-              // mediaCategory: item.mediaCategory,
-              // libraryId: item.libraryId,
-            },
-            // ...(item.libraryId ? { libraryId: item.libraryId } : {}),
-          }}
-        />
-      </div>
+      {/* Plugin-injected detail panels */}
+      <PluginSlot
+        injectionPoint="detail-panel"
+        props={{
+          mediaItem: {
+            id: item.id,
+            title: item.title,
+          },
+        }}
+      />
 
       {/* Main Content Area */}
-      <Surface className={clsx(styles.content, styles.container)} br="sm">
+      <Surface
+        className={clsx(styles.content, styles.container)}
+        borderRadius="sm"
+      >
         {/* Title + actions */}
         <Flex gap="3" dir="col">
           {editing ? (
@@ -608,21 +419,6 @@ export default function Media() {
             </div>
           ) : (
             <>
-              <Flex justify="between" className={styles.titleRow}>
-                <h1 className={styles.title}>{item.title}</h1>
-                {item.metadata.resolution && (
-                  <div>
-                    <Badge>
-                      <Resolution
-                        height={item.metadata.resolution.height}
-                        width={item.metadata.resolution.width}
-                        layout="$n $a"
-                      />
-                    </Badge>
-                  </div>
-                )}
-              </Flex>
-
               {item.drmProtected && (
                 <div className={styles.drmNotice}>
                   <span className={styles.drmBadge}>DRM Protected</span>
@@ -632,8 +428,6 @@ export default function Media() {
                   </p>
                 </div>
               )}
-
-              <span>{parseYear(item)}</span>
 
               {description && (
                 <p className={styles.description}>{description}</p>
@@ -646,38 +440,6 @@ export default function Media() {
                   ))}
                 </div>
               )}
-
-              {/* {aiTags.length > 0 && (
-                  <div className={styles.aiTagsSection}>
-                    <p className={styles.aiTagsLabel}>AI Suggested Tags</p>
-                    <div className={styles.aiTags}>
-                      {aiTags.map((tag) => (
-                        <span key={tag.text} className={styles.aiTag}>
-                          <span className={styles.aiTagText}>{tag.text}</span>
-                          <span className={styles.aiTagConfidence}>
-                            {tag.confidence}%
-                          </span>
-                          <button
-                            type="button"
-                            className={styles.aiTagAccept}
-                            title="Accept tag"
-                            onClick={() => handleAiTag('accept', tag.text)}
-                          >
-                            ✓
-                          </button>
-                          <button
-                            type="button"
-                            className={styles.aiTagReject}
-                            title="Reject tag"
-                            onClick={() => handleAiTag('reject', tag.text)}
-                          >
-                            ✕
-                          </button>
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                )} */}
             </>
           )}
         </Flex>
@@ -700,19 +462,13 @@ export default function Media() {
                 </MetaRow>
               )}
               {metaEntries
-                .filter(([key]) => !['images', 'overview'].includes(key))
+                .filter(
+                  ([key]) => !['images', 'overview', 'duration'].includes(key),
+                )
                 .map(([key, val]) => {
-                  const value =
-                    key === 'duration'
-                      ? humanizeDuration(val * 1000, {
-                          units: ['h', 'm'],
-                          round: true,
-                        })
-                      : val
-
                   return (
                     <MetaRow key={key} label={key}>
-                      {JSON.stringify(value)}
+                      {JSON.stringify(val)}
                     </MetaRow>
                   )
                 })}
@@ -766,6 +522,25 @@ export default function Media() {
       </Surface>
     </>
   )
+}
+
+function parseVote(value?: number) {
+  return value?.toFixed(1)
+}
+
+function parseDuration(value?: number) {
+  if (!value) return null
+
+  const totalSeconds = Math.round(value / 1000)
+  const hours = Math.floor(totalSeconds / 3600)
+  const minutes = Math.floor((totalSeconds % 3600) / 60)
+  const seconds = hours > 0 ? 0 : totalSeconds % 60
+
+  return new Intl.DurationFormat(undefined, { style: 'narrow' }).format({
+    hours,
+    minutes,
+    seconds,
+  })
 }
 
 type CastMember = {
