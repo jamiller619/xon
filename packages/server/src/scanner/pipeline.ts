@@ -18,13 +18,16 @@ const stages: PipelineStage[] = [
 
 /**
  * Stages for a metadata refresh of already-persisted items: re-runs metadata
- * plugins against existing rows without touching the file (no drm/thumbnail
- * probing — title and fileMetadata are seeded from the stored row).
+ * plugins against existing rows (title and fileMetadata are seeded from the
+ * stored row, so no drm/title/fileMetadata probing). The thumbnail stage runs
+ * too, so a refresh backfills artwork for items a plugin didn't match — it
+ * no-ops for movies/shows that already have plugin images.
  */
 export const refreshStages: PipelineStage[] = [
   stage.libraryMetadata,
   stage.persist,
   stage.person,
+  stage.thumbnail,
 ]
 
 export async function runPipeline(

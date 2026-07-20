@@ -293,9 +293,13 @@ export class TmdbClient {
 
     const poster = pickByLanguage(images?.posters ?? [], language)
     if (poster) {
-      data.images.poster = constructURL(posterSizes.xlarge, poster.file_path)
+      data.images.poster = [
+        { src: constructURL(posterSizes.xlarge, poster.file_path) },
+      ]
     } else if (details.poster_path) {
-      data.images.poster = constructURL(posterSizes.xlarge, details.poster_path)
+      data.images.poster = [
+        { src: constructURL(posterSizes.xlarge, details.poster_path) },
+      ]
     }
 
     const logo = pickByLanguage(images?.logos ?? [], language)
@@ -365,10 +369,9 @@ export class TmdbClient {
 
     if (details.poster_path) {
       metadata.images ??= {}
-      metadata.images.poster = constructURL(
-        posterSizes.xlarge,
-        details.poster_path,
-      )
+      metadata.images.poster = [
+        { src: constructURL(posterSizes.xlarge, details.poster_path) },
+      ]
     }
 
     if (details.backdrop_path) {

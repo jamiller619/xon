@@ -9,6 +9,7 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { computeETag } from '../cache.ts'
+import config from '../config.ts'
 import type { MediaItem } from '../db/schema.ts'
 import { groupItems, groups, mediaItems } from '../db/schema.ts'
 import { validate } from '../http/validate.ts'
@@ -96,6 +97,43 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     c.header('ETag', etag)
     // return c.json({ ...itemWithUrls, pluginMetadata })
     return c.json(data)
+  })
+
+  const THUMBNAIL_SIZES = new Set(['small', 'medium', 'large'])
+
+  // GET /media/:id/thumbnail?size=small|medium|large — serve a locally
+  // generated thumbnail from the cache. Files are named deterministically
+  // (<id>_<size>.jpg), so the item id + size is enough to locate them.
+  router.get('/:id/thumbnail', async (c) => {
+    const id = c.req.param('id')
+    const size = c.req.query('size') ?? 'medium'
+
+    // Guard against path traversal — ids are UUIDs.
+    if (!/^[a-zA-Z0-9-]+$/.test(id) || !THUMBNAIL_SIZES.has(size)) {
+      return c.json({ error: 'Not found' }, 404)
+    }
+
+    const filePath = join(
+      config.get('appdata.cachePath'),
+      'thumbnails',
+      `${id}_${size}.jpg`,
+    )
+
+    let data: Buffer
+    try {
+      data = await readFile(filePath)
+    } catch {
+      return c.json({ error: 'Not found' }, 404)
+    }
+
+    const etag = `"${id}-${size}-${data.length}"`
+    if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
+
+    return c.body(new Uint8Array(data), 200, {
+      'Content-Type': 'image/jpeg',
+      'Cache-Control': 'public, max-age=86400',
+      ETag: etag,
+    })
   })
 
   const updateMediaSchema = z.object({

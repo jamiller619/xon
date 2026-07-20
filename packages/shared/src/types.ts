@@ -121,6 +121,58 @@ export type MPARating = (typeof MPARatings)[number]
 // biome-ignore lint/suspicious/noExplicitAny: any is correct
 export type Metadata = Record<string, any>
 
+/** The three generated sizes for a single image, in pixels of the long edge. */
+export interface ThumbnailSet {
+  small: string
+  medium: string
+  large: string
+}
+
+/**
+ * A poster (or other artwork) entry: the source image plus any locally
+ * generated thumbnails of *that same* image, so thumbnails stay tied to the
+ * image they were derived from. A media item may carry more than one.
+ */
+export interface PosterImage {
+  src: string
+  thumbnails?: ThumbnailSet
+}
+
+/** Anything historically stored under `images.poster` (legacy or current). */
+export type PosterInput =
+  | string
+  | PosterImage
+  | Array<string | PosterImage>
+  | undefined
+  | null
+
+/** Normalize a bare URL string into a {@link PosterImage}. */
+export function toPosterImage(entry: string | PosterImage): PosterImage {
+  return typeof entry === 'string' ? { src: entry } : entry
+}
+
+/** All poster entries as normalized {@link PosterImage} objects. */
+export function posterImages(poster: PosterInput): PosterImage[] {
+  if (!poster) return []
+  const list = Array.isArray(poster) ? poster : [poster]
+  return list.filter(Boolean).map(toPosterImage)
+}
+
+/**
+ * Best display URL for the first poster. Prefers the requested thumbnail
+ * size when present, otherwise falls back to the full-size `src`. Tolerant of
+ * legacy string/string[] values so existing rows keep rendering.
+ */
+export function posterUrl(
+  poster: PosterInput,
+  size?: keyof ThumbnailSet,
+): string | undefined {
+  const first = posterImages(poster)[0]
+  if (!first) return undefined
+  if (size && first.thumbnails?.[size]) return first.thumbnails[size]
+  return first.src
+}
+
 // export type MetadataMovie = Metadata<{
 //   title: string
 //   releaseDate?: string

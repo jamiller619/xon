@@ -11,7 +11,7 @@ import { Card, ContextMenu, type ContextMenuItem, Dialog } from '@xon/ui'
 import clsx from 'clsx'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { apiFetch, apiUrl } from '~/lib/apiFetch'
+import { apiFetch, thumbnailUrl } from '~/lib/apiFetch'
 import { useAudioStore } from '~/store/audioStore'
 import EditImages from '../EditImages'
 import ListView from './ListView'
@@ -40,6 +40,7 @@ export default function MediaCard({
   const addToQueue = useAudioStore((s) => s.addToQueue)
   const [editImagesOpen, setEditImagesOpen] = useState(false)
   const isAudio = item.mediaType?.startsWith('audio/') ?? false
+  const posterSrc = thumbnailUrl(item, 'medium')
   const link = `/media/${encodeURIComponent(item.title.toLowerCase().replaceAll(' ', '-'))}/${item.id}`
 
   function handlePlay(e: React.MouseEvent) {
@@ -84,12 +85,8 @@ export default function MediaCard({
   const cardContent = (
     <>
       <Card.Thumb>
-        {item.metadata.images?.poster ? (
-          <img
-            src={apiUrl(item.metadata.images.poster)}
-            alt={item.title}
-            loading="lazy"
-          />
+        {posterSrc ? (
+          <img src={posterSrc} alt={item.title} loading="lazy" />
         ) : (
           <div className={styles.thumbPlaceholder}>
             <span>{isAudio ? '♪' : '▶'}</span>

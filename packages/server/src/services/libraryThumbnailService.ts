@@ -1,6 +1,6 @@
 import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises'
 import { join } from 'node:path'
-import type { Metadata } from '@xon/shared'
+import { type Metadata, posterUrl } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import sharp from 'sharp'
 import config from '../config.ts'
@@ -19,9 +19,7 @@ const GRID_H = ROWS * CELL_H + (ROWS - 1) * GAP
 const POSTER_FETCH_TIMEOUT_MS = 4000
 
 function extractPosterUrl(metadata: Metadata): string | null {
-  const poster = metadata.images?.poster
-  if (!poster) return null
-  return Array.isArray(poster) ? (poster[0] ?? null) : poster
+  return posterUrl(metadata.images?.poster) ?? null
 }
 
 async function fetchPoster(src: string): Promise<Buffer | null> {

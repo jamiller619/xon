@@ -1,6 +1,11 @@
 import fsp from 'node:fs/promises'
 import path from 'node:path'
-import { LibraryType, type Metadata } from '@xon/shared'
+import {
+  LibraryType,
+  type Metadata,
+  type PosterImage,
+  posterImages,
+} from '@xon/shared'
 import { eq } from 'drizzle-orm'
 import mime from 'mime-types'
 import config from '../../config.ts'
@@ -36,18 +41,21 @@ export default {
 
     if (isMovieOrShow && hasImages(job.data.metadata)) return
 
-    const images: Record<string, string | string[]> = {
+    const images: Record<string, unknown> = {
       ...job.data.metadata?.images,
     }
 
     let thumbs: ThumbnailPaths | undefined
+    // Full-size original, when we have one (embedded cover art). Used as the
+    // poster's `src`; the generated thumbnails hang off the same entry.
+    let fullSize: string | undefined
 
     if (isAudio(job.file.mediaType)) {
       const cover = await saveEmbeddedArt(job)
 
       if (!cover) return
 
-      images.poster = cover.posterPath
+      fullSize = cover.posterPath
       thumbs = cover.thumbs
     } else if (isImage(job.file.mediaType)) {
       thumbs = await generateThumbnails(job.file.path, job.data.id)
@@ -58,7 +66,23 @@ export default {
     }
 
     if (thumbs) {
-      images.thumbnail = [thumbs.large, thumbs.medium, thumbs.small]
+      // One poster entry pairing the source image with its own thumbnails.
+      const generated: PosterImage = {
+        src: fullSize ?? thumbs.large,
+        thumbnails: {
+          small: thumbs.small,
+          medium: thumbs.medium,
+          large: thumbs.large,
+        },
+      }
+
+      // Preserve posters from other sources (e.g. a metadata plugin) and
+      // append ours. Drop any prior identical generated entry so rescans stay
+      // idempotent rather than accumulating duplicates.
+      const existing = posterImages(images.poster as string | string[]).filter(
+        (p) => p.src !== generated.src,
+      )
+      images.poster = [...existing, generated]
     }
 
     if (Object.keys(images).length < 1) return

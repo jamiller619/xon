@@ -1,6 +1,6 @@
 import type { MediaItem } from '@xon/shared'
 import { Link } from 'react-router-dom'
-import { apiUrl } from '~/lib/apiFetch'
+import { thumbnailUrl } from '~/lib/apiFetch'
 import styles from './MediaCard.module.css'
 
 type ListViewProps = {
@@ -21,6 +21,7 @@ export default function ListView({
   onToggleSelect,
 }: ListViewProps) {
   const isAudio = item.mimeType?.startsWith('audio/') ?? false
+  const posterSrc = thumbnailUrl(item, 'small')
 
   return (
     <tr
@@ -49,9 +50,9 @@ export default function ListView({
           <div
             className={`${styles.listThumbLink} ${item.drmProtected ? styles.listThumbDrm : ''}`}
           >
-            {item.metadata.images?.thumbnail ? (
+            {posterSrc ? (
               <img
-                src={apiUrl(item.metadata.images.thumbnail)}
+                src={posterSrc}
                 alt=""
                 loading="lazy"
                 className={styles.listThumbImg}
@@ -70,9 +71,9 @@ export default function ListView({
             to={`/media/${item.id}`}
             className={`${styles.listThumbLink} ${item.drmProtected ? styles.listThumbDrm : ''}`}
           >
-            {item.metadata.images?.thumbnail ? (
+            {posterSrc ? (
               <img
-                src={apiUrl(item.metadata.images?.thumbnail)}
+                src={posterSrc}
                 alt=""
                 loading="lazy"
                 className={styles.listThumbImg}

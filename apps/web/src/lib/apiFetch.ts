@@ -1,3 +1,4 @@
+import { type PosterInput, posterImages } from '@xon/shared'
 import { useAuthStore } from '~/store/authStore'
 
 export async function getAPIError(
@@ -50,8 +51,22 @@ export function apiUrl(url: string | string[]): string {
   return `${url}${sep}token=${token}`
 }
 
-function resolveUrl(url: string | string[]): string {
-  if (typeof url === 'string') return url
+/**
+ * Resolve a media item's poster to a servable image URL. Remote posters
+ * (e.g. TMDB `https://…`) are used directly; locally generated thumbnails are
+ * served through the API by id + size, since their on-disk paths aren't
+ * web-accessible.
+ */
+export function thumbnailUrl(
+  item: { id: string; metadata?: { images?: { poster?: PosterInput } } },
+  size: 'small' | 'medium' | 'large' = 'medium',
+): string | undefined {
+  const first = posterImages(item.metadata?.images?.poster)[0]
+  if (!first) return undefined
 
-  return url.join('/')
+  const url = /^https?:\/\//.test(first.src)
+    ? first.src
+    : `/api/media/${item.id}/thumbnail?size=${size}`
+
+  return apiUrl(url)
 }

@@ -1,10 +1,11 @@
+import { type PosterImage, posterImages } from '@xon/shared'
 import { Flex } from '@xon/ui'
 import { css } from 'inline-css-modules'
 
 type ImagesMetadata = {
   backdrop?: string | string[]
   logo?: string | string[]
-  poster?: string | string[]
+  poster?: string | PosterImage | Array<string | PosterImage>
 }
 
 const styles = css`
@@ -21,7 +22,12 @@ export default function EditImages({
 }) {
   return (
     <Flex dir="col">
-      {images?.poster && <ImageRow images={images?.poster} title="Poster" />}
+      {images?.poster && (
+        <ImageRow
+          images={posterImages(images.poster).map((p) => p.src)}
+          title="Poster"
+        />
+      )}
       <div>
         {images?.backdrop && (
           <ImageRow images={images?.backdrop} title="Backdrop" />

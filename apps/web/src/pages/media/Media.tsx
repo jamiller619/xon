@@ -8,7 +8,7 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 import { BackgroundSlideshow } from '~/components/background-slideshow/BackgroundSlideshow'
 import PluginSlot from '~/components/PluginSlot'
 import useQueryAPIHelper from '~/hooks/useQueryAPIHelper'
-import { apiUrl } from '~/lib/apiFetch'
+import { apiUrl, thumbnailUrl } from '~/lib/apiFetch'
 import basename from '~/lib/basename'
 import ActionButtons from './components/ActionButtons'
 import styles from './Media.module.css'
@@ -71,6 +71,7 @@ export default function Media() {
     : []
   const fileName = basename(data.filePath)
   const description = data.description ?? data.metadata.overview
+  const posterSrc = thumbnailUrl(data, 'large')
 
   return (
     <div className={styles.page}>
@@ -106,9 +107,9 @@ export default function Media() {
                   <span className={styles.lockIcon}>🔒</span>
                 </div>
               )}
-              {data.metadata.images?.poster ? (
+              {posterSrc ? (
                 <img
-                  src={apiUrl(data.metadata.images.poster)}
+                  src={posterSrc}
                   alt={data.title ?? fileName}
                   loading="lazy"
                   className={styles.posterImg}

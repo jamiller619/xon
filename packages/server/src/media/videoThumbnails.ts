@@ -1,6 +1,6 @@
 import { spawn } from 'node:child_process'
-import { unlink } from 'node:fs/promises'
-import { join } from 'node:path'
+import { mkdir, unlink } from 'node:fs/promises'
+import { dirname, join } from 'node:path'
 // import { MediaCategory } from '@xon/shared'
 import config from '../config.ts'
 import { createLogger } from '../logger.ts'
@@ -119,6 +119,19 @@ export async function generateVideoThumbnails(
     '.tmp',
     `${mediaItemId}_tmp.jpg`,
   )
+
+  // FFmpeg's image2 muxer won't create missing parent directories; without
+  // this the write fails with "Error muxing a packet" (I/O error).
+  try {
+    await mkdir(dirname(tmpPath), { recursive: true })
+  } catch (err) {
+    logger.error('Failed to create thumbnail temp directory', {
+      dir: dirname(tmpPath),
+      error: String(err),
+    })
+    return undefined
+  }
+
   const frameExtracted = await extractFrame(filePath, timestamp, tmpPath)
   if (!frameExtracted) {
     return undefined
