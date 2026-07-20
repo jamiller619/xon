@@ -1,33 +1,10 @@
 import type { DataSource, Library } from '@xon/shared/'
 import { Button } from '@xon/ui'
-import { useCallback, useEffect, useState } from 'react'
+import { useState } from 'react'
 import { CreateLibraryForm } from '~/components/create-library-form/CreateLibraryForm'
 import useLibraries from '~/hooks/useLibraries'
 import { apiFetch } from '~/lib/apiFetch'
 import styles from './AdminLibraries.module.css'
-
-const ALL_MEDIA_TYPES = [
-  'Movies',
-  'TV Shows',
-  // 'Clips',
-  'Music',
-  // 'Audiobooks',
-  // 'Audio Clips',
-  // 'Podcasts',
-  'Pictures',
-  // 'Images',
-  // 'Textures',
-  'Home Videos',
-  // 'Games',
-  // 'Interactive Media',
-  // 'Documents',
-  // 'Web Media',
-  // 'Design Files',
-  // '3D Models',
-  // 'Archives',
-  // 'Fonts',
-  // 'Icons',
-]
 
 const SCHEDULE_PRESETS = [
   { label: 'Disabled', value: null },
@@ -56,15 +33,6 @@ function getNextScanTime(schedule: string | null): string | null {
   const now = Date.now()
   const next = new Date(Math.ceil(now / intervalMs) * intervalMs)
   return next.toLocaleString()
-}
-
-function formatDuration(ms: number | null): string {
-  if (ms === null || ms === undefined) return '—'
-  if (ms < 1000) return `${ms}ms`
-  if (ms < 60000) return `${(ms / 1000).toFixed(1)}s`
-  const mins = Math.floor(ms / 60000)
-  const secs = Math.round((ms % 60000) / 1000)
-  return secs > 0 ? `${mins}m ${secs}s` : `${mins}m`
 }
 
 // function parseAllowedMediaTypes(raw: string): string[] {
@@ -136,9 +104,6 @@ export default function AdminLibraries() {
       setEditingLibrary(data)
       setFormName(data.name)
       setFormDescription(data.description ?? '')
-      setFormMediaTypes(data.mediaCategories)
-      // setScheduleValue(data.scanSchedule)
-      // setWatchEnabled(data.watchEnabled)
       setShowCreateForm(false)
     } catch {
       setError('Failed to load library details')
@@ -229,50 +194,6 @@ export default function AdminLibraries() {
       setSourceError('Failed to add data source')
     } finally {
       setAddingSource(false)
-    }
-  }
-
-  // async function handleToggleSource(source: DataSource) {
-  //   if (!editingLibrary) return
-  //   try {
-  //     const res = await apiFetch(
-  //       `/api/libraries/${editingLibrary.id}/sources/${source.id}`,
-  //       {
-  //         method: 'PUT',
-  //         headers: { 'Content-Type': 'application/json' },
-  //         body: JSON.stringify({ enabled: !source.enabled }),
-  //       },
-  //     )
-  //     if (res.ok) {
-  //       const updated = (await res.json()) as DataSource
-  //       setEditingLibrary({
-  //         ...editingLibrary,
-  //         dataSources: editingLibrary.dataSources?.map((s) =>
-  //           s.id === source.id ? updated : s,
-  //         ) ?? [],
-  //       })
-  //     }
-  //   } catch {
-  //     // ignore
-  //   }
-  // }
-
-  async function handleDeleteSource(sourceId: string) {
-    if (!editingLibrary) return
-    try {
-      await apiFetch(
-        `/api/libraries/${editingLibrary.id}/sources/${sourceId}`,
-        {
-          method: 'DELETE',
-        },
-      )
-      setEditingLibrary({
-        ...editingLibrary,
-        dataSources:
-          editingLibrary.dataSources?.filter((s) => s.id !== sourceId) ?? [],
-      })
-    } catch {
-      setSourceError('Failed to remove data source')
     }
   }
 
@@ -417,23 +338,6 @@ export default function AdminLibraries() {
           <div className={styles.sourcesSection}>
             <h3 className={styles.sourcesSectionHeading}>Scan Schedule</h3>
 
-            {/* Last scan info */}
-            <div className={styles.scanInfoRow}>
-              <span className={styles.scanInfoLabel}>Last scan:</span>
-              <span
-                className={`${styles.scanInfoValue} ${
-                  editingLibrary.lastScanResult === 'failed'
-                    ? styles.scanResultFailed
-                    : ''
-                }`}
-              >
-                {editingLibrary.lastScanResult ?? 'Never'}
-                {editingLibrary.lastScanDuration !== null &&
-                  editingLibrary.lastScanDuration !== undefined &&
-                  ` (${formatDuration(editingLibrary.lastScanDuration)})`}
-              </span>
-            </div>
-
             <form onSubmit={handleSaveSchedule} className={styles.scheduleForm}>
               <div className={styles.scheduleRow}>
                 <label className={styles.scheduleLabel}>
@@ -488,37 +392,6 @@ export default function AdminLibraries() {
             {editingLibrary.dataSources?.length === 0 && (
               <p className={styles.emptyMsg}>No data sources added yet.</p>
             )}
-            {editingLibrary.dataSources?.map((source) => (
-              <div key={source.id} className={styles.sourceRow}>
-                <div className={styles.sourceInfo}>
-                  <span className={styles.sourceType}>{source.type}</span>
-                  <span className={styles.sourcePath}>{source.path}</span>
-                  {/* <span className={styles.sourceMeta}>
-                    {source.recursive ? 'recursive' : 'non-recursive'}
-                  </span> */}
-                </div>
-                <div className={styles.sourceActions}>
-                  {/* <button
-                    type="button"
-                    className={
-                      source.enabled
-                        ? styles.disableBtn
-                        : (styles.enableBtn)
-                    }
-                    onClick={() => handleToggleSource(source)}
-                  >
-                    {source.enabled ? 'Disable' : 'Enable'}
-                  </button> */}
-                  <button
-                    type="button"
-                    className={styles.deleteSourceBtn}
-                    onClick={() => handleDeleteSource(source.id)}
-                  >
-                    Remove
-                  </button>
-                </div>
-              </div>
-            ))}
 
             <form onSubmit={handleAddSource} className={styles.addSourceForm}>
               <h4 className={styles.addSourceHeading}>Add Data Source</h4>
@@ -574,7 +447,7 @@ export default function AdminLibraries() {
           <div key={lib.id} className={styles.libraryCard}>
             <div className={styles.libraryCardMain}>
               <div>
-                <p className={styles.libraryName}>{lib.name}</p>
+                {/* <p className={styles.libraryName}>{lib.name}</p>
                 {lib.description && (
                   <p className={styles.libraryDescription}>{lib.description}</p>
                 )}
@@ -606,7 +479,7 @@ export default function AdminLibraries() {
                         ` (${formatDuration(lib.lastScanDuration)})`}
                     </span>
                   )}
-                </div>
+                </div> */}
               </div>
               <div className={styles.libraryCardActions}>
                 {scanMessages[lib.id] && (
@@ -666,10 +539,8 @@ interface LibraryFormFieldsProps {
 function LibraryFormFields({
   name,
   description,
-  mediaTypes,
   onNameChange,
   onDescriptionChange,
-  onToggleMediaType,
 }: LibraryFormFieldsProps) {
   return (
     <div className={styles.formFields}>
@@ -694,23 +565,6 @@ function LibraryFormFields({
           placeholder="Optional description"
         />
       </label>
-      <div>
-        <p className={styles.fieldLabel}>
-          Allowed Media Types (leave empty for all)
-        </p>
-        <div className={styles.mediaTypeGrid}>
-          {ALL_MEDIA_TYPES.map((type) => (
-            <label key={type} className={styles.mediaTypeCheckbox}>
-              <input
-                type="checkbox"
-                checked={mediaTypes.includes(type)}
-                onChange={() => onToggleMediaType(type)}
-              />
-              {type}
-            </label>
-          ))}
-        </div>
-      </div>
     </div>
   )
 }

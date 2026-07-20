@@ -127,7 +127,7 @@ export interface ImageResult {
   aspect_ratio: number
   file_path: string
   height: number
-  iso_639_1: string
+  iso_639_1: string | null
   vote_average: number
   vote_count: number
   width: number
@@ -282,7 +282,8 @@ export class TmdbClient {
     }
 
     data.images ??= {}
-    const images = await this.fetchMovieImages(first.tmdbId, lang)
+    const language = lang || 'en'
+    const images = await this.fetchMovieImages(first.tmdbId, language)
 
     if (images?.backdrops) {
       data.images.backdrop = images.backdrops
@@ -290,18 +291,16 @@ export class TmdbClient {
         .map((i) => constructURL(backdropSizes.large, i.file_path))
     }
 
-    if (images?.posters) {
-      data.images.poster = images.posters
-        .slice(0, 5)
-        .map((i) => constructURL(posterSizes.xlarge, i.file_path))
+    const poster = pickByLanguage(images?.posters ?? [], language)
+    if (poster) {
+      data.images.poster = constructURL(posterSizes.xlarge, poster.file_path)
+    } else if (details.poster_path) {
+      data.images.poster = constructURL(posterSizes.xlarge, details.poster_path)
     }
 
-    if (images?.logos) {
-      const logo = images.logos.at(0)
-
-      if (logo) {
-        data.images.logo = constructURL(logoSizes.original, logo.file_path)
-      }
+    const logo = pickByLanguage(images?.logos ?? [], language)
+    if (logo) {
+      data.images.logo = constructURL(logoSizes.original, logo.file_path)
     }
 
     return data
@@ -309,8 +308,8 @@ export class TmdbClient {
 
   async fetchTvMetadata(
     seriesTitle: string,
-    season: number,
-    episode: number,
+    season?: number,
+    episode?: number,
   ): Promise<Metadata | undefined> {
     const search = await this.#get<SearchResponse<TmdbTvSearchResult>>(
       '/search/tv',
@@ -326,9 +325,12 @@ export class TmdbClient {
     })
     if (!details) return
 
-    const episodeDetails = await this.#get<TmdbEpisodeResult>(
-      `/tv/${first.id}/season/${season}/episode/${episode}`,
-    )
+    const episodeDetails =
+      season != null && episode != null
+        ? await this.#get<TmdbEpisodeResult>(
+            `/tv/${first.id}/season/${season}/episode/${episode}`,
+          )
+        : null
 
     const cast = details.credits?.cast ?? []
     const crew = details.credits?.crew ?? []
@@ -356,9 +358,10 @@ export class TmdbClient {
           job: c.job,
           department: c.department,
         })),
-      seasonNumber: season,
-      episodeNumber: episode,
     }
+
+    if (season != null) metadata.seasonNumber = season
+    if (episode != null) metadata.episodeNumber = episode
 
     if (details.poster_path) {
       metadata.images ??= {}
@@ -387,12 +390,10 @@ export class TmdbClient {
     return metadata
   }
 
-  async fetchMovieImages(movieId: number, lang?: string) {
-    const url = `/movie/${movieId}/images${lang ? `?language=${lang}` : ''}`
-
-    const images = await this.#get<TmdbMovieImagesResult>(url)
-
-    return images
+  async fetchMovieImages(movieId: number, lang = 'en') {
+    return this.#get<TmdbMovieImagesResult>(`/movie/${movieId}/images`, {
+      include_image_language: `${lang},null`,
+    })
   }
 
   clearCache(): void {
@@ -404,4 +405,29 @@ function constructURL(size: string, imagePath?: string | null | undefined) {
   if (!imagePath) return ''
 
   return new URL(`${size}${imagePath}`, secureBaseURL).href
+}
+
+/**
+ * Pick the single best image for a language: exact language match first,
+ * then language-neutral, then anything, ranked by TMDb votes within each
+ * group.
+ */
+function pickByLanguage(
+  images: ImageResult[],
+  lang: string,
+): ImageResult | undefined {
+  const matches = images.filter((i) => i.iso_639_1 === lang)
+  const neutral = images.filter((i) => i.iso_639_1 === null)
+  const candidates = matches.length
+    ? matches
+    : neutral.length
+      ? neutral
+      : images
+
+  return [...candidates].sort(
+    (a, b) =>
+      b.vote_average - a.vote_average ||
+      b.vote_count - a.vote_count ||
+      b.width - a.width,
+  )[0]
 }

@@ -121,7 +121,7 @@
 //   /**
 //    * GET /admin/ai-settings/key
 //    * Returns the decrypted cloud API key for server-internal use.
-//    * Only accessible to admin role (enforced by parent /admin/* middleware).
+//    * Only accessible through the authenticated /admin/* middleware.
 //    */
 //   router.get('/key', async (c) => {
 //     const row = await getOrInitSettings(db)

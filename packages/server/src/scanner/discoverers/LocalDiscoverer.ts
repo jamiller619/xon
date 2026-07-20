@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto'
 import path from 'node:path'
+import { LibraryType } from '@xon/shared'
 import { fdir } from 'fdir'
 import fileEntryCache from 'file-entry-cache'
 import pLimit from 'p-limit'
@@ -21,15 +22,22 @@ export class LocalDiscoverer implements MediaDiscoverer {
     const { libraryId, libraryType, dataSource, extSet } = ctx
     const sourcePath = toLocalPath(dataSource.path)
 
+    const filterSamples = SAMPLE_FILTERED_LIBRARY_TYPES.has(libraryType)
+
     const filePaths = await new fdir()
       .withFullPaths()
-      .exclude((dirName) => dirName.startsWith('.'))
+      .exclude(
+        (dirName) =>
+          dirName.startsWith('.') ||
+          (filterSamples && SAMPLE_DIR_PATTERN.test(dirName)),
+      )
       .filter(
         (fp, isDir) =>
           !isDir &&
           !fp.startsWith('.') &&
           !path.basename(fp).startsWith('.') &&
-          extSet.has(path.extname(fp).toLowerCase()),
+          extSet.has(path.extname(fp).toLowerCase()) &&
+          !(filterSamples && isSampleFile(fp)),
       )
       .crawl(sourcePath)
       .withPromise()
@@ -83,4 +91,20 @@ export class LocalDiscoverer implements MediaDiscoverer {
       reconcile: () => cache.reconcile(),
     }
   }
+}
+
+// "sample" is only a release-scene convention for movies/TV — the same
+// word is legitimate in music (sample packs) and other library types
+const SAMPLE_FILTERED_LIBRARY_TYPES = new Set<LibraryType>([
+  LibraryType.Movies,
+  LibraryType.TVShows,
+])
+
+const SAMPLE_TOKEN_PATTERN = /(^|[\s._-])sample([\s._-]|$)/i
+const SAMPLE_DIR_PATTERN = /^samples?$/i
+
+export function isSampleFile(filePath: string): boolean {
+  const name = path.basename(filePath, path.extname(filePath))
+
+  return SAMPLE_TOKEN_PATTERN.test(name)
 }

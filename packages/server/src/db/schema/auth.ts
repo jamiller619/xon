@@ -17,9 +17,6 @@ export const users = sqliteTable('users', {
     .$onUpdate(() => /* @__PURE__ */ new Date())
     .notNull(),
   isAnonymous: integer('is_anonymous', { mode: 'boolean' }).default(false),
-  role: text({ enum: ['user', 'admin', 'guest'] })
-    .default('user')
-    .notNull(),
 })
 
 export const sessions = sqliteTable(

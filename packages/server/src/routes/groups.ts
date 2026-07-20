@@ -1,9 +1,9 @@
-import { GroupType, MediaType, UserRole } from '@xon/shared'
+import { GroupType, MediaType } from '@xon/shared'
 import { and, asc, eq, inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { requireRole } from '../auth/rbac.ts'
+import { requireAuth } from '../auth/middleware.ts'
 import { groupItems, groups, mediaItems } from '../db/schema.ts'
 import { validate } from '../http/validate.ts'
 
@@ -45,7 +45,7 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
   // POST /groups — create a manual group (user+)
   router.post(
     '/',
-    requireRole(UserRole.User),
+    requireAuth(),
     validate('json', createGroupSchema),
     async (c) => {
       const body = c.req.valid('json')
@@ -79,7 +79,7 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
     // if (!libraryId)
     //   return c.json({ error: 'libraryId query param required' }, 400)
 
-    // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+    // const accessibleIds = await getAccessibleLibraryIds(db, user.id)
     // if (accessibleIds !== null && !accessibleIds.includes(libraryId)) {
     //   return c.json({ error: 'Not found' }, 404)
     // }
@@ -106,7 +106,7 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
     const group = groupRows[0]
     if (!group) return c.json({ error: 'Not found' }, 404)
 
-    // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+    // const accessibleIds = await getAccessibleLibraryIds(db, user.id)
     // if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
     //   return c.json({ error: 'Not found' }, 404)
     // }
@@ -162,7 +162,7 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
   // PUT /groups/:id — update group title/type (manager+)
   router.put(
     '/:id',
-    requireRole(UserRole.User),
+    requireAuth(),
     validate('json', updateGroupSchema),
     async (c) => {
       const id = c.req.param('id')
@@ -177,7 +177,6 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
       // const accessibleIds = await getAccessibleLibraryIds(
       //   db,
       //   user.id,
-      //   user.role,
       // )
       // if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
       //   return c.json({ error: 'Not found' }, 404)
@@ -202,7 +201,7 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
   )
 
   // DELETE /groups/:id — delete group (manager+)
-  router.delete('/:id', requireRole(UserRole.User), async (c) => {
+  router.delete('/:id', requireAuth(), async (c) => {
     const id = c.req.param('id')
     // const user = c.get('user')
 
@@ -211,7 +210,7 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
     const group = groupRows[0]
     if (!group) return c.json({ error: 'Not found' }, 404)
 
-    // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+    // const accessibleIds = await getAccessibleLibraryIds(db, user.id)
     // if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
     //   return c.json({ error: 'Not found' }, 404)
     // }
@@ -228,7 +227,7 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
   // POST /groups/:id/items — add item to group (upsert with sortOrder)
   router.post(
     '/:id/items',
-    requireRole(UserRole.User),
+    requireAuth(),
     validate('json', addItemSchema),
     async (c) => {
       const groupId = c.req.param('id')
@@ -246,7 +245,6 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
       // const accessibleIds = await getAccessibleLibraryIds(
       //   db,
       //   user.id,
-      //   user.role,
       // )
       // if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
       //   return c.json({ error: 'Not found' }, 404)
@@ -292,7 +290,7 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
   // PUT /groups/:id/items — reorder items (batch update sortOrder)
   router.put(
     '/:id/items',
-    requireRole(UserRole.User),
+    requireAuth(),
     validate('json', reorderItemsSchema),
     async (c) => {
       const groupId = c.req.param('id')
@@ -310,7 +308,6 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
       // const accessibleIds = await getAccessibleLibraryIds(
       //   db,
       //   user.id,
-      //   user.role,
       // )
       // if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
       //   return c.json({ error: 'Not found' }, 404)
@@ -333,43 +330,38 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
   )
 
   // DELETE /groups/:id/items/:mediaItemId — remove item from group (manager+)
-  router.delete(
-    '/:id/items/:mediaItemId',
-    requireRole(UserRole.User),
-    async (c) => {
-      const groupId = c.req.param('id')
-      const mediaItemId = c.req.param('mediaItemId')
-      // const user = c.get('user')
+  router.delete('/:id/items/:mediaItemId', requireAuth(), async (c) => {
+    const groupId = c.req.param('id')
+    const mediaItemId = c.req.param('mediaItemId')
+    // const user = c.get('user')
 
-      const groupRows = await db
-        .select()
-        .from(groups)
-        .where(eq(groups.id, groupId))
-      if (groupRows.length === 0) return c.json({ error: 'Not found' }, 404)
-      const group = groupRows[0]
-      if (!group) return c.json({ error: 'Not found' }, 404)
+    const groupRows = await db
+      .select()
+      .from(groups)
+      .where(eq(groups.id, groupId))
+    if (groupRows.length === 0) return c.json({ error: 'Not found' }, 404)
+    const group = groupRows[0]
+    if (!group) return c.json({ error: 'Not found' }, 404)
 
-      // const accessibleIds = await getAccessibleLibraryIds(
-      //   db,
-      //   user.id,
-      //   user.role,
-      // )
-      // if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
-      //   return c.json({ error: 'Not found' }, 404)
-      // }
+    // const accessibleIds = await getAccessibleLibraryIds(
+    //   db,
+    //   user.id,
+    // )
+    // if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
+    //   return c.json({ error: 'Not found' }, 404)
+    // }
 
-      await db
-        .delete(groupItems)
-        .where(
-          and(
-            eq(groupItems.groupId, groupId),
-            eq(groupItems.mediaItemId, mediaItemId),
-          ),
-        )
+    await db
+      .delete(groupItems)
+      .where(
+        and(
+          eq(groupItems.groupId, groupId),
+          eq(groupItems.mediaItemId, mediaItemId),
+        ),
+      )
 
-      return c.json({ success: true })
-    },
-  )
+    return c.json({ success: true })
+  })
 
   return router
 }

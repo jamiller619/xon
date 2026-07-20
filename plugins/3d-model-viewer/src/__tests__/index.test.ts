@@ -37,7 +37,7 @@ describe('ModelViewerPlugin', () => {
         registerRoute: vi.fn(),
         registerUI: vi.fn((component) => registeredComponents.push(component)),
         logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
-        fs: {} as PluginContext['fs'],
+        images: { save: vi.fn() },
         fetch: vi.fn(),
       }
 
@@ -60,7 +60,7 @@ describe('ModelViewerPlugin', () => {
         registerRoute: vi.fn(),
         registerUI: vi.fn(),
         logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
-        fs: {} as PluginContext['fs'],
+        images: { save: vi.fn() },
         fetch: vi.fn(),
       }
 
@@ -77,7 +77,7 @@ describe('ModelViewerPlugin', () => {
         registerRoute: vi.fn(),
         registerUI: vi.fn(),
         logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
-        fs: {} as PluginContext['fs'],
+        images: { save: vi.fn() },
         fetch: vi.fn(),
       }
 
@@ -94,7 +94,7 @@ describe('ModelViewerPlugin', () => {
         registerRoute: vi.fn(),
         registerUI: vi.fn(),
         logger: { info: vi.fn(), warn: vi.fn(), error: vi.fn() },
-        fs: {} as PluginContext['fs'],
+        images: { save: vi.fn() },
         fetch: vi.fn(),
       }
 

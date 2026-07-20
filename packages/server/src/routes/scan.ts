@@ -1,16 +1,15 @@
-import { UserRole } from '@xon/shared'
 import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { requireRole } from '../auth/rbac.ts'
+import { requireAuth } from '../auth/middleware.ts'
 import { appCache } from '../cache.ts'
 import { libraries } from '../db/schema.ts'
 import { emitEvent } from '../events.ts'
 import { validate } from '../http/validate.ts'
 import { emitPluginEvent } from '../plugins/pluginManager.ts'
-import { type ScanState, scanRegistry } from '../scanner/scanRegistry.ts'
 import type { ScannerHandle } from '../scanner/scannerHandle.ts'
+import { type ScanState, scanRegistry } from '../scanner/scanRegistry.ts'
 import { parseCronInterval } from '../scanner/scheduler.ts'
 
 const scheduleSchema = z.object({
@@ -35,6 +34,29 @@ export function triggerLibraryScan(
   scannerHandle: ScannerHandle,
   libraryId: string,
 ): boolean {
+  return runScanJob(libraryId, () => scannerHandle.startScan(libraryId))
+}
+
+/**
+ * Fire-and-forget metadata refresh for a library, or a single media item when
+ * mediaItemId is given. Shares the scan registry, so a refresh and a scan of
+ * the same library never run concurrently and reuse the same progress UI.
+ * Returns false if a scan or refresh is already running.
+ */
+export function triggerMetadataRefresh(
+  scannerHandle: ScannerHandle,
+  libraryId: string,
+  mediaItemId?: string,
+): boolean {
+  return runScanJob(libraryId, () =>
+    scannerHandle.refreshMetadata(libraryId, mediaItemId),
+  )
+}
+
+function runScanJob(
+  libraryId: string,
+  run: () => Promise<Awaited<ReturnType<ScannerHandle['startScan']>>>,
+): boolean {
   const current = scanRegistry.get(libraryId)
   if (current?.status === 'running') return false
 
@@ -49,8 +71,7 @@ export function triggerLibraryScan(
 
   emitPluginEvent('scan:start', { libraryId })
 
-  scannerHandle
-    .startScan(libraryId)
+  run()
     .then((summary) => {
       state.status = 'completed'
       state.summary = summary
@@ -93,9 +114,28 @@ export function makeScanRouter(
   const router = new Hono()
 
   // POST / — trigger scan (mounted at /:libraryId/scan) (manager+)
-  router.post('/', requireRole(UserRole.User), (c) => {
+  router.post('/', requireAuth(), (c) => {
     const libraryId = c.req.param('libraryId') as string
     const started = triggerLibraryScan(scannerHandle, libraryId)
+    if (!started) {
+      return c.json({ status: 'already_running' }, 409)
+    }
+    return c.json({ status: 'started' }, 202)
+  })
+
+  // POST /refresh — re-run metadata plugins for the whole library, or a
+  // single item when the body carries { mediaItemId } (mounted at
+  // /:libraryId/scan/refresh) (manager+)
+  router.post('/refresh', requireAuth(), async (c) => {
+    const libraryId = c.req.param('libraryId') as string
+
+    const body = (await c.req.json().catch(() => ({}))) as {
+      mediaItemId?: unknown
+    }
+    const mediaItemId =
+      typeof body.mediaItemId === 'string' ? body.mediaItemId : undefined
+
+    const started = triggerMetadataRefresh(scannerHandle, libraryId, mediaItemId)
     if (!started) {
       return c.json({ status: 'already_running' }, 409)
     }
@@ -123,7 +163,7 @@ export function makeScanRouter(
   // PUT /schedule — update scan schedule for a library (manager+)
   router.put(
     '/schedule',
-    requireRole(UserRole.User),
+    requireAuth(),
     validate('json', scheduleSchema),
     async (c) => {
       const libraryId = c.req.param('libraryId') as string
@@ -151,7 +191,7 @@ export function makeScanRouter(
   // PUT /watch — enable/disable filesystem watch for a library (manager+)
   // router.put(
   //   '/watch',
-  //   requireRole(UserRole.User),
+  //   requireAuth(),
   //   validate('json', watchSchema),
   //   async (c) => {
   //     const libraryId = c.req.param('libraryId') as string

@@ -22,7 +22,7 @@ const AdminLibraryAccess = lazy(
 const AdminNetworkSettings = lazy(
   () => import('~/pages/admin/network-settings/AdminNetworkSettings'),
 )
-const ServerOutput = lazy(() => import('~/pages/admin/logs/ServerOutput'))
+const LogViewer = lazy(() => import('~/pages/admin/logs/LogViewer'))
 const AdminPlugins = lazy(() => import('~/pages/admin/plugins/AdminPlugins'))
 const AdminSettings = lazy(() => import('~/pages/admin/settings/AdminSettings'))
 const AdminUsers = lazy(() => import('~/pages/admin/users/AdminUsers'))
@@ -42,7 +42,14 @@ export default function Router() {
   return (
     <Routes>
       <Route path="/setup" element={<Setup />} />
-      <Route path="/login" element={<Login />} />
+      <Route
+        path="/login"
+        element={
+          <RequireSetup>
+            <Login />
+          </RequireSetup>
+        }
+      />
       <Route
         element={
           <RequireSetup>
@@ -67,10 +74,17 @@ export default function Router() {
         <Route path="/admin/network" element={<AdminNetworkSettings />} />
         <Route path="/admin/settings" element={<AdminSettings />} />
         <Route path="/admin/health" element={<AdminHealth />} />
-        <Route path="/admin/logs" element={<ServerOutput />} />
+        <Route path="/admin/logs" element={<LogViewer />} />
         <Route path="/settings" element={<Settings />} />
       </Route>
-      <Route path="*" element={<NotFound />} />
+      <Route
+        path="*"
+        element={
+          <RequireSetup>
+            <NotFound />
+          </RequireSetup>
+        }
+      />
     </Routes>
   )
 }

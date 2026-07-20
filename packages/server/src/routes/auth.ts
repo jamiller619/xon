@@ -1,4 +1,3 @@
-// import { UserRole } from '@xon/shared'
 // import { eq, lt } from 'drizzle-orm'
 // import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 
@@ -26,14 +25,12 @@ import * as userService from '../services/userService.ts'
 // export async function signAccessToken(
 //   userId: string,
 //   username: string,
-//   role: string,
 // ): Promise<string> {
 //   const now = Math.floor(Date.now() / 1000)
 //   return sign(
 //     {
 //       sub: userId,
 //       username,
-//       role,
 //       iat: now,
 //       exp: now + ACCESS_TOKEN_TTL_SECONDS,
 //     },
@@ -62,18 +59,16 @@ import * as userService from '../services/userService.ts'
 
 // export async function verifyAccessToken(
 //   token: string,
-// ): Promise<{ sub: string; username: string; role: string } | null> {
+// ): Promise<{ sub: string; username: string } | null> {
 //   try {
 //     const payload = await verify(token, getJwtSecret(), 'HS256')
 //     if (
 //       typeof payload.sub === 'string' &&
 //       typeof payload.username === 'string' &&
-//       typeof payload.role === 'string'
 //     ) {
 //       return {
 //         sub: payload.sub,
 //         username: payload.username,
-//         role: payload.role,
 //       }
 //     }
 //     return null
@@ -136,7 +131,6 @@ export function makeAuthRouter(db: LibSQLDatabase): Hono {
   //     const accessToken = await signAccessToken(
   //       user.id,
   //       user.username,
-  //       user.role,
   //     )
   //     const refreshToken = await signRefreshToken(tokenId, user.id)
 
@@ -215,7 +209,7 @@ export function makeAuthRouter(db: LibSQLDatabase): Hono {
   //     expiresAt,
   //   })
 
-  //   const accessToken = await signAccessToken(user.id, user.username, user.role)
+  //   const accessToken = await signAccessToken(user.id, user.username)
   //   const newRefreshToken = await signRefreshToken(newTokenId, user.id)
 
   //   setCookie(c, REFRESH_COOKIE_NAME, newRefreshToken, {
@@ -283,7 +277,6 @@ export function makeAuthRouter(db: LibSQLDatabase): Hono {
   //       username,
   //       email,
   //       passwordHash,
-  //       role: UserRole.Admin,
   //     })
 
   //     const tokenId = crypto.randomUUID()

@@ -383,13 +383,8 @@ function makeContext(overrides: Partial<PluginContext> = {}): PluginContext {
       warn: vi.fn(),
       error: vi.fn(),
     },
-    fs: {
-      readFile: vi.fn(),
-      writeFile: vi.fn(),
-      readdir: vi.fn(),
-      stat: vi.fn(),
-      mkdir: vi.fn(),
-      unlink: vi.fn(),
+    images: {
+      save: vi.fn(),
     },
     fetch: vi.fn(),
     ...overrides,

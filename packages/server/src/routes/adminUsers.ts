@@ -11,13 +11,11 @@ const createUserSchema = z.object({
   email: z.string().email(),
   displayName: z.string().min(1),
   password: z.string().min(1),
-  role: z.enum(['admin', 'manager', 'user', 'guest']).default('user'),
 })
 
 const updateUserSchema = z.object({
   displayName: z.string().min(1).optional(),
   email: z.string().email().optional(),
-  role: z.enum(['admin', 'manager', 'user', 'guest']).optional(),
   maxContentRating: z
     .enum(['G', 'PG', 'PG-13', 'R', 'unrated', 'none'])
     .optional(),
@@ -47,7 +45,6 @@ export function makeAdminUsersRouter(db: LibSQLDatabase): Hono {
   //     email: body.email,
   //     displayName: body.displayName,
   //     passwordHash,
-  //     role: body.role,
   //     createdAt: now,
   //     updatedAt: now,
   //   })
@@ -59,7 +56,6 @@ export function makeAdminUsersRouter(db: LibSQLDatabase): Hono {
   //       email: users.email,
   //       displayName: users.displayName,
   //       avatarUrl: users.avatarUrl,
-  //       role: users.role,
   //       maxContentRating: users.maxContentRating,
   //       createdAt: users.createdAt,
   //       updatedAt: users.updatedAt,
@@ -82,7 +78,6 @@ export function makeAdminUsersRouter(db: LibSQLDatabase): Hono {
   //   }
   //   if (body.displayName !== undefined) updates.displayName = body.displayName
   //   if (body.email !== undefined) updates.email = body.email
-  //   if (body.role !== undefined) updates.role = body.role
   //   if (body.maxContentRating !== undefined)
   //     updates.maxContentRating = body.maxContentRating
   //   if (body.password !== undefined)
@@ -96,7 +91,6 @@ export function makeAdminUsersRouter(db: LibSQLDatabase): Hono {
   //       email: users.email,
   //       displayName: users.displayName,
   //       avatarUrl: users.avatarUrl,
-  //       role: users.role,
   //       maxContentRating: users.maxContentRating,
   //       createdAt: users.createdAt,
   //       updatedAt: users.updatedAt,

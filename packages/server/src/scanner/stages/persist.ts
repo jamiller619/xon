@@ -8,6 +8,7 @@ export default {
   async run(ctx, job) {
     if (job.type === 'new') return saveNewMediaItem(ctx, job)
     if (job.type === 'changed') return saveChangedMediaItem(ctx, job)
+    if (job.type === 'refresh') return saveRefreshedMediaItem(ctx, job)
   },
 } satisfies PipelineStage
 
@@ -51,10 +52,58 @@ async function saveChangedMediaItem(ctx: PipelineContext, job: MediaJob) {
   return mediaItem
 }
 
+async function saveRefreshedMediaItem(ctx: PipelineContext, job: MediaJob) {
+  const [mediaItem] = await ctx.db
+    .select()
+    .from(mediaItems)
+    .where(eq(mediaItems.id, job.data.id))
+
+  if (!mediaItem) {
+    job.errors.push(
+      new Error('Persist stage: No media item found for refresh job'),
+    )
+
+    return
+  }
+
+  // Fresh plugin data wins over stored fields; stored fields the plugins
+  // didn't return (e.g. user edits, other sources) are kept.
+  const combinedMetadata = {
+    ...mediaItem.metadata,
+    ...job.data.metadata,
+  }
+
+  ctx.logger.log(
+    `Persist stage: Refreshing metadata for media item ${mediaItem.id}`,
+  )
+
+  await ctx.db
+    .update(mediaItems)
+    .set({
+      metadata: combinedMetadata,
+      title: job.data.title ?? mediaItem.title,
+      matchId: job.data.matchId ?? mediaItem.matchId,
+      matchIdSource: job.data.matchIdSource ?? mediaItem.matchIdSource,
+      scannedAt: new Date(),
+    })
+    .where(eq(mediaItems.id, mediaItem.id))
+
+  // Person stage runs after this and re-writes metadata from job.data —
+  // hand it the merged object so stored-only fields survive.
+  return { metadata: combinedMetadata }
+}
+
 async function saveNewMediaItem(ctx: PipelineContext, job: MediaJob) {
   await ctx.db.transaction(async (tx) => {
     if (job.data.drmProtected == null || !job.data.title) {
-      ctx.logger.error('Missing required fields: ', ctx, job.data)
+      ctx.logger.error('Persist stage: missing required fields', {
+        file: job.file.path,
+        jobId: job.data.id,
+        missing: [
+          job.data.drmProtected == null ? 'drmProtected' : null,
+          !job.data.title ? 'title' : null,
+        ].filter(Boolean),
+      })
 
       return
     }

@@ -4,6 +4,12 @@ export type ScanJobId = string
 
 export type ParentToChild =
   | { type: 'start-scan'; jobId: ScanJobId; libraryId: string }
+  | {
+      type: 'refresh-metadata'
+      jobId: ScanJobId
+      libraryId: string
+      mediaItemId?: string | undefined
+    }
   | { type: 'shutdown' }
 
 export type ChildToParent =

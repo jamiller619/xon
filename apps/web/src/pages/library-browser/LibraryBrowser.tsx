@@ -1,11 +1,12 @@
 import type { MediaItem } from '@xon/shared'
 import { Select } from '@xon/ui'
-import { useCallback, useEffect, useState } from 'react'
+import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import BulkEditDialog from '~/components/group-dialog/BulkEditDialog'
 import GroupDialog from '~/components/group-dialog/GroupDialog'
 import MediaCard from '~/components/media-card/MediaCard'
 import { apiFetch } from '~/lib/apiFetch'
+import { subscribeToEvents } from '~/lib/eventStream'
 import { useAppStore } from '~/store/appStore'
 import styles from './LibraryBrowser.module.css'
 
@@ -32,6 +33,9 @@ type SortColumn =
 type SortDir = 'asc' | 'desc'
 
 const PAGE_SIZE = 40
+
+/** Minimum gap between mid-scan refreshes of the visible media list. */
+const SCAN_REFRESH_THROTTLE_MS = 3000
 
 const MEDIA_CATEGORIES = [
   'Movies',
@@ -113,34 +117,43 @@ export default function LibraryBrowser() {
       .catch(() => setError('Failed to load library'))
   }, [id])
 
+  // A "silent" fetch keeps the current items on screen instead of flashing
+  // skeletons — used for live refreshes while a scan is running
+  const fetchMedia = useCallback(
+    (silent: boolean) => {
+      if (!id) return
+      if (!silent) setLoading(true)
+      const apiSortBy = sortCol === 'mediaCategory' ? 'createdAt' : sortCol
+      const params = new URLSearchParams({
+        order: sortDir,
+        sortBy: apiSortBy,
+        limit: String(PAGE_SIZE),
+        page: String(page),
+      })
+      if (filterCategory) params.set('mediaCategory', filterCategory)
+      apiFetch(`/api/libraries/${id}/media?${params.toString()}`)
+        .then((r) => r.json())
+        .then((data) => {
+          const mediaList = data as MediaItem[]
+          setItems(mediaList)
+          if (mediaList.length === PAGE_SIZE) {
+            setTotalPages((prev) => Math.max(prev, page + 1))
+          } else {
+            setTotalPages(page)
+          }
+          setLoading(false)
+        })
+        .catch(() => {
+          setError('Failed to load media')
+          setLoading(false)
+        })
+    },
+    [id, page, sortCol, sortDir, filterCategory],
+  )
+
   useEffect(() => {
-    if (!id) return
-    setLoading(true)
-    const apiSortBy = sortCol === 'mediaCategory' ? 'createdAt' : sortCol
-    const params = new URLSearchParams({
-      order: sortDir,
-      sortBy: apiSortBy,
-      limit: String(PAGE_SIZE),
-      page: String(page),
-    })
-    if (filterCategory) params.set('mediaCategory', filterCategory)
-    apiFetch(`/api/libraries/${id}/media?${params.toString()}`)
-      .then((r) => r.json())
-      .then((data) => {
-        const mediaList = data as MediaItem[]
-        setItems(mediaList)
-        if (mediaList.length === PAGE_SIZE) {
-          setTotalPages((prev) => Math.max(prev, page + 1))
-        } else {
-          setTotalPages(page)
-        }
-        setLoading(false)
-      })
-      .catch(() => {
-        setError('Failed to load media')
-        setLoading(false)
-      })
-  }, [id, page, sortCol, sortDir, filterCategory])
+    fetchMedia(false)
+  }, [fetchMedia])
 
   const loadGroups = useCallback(() => {
     if (!id) return
@@ -152,6 +165,47 @@ export default function LibraryBrowser() {
         /* ignore */
       })
       .finally(() => setGroupsLoading(false))
+  }, [id])
+
+  // Kept current every render so the scan subscription below always refreshes
+  // with the latest filters/page/tab without resubscribing
+  const refreshLiveRef = useRef(() => {})
+  refreshLiveRef.current = () => {
+    fetchMedia(true)
+    if (tab === 'groups') loadGroups()
+  }
+
+  // Refresh the visible list live while this library is being scanned
+  useEffect(() => {
+    if (!id) return
+
+    let lastRefresh = 0
+
+    return subscribeToEvents((event) => {
+      if (
+        event.type !== 'scan:progress' &&
+        event.type !== 'scan:complete' &&
+        event.type !== 'scan:error'
+      )
+        return
+      if (event.payload.libraryId !== id) return
+      // No items are written during discovery
+      if (
+        event.type === 'scan:progress' &&
+        event.payload.phase === 'discovering'
+      )
+        return
+
+      const now = Date.now()
+      if (
+        event.type === 'scan:progress' &&
+        now - lastRefresh < SCAN_REFRESH_THROTTLE_MS
+      )
+        return
+
+      lastRefresh = now
+      refreshLiveRef.current()
+    })
   }, [id])
 
   useEffect(() => {

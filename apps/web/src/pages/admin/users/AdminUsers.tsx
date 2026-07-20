@@ -8,13 +8,10 @@ interface UserInfo {
   username: string
   email: string
   displayName: string
-  role: 'admin' | 'manager' | 'user' | 'guest'
   maxContentRating: 'G' | 'PG' | 'PG-13' | 'R' | 'unrated' | 'none'
   createdAt: number
 }
 
-type UserRole = 'admin' | 'manager' | 'user' | 'guest'
-const ROLES: UserRole[] = ['admin', 'manager', 'user', 'guest']
 // type ContentRatingMax = 'G' | 'PG' | 'PG-13' | 'R' | 'unrated' | 'none'
 // const CONTENT_RATINGS: ContentRatingMax[] = [
 //   'G',
@@ -30,13 +27,11 @@ interface CreateForm {
   email: string
   displayName: string
   password: string
-  role: UserRole
 }
 
 interface EditForm {
   displayName: string
   email: string
-  role: UserRole
   maxContentRating: MPARating | 'none' | 'unrated'
   password: string
 }
@@ -46,7 +41,6 @@ const EMPTY_CREATE: CreateForm = {
   email: '',
   displayName: '',
   password: '',
-  role: 'user',
 }
 
 export default function AdminUsers() {
@@ -61,7 +55,6 @@ export default function AdminUsers() {
   const [editForm, setEditForm] = useState<EditForm>({
     displayName: '',
     email: '',
-    role: 'user',
     maxContentRating: 'none',
     password: '',
   })
@@ -84,7 +77,6 @@ export default function AdminUsers() {
     setEditForm({
       displayName: user.displayName,
       email: user.email,
-      role: user.role,
       maxContentRating: user.maxContentRating,
       password: '',
     })
@@ -103,7 +95,6 @@ export default function AdminUsers() {
     const body: Record<string, string> = {
       displayName: editForm.displayName,
       email: editForm.email,
-      role: editForm.role,
       maxContentRating: editForm.maxContentRating,
     }
     if (editForm.password) body.password = editForm.password
@@ -232,25 +223,6 @@ export default function AdminUsers() {
                 }
               />
             </label>
-            <label className={styles.label ?? ''}>
-              Role
-              <select
-                className={styles.input ?? ''}
-                value={createForm.role}
-                onChange={(e) =>
-                  setCreateForm((f) => ({
-                    ...f,
-                    role: e.target.value as UserRole,
-                  }))
-                }
-              >
-                {ROLES.map((r) => (
-                  <option key={r} value={r}>
-                    {r}
-                  </option>
-                ))}
-              </select>
-            </label>
           </div>
           <div className={styles.formActions ?? ''}>
             <button
@@ -283,7 +255,6 @@ export default function AdminUsers() {
               <th className={styles.th ?? ''}>Username</th>
               <th className={styles.th ?? ''}>Display Name</th>
               <th className={styles.th ?? ''}>Email</th>
-              <th className={styles.th ?? ''}>Role</th>
               <th className={styles.th ?? ''}>Max Rating</th>
               <th className={styles.th ?? ''}>Actions</th>
             </tr>
@@ -314,24 +285,6 @@ export default function AdminUsers() {
                         setEditForm((f) => ({ ...f, email: e.target.value }))
                       }
                     />
-                  </td>
-                  <td className={styles.td ?? ''}>
-                    <select
-                      className={styles.inlineInput ?? ''}
-                      value={editForm.role}
-                      onChange={(e) =>
-                        setEditForm((f) => ({
-                          ...f,
-                          role: e.target.value as UserRole,
-                        }))
-                      }
-                    >
-                      {ROLES.map((r) => (
-                        <option key={r} value={r}>
-                          {r}
-                        </option>
-                      ))}
-                    </select>
                   </td>
                   <td className={styles.td ?? ''}>
                     <select
@@ -395,13 +348,6 @@ export default function AdminUsers() {
                   </td>
                   <td className={styles.td ?? ''}>{user.displayName}</td>
                   <td className={styles.td ?? ''}>{user.email}</td>
-                  <td className={styles.td ?? ''}>
-                    <span
-                      className={`${styles.badge ?? ''} ${styles[`role_${user.role}`] ?? ''}`}
-                    >
-                      {user.role}
-                    </span>
-                  </td>
                   <td className={styles.td ?? ''}>
                     <span className={styles.badge ?? ''}>
                       {user.maxContentRating === 'none'

@@ -1,6 +1,6 @@
 .button {
   position: relative;
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
   gap: var(--space-xs);
@@ -9,11 +9,13 @@
   corner-shape: var(--corner-shape);
   border: none;
 
-  min-height: 3rem;
-  min-width: 3rem;
+  min-height: 2.5rem;
+  padding-block: var(--space-xs);
+  padding-inline: var(--space-md);
 
   color: var(--color-text);
-  font-size: var(--text-md);
+  font-size: var(--text-sm);
+  /* font-size: 14px; */
   font-weight: 400;
   font-family: inherit;
 
@@ -47,13 +49,19 @@
     }
   }
 
+  &.mini {
+    height: 1.5rem;
+    font-size: var(--text-sm);
+    padding-inline: var(--space-xs);
+  }
+
   &.small {
-    min-height: 2rem;
+    height: 2rem;
     font-size: var(--text-sm);
   }
 
   &.large {
-    min-height: 3rem;
+    height: 4rem;
     padding-inline: var(--space-md);
     font-size: var(--text-lg);
   }
@@ -70,7 +78,6 @@
 
   &.danger {
     background: red;
-    /* color: var(--color-gray-1); */
   }
 }
 

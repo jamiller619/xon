@@ -12,7 +12,6 @@ interface UserInfo {
   id: string
   username: string
   displayName: string
-  role: string
 }
 
 interface AccessEntry {
@@ -20,7 +19,6 @@ interface AccessEntry {
   libraryId: string
   username: string
   displayName: string
-  role: string
 }
 
 export default function AdminLibraryAccess() {
@@ -210,8 +208,7 @@ export default function AdminLibraryAccess() {
             <div className={styles.loading}>Loading…</div>
           ) : accessList.length === 0 ? (
             <div className={styles.empty}>
-              No users have been granted access to this library. Admin and
-              manager roles can always access all libraries.
+              No users have been granted access to this library.
             </div>
           ) : (
             <table className={styles.table}>
@@ -219,7 +216,6 @@ export default function AdminLibraryAccess() {
                 <tr>
                   <th className={styles.th}>User</th>
                   <th className={styles.th}>Username</th>
-                  <th className={styles.th}>Role</th>
                   <th className={styles.th}>Actions</th>
                 </tr>
               </thead>
@@ -229,13 +225,6 @@ export default function AdminLibraryAccess() {
                     <td className={styles.td}>{entry.displayName}</td>
                     <td className={`${styles.td} ${styles.mono}`}>
                       {entry.username}
-                    </td>
-                    <td className={styles.td}>
-                      <span
-                        className={`${styles.badge} ${styles[`role_${entry.role}` as keyof typeof styles] ?? ''}`}
-                      >
-                        {entry.role}
-                      </span>
                     </td>
                     <td className={styles.td}>
                       {confirmRevokeId === entry.userId ? (

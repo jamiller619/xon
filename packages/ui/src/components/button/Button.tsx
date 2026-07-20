@@ -49,6 +49,7 @@ export default function Button({
         {
           [styles.large as string]: size === 'large',
           [styles.small as string]: size === 'small',
+          [styles.mini as string]: size === 'mini',
           [styles.block as string]: block,
           [styles.loading as string]: isLoading,
         },

@@ -14,7 +14,7 @@ export type TextboxProps = Omit<
   size?: Size | undefined
 }
 
-const styles = css /* css */`
+const styles = css`
   .container {
     --padding: calc(var(--space-xs) + var(--space-2xs));
 
@@ -35,6 +35,7 @@ const styles = css /* css */`
     background-color: var(--color-gray-5);
     border: none;
     font: inherit;
+    font-size: var(--text-sm);
     border-radius: var(--border-radius-3);
     corner-shape: var(--corner-shape);
     padding: var(--padding);

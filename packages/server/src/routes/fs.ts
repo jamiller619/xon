@@ -23,7 +23,7 @@ export function makeFsRouter(db: LibSQLDatabase): Hono {
   //
   // Auth rules (enforced here because auth middleware skips /fs/):
   //   - Before setup (no users): open access — the admin hasn't been created yet.
-  //   - After setup: requires manager role or higher.
+  //   - After setup: requires an authenticated user.
   router.get(
     '/browse',
     validate('query', z.object({ path: z.string().optional() })),
@@ -40,7 +40,6 @@ export function makeFsRouter(db: LibSQLDatabase): Hono {
         //   : (c.req.query('token') ?? '')
         // const payload = token ? await verifyAccessToken(token) : null
         // const rank =
-        //   (ROLE_RANK as Record<string, number>)[payload?.role ?? ''] ?? -1
         // if (rank < ROLE_RANK.manager) {
         //   return c.json({ error: 'Unauthorized' }, 401)
         // }

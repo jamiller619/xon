@@ -1,13 +1,8 @@
-import {
-  DataSourceType,
-  type Library,
-  LibraryType,
-  UserRole,
-} from '@xon/shared'
+import { DataSourceType, type Library, LibraryType } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { requireRole } from '../auth/rbac.ts'
+import { requireAuth } from '../auth/middleware.ts'
 import { appCache, computeETag } from '../cache.ts'
 import type { MediaItem } from '../db/schema.ts'
 import { validate } from '../http/validate.ts'
@@ -68,7 +63,7 @@ export function makeLibrariesRouter(
   const router = new Hono()
     .post(
       '/',
-      // requireRole(UserRole.User),
+      // requireAuth(),
       validate('json', createLibrarySchema),
       async (c) => {
         const body = c.req.valid('json')
@@ -130,7 +125,7 @@ export function makeLibrariesRouter(
     // PUT /libraries/:id — update library (manager+)
     .put(
       '/:id',
-      requireRole(UserRole.User),
+      requireAuth(),
       validate('json', updateLibrarySchema),
       async (c) => {
         const id = c.req.param('id')
@@ -154,7 +149,7 @@ export function makeLibrariesRouter(
     )
 
     // DELETE /libraries/:id — delete library and associated data sources (manager+)
-    .delete('/:id', requireRole(UserRole.User), async (c) => {
+    .delete('/:id', requireAuth(), async (c) => {
       const id = c.req.param('id')
       const result = await libraryService.deleteLibraryById(db, id)
 

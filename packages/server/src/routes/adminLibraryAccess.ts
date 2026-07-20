@@ -35,7 +35,6 @@ export function makeAdminLibraryAccessRouter(db: LibSQLDatabase): Hono {
   //       username: users.username,
   //       displayName: users.displayName,
   //       email: users.email,
-  //       role: users.role,
   //     })
   //     .from(libraryAccess)
   //     .innerJoin(users, eq(users.id, libraryAccess.userId))

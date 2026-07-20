@@ -1,9 +1,19 @@
-import { Play16Regular as PlayIcon } from '@fluentui/react-icons'
+import {
+  TextBulletListAddRegular as AddToPlaylistIcon,
+  Delete16Regular as DeleteIcon,
+  LinkEdit16Regular as FixMatchIcon,
+  ImageEdit16Regular as ImageEditIcon,
+  Play16Regular as PlayIcon,
+  ArrowSyncRegular as RefreshIcon,
+} from '@fluentui/react-icons'
 import type { MediaItem } from '@xon/shared'
-import { ContextMenu, type ContextMenuItem } from '@xon/ui'
+import { Card, ContextMenu, type ContextMenuItem, Dialog } from '@xon/ui'
+import clsx from 'clsx'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { apiUrl } from '~/lib/apiFetch'
+import { apiFetch, apiUrl } from '~/lib/apiFetch'
 import { useAudioStore } from '~/store/audioStore'
+import EditImages from '../EditImages'
 import ListView from './ListView'
 import styles from './MediaCard.module.css'
 
@@ -17,22 +27,6 @@ interface MediaCardProps {
   onToggleSelect?: (id: string) => void
 }
 
-const contextMenuItems: ContextMenuItem[] = [
-  {
-    label: 'Play',
-    icon: <PlayIcon />,
-  },
-  {
-    label: 'Add to playlist',
-  },
-  {
-    label: 'Fix match',
-  },
-  {
-    label: 'Delete',
-  },
-]
-
 export default function MediaCard({
   item,
   listView,
@@ -44,6 +38,7 @@ export default function MediaCard({
 }: MediaCardProps) {
   const playTrack = useAudioStore((s) => s.playTrack)
   const addToQueue = useAudioStore((s) => s.addToQueue)
+  const [editImagesOpen, setEditImagesOpen] = useState(false)
   const isAudio = item.mediaType?.startsWith('audio/') ?? false
   const link = `/media/${encodeURIComponent(item.title.toLowerCase().replaceAll(' ', '-'))}/${item.id}`
 
@@ -88,13 +83,12 @@ export default function MediaCard({
 
   const cardContent = (
     <>
-      <div className={styles.thumb}>
+      <Card.Thumb>
         {item.metadata.images?.poster ? (
           <img
             src={apiUrl(item.metadata.images.poster)}
             alt={item.title}
             loading="lazy"
-            className={styles.thumbImg}
           />
         ) : (
           <div className={styles.thumbPlaceholder}>
@@ -145,20 +139,20 @@ export default function MediaCard({
             </button>
           </div>
         )}
-      </div>
-      <div className={styles.info}>
-        <span className={styles.title}>{item.title}</span>
-        <div className={styles.meta}>
+      </Card.Thumb>
+      <Card.Info>
+        <Card.Title>{item.title}</Card.Title>
+        <Card.Meta>
           <span>{item.metadata.year}</span>
-        </div>
-      </div>
+        </Card.Meta>
+      </Card.Info>
     </>
   )
 
   if (selectMode) {
     return (
-      <div
-        className={`${styles.card} ${selected ? styles.cardSelected : ''}`}
+      <Card
+        className={clsx(styles.card, selected && styles.cardSelected)}
         // onClick={() => onToggleSelect?.(item.id)}
         // onKeyDown={(e) =>
         //   (e.key === 'Enter' || e.key === ' ') && onToggleSelect?.(item.id)
@@ -166,15 +160,58 @@ export default function MediaCard({
         // aria-label={`${selected ? 'Deselect' : 'Select'} ${item.title}`}
       >
         {cardContent}
-      </div>
+      </Card>
     )
   }
 
+  const contextMenuItems: ContextMenuItem[] = [
+    {
+      label: 'Play',
+      icon: <PlayIcon />,
+    },
+    {
+      label: 'Add to playlist',
+      icon: <AddToPlaylistIcon />,
+    },
+    {
+      label: 'Edit images',
+      icon: <ImageEditIcon />,
+      onClick: () => setEditImagesOpen(true),
+    },
+    {
+      label: 'Fix match',
+      icon: <FixMatchIcon />,
+    },
+    {
+      label: 'Refresh metadata',
+      icon: <RefreshIcon />,
+      onClick: () =>
+        apiFetch(`/api/libraries/${item.libraryId}/scan/refresh`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ mediaItemId: item.id }),
+        }),
+    },
+    {
+      label: 'Delete',
+      icon: <DeleteIcon />,
+    },
+  ]
+
   return (
-    <ContextMenu items={contextMenuItems}>
-      <Link to={link} className={styles.card} state={item}>
-        {cardContent}
-      </Link>
-    </ContextMenu>
+    <>
+      <ContextMenu items={contextMenuItems}>
+        <Card as={Link} to={link} className={styles.card} state={item}>
+          {cardContent}
+        </Card>
+      </ContextMenu>
+      <Dialog
+        open={editImagesOpen}
+        onOpenChange={setEditImagesOpen}
+        title={`${item.title}: Edit images`}
+      >
+        <EditImages images={item.metadata.images} />
+      </Dialog>
+    </>
   )
 }

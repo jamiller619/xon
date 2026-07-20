@@ -1,9 +1,7 @@
-import { UserRole } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 // import { cors } from 'hono/cors'
-import { makeSessionMiddleware } from './auth/middleware.ts'
-import { requireRole } from './auth/rbac.ts'
+import { makeSessionMiddleware, requireAuth } from './auth/middleware.ts'
 import { makeConfigRouter } from './config/config.router.ts'
 import { makeCorsMiddleware } from './http/corsMiddleware.ts'
 // import config from './config.ts'
@@ -123,8 +121,8 @@ export function createApp(
     app.route('/config', makeConfigRouter())
   }
 
-  // Admin-only: require admin role for all /admin/* routes
-  app.use('/admin/*', requireRole(UserRole.Admin))
+  // All /admin/* routes require an authenticated user
+  app.use('/admin/*', requireAuth())
 
   // Admin: user management
   if (db) {

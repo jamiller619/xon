@@ -2,6 +2,16 @@
   position: relative;
 }
 
+.button {
+  opacity: 1;
+  transition: opacity 150ms ease-in;
+
+  &.hidden {
+    pointer-events: none;
+    opacity: 0;
+  }
+}
+
 /*
  * Edge fades, shown only on the side(s) with more content to scroll to. The
  * gradient runs from --color-gray-1 at the edge to transparent inward, hinting
@@ -50,6 +60,16 @@
   scroll-snap-type: x proximity;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */
+
+  /*
+   * Vertical breathing room, cancelled out of the layout by the negative
+   * margin: overflow-x forces vertical clipping too, so without it children
+   * that scale/lift on hover (media cards) get their tops sheared off at this
+   * box. Block padding is safe here — only *inline* padding suffers the
+   * clipped-trailing-gutter problem described below.
+   */
+  padding-block: var(--space-sm);
+  margin-block: calc(-1 * var(--space-sm));
 
   &::-webkit-scrollbar {
     display: none; /* Chrome/Safari */

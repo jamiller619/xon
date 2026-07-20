@@ -1,99 +1,32 @@
 import { createReadStream } from 'node:fs'
-import { readdir, readFile, stat } from 'node:fs/promises'
+import { readdir, readFile } from 'node:fs/promises'
 import { basename, dirname, extname, join } from 'node:path'
 import { Readable } from 'node:stream'
 import TmdbMetadataPlugin from '@xon/plugin-tmdb-metadata'
-import type { GroupType } from '@xon/shared'
-import { and, asc, desc, eq, inArray } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
-// import { parse as parseFont } from 'opentype.js'
 import { z } from 'zod'
 import { computeETag } from '../cache.ts'
 import type { MediaItem } from '../db/schema.ts'
-import {
-  // getAllowedRatings,
-  groupItems,
-  groups,
-  // libraryAccess,
-  // matchingQueue,
-  mediaItems,
-  // mediaProgress,
-  // readingPositions,
-  users,
-} from '../db/schema.ts'
+import { groupItems, groups, mediaItems } from '../db/schema.ts'
 import { validate } from '../http/validate.ts'
-import { listArchiveContents } from '../media/archive.ts'
 import {
   extractFfprobeMetadata,
   extractStreamTracks,
 } from '../media/ffprobe.ts'
-import { convertMobiToEpub } from '../media/mobi.ts'
 import { convertRawToJpeg, isRawImage } from '../media/raw.ts'
 import {
   generateHlsPlaylist,
   needsTranscoding,
   spawnTranscodeSegment,
 } from '../media/transcode.ts'
-import { getPluginMetadataForItem } from '../plugins/pluginManager.ts'
 import * as mediaService from '../services/mediaService.ts'
 
 const tmdbPlugin = new TmdbMetadataPlugin()
 
-const VALID_SIZES = ['small', 'medium', 'large'] as const
-type ThumbnailSize = (typeof VALID_SIZES)[number]
-
-// export function withThumbnailUrls(item: MediaItem) {
-//   const thumbnailUrls = item.thumbnailPaths
-//     ? {
-//         small: `/api/media/${item.id}/thumbnail?size=small`,
-//         medium: `/api/media/${item.id}/thumbnail?size=medium`,
-//         large: `/api/media/${item.id}/thumbnail?size=large`,
-//       }
-//     : null
-//   return { ...item, thumbnailUrls }
-// }
-
 export function makeMediaRouter(db: LibSQLDatabase): Hono {
   const router = new Hono()
-
-  // const PRIVILEGED_ROLES = ['admin', 'manager'] as const
-
-  // async function getAccessibleLibraryIds(
-  //   userId: string,
-  //   role: string,
-  // ): Promise<string[] | null> {
-  //   if ((PRIVILEGED_ROLES as readonly string[]).includes(role)) return null // null = all
-  //   const rows = await db
-  //     .select({ libraryId: libraryAccess.libraryId })
-  //     .from(libraryAccess)
-  //     .where(eq(libraryAccess.userId, userId))
-  //   return rows.map((r) => r.libraryId)
-  // }
-
-  /** Builds a Drizzle WHERE condition restricting items by the user's maxContentRating. */
-  // async function getContentRatingCondition(userId: string) {
-  //   const userRows = await db
-  //     .select({ maxContentRating: users.maxContentRating })
-  //     .from(users)
-  //     .where(eq(users.id, userId))
-  //   const maxRating = userRows[0]?.maxContentRating ?? 'none'
-  //   const allowed = getAllowedRatings(maxRating)
-  //   if (allowed === null) return null // no restriction
-  //   if (allowed.length === 0) {
-  //     // Only unrated items with null contentRating are visible
-  //     return isNull(mediaItems.contentRating)
-  //   }
-  //   // Items with null contentRating are treated as unrated; include them if "unrated" is allowed
-  //   const unratedAllowed = (allowed as string[]).includes('unrated')
-  //   if (unratedAllowed) {
-  //     return or(
-  //       isNull(mediaItems.contentRating),
-  //       inArray(mediaItems.contentRating, allowed),
-  //     ) as SQL<unknown>
-  //   }
-  //   return inArray(mediaItems.contentRating, allowed)
-  // }
 
   // GET /media — list media items scoped to accessible libraries
   router.get('/', async (c) => {
@@ -102,22 +35,8 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     if (!user) {
       return c.json({ error: 'Unauthorized' }, 401)
     }
-    const { sortBy, order, page, limit } = c.req.query()
-    const pageNum = Math.max(1, Number(page) || 1)
-    const limitNum = Math.min(Math.max(1, Number(limit) || 20), 100)
-    const offset = (pageNum - 1) * limitNum
-
-    const sortDir = order === 'asc' ? asc : desc
-    const orderExpr = sortDir(mediaItems[(sortBy as keyof MediaItem) || 'id'])
 
     const items = await mediaService.getMediaByUser(db, user.id)
-
-    // const items = await db
-    //   .select()
-    //   .from(mediaItems)
-    //   .orderBy(orderExpr)
-    //   .limit(limitNum)
-    //   .offset(offset)
 
     const etag = computeETag(items)
     if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
@@ -125,116 +44,38 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     c.header('ETag', etag)
 
     return c.json(items)
-    // const orderExpr =
-    //   sortBy === 'title'
-    //     ? sortDir(mediaItems.title)
-    //     : sortBy === 'fileSize'
-    //       ? sortDir(mediaItems.fileSize)
-    //       : sortDir(mediaItems.createdAt)
-
-    // const accessibleIds = await getAccessibleLibraryIds(user.id, user.role)
-    // if (accessibleIds !== null && accessibleIds.length === 0) {
-    //   return c.json([])
-    // }
-
-    // const ratingCond = await getContentRatingCondition(user.id)
-
-    // const libraryFilter =
-    // accessibleIds !== null
-    // ? inArray(mediaItems.libraryId, accessibleIds)
-    // : undefined
-    // const whereClause = and(libraryFilter, ratingCond ?? undefined)
-    // const whereClause = and(libraryFilter, undefined)
-
-    // const baseQuery = db.select().from(mediaItems)
-    // const scopedQuery = whereClause ? baseQuery.where(whereClause) : baseQuery
-    // const rows = await scopedQuery
-    //   .orderBy(orderExpr)
-    //   .limit(limitNum)
-    //   .offset(offset)
-
-    // const items = rows.map(withThumbnailUrls)
-    // const items = rows
-    // const etag = computeETag(items)
-    // if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
-    // c.header('ETag', etag)
-    // return c.json(items)
   })
 
-  // GET /media/:id — get single media item (scoped to accessible libraries)
+  // GET /media/featured — daily-rotating highlights: top-rated items with artwork
+  router.get('/featured', async (c) => {
+    const user = c.get('user')
+
+    if (!user) {
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
+
+    const items = await mediaService.getFeaturedMedia(db, user.id)
+
+    const etag = computeETag(items)
+    if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
+
+    c.header('ETag', etag)
+
+    return c.json(items)
+  })
+
+  // GET /media/:id — get single media item
   router.get('/:id', async (c) => {
     const id = c.req.param('id')
-    // const user = c.get('user')
     const data = await mediaService.getMediaById(db, id)
 
     if (!data) return c.json({ error: 'Not found' }, 404)
-
-    // const accessibleIds = await getAccessibleLibraryIds(user.id, user.role)
-    // if (accessibleIds !== null && !accessibleIds.includes(item.libraryId)) {
-    //   return c.json({ error: 'Not found' }, 404)
-    // }
-
-    // const ratingCond = await getContentRatingCondition(user.id)
-    // if (ratingCond !== null) {
-    //   // Check if this item passes the content rating filter
-    //   const allowed = await db
-    //     .select({ id: mediaItems.id })
-    //     .from(mediaItems)
-    //     .where(and(eq(mediaItems.id, id), ratingCond))
-    //   if (allowed.length === 0) return c.json({ error: 'Not found' }, 404)
-    // }
-
-    // const itemWithUrls = withThumbnailUrls(item)
-    // const pluginMetadata = await getPluginMetadataForItem(id)
     const etag = `"${data.updatedAt?.getTime()}"`
     if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
     c.header('ETag', etag)
     // return c.json({ ...itemWithUrls, pluginMetadata })
     return c.json(data)
   })
-
-  // GET /media/:id/match — get pending match for a media item
-  // router.get('/:id/match', async (c) => {
-  //   const id = c.req.param('id')
-  //   // const user = c.get('user')
-
-  //   const rows = await db
-  //     .select({ libraryId: mediaItems.libraryId })
-  //     .from(mediaItems)
-  //     .where(eq(mediaItems.id, id))
-  //   const item = rows[0]
-  //   if (!item) return c.json({ error: 'Not found' }, 404)
-
-  //   // const accessibleIds = await getAccessibleLibraryIds(user.id, user.role)
-  //   // if (accessibleIds !== null && !accessibleIds.includes(item.libraryId)) {
-  //   //   return c.json({ error: 'Not found' }, 404)
-  //   // }
-
-  //   const matchRows = await db
-  //     .select()
-  //     .from(matchingQueue)
-  //     .where(
-  //       and(
-  //         eq(matchingQueue.mediaItemId, id),
-  //         eq(matchingQueue.status, 'pending'),
-  //       ),
-  //     )
-  //     .limit(1)
-
-  //   const match = matchRows[0]
-  //   if (!match) return c.json(null)
-
-  //   return c.json({
-  //     ...match,
-  //     suggestedMetadata: (() => {
-  //       try {
-  //         return JSON.parse(match.suggestedMetadata) as Record<string, unknown>
-  //       } catch {
-  //         return {}
-  //       }
-  //     })(),
-  //   })
-  // })
 
   const updateMediaSchema = z.object({
     title: z.string().min(1).optional(),
@@ -269,71 +110,6 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       .select()
       .from(mediaItems)
       .where(eq(mediaItems.id, id))
-    // return c.json(withThumbnailUrls(updated[0] as
-    // MediaItem))
-
-    return c.json(updated[0] as MediaItem)
-  })
-
-  const aiTagsSchema = z.object({
-    accept: z.array(z.string()).optional(),
-    reject: z.array(z.string()).optional(),
-  })
-
-  // PUT /media/:id/ai-tags — accept or reject AI-generated tag suggestions
-  router.put('/:id/ai-tags', validate('json', aiTagsSchema), async (c) => {
-    const id = c.req.param('id')
-    const body = c.req.valid('json')
-
-    const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
-    const item = rows[0]
-    if (!item) return c.json({ error: 'Not found' }, 404)
-
-    const meta = item.metadata
-
-    interface AiTagEntry {
-      text: string
-      confidence: number
-      source: string
-    }
-
-    const currentAiTags: AiTagEntry[] = Array.isArray(meta.aiTags)
-      ? (meta.aiTags as AiTagEntry[])
-      : []
-    const currentTags: string[] = Array.isArray(meta.tags)
-      ? (meta.tags as string[])
-      : []
-
-    const acceptSet = new Set(body.accept ?? [])
-    const rejectSet = new Set(body.reject ?? [])
-
-    // Move accepted tags into the regular tags array
-    const newTags = [...currentTags]
-    for (const tag of currentAiTags) {
-      if (acceptSet.has(tag.text) && !newTags.includes(tag.text)) {
-        newTags.push(tag.text)
-      }
-    }
-
-    // Remove accepted and rejected from aiTags
-    const remainingAiTags = currentAiTags.filter(
-      (t) => !acceptSet.has(t.text) && !rejectSet.has(t.text),
-    )
-
-    meta.tags = newTags
-    meta.aiTags = remainingAiTags
-
-    await db
-      .update(mediaItems)
-      .set({ metadata: meta, updatedAt: new Date() })
-      .where(eq(mediaItems.id, id))
-
-    const updated = await db
-      .select()
-      .from(mediaItems)
-      .where(eq(mediaItems.id, id))
-    // return c.json(withThumbnailUrls(updated[0] as
-    // MediaItem))
 
     return c.json(updated[0] as MediaItem)
   })
@@ -365,29 +141,12 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
   // POST /media/bulk — bulk update, delete, or move media items
   router.post('/bulk', validate('json', bulkSchema), async (c) => {
     const body = c.req.valid('json')
-    const user = c.get('user')
-
-    // Scope to accessible libraries
-    // const accessibleIds = await getAccessibleLibraryIds(user.id, user.role)
-    // if (accessibleIds !== null && accessibleIds.length === 0) {
-    //   return c.json({ error: 'No accessible libraries' }, 403)
-    // }
-
-    // const libraryFilter =
-    //   accessibleIds !== null
-    //     ? inArray(mediaItems.libraryId, accessibleIds)
-    //     : undefined
 
     // Fetch requested items (access-check + existence)
     const baseQuery = db
       .select({ id: mediaItems.id, metadata: mediaItems.metadata })
       .from(mediaItems)
-      .where(
-        // libraryFilter
-        //   ? and(inArray(mediaItems.id, body.ids), libraryFilter)
-        // :
-        inArray(mediaItems.id, body.ids),
-      )
+      .where(inArray(mediaItems.id, body.ids))
     const rows = await baseQuery
     const foundIds = rows.map((r) => r.id)
 
@@ -412,10 +171,6 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
         const updates: Partial<typeof mediaItems.$inferInsert> = {
           updatedAt: new Date(),
         }
-
-        // if (upd.contentRating !== undefined) {
-        //   updates.contentRating = upd.contentRating
-        // }
 
         if (upd.genre !== undefined || upd.tags !== undefined) {
           const meta = row.metadata
@@ -689,348 +444,6 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       'Cache-Control': 'public, max-age=3600',
     })
   })
-
-  // GET /media/:id/thumbnail?size=small|medium|large
-  // router.get('/:id/thumbnail', async (c) => {
-  //   const id = c.req.param('id')
-  //   const sizeParam = c.req.query('size') ?? 'medium'
-
-  //   if (!VALID_SIZES.includes(sizeParam as ThumbnailSize)) {
-  //     return c.json(
-  //       { error: 'Invalid size. Must be small, medium, or large.' },
-  //       400,
-  //     )
-  //   }
-  //   const size = sizeParam as ThumbnailSize
-
-  //   const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
-  //   const item = rows[0]
-  //   if (!item) return c.json({ error: 'Not found' }, 404)
-  //   if (!item.thumbnailPaths)
-  //     return c.json({ error: 'No thumbnail available' }, 404)
-
-  //   let paths: ThumbnailPaths
-  //   try {
-  //     paths = JSON.parse(item.thumbnailPaths) as ThumbnailPaths
-  //   } catch {
-  //     return c.json({ error: 'No thumbnail available' }, 404)
-  //   }
-
-  //   const filePath = paths[size]
-  //   if (!filePath) return c.json({ error: 'No thumbnail available' }, 404)
-
-  //   let buffer: Buffer
-  //   try {
-  //     buffer = await readFile(filePath)
-  //   } catch {
-  //     return c.json({ error: 'No thumbnail available' }, 404)
-  //   }
-
-  //   return c.body(new Uint8Array(buffer), 200, {
-  //     'Content-Type': 'image/jpeg',
-  //     'Cache-Control': 'public, max-age=86400, immutable',
-  //   })
-  // })
-
-  // GET /media/:id/epub — serve EPUB file (or convert MOBI to EPUB)
-  router.get('/:id/epub', async (c) => {
-    const id = c.req.param('id')
-    const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
-    const item = rows[0]
-    if (!item) return c.json({ error: 'Not found' }, 404)
-
-    const ext = extname(item.filePath).toLowerCase()
-    if (
-      ext !== '.epub' &&
-      ext !== '.mobi' &&
-      ext !== '.azw' &&
-      ext !== '.azw3'
-    ) {
-      return c.json({ error: 'Not an EPUB or MOBI file' }, 400)
-    }
-
-    let epubPath = item.filePath
-
-    if (ext !== '.epub') {
-      // Convert MOBI/AZW to EPUB via ebook-convert (calibre)
-      let converted: string
-      try {
-        converted = await convertMobiToEpub(item.filePath)
-      } catch (err) {
-        const msg = err instanceof Error ? err.message : 'Conversion failed'
-        return c.json({ error: msg }, 500)
-      }
-      epubPath = converted
-    }
-
-    let buffer: Buffer
-    try {
-      buffer = await readFile(epubPath)
-    } catch {
-      return c.json({ error: 'File not accessible' }, 404)
-    }
-
-    return c.body(new Uint8Array(buffer), 200, {
-      'Content-Type': 'application/epub+zip',
-      'Cache-Control': 'no-store',
-    })
-  })
-
-  // GET /media/:id/font-metadata — parse font file and return name/weight/style/glyph count
-  // router.get('/:id/font-metadata', async (c) => {
-  //   const id = c.req.param('id')
-  //   const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
-  //   const item = rows[0]
-  //   if (!item) return c.json({ error: 'Not found' }, 404)
-
-  //   const ext = extname(item.filePath).toLowerCase()
-  //   const fontExts = ['.ttf', '.otf', '.woff', '.woff2', '.eot']
-  //   if (!fontExts.includes(ext)) {
-  //     return c.json({ error: 'Not a font file' }, 400)
-  //   }
-
-  //   let buffer: Buffer
-  //   try {
-  //     buffer = await readFile(item.filePath)
-  //   } catch {
-  //     return c.json({ error: 'File not accessible' }, 404)
-  //   }
-
-  //   try {
-  //     const font = parseFont(buffer.buffer as ArrayBuffer)
-  //     const names = font.names
-  //     const family =
-  //       names.fontFamily?.en ??
-  //       Object.values(names.fontFamily ?? {})[0] ??
-  //       basename(item.filePath, ext)
-  //     const subfamily =
-  //       names.fontSubfamily?.en ??
-  //       Object.values(names.fontSubfamily ?? {})[0] ??
-  //       'Regular'
-  //     const glyphCount = font.glyphs.length
-  //     const unitsPerEm = font.unitsPerEm
-  //     return c.json({ family, subfamily, glyphCount, unitsPerEm })
-  //   } catch {
-  //     // WOFF2 or unsupported format — return what we can from the filename
-  //     const family = basename(item.filePath, ext)
-  //     return c.json({
-  //       family,
-  //       subfamily: 'Unknown',
-  //       glyphCount: null,
-  //       unitsPerEm: null,
-  //     })
-  //   }
-  // })
-
-  // GET /media/:id/archive-contents — list files inside a ZIP, TAR, or 7z archive
-  // router.get('/:id/archive-contents', async (c) => {
-  //   const id = c.req.param('id')
-  //   const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
-  //   const item = rows[0]
-  //   if (!item) return c.json({ error: 'Not found' }, 404)
-
-  //   const entries = await listArchiveContents(item.filePath)
-  //   return c.json({ entries })
-  // })
-
-  // // GET /media/:id/reading-position — retrieve saved reading position
-  // router.get('/:id/reading-position', async (c) => {
-  //   const id = c.req.param('id')
-  //   const rows = await db
-  //     .select()
-  //     .from(readingPositions)
-  //     .where(eq(readingPositions.mediaItemId, id))
-  //   const pos = rows[0]
-  //   if (!pos) return c.json(null)
-  //   return c.json({ cfi: pos.cfi, chapterTitle: pos.chapterTitle })
-  // })
-
-  // const readingPositionSchema = z.object({
-  //   cfi: z.string().min(1),
-  //   chapterTitle: z.string().optional(),
-  // })
-
-  // // PUT /media/:id/reading-position — upsert reading position
-  // router.put(
-  //   '/:id/reading-position',
-  //   validate('json', readingPositionSchema),
-  //   async (c) => {
-  //     const id = c.req.param('id')
-  //     const body = c.req.valid('json')
-
-  //     // Verify media item exists
-  //     const itemRows = await db
-  //       .select()
-  //       .from(mediaItems)
-  //       .where(eq(mediaItems.id, id))
-  //     if (!itemRows[0]) return c.json({ error: 'Not found' }, 404)
-
-  //     const existing = await db
-  //       .select()
-  //       .from(readingPositions)
-  //       .where(eq(readingPositions.mediaItemId, id))
-
-  //     if (existing[0]) {
-  //       await db
-  //         .update(readingPositions)
-  //         .set({
-  //           cfi: body.cfi,
-  //           ...(body.chapterTitle !== undefined
-  //             ? { chapterTitle: body.chapterTitle }
-  //             : {}),
-  //           updatedAt: new Date(),
-  //         })
-  //         .where(eq(readingPositions.mediaItemId, id))
-  //     } else {
-  //       const crypto = await import('node:crypto')
-  //       await db.insert(readingPositions).values({
-  //         id: crypto.randomUUID(),
-  //         mediaItemId: id,
-  //         cfi: body.cfi,
-  //         ...(body.chapterTitle !== undefined
-  //           ? { chapterTitle: body.chapterTitle }
-  //           : {}),
-  //       })
-  //     }
-
-  //     return c.json({ ok: true })
-  //   },
-  // )
-
-  // const progressSchema = z.object({
-  //   position: z.number().int().min(0),
-  //   duration: z.number().int().min(0).optional(),
-  //   completed: z.boolean().optional(),
-  // })
-
-  // // PUT /media/:id/progress — save playback/reading position
-  // router.put('/:id/progress', validate('json', progressSchema), async (c) => {
-  //   const id = c.req.param('id')
-  //   const user = c.get('user')
-
-  //   if (!user) return c.json({ error: 'Unauthorized' }, 401)
-
-  //   const body = c.req.valid('json')
-
-  //   const rows = await db
-  //     .select({ id: mediaItems.id })
-  //     .from(mediaItems)
-  //     .where(eq(mediaItems.id, id))
-  //   if (!rows[0]) return c.json({ error: 'Not found' }, 404)
-
-  //   const existing = await db
-  //     .select()
-  //     .from(mediaProgress)
-  //     .where(
-  //       and(
-  //         eq(mediaProgress.userId, user.id),
-  //         eq(mediaProgress.mediaItemId, id),
-  //       ),
-  //     )
-
-  //   if (existing[0]) {
-  //     await db
-  //       .update(mediaProgress)
-  //       .set({
-  //         position: body.position,
-  //         ...(body.duration !== undefined ? { duration: body.duration } : {}),
-  //         ...(body.completed !== undefined
-  //           ? { completed: body.completed }
-  //           : {}),
-  //         updatedAt: new Date(),
-  //       })
-  //       .where(
-  //         and(
-  //           eq(mediaProgress.userId, user.id),
-  //           eq(mediaProgress.mediaItemId, id),
-  //         ),
-  //       )
-  //   } else {
-  //     await db.insert(mediaProgress).values({
-  //       userId: user.id,
-  //       mediaItemId: id,
-  //       position: body.position,
-  //       duration: body.duration ?? 0,
-  //       completed: body.completed ?? false,
-  //     })
-  //   }
-
-  //   return c.json({ ok: true })
-  // })
-
-  // POST /media/:id/favorite — add to favorites
-  // (idempotent)
-  // router.post('/:id/groups/:type', async (c) => {
-  //   const user = c.get('user')
-  //   const id = c.req.param('id')
-  //   const type = c.req.param('type') as GroupType
-  //   const [item] = await db
-  //     .select({ id: mediaItems.id })
-  //     .from(mediaItems)
-  //     .where(eq(mediaItems.id, id))
-  //   if (!item) return c.json({ error: 'Not found' }, 404)
-
-  //   const group = await db
-  //     .select()
-  //     .from(groups)
-  //     .innerJoin(groupItems, eq(groupItems.groupId, groups.id))
-  //     .where(and(eq(groups.type, type), eq(groups.userId, user.id)))
-  //   // await db
-  //   //   .insert(favorites)
-  //   //   .values({ userId: user.id, mediaItemId: id, type })
-  //   //   .onConflictDoNothing()
-  //   return c.json({ favorited: true })
-  // })
-  // router.post('/:id/favorite', async (c) => {
-  //   const user = c.get('user')
-  //   const id = c.req.param('id')
-  //   const [item] = await db
-  //     .select({ id: mediaItems.id })
-  //     .from(mediaItems)
-  //     .where(eq(mediaItems.id, id))
-  //   if (!item) return c.json({ error: 'Not found' }, 404)
-  //   await db
-  //     .insert(favorites)
-  //     .values({ userId: user.id, mediaItemId: id })
-  //     .onConflictDoNothing()
-  //   return c.json({ favorited: true })
-  // })
-
-  // DELETE /media/:id/favorite — remove from favorites
-  // router.delete('/:id/favorite', async (c) => {
-  //   const user = c.get('user')
-  //   const id = c.req.param('id')
-  //   await db
-  //     .delete(favorites)
-  //     .where(and(eq(favorites.userId, user.id), eq(favorites.mediaItemId, id)))
-  //   return c.json({ favorited: false })
-  // })
-
-  // POST /media/:id/watchlist — add to watchlist (idempotent)
-  // router.post('/:id/watchlist', async (c) => {
-  //   const user = c.get('user')
-  //   const id = c.req.param('id')
-  //   const [item] = await db
-  //     .select({ id: mediaItems.id })
-  //     .from(mediaItems)
-  //     .where(eq(mediaItems.id, id))
-  //   if (!item) return c.json({ error: 'Not found' }, 404)
-  //   await db
-  //     .insert(watchlist)
-  //     .values({ userId: user.id, mediaItemId: id })
-  //     .onConflictDoNothing()
-  //   return c.json({ watchlisted: true })
-  // })
-
-  // DELETE /media/:id/watchlist — remove from watchlist
-  // router.delete('/:id/watchlist', async (c) => {
-  //   const user = c.get('user')
-  //   const id = c.req.param('id')
-  //   await db
-  //     .delete(watchlist)
-  //     .where(and(eq(watchlist.userId, user.id), eq(watchlist.mediaItemId, id)))
-  //   return c.json({ watchlisted: false })
-  // })
 
   return router
 }

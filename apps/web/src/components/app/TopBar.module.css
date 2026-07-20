@@ -24,10 +24,10 @@
   line-height: 1; */
 }
 
-.menuButton:hover {
+/* .menuButton:hover {
   background: #2d2d44;
   color: #fff;
-}
+} */
 
 .searchWrapper {
   flex: 1;
@@ -50,16 +50,17 @@
 }
 
 .avatar {
-  width: 28px;
-  height: 28px;
+  /* width: 28px;
+  height: 28px; */
+  width: var(--space-lg);
+  height: var(--space-lg);
   border-radius: 50%;
-  background: #6c63ff;
+  background: var(--color-gray-8);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 12px;
+  font-size: var(--text-md);
   font-weight: 600;
-  color: #fff;
 }
 
 /* Type-ahead dropdown */

@@ -5,10 +5,16 @@ import db, { client } from '../db/db.ts'
 import { createLogger, initChildLogger, setLogLevel } from '../logger.ts'
 import {
   discoverAndActivatePlugins,
+  setPluginAppDataPath,
   setPluginDatabase,
+  setPluginSettingsSource,
 } from '../plugins/pluginManager.ts'
 import type { ChildToParent, ParentToChild } from './ipc.ts'
-import { scanLibrary } from './orchestrator.ts'
+import {
+  refreshMetadata,
+  type ScanProgress,
+  scanLibrary,
+} from './orchestrator.ts'
 
 const logger = createLogger('scanner-child')
 
@@ -25,7 +31,12 @@ function send(msg: ChildToParent): void {
   process.send(msg)
 }
 
-type QueueItem = { jobId: string; libraryId: string }
+type QueueItem = {
+  jobId: string
+  libraryId: string
+  kind: 'scan' | 'refresh'
+  mediaItemId?: string | undefined
+}
 
 const queue: QueueItem[] = []
 let running = false
@@ -36,12 +47,16 @@ async function runNext(): Promise<void> {
   if (!item) return
 
   running = true
-  const { jobId, libraryId } = item
+  const { jobId, libraryId, kind, mediaItemId } = item
 
   try {
-    const summary = await scanLibrary(db, libraryId, (progress) => {
+    const report = (progress: ScanProgress) => {
       send({ type: 'progress', jobId, libraryId, progress })
-    })
+    }
+    const summary =
+      kind === 'refresh'
+        ? await refreshMetadata(db, libraryId, mediaItemId, report)
+        : await scanLibrary(db, libraryId, report)
     send({ type: 'complete', jobId, libraryId, summary })
   } catch (err) {
     const error = err instanceof Error ? err.message : String(err)
@@ -63,6 +78,12 @@ async function main(): Promise<void> {
 
   setPluginDatabase(client)
 
+  setPluginSettingsSource({
+    get: (key) => (config.getStore() as unknown as Record<string, unknown>)[key],
+  })
+
+  setPluginAppDataPath(config.get('appdata.path'))
+
   logger.log(`Loading bundled plugins from ${BUNDLED_PLUGINS_DIR}`)
   await discoverAndActivatePlugins(BUNDLED_PLUGINS_DIR)
 
@@ -72,7 +93,15 @@ async function main(): Promise<void> {
 
   process.on('message', (msg: ParentToChild) => {
     if (msg.type === 'start-scan') {
-      queue.push({ jobId: msg.jobId, libraryId: msg.libraryId })
+      queue.push({ jobId: msg.jobId, libraryId: msg.libraryId, kind: 'scan' })
+      void runNext()
+    } else if (msg.type === 'refresh-metadata') {
+      queue.push({
+        jobId: msg.jobId,
+        libraryId: msg.libraryId,
+        kind: 'refresh',
+        mediaItemId: msg.mediaItemId,
+      })
       void runNext()
     } else if (msg.type === 'shutdown') {
       logger.log('Shutdown requested')

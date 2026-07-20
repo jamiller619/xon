@@ -5,20 +5,57 @@ import prettyBytes from 'pretty-bytes'
 import prettyMs from 'pretty-ms'
 import { type HTMLAttributes, useEffect, useState } from 'react'
 import dashboardStyles from '../Dashboard.module.css'
+import LiveMetricChart, { type MetricPoint } from './LiveMetricChart'
 import styles from './System.module.css'
 
 type SystemProps = HTMLAttributes<HTMLDivElement>
 
+type ProcessSample = {
+  t: number
+  cpu: number
+  memory: number
+}
+
+/** 60s visible window + slack so the left edge stays covered mid-slide */
+const MAX_SAMPLES = 66
+
+function formatPercent(value: number) {
+  return `${Number(value.toPrecision(2))}%`
+}
+
+function formatUptime(seconds: number) {
+  if (seconds < 60) {
+    return 'Just now'
+  }
+
+  return prettyMs(seconds * 1000, {
+    hideSeconds: true,
+  })
+}
+
 export default function System({ className, ...props }: SystemProps) {
   const [data, setData] = useState<StatsPayload>({} as StatsPayload)
+  const [history, setHistory] = useState<ProcessSample[]>([])
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
     const eventSource = new EventSource('/api/stats')
 
     eventSource.onmessage = (event) => {
-      const parsedData = JSON.parse(event.data)
+      const parsedData: StatsPayload = JSON.parse(event.data)
+
       setData(parsedData)
+
+      if (parsedData.process) {
+        setHistory((prev) => [
+          ...prev.slice(1 - MAX_SAMPLES),
+          {
+            t: parsedData.timestamp,
+            cpu: parsedData.process.cpu,
+            memory: parsedData.process.memory,
+          },
+        ])
+      }
     }
 
     eventSource.onerror = (err) => {
@@ -30,6 +67,12 @@ export default function System({ className, ...props }: SystemProps) {
       eventSource.close()
     }
   }, [])
+
+  const cpuPoints: MetricPoint[] = history.map((s) => ({ t: s.t, v: s.cpu }))
+  const memoryPoints: MetricPoint[] = history.map((s) => ({
+    t: s.t,
+    v: s.memory,
+  }))
 
   return (
     <Surface
@@ -50,12 +93,7 @@ export default function System({ className, ...props }: SystemProps) {
           </div>
           <div className={styles.row}>
             <dt>Uptime</dt>
-            <dd>
-              {data.process &&
-                prettyMs(data.process.uptime * 1000, {
-                  hideSeconds: true,
-                })}
-            </dd>
+            <dd>{data.process && formatUptime(data.process.uptime)}</dd>
           </div>
           {/* {data.network?.map((n) => (
             <div key={n.iface} className={styles.row}>
@@ -85,15 +123,32 @@ export default function System({ className, ...props }: SystemProps) {
               <Progress value={data.memory.used} max={data.memory.total} />
             )}
           </div>
-          <div className={styles.row}>
-            <dt>Xon CPU</dt>
-            <dd>
-              <CPUUsage value={data.process?.cpu} />
-            </dd>
-          </div>
-          <div className={styles.row}>
-            <dt>Xon Memory</dt>
-            <dd>{data.process && prettyBytes(data.process.memory)}</dd>
+          <div className={styles.charts}>
+            <div className={styles.chartTile}>
+              <div className={styles.row}>
+                <dt>Xon CPU</dt>
+                <dd>
+                  <CPUUsage value={data.process?.cpu} />
+                </dd>
+              </div>
+              <LiveMetricChart
+                label="Xon CPU usage, last 60 seconds"
+                points={cpuPoints}
+                format={formatPercent}
+                cap={100}
+              />
+            </div>
+            <div className={styles.chartTile}>
+              <div className={styles.row}>
+                <dt>Xon Memory</dt>
+                <dd>{data.process && prettyBytes(data.process.memory)}</dd>
+              </div>
+              <LiveMetricChart
+                label="Xon memory usage, last 60 seconds"
+                points={memoryPoints}
+                format={prettyBytes}
+              />
+            </div>
           </div>
         </dl>
       </div>

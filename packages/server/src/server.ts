@@ -16,8 +16,11 @@ import config from './config.ts'
 import {
   discoverAndActivatePlugins,
   emitPluginEvent,
+  setPluginAppDataPath,
   setPluginDatabase,
+  setPluginSettingsSource,
 } from './plugins/pluginManager.ts'
+import { triggerLibraryScan } from './routes/scan.ts'
 import { createWsServer, WS_PATH } from './routes/ws.ts'
 import { startScannerChild } from './scanner/scannerHandle.ts'
 import { startScheduler } from './scanner/scheduler.ts'
@@ -62,6 +65,12 @@ export async function boot(): Promise<void> {
     setPluginDatabase(client)
     logger.log('Plugin database configured')
 
+    setPluginSettingsSource({
+      get: (key) => (config.getStore() as unknown as Record<string, unknown>)[key],
+    })
+
+    setPluginAppDataPath(config.get('appdata.path'))
+
     logger.log(`Loading bundled plugins from ${BUNDLED_PLUGINS_DIR}`)
     await discoverAndActivatePlugins(BUNDLED_PLUGINS_DIR)
 
@@ -75,9 +84,11 @@ export async function boot(): Promise<void> {
     const scannerHandle = await startScannerChild()
     logger.log('Scanner child process ready')
 
-    const scheduler = await startScheduler(db, (_, id) =>
-      scannerHandle.startScan(id),
-    )
+    // Route scheduled/watch-triggered scans through triggerLibraryScan so they
+    // update the scan registry and emit scan events, same as manual scans
+    const scheduler = await startScheduler(db, async (_, id) => {
+      triggerLibraryScan(scannerHandle, id)
+    })
     logger.log('Scheduler started')
 
     let tlsCert: string | undefined

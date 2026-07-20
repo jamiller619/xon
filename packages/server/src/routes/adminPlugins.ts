@@ -1,3 +1,4 @@
+import type { PluginSettingDefinition } from '@xon/plugin-sdk'
 import { Hono } from 'hono'
 import {
   activatePlugin,
@@ -13,6 +14,8 @@ export interface PluginAdminInfo {
   type: string
   status: 'active' | 'inactive' | 'loaded' | 'error'
   error?: string
+  /** Settings the plugin exposes, saved under `plugins.<id>.<key>` in the app config */
+  settings?: Record<string, PluginSettingDefinition>
 }
 
 export function makeAdminPluginsRouter(): Hono {
@@ -29,6 +32,7 @@ export function makeAdminPluginsRouter(): Hono {
         version: entry.manifest.version,
         type: entry.manifest.category,
         status: entry.status,
+        ...(entry.manifest.settings && { settings: entry.manifest.settings }),
       })
     }
 

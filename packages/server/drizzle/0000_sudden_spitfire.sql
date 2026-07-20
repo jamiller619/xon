@@ -94,6 +94,8 @@ CREATE TABLE `media_items` (
 	`created_at` integer NOT NULL,
 	`updated_at` integer,
 	`library_id` text NOT NULL,
+	`match_id` text,
+	`match_id_source` text,
 	`file_path` text NOT NULL,
 	`file_size` integer NOT NULL,
 	`file_metadata` text NOT NULL,

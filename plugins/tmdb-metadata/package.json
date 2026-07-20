@@ -22,13 +22,41 @@
   "xon": {
     "displayName": "TMDb",
     "category": "MetadataSource",
+    "priority": 10,
+    "settings": {
+      "apiKey": {
+        "title": "API Key",
+        "type": "string",
+        "description": "TMDb API key from https://www.themoviedb.org/settings/api — falls back to the TMDB_API_KEY environment variable when unset.",
+        "secret": true
+      },
+      "language": {
+        "title": "Preferred Language",
+        "type": "string",
+        "default": "en",
+        "description": "ISO 639-1 language code (e.g. \"en\", \"de\", \"ja\") used to pick localized artwork such as posters and logos."
+      },
+      "saveImages": {
+        "title": "Save Images Locally",
+        "type": "boolean",
+        "default": false,
+        "description": "Download artwork (posters, backdrops, logos) to the application data images directory instead of linking to TMDb URLs."
+      },
+      "imageLimit": {
+        "title": "Local Image Limit",
+        "type": "integer",
+        "default": 0,
+        "description": "Maximum number of images to save locally per image type (posters, backdrops) for each item. 0 means no limit. Images beyond the limit remain TMDb URLs."
+      }
+    },
     "libraryTypes": [
       "movies",
       "tv_shows"
     ],
     "permissions": {
       "network": [
-        "api.themoviedb.org"
+        "api.themoviedb.org",
+        "image.tmdb.org"
       ]
     }
   }

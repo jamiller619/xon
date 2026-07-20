@@ -15,6 +15,7 @@ type FlexAlign =
   | 'baseline'
   | 'anchor-center'
 type FlexJustify = 'start' | 'center' | 'end' | 'between' | 'around' | 'evenly'
+type FlexWrap = 'nowrap' | 'wrap'
 
 type FlexOwnProps<C extends ElementType> = {
   dir?: FlexDirection
@@ -32,6 +33,7 @@ export default function Flex<C extends ElementType = 'div'>({
   gap,
   align,
   justify,
+  wrap,
   style,
   className,
   children,
@@ -44,7 +46,7 @@ export default function Flex<C extends ElementType = 'div'>({
     Component,
     {
       className: clsx(styles.flex, className),
-      style: resolveStyle({ ...style }, dir, gap, align, justify),
+      style: resolveStyle({ ...style }, dir, gap, align, justify, wrap),
       ...props,
     },
     children,
@@ -57,8 +59,13 @@ function resolveStyle(
   gap?: number | string,
   align?: FlexAlign,
   justify?: FlexJustify,
+  wrap?: FlexWrap,
 ): React.CSSProperties {
   const style: React.CSSProperties = styleProp ?? {}
+
+  if (wrap) {
+    style.flexWrap = wrap === 'nowrap' ? 'nowrap' : 'wrap'
+  }
 
   if (dir) {
     style.flexDirection = dir === 'row' ? 'row' : 'column'

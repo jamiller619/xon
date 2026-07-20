@@ -23,9 +23,3 @@ export const DEFAULT_PORT = 32400
 //   Fonts = 'Fonts',
 //   Icons = 'Icons',
 // }
-
-// export enum UserRole {
-//   Admin = 'admin',
-//   User = 'user',
-//   Guest = 'guest',
-// }

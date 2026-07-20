@@ -7,14 +7,13 @@ import {
 } from '@fluentui/react-icons'
 import { useMutation, useQuery } from '@tanstack/react-query'
 import type { MediaItem } from '@xon/shared'
-import { Button } from '@xon/ui'
+import { Button, Flex } from '@xon/ui'
 
 type ActionButtonsProps = {
   item: MediaItem
 }
 
 export default function ActionButtons({ item }: ActionButtonsProps) {
-  const { isVideo, isAudio, isImage } = determineType(item)
   const { data: isFavorited } = useQuery<boolean>({
     queryKey: ['isFavorited', item.id],
     queryFn: async () => {
@@ -62,87 +61,20 @@ export default function ActionButtons({ item }: ActionButtonsProps) {
   })
 
   return (
-    <>
-      {isImage ? (
-        <button
-          type="button"
-          // className={`${styles.btnPlay} ${item.drmProtected ? styles.btnDisabled : ''}`}
-          disabled={item.drmProtected}
-          title={
-            item.drmProtected
-              ? 'Viewing unavailable — DRM protected'
-              : 'View image'
-          }
-          // onClick={() => setShowImageViewer(true)}
-        >
-          🖼 View
-        </button>
-      ) : isAudio ? (
-        <>
-          <Button
-            // className={styles.btnPlay}
-            variant="primary"
-            disabled={item.drmProtected}
-            title={
-              item.drmProtected
-                ? 'Playback unavailable — DRM protected'
-                : 'Play'
-            }
-            // onClick={() => {
-            //   if (!item.drmProtected && item.id) {
-            //     playTrack({
-            //       id: item.id,
-            //       title: item.title ?? fileName,
-            //       mimeType: item.mimeType,
-            //     })
-            //   }
-            // }}
-          >
-            ▶ Play
-          </Button>
-          <button
-            type="button"
-            // className={styles.btnSecondary}
-            disabled={item.drmProtected}
-            title="Add to queue"
-            // onClick={() => {
-            //   if (!item.drmProtected && item.id) {
-            //     addToQueue({
-            //       id: item.id,
-            //       title: item.title ?? fileName,
-            //       mimeType: item.mimeType,
-            //     })
-            //   }
-            // }}
-          >
-            + Queue
-          </button>
-        </>
-      ) : (
-        <Button
-          variant="primary"
-          size="large"
-          disabled={item.drmProtected || !isVideo}
-          title={
-            item.drmProtected
-              ? 'Playback unavailable — DRM protected'
-              : !isVideo
-                ? 'Playback not supported for this media type'
-                : 'Play'
-          }
-          // onClick={() => setShowPlayer(true)}
-        >
-          <PlayIcon /> <span>Play</span>
-        </Button>
-      )}
-      {/* {isVideo && (
-        <Button onClick={startEditing} title="Edit metadata">
-          <EditIcon />
-        </Button>
-      )} */}
+    <Flex dir="row" gap="3">
+      <Button
+        variant="primary"
+        size="large"
+        disabled={item.drmProtected}
+        title={
+          item.drmProtected ? 'Playback unavailable — DRM protected' : 'Play'
+        }
+        // onClick={() => setShowPlayer(true)}
+      >
+        <PlayIcon /> <span>Play</span>
+      </Button>
       <Button
         title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-        // size="large"
         onClick={() => toggleFavorite.mutate()}
       >
         {isFavorited ? <HeartIcon /> : <HeartStrokeIcon />}
@@ -164,37 +96,6 @@ export default function ActionButtons({ item }: ActionButtonsProps) {
           </>
         )}
       </Button>
-    </>
+    </Flex>
   )
-}
-
-function determineType(item: MediaItem) {
-  const resp = {
-    isVideo: false,
-    isAudio: false,
-    isImage: false,
-  }
-
-  if (item.mediaType?.startsWith('video/')) {
-    return {
-      ...resp,
-      isVideo: true,
-    }
-  }
-
-  if (item.mediaType?.startsWith('audio/')) {
-    return {
-      ...resp,
-      isAudio: true,
-    }
-  }
-
-  if (item.mediaType?.startsWith('image/')) {
-    return {
-      ...resp,
-      isImage: true,
-    }
-  }
-
-  return resp
 }

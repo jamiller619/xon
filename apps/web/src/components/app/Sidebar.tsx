@@ -1,21 +1,21 @@
 import {
+  FolderAdd20Regular as AddLibraryIcon,
   Glance20Regular as DashboardIcon,
   Glance20Filled as DashboardOnIcon,
   Heart20Regular as FavoritesIcon,
   Folder20Regular as FolderIcon,
+  DocumentText20Regular as LogViewerIcon,
+  DocumentText20Filled as LogViewerOnIcon,
+  Library20Regular as ManageLibrariesIcon,
+  Library20Filled as ManageLibrariesOnIcon,
   MoviesAndTv20Regular as MoviesIcon,
   MusicNote220Regular as MusicIcon,
   TextBulletList20Regular as PlaylistIcon,
-  // CircleSmall20Regular as LibraryIcon,
-  PlugDisconnected20Regular as PluginsIcon,
-  PlugDisconnected20Filled as PluginsOnIcon,
   WindowConsole20Regular as ServerOutputIcon,
   WindowConsole20Filled as ServerOutputOnIcon,
   Settings20Regular as SettingsIcon,
   Settings20Filled as SettingsOnIcon,
   Tv20Regular as TVIcon,
-  PersonCircle20Regular as UsersIcon,
-  PersonCircle20Filled as UsersOnIcon,
 } from '@fluentui/react-icons'
 import { useQuery } from '@tanstack/react-query'
 import { type Group, GroupType, LibraryType } from '@xon/shared'
@@ -34,13 +34,9 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ className, isOpen }: SidebarProps) {
-  const { isPending, error, data: libraries } = useQuery(librariesQuery)
+  const { data: libraries } = useQuery(librariesQuery)
 
-  const {
-    isPending: isPendingGroups,
-    error: errorGroups,
-    data: groups,
-  } = useQuery<Group[]>(useQueryAPIHelper('groups'))
+  const { data: groups } = useQuery<Group[]>(useQueryAPIHelper('groups'))
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
     `${styles.navLink}${isActive ? ` ${styles.active}` : ''}`
@@ -62,18 +58,6 @@ export default function Sidebar({ className, isOpen }: SidebarProps) {
         <NavLink to="/" end className={navClass}>
           <NavItem label="Dashboard" />
         </NavLink>
-        <NavLink to="/admin/plugins" className={navClass}>
-          <NavItem label="Plugins" />
-        </NavLink>
-        <NavLink to="/admin/users" className={navClass}>
-          <NavItem label="Users" />
-        </NavLink>
-        <NavLink to="/admin/logs" className={navClass}>
-          <NavItem label="Server Output" />
-        </NavLink>
-        <NavLink to="/settings" className={navClass}>
-          <NavItem label="Settings" />
-        </NavLink>
         <PluginSlot injectionPoint="nav-item" />
       </Section>
 
@@ -90,7 +74,10 @@ export default function Sidebar({ className, isOpen }: SidebarProps) {
               <span>{lib.name}</span>
             </NavLink>
           ))}
-        {/* <Button>Add New Library</Button> */}
+        <NavLink to="" className={styles.navLink ?? ''}>
+          <AddLibraryIcon />
+          <span>Add Library</span>
+        </NavLink>
       </Section>
 
       <Section>
@@ -106,6 +93,22 @@ export default function Sidebar({ className, isOpen }: SidebarProps) {
               <span>{collection.title}</span>
             </NavLink>
           ))}
+        <NavLink to="" className={styles.navLink ?? ''}>
+          <AddLibraryIcon />
+          <span>Add Collection</span>
+        </NavLink>
+      </Section>
+      <Section>
+        <div className={styles.sectionTitle}>Admin</div>
+        <NavLink to="/settings" className={navClass}>
+          <NavItem label="Settings" />
+        </NavLink>
+        <NavLink to="/admin/libraries" className={navClass}>
+          <NavItem label="Manage Libraries" />
+        </NavLink>
+        <NavLink to="/admin/logs" className={navClass}>
+          <NavItem label="Log Viewer" />
+        </NavLink>
       </Section>
     </Surface>
   )
@@ -116,21 +119,21 @@ const navIcons = {
     default: <DashboardIcon />,
     active: <DashboardOnIcon />,
   },
-  Plugins: {
-    default: <PluginsIcon />,
-    active: <PluginsOnIcon />,
-  },
-  Users: {
-    default: <UsersIcon />,
-    active: <UsersOnIcon />,
-  },
   'Server Output': {
     default: <ServerOutputIcon />,
     active: <ServerOutputOnIcon />,
   },
+  'Log Viewer': {
+    default: <LogViewerIcon />,
+    active: <LogViewerOnIcon />,
+  },
   Settings: {
     default: <SettingsIcon />,
     active: <SettingsOnIcon />,
+  },
+  'Manage Libraries': {
+    default: <ManageLibrariesIcon />,
+    active: <ManageLibrariesOnIcon />,
   },
 }
 

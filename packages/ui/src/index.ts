@@ -6,6 +6,10 @@ export {
 export { default as CheckboxGroup } from './components/CheckboxGroup.jsx'
 export { default as Collapsible } from './components/Collapsible.jsx'
 export {
+  type CardProps,
+  default as Card,
+} from './components/card/Card.jsx'
+export {
   type ContextMenuItem,
   type ContextMenuProps,
   default as ContextMenu,

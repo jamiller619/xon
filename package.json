@@ -14,6 +14,7 @@
     "format": "biome format .",
     "check": "biome check .",
     "build": "yarn workspaces run build",
+    "db:rebuild": "yarn workspace @xon/server db:generate && yarn workspace @xon/server db:migrate",
     "db:reset": "DATA_DIR=apps/headless/.data node scripts/db-reset.mjs",
     "db:seed": "DATA_DIR=apps/headless/.data node scripts/db-seed.mjs"
   },

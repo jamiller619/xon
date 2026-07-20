@@ -18,6 +18,10 @@ type PendingJob = {
 
 export type ScannerHandle = {
   startScan: (libraryId: string) => Promise<ScanSummary>
+  refreshMetadata: (
+    libraryId: string,
+    mediaItemId?: string,
+  ) => Promise<ScanSummary>
   stop: () => Promise<void>
 }
 
@@ -148,6 +152,23 @@ export async function startScannerChild(): Promise<ScannerHandle> {
         if (!child.send(msg)) {
           pending.delete(jobId)
           reject(new Error('Failed to send start-scan to scanner child'))
+        }
+      })
+    },
+
+    refreshMetadata(libraryId, mediaItemId) {
+      return new Promise<ScanSummary>((resolve, reject) => {
+        const jobId = crypto.randomUUID()
+        pending.set(jobId, { libraryId, resolve, reject })
+        const msg: ParentToChild = {
+          type: 'refresh-metadata',
+          jobId,
+          libraryId,
+          mediaItemId,
+        }
+        if (!child.send(msg)) {
+          pending.delete(jobId)
+          reject(new Error('Failed to send refresh-metadata to scanner child'))
         }
       })
     },

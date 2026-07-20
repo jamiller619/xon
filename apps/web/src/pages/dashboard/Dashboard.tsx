@@ -1,15 +1,22 @@
+import {
+  ArrowSyncRegular as RefreshIcon,
+  FolderSearchRegular as ScanIcon,
+} from '@fluentui/react-icons'
 import { useQuery } from '@tanstack/react-query'
 import type { MediaItem } from '@xon/shared'
-import { Flex, Surface, XScroller } from '@xon/ui'
+import { Card, ContextMenu, Flex, Surface, XScroller } from '@xon/ui'
 import clsx from 'clsx'
 import type { HTMLAttributes } from 'react'
 import { Link } from 'react-router-dom'
-import MediaCard, {} from '~/components/media-card/MediaCard'
+import MediaCard from '~/components/media-card/MediaCard'
 import PluginSlot from '~/components/PluginSlot'
 import useQueryAPIHelper from '~/hooks/useQueryAPIHelper'
+import { apiPost } from '~/lib/apiFetch'
 import { librariesQuery } from '~/lib/librariesApi'
+import { useScanStore } from '~/store/scanStore'
 import System from './cards/System'
 import styles from './Dashboard.module.css'
+import FeaturedCarousel from './FeaturedCarousel'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 
@@ -18,36 +25,61 @@ export default function Dashboard() {
     useQueryAPIHelper('recentMedia'),
   )
 
+  const { data: featuredMedia } = useQuery<MediaItem[]>(
+    useQueryAPIHelper('featuredMedia'),
+  )
+
   const { data: libraries } = useQuery(librariesQuery)
+  // Cache-busts library thumbnails once a scan (re)generates them
+  const scanCompletedAt = useScanStore((s) => s.completedAt)
 
   return (
-    <Flex dir="col" gap="4">
+    <Flex dir="col" gap="4" className={styles.page}>
       <PluginSlot injectionPoint="dashboard-widget" />
-      <MediaSection
-        key="featured"
-        className={styles.featured}
-        title="Featured"
-        media={recentMedia}
-      />
+      <FeaturedCarousel key="featured" items={featuredMedia} />
       <Flex gap="4">
         <DashboardSection key="my-libraries" title="Libraries">
           {libraries?.map((library) => (
-            <Link
+            <ContextMenu
+              items={[
+                {
+                  label: 'Scan library',
+                  icon: <ScanIcon />,
+                  onClick: () => apiPost(`/api/libraries/${library.id}/scan`),
+                },
+                {
+                  label: 'Refresh metadata',
+                  icon: <RefreshIcon />,
+                  onClick: () =>
+                    apiPost(`/api/libraries/${library.id}/scan/refresh`),
+                },
+              ]}
               key={library.id}
-              to={`/library/${library.id}`}
-              className={styles.library}
             >
-              <span
-                className={styles.libraryThumbnailBackdrop}
-                style={{
-                  backgroundImage: `url(/api/libraries/${library.id}/thumbnail)`,
-                }}
-              />
-              <span className={styles.libraryThumbnailTitle}>
-                <h1>{library.name}</h1>
-                <small>{library.type}</small>
-              </span>
-            </Link>
+              <Card
+                as={Link}
+                key={library.id}
+                to={`/library/${library.id}`}
+                className={styles.library}
+              >
+                <Card.Thumb aspectRatio="4 / 3" className={styles.libraryThumb}>
+                  <span
+                    className={styles.libraryThumbnailBackdrop}
+                    style={{
+                      backgroundImage: `url(/api/libraries/${library.id}/thumbnail${
+                        scanCompletedAt[library.id]
+                          ? `?v=${scanCompletedAt[library.id]}`
+                          : ''
+                      })`,
+                    }}
+                  />
+                </Card.Thumb>
+                <Card.Info>
+                  <Card.Title>{library.name}</Card.Title>
+                  {/* <Card.Meta>{library.type}</Card.Meta> */}
+                </Card.Info>
+              </Card>
+            </ContextMenu>
           ))}
         </DashboardSection>
         <DashboardSection key="continue-watching" title="Continue Watching" />

@@ -1,24 +1,32 @@
 import clsx from 'clsx'
 import { css } from 'inline-css-modules'
 import type { HTMLAttributes, PropsWithChildren } from 'react'
-import Tooltip from './tooltip/Tooltip.js'
 import type { Variant } from './types.js'
 
 const styles = css`
   .badge {
     display: inline-block;
     padding: var(--space-2xs) var(--space-xs);
-    background: var(--color-accent-3);
     border-radius: var(--border-radius-3);
     corner-shape: var(--corner-shape);
     font-weight: 500;
-    color: var(--color-accent-12);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 
+    background: var(--color-gray-5);
+    color: var(--color-text);
+    
     &.primary {
-      background: var(--color-accent-5);
+      color: var(--color-accent-12);
+      background: var(--color-accent-4);
+    }
+
+    &.ghost {
+      background-color: transparent;
+      backdrop-filter: blur(8px);
+      outline: 2px solid var(--color-gray-8);
+      outline-offset: -2px;
     }
   }
 `
@@ -34,13 +42,11 @@ export default function Badge({
   ...props
 }: BadgeProps) {
   return (
-    <Tooltip content={String(children)}>
-      <div
-        className={clsx(styles.badge, className, variant && styles[variant])}
-        {...props}
-      >
-        {children}
-      </div>
-    </Tooltip>
+    <div
+      className={clsx(styles.badge, className, variant && styles[variant])}
+      {...props}
+    >
+      {children}
+    </div>
   )
 }

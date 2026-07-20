@@ -4,7 +4,8 @@ import { Button, type ButtonProps, Flex } from '../../index.js'
 import styles from './Dialog.module.css'
 
 type DialogProps = Omit<UIDialog.Root.Props, 'children'> & {
-  triggerText: string
+  /** Renders a trigger button. Omit when controlling the dialog via `open`. */
+  triggerText?: string
   title: string
   description?: string
   children: ReactNode
@@ -17,14 +18,17 @@ export default function Dialog({
   description,
   children,
   buttonProps,
+  ...props
 }: DialogProps) {
   return (
-    <UIDialog.Root>
-      <UIDialog.Trigger
-        render={(props) => <Button {...buttonProps} {...props} />}
-      >
-        {triggerText}
-      </UIDialog.Trigger>
+    <UIDialog.Root {...props}>
+      {triggerText != null && (
+        <UIDialog.Trigger
+          render={(props) => <Button {...buttonProps} {...props} />}
+        >
+          {triggerText}
+        </UIDialog.Trigger>
+      )}
       <UIDialog.Portal>
         <UIDialog.Backdrop className={styles.backdrop} />
         <UIDialog.Popup className={styles.popup}>

@@ -21,9 +21,7 @@ const PRIVILEGED_ROLES = ['admin', 'manager'] as const
 // async function getAccessibleLibraryIds(
 //   db: LibSQLDatabase,
 //   userId: string,
-//   role: string,
 // ): Promise<string[] | null> {
-//   if ((PRIVILEGED_ROLES as readonly string[]).includes(role)) return null
 //   const rows = await db
 //     .select({ libraryId: libraryAccess.libraryId })
 //     .from(libraryAccess)
@@ -58,7 +56,7 @@ export function makeSearchRouter(db: LibSQLDatabase): Hono {
     const user = c.get('user')
 
     // Get accessible library IDs for this user
-    // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+    // const accessibleIds = await getAccessibleLibraryIds(db, user.id)
     // if (accessibleIds !== null && accessibleIds.length === 0) {
     //   return c.json({ results: [] })
     // }

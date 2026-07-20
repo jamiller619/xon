@@ -18,10 +18,11 @@
     calc(var(--text-base) * pow(var(--text-ratio), -2)),
     0.0625rem
   ); /* 12px */
-  --text-sm: round(
+  --text-sm: 0.875rem;
+  /* --text-sm: round(
     calc(var(--text-base) * pow(var(--text-ratio), -1)),
     0.0625rem
-  ); /* 14px */
+  ); 14px */
   --text-md: var(--text-base); /* 16px */
   --text-lg: round(
     calc(var(--text-base) * pow(var(--text-ratio), 1)),

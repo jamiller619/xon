@@ -1,3 +1,4 @@
+import { LibraryType } from '@xon/shared'
 import { parseFilename } from '../../media/filenameParser.ts'
 import type { PipelineStage } from '../pipeline.js'
 
@@ -7,7 +8,10 @@ export default {
   run: async (_, job) => {
     if (job.data.title) return
 
-    const { title, metadata } = parseFilename(job.file.path)
+    const { title, metadata } = parseFilename(
+      job.file.path,
+      job.libraryType === LibraryType.TVShows,
+    )
 
     return {
       title,

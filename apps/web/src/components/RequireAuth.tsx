@@ -1,7 +1,22 @@
-import { type ReactNode, useCallback, useEffect, useState } from 'react'
+import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import useConfig from '~/hooks/useConfig'
 import authClient from '~/lib/authClient'
+
+/**
+ * In-flight anonymous sign-in, shared across callers: React StrictMode
+ * re-runs the sign-in effect, and firing the request twice both creates a
+ * duplicate anonymous user and makes the losing request fail with a 400.
+ */
+let anonSignIn: ReturnType<typeof authClient.signIn.anonymous> | null = null
+
+function signInAnonymouslyOnce() {
+  anonSignIn ??= authClient.signIn.anonymous().finally(() => {
+    anonSignIn = null
+  })
+
+  return anonSignIn
+}
 
 export default function RequireAuth({
   children,
@@ -14,68 +29,56 @@ export default function RequireAuth({
     error: sessionError,
     isPending,
     isRefetching,
+    refetch,
   } = authClient.useSession()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const hasAttemptedSignIn = useRef(false)
   const [areAnonLoginsEnabled] = useConfig('session.enableAnonymousLogins')
 
   const loginAnonymously = useCallback(async () => {
-    await authClient.signIn.anonymous({
-      fetchOptions: {
-        onSuccess() {
-          navigate('/', {
-            replace: true,
-          })
-        },
-        onError(ctx) {
-          setError(ctx.error.message)
-        },
-        onRequest() {
-          setError(null)
-          setIsLoading(true)
-        },
-        onResponse() {
-          setIsLoading(false)
-        },
-      },
-    })
-  }, [navigate])
+    setError(null)
+    setIsLoading(true)
+
+    const { error: signInError } = await signInAnonymouslyOnce()
+
+    setIsLoading(false)
+
+    if (signInError) {
+      setError(signInError.message ?? 'Anonymous sign-in failed')
+      return
+    }
+
+    // Pick up the new session cookie; children render in place, preserving
+    // whatever URL the user originally requested
+    refetch()
+  }, [refetch])
 
   useEffect(() => {
     if (
       !areAnonLoginsEnabled ||
+      hasAttemptedSignIn.current ||
       isPending ||
       isRefetching ||
-      isLoading ||
-      error ||
-      sessionError ||
-      (data && data?.user != null)
+      data?.user != null
     )
       return
+
+    hasAttemptedSignIn.current = true
     loginAnonymously()
-  }, [
-    loginAnonymously,
-    areAnonLoginsEnabled,
-    data,
-    isPending,
-    isRefetching,
-    isLoading,
-    error,
-    sessionError,
-  ])
+  }, [areAnonLoginsEnabled, data, isPending, isRefetching, loginAnonymously])
 
   useEffect(() => {
     if (isPending || isRefetching || isLoading) return
 
-    const isAuthenticated = !!(!error && !sessionError && data?.user)
+    const isAuthenticated = !!(!sessionError && data?.user)
 
-    // Anon logins are enabled and no error yet — let the first effect attempt sign-in
-    if (!isAuthenticated && areAnonLoginsEnabled && !error && !sessionError)
-      return
+    if (isAuthenticated) return
 
-    if (!isAuthenticated) {
-      navigate('/login', { replace: true })
-    }
+    // Anon logins are enabled and haven't failed yet — wait for the sign-in
+    if (areAnonLoginsEnabled && !error && !sessionError) return
+
+    navigate('/login', { replace: true })
   }, [
     data,
     error,

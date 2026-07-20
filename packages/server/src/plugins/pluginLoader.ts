@@ -37,6 +37,8 @@ function validateManifest(data: unknown, source: string): PluginManifest {
   const optional: Array<keyof PluginManifest> = [
     'displayName',
     'minServerVersion',
+    'priority',
+    'settings',
     'themeAssets',
     'permissions',
   ]

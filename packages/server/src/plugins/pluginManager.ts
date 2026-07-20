@@ -1,3 +1,4 @@
+import { mkdir, stat, writeFile } from 'node:fs/promises'
 import { basename, join } from 'node:path'
 import type { Client } from '@libsql/client'
 import type {
@@ -8,10 +9,10 @@ import type {
   RouteDefinition,
   UIComponent,
 } from '@xon/plugin-sdk'
-import { BasePlugin } from '@xon/plugin-sdk'
+import { BasePlugin, pluginSettingKey } from '@xon/plugin-sdk'
 import type { PluginCategory } from '@xon/shared'
 import { discoverPluginManifests } from './pluginLoader.ts'
-import { createSandboxedFetch, createSandboxedFs } from './pluginSandbox.ts'
+import { createSandboxedFetch } from './pluginSandbox.ts'
 
 type AnyPluginEventHandler = (payload: unknown) => void | Promise<void>
 
@@ -43,9 +44,11 @@ export const registry = new Map<string, PluginEntry>()
 export function getPluginsByCategory<T extends BasePlugin = BasePlugin>(
   category: PluginCategory,
 ): PluginEntry<T>[] {
-  return Array.from(registry.values()).filter(
-    (plugin) => plugin.manifest.category === category,
-  ) as PluginEntry<T>[]
+  return (
+    Array.from(registry.values()).filter(
+      (plugin) => plugin.manifest.category === category,
+    ) as PluginEntry<T>[]
+  ).sort((a, b) => (a.manifest.priority ?? 0) - (b.manifest.priority ?? 0))
 }
 
 export interface PluginErrorEntry {
@@ -74,6 +77,32 @@ export function setPluginDatabase(client: Client): void {
   _pluginClient = client
 }
 
+/** Read access to saved plugin setting values, keyed by config-store key */
+export interface PluginSettingsSource {
+  get(key: string): unknown
+}
+
+let _settingsSource: PluginSettingsSource | undefined
+
+/**
+ * Set the source for saved plugin setting values (the app config store).
+ * Without one, plugins only see the defaults declared in their manifest.
+ */
+export function setPluginSettingsSource(source: PluginSettingsSource): void {
+  _settingsSource = source
+}
+
+let _appDataPath: string | undefined
+
+/**
+ * Set the configured application data directory (config `appdata.path`).
+ * Backs the `context.images` API, which saves into `<appdata>/images`.
+ * Without one, `context.images.save` rejects.
+ */
+export function setPluginAppDataPath(appDataPath: string): void {
+  _appDataPath = appDataPath
+}
+
 /** Emit a plugin event to all registered hooks. Errors in hooks are logged, not thrown. */
 export async function emitPluginEvent<E extends PluginEvent>(
   event: E,
@@ -95,20 +124,41 @@ function buildContext(entry: PluginEntry): PluginContext {
   //       query: async (_sql: string, _params?: unknown[]) => [],
   //     }
 
-  const allowedFsPaths = entry.manifest.permissions?.filesystem ?? []
   const allowedDomains = entry.manifest.permissions?.network ?? []
-  const sandboxedFs = createSandboxedFs(
-    entry.manifest.id,
-    entry.pluginDir,
-    allowedFsPaths,
-  )
   const sandboxedFetch = createSandboxedFetch(entry.manifest.id, allowedDomains)
 
   return {
     manifest: entry.manifest,
     // db,
-    fs: sandboxedFs,
     fetch: sandboxedFetch,
+    images: {
+      // Downloads on behalf of the plugin so plugins never touch the
+      // filesystem directly. The fetch is still the plugin's sandboxed
+      // one, so network permissions apply.
+      async save(url: string): Promise<string> {
+        if (!_appDataPath) {
+          throw new Error(
+            `[plugin:${entry.manifest.id}] Cannot save image: no app data path configured`,
+          )
+        }
+
+        const imagesDir = join(_appDataPath, 'images')
+        const dest = join(imagesDir, basename(new URL(url).pathname))
+
+        const existing = await stat(dest).catch(() => null)
+        if (existing?.isFile()) return dest
+
+        const res = await sandboxedFetch(url)
+        if (!res.ok) {
+          throw new Error(`Image download failed (${res.status}): ${url}`)
+        }
+
+        await mkdir(imagesDir, { recursive: true })
+        await writeFile(dest, Buffer.from(await res.arrayBuffer()))
+
+        return dest
+      },
+    },
     on<E extends PluginEvent>(
       event: E,
       handler: (payload: PluginEventPayloads[E]) => void | Promise<void>,
@@ -131,6 +181,25 @@ function buildContext(entry: PluginEntry): PluginContext {
     registerMediaMetadataProvider(provider: MediaMetadataProvider): void {
       entry.metadataProviders.push(provider)
       mediaMetadataProviders.set(entry.manifest.id, provider)
+    },
+    settings: {
+      get<T = unknown>(key: string): T | undefined {
+        const saved = _settingsSource?.get(
+          pluginSettingKey(entry.manifest.id, key),
+        )
+
+        return (saved ?? entry.manifest.settings?.[key]?.default) as
+          | T
+          | undefined
+      },
+      getAll(): Record<string, unknown> {
+        return Object.fromEntries(
+          Object.keys(entry.manifest.settings ?? {}).map((key) => [
+            key,
+            this.get(key),
+          ]),
+        )
+      },
     },
     logger: {
       info: (msg: string) =>
@@ -330,6 +399,7 @@ export function _resetForTesting(): void {
   pluginErrors.clear()
   mediaMetadataProviders.clear()
   _pluginClient = undefined
+  _appDataPath = undefined
 }
 
 /**

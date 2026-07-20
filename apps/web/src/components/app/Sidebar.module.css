@@ -7,13 +7,17 @@
   padding-inline: var(--space-xs);
 
   .sectionTitle {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    width: stretch;
     opacity: 0;
     font-size: var(--text-xs);
     text-transform: uppercase;
     letter-spacing: 0.8px;
     font-weight: 600;
     color: var(--color-gray-10);
-    padding: var(--space-xs) var(--space-md) var(--space-2xs);
+    padding: var(--space-xs) 0 0 var(--space-md);
   }
 
   &.open {
@@ -49,7 +53,6 @@
   border-radius: var(--border-radius-4);
   font-size: var(--text-sm);
   corner-shape: var(--corner-shape);
-  font-weight: 500;
   line-height: 0;
   letter-spacing: 0.04em;
 

@@ -143,6 +143,7 @@ export interface CastMember {
 
 export interface MediaItem {
   id: string
+  libraryId: string
   createdAt: Date
   updatedAt: Date | null
   filePath: string
@@ -160,17 +161,10 @@ export interface MediaItem {
   cast?: CastMember[]
 }
 
-export enum UserRole {
-  Admin = 'admin',
-  User = 'user',
-  Guest = 'guest',
-}
-
 export interface User {
   id: string
   username: string
   email: string
-  role: UserRole
   createdAt: Date
   updatedAt: Date
 }

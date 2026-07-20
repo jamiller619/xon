@@ -1,5 +1,5 @@
 // import { MediaCategory } from '@xon/shared'
-import { parseFile } from 'music-metadata'
+import { type IPicture, parseFile, selectCover } from 'music-metadata'
 
 // const MUSIC_CATEGORIES = new Set<string>([
 //   MediaCategory.Music,
@@ -26,6 +26,21 @@ export function isMusicCategory(category: string | null): boolean {
   if (!category) return false
   return category.startsWith('audio/')
   // return MUSIC_CATEGORIES.has(category)
+}
+
+export async function extractAlbumArt(
+  filePath: string,
+): Promise<IPicture | null> {
+  try {
+    const { common } = await parseFile(filePath)
+
+    return selectCover(common.picture)
+  } catch (err) {
+    console.error(
+      `Album art extraction failed for ${filePath}: ${(err as Error).message}`,
+    )
+    return null
+  }
 }
 
 export async function extractMusicTags(

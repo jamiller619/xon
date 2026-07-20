@@ -16,9 +16,7 @@
 // // async function getAccessibleLibraryIds(
 // //   db: LibSQLDatabase,
 // //   userId: string,
-// //   role: string,
 // // ): Promise<string[] | null> {
-// //   if ((PRIVILEGED_ROLES as readonly string[]).includes(role)) return null
 // //   const rows = await db
 // //     .select({ libraryId: libraryAccess.libraryId })
 // //     .from(libraryAccess)
@@ -42,7 +40,7 @@
 //     )
 //     const offsetNum = Math.max(0, Number(c.req.query('offset') || 0))
 
-//     // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+//     // const accessibleIds = await getAccessibleLibraryIds(db, user.id)
 
 //     const rows = await db
 //       .select({
@@ -124,7 +122,7 @@
 //       return c.json({ error: 'Media item not found' }, 404)
 //     }
 
-//     // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+//     // const accessibleIds = await getAccessibleLibraryIds(db, user.id)
 //     // if (accessibleIds !== null && !accessibleIds.includes(mediaRow.libraryId)) {
 //     //   return c.json({ error: 'Forbidden' }, 403)
 //     // }
@@ -204,7 +202,7 @@
 //       return c.json({ error: 'Media item not found' }, 404)
 //     }
 
-//     // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+//     // const accessibleIds = await getAccessibleLibraryIds(db, user.id)
 //     // if (accessibleIds !== null && !accessibleIds.includes(mediaRow.libraryId)) {
 //     //   return c.json({ error: 'Forbidden' }, 403)
 //     // }

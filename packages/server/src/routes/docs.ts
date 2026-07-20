@@ -57,7 +57,6 @@ const OPENAPI_SPEC = {
           email: { type: 'string', format: 'email', nullable: true },
           displayName: { type: 'string', nullable: true },
           avatarUrl: { type: 'string', nullable: true },
-          role: { type: 'string', enum: ['admin', 'manager', 'user', 'guest'] },
           maxContentRating: {
             type: 'string',
             enum: ['none', 'G', 'PG', 'PG-13', 'R', 'NC-17', 'unrated'],
@@ -65,7 +64,7 @@ const OPENAPI_SPEC = {
           hideDRMItems: { type: 'boolean' },
           createdAt: { type: 'string', format: 'date-time' },
         },
-        required: ['id', 'username', 'role'],
+        required: ['id', 'username'],
       },
       Library: {
         type: 'object',
@@ -389,7 +388,7 @@ const OPENAPI_SPEC = {
       post: {
         tags: ['Libraries'],
         summary: 'Create library',
-        description: 'Creates a new library. Requires admin or manager role.',
+        description: 'Creates a new library.',
         requestBody: {
           required: true,
           content: {
@@ -416,7 +415,7 @@ const OPENAPI_SPEC = {
             },
           },
           '403': {
-            description: 'Forbidden — insufficient role',
+            description: 'Forbidden',
             content: {
               'application/json': {
                 schema: { $ref: '#/components/schemas/Error' },
@@ -468,7 +467,6 @@ const OPENAPI_SPEC = {
       put: {
         tags: ['Libraries'],
         summary: 'Update library',
-        description: 'Requires admin or manager role.',
         parameters: [
           {
             name: 'id',
@@ -514,7 +512,6 @@ const OPENAPI_SPEC = {
       delete: {
         tags: ['Libraries'],
         summary: 'Delete library',
-        description: 'Requires admin or manager role.',
         parameters: [
           {
             name: 'id',
@@ -647,7 +644,6 @@ const OPENAPI_SPEC = {
       post: {
         tags: ['Libraries'],
         summary: 'Add data source to library',
-        description: 'Requires admin or manager role.',
         parameters: [
           {
             name: 'libraryId',
@@ -1486,10 +1482,6 @@ const OPENAPI_SPEC = {
                   username: { type: 'string', minLength: 3 },
                   password: { type: 'string', minLength: 8 },
                   email: { type: 'string', format: 'email' },
-                  role: {
-                    type: 'string',
-                    enum: ['admin', 'manager', 'user', 'guest'],
-                  },
                 },
                 required: ['username', 'password'],
               },
@@ -1530,10 +1522,6 @@ const OPENAPI_SPEC = {
                 properties: {
                   email: { type: 'string', format: 'email' },
                   displayName: { type: 'string' },
-                  role: {
-                    type: 'string',
-                    enum: ['admin', 'manager', 'user', 'guest'],
-                  },
                   password: { type: 'string', minLength: 8 },
                 },
               },

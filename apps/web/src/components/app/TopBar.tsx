@@ -224,21 +224,22 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
       <Menu
         items={[
           {
-            label: 'Sign out',
-            icon: <SignOutIcon />,
-          },
-          {
             label: 'View account',
             icon: <UserIcon />,
+          },
+          {
+            label: 'Sign out',
+            icon: <SignOutIcon />,
           },
         ]}
         align="end"
       >
-        <Button aria-label="User menu">
+        <Button aria-label="User menu" size="small">
           <span className={styles.avatar}>
             {authData?.user.name.charAt(0).toUpperCase()}
           </span>
-          <span>{authData?.user.name}</span>
+          <span>My Account</span>
+          {/* <span>{authData?.user.name}</span> */}
         </Button>
       </Menu>
     </Surface>

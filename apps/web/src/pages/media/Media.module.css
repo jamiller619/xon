@@ -1,9 +1,14 @@
+.page {
+  padding: var(--space-lg);
+  background-image: linear-gradient(
+    45deg,
+    var(--color-gray-1),
+    var(--color-gray-a3)
+  );
+}
+
 .logo {
-  /* position: absolute;
-  right: 50px;
-  bottom: 100px; */
-  max-width: 300px;
-  z-index: 1;
+  max-width: 33rem;
 }
 
 .content {
@@ -14,7 +19,6 @@
 }
 
 .container {
-  position: relative;
   padding-inline: var(--space-xl);
   max-width: 1100px;
   margin: 0 auto;
@@ -24,18 +28,16 @@
   margin-block-end: var(--space-xl);
 }
 
-.logo {
-  position: absolute;
-  top: 0;
-  right: 0;
-}
-
 .subtitle {
   font-size: var(--text-sm);
+
+  &:empty {
+    display: none;
+  }
 }
 
 .description {
-  max-width: 45em;
+  max-width: 33rem;
 }
 
 .actions {

@@ -1,5 +1,20 @@
 import type { LibraryType, MediaType, PluginCategory } from '@xon/shared'
 
+/**
+ * JSON-schema-style definition of a single plugin setting. Declared in the
+ * manifest, rendered and saved by the app's settings UI, and read by the
+ * plugin via `PluginContext.settings`.
+ */
+export interface PluginSettingDefinition {
+  title: string
+  type: 'string' | 'number' | 'integer' | 'boolean'
+  description?: string
+  default?: string | number | boolean
+  enum?: (string | number)[]
+  /** Mask the value in the settings UI (API keys, tokens) */
+  secret?: boolean
+}
+
 // Plugin manifest matching the package.json xon field schema
 export interface PluginManifest {
   id: string
@@ -15,6 +30,19 @@ export interface PluginManifest {
   mediaTypes?: (MediaType | string)[]
   /** Minimum Xon server version required */
   minServerVersion?: string
+  /**
+   * Run order among plugins of the same category — lower runs first
+   * (default 0). Later plugins see metadata from earlier ones (e.g.
+   * OMDb reusing TMDb's imdbId) and overwrite any fields they both
+   * produce, so the highest-priority source wins.
+   */
+  priority?: number
+  /**
+   * Settings this plugin exposes in the app's settings UI, keyed by
+   * setting name. Values are stored in the app config under
+   * `plugins.<pluginId>.<key>` and read via `PluginContext.settings`.
+   */
+  settings?: Record<string, PluginSettingDefinition>
   /** Entry point relative to plugin root (default: index.js) */
   main?: string
   /** Theme asset files (for Theme category plugins) */
@@ -26,8 +54,6 @@ export interface PluginManifest {
   }
   /** Declared sandbox permissions for this plugin */
   permissions?: {
-    /** Filesystem paths the plugin may read/write (in addition to its own directory) */
-    filesystem?: string[]
     /** Network domains the plugin may connect to (e.g. "api.example.com") */
     network?: string[]
   }
@@ -241,24 +267,34 @@ export interface PluginContext {
   registerMediaMetadataProvider: (
     provider: (mediaId: string) => Promise<Record<string, unknown> | null>,
   ) => void
+  /**
+   * Read-only access to this plugin's settings. Declared in the manifest's
+   * `settings` field; the app saves values through its settings UI. Returns
+   * the manifest default when nothing has been saved yet.
+   */
+  settings: {
+    get: <T = unknown>(key: string) => T | undefined
+    getAll: () => Record<string, unknown>
+  }
+  /**
+   * Host-managed image storage. Plugins have no direct filesystem access;
+   * saving artwork locally goes through this API.
+   */
+  images: {
+    /**
+     * Download an image into the app's shared images directory and return
+     * the saved file's absolute path. Already-downloaded URLs are skipped.
+     * The download uses the plugin's sandboxed fetch, so the URL's domain
+     * must be declared in `permissions.network`. Throws when the download
+     * fails or the host has no configured images directory.
+     */
+    save: (url: string) => Promise<string>
+  }
   /** Logger scoped to this plugin */
   logger: {
     info: (message: string) => void
     warn: (message: string) => void
     error: (message: string) => void
-  }
-  /** Sandboxed filesystem access (node:fs/promises subset) */
-  fs: {
-    readFile: (path: string) => Promise<Buffer>
-    writeFile: (path: string, data: string | Buffer) => Promise<void>
-    readdir: (path: string) => Promise<string[]>
-    stat: (path: string) => Promise<{
-      size: number
-      isFile: () => boolean
-      isDirectory: () => boolean
-    }>
-    mkdir: (path: string, options?: { recursive?: boolean }) => Promise<void>
-    unlink: (path: string) => Promise<void>
   }
   /** Sandboxed fetch — only allows declared network domains */
   fetch: (url: string, init?: RequestInit) => Promise<Response>

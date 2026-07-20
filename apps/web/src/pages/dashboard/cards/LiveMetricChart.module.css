@@ -1,0 +1,104 @@
+.chart {
+  position: relative;
+  min-width: 0;
+}
+
+.svg {
+  display: block;
+  width: 100%;
+  overflow: visible;
+}
+
+.slide {
+  animation: slide 1s linear both;
+}
+
+@keyframes slide {
+  from {
+    transform: translateX(var(--slide, 0px));
+  }
+
+  to {
+    transform: translateX(0);
+  }
+}
+
+.gridline {
+  stroke: var(--color-gray-4);
+  stroke-width: 1;
+}
+
+.baseline {
+  stroke: var(--color-gray-5);
+  stroke-width: 1;
+}
+
+.tick {
+  fill: var(--color-text-muted);
+  font-size: 10px;
+}
+
+.area {
+  fill: var(--color-accent-9);
+  fill-opacity: 0.1;
+}
+
+.line {
+  fill: none;
+  stroke: var(--color-accent-9);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+
+.dot,
+.hoverDot {
+  fill: var(--color-accent-9);
+  stroke: var(--color-gray-2);
+  stroke-width: 2;
+}
+
+.dot {
+  transition: cy 1s linear;
+}
+
+.crosshair {
+  stroke: var(--color-gray-8);
+  stroke-width: 1;
+}
+
+.tooltip {
+  position: absolute;
+  bottom: calc(100% + var(--space-2xs));
+  transform: translateX(-50%);
+  display: flex;
+  align-items: baseline;
+  gap: var(--space-xs);
+  padding: var(--space-2xs) var(--space-xs);
+  background: var(--color-gray-3);
+  border: 1px solid var(--color-gray-6);
+  border-radius: var(--border-radius-1);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.tooltipValue {
+  color: var(--color-text);
+  font-weight: 600;
+}
+
+.tooltipTime {
+  color: var(--color-text-muted);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .slide {
+    animation: none;
+  }
+
+  .dot {
+    transition: none;
+  }
+}

@@ -20,6 +20,15 @@
   "xon": {
     "displayName": "OMDb",
     "category": "MetadataSource",
+    "priority": 20,
+    "settings": {
+      "apiKey": {
+        "title": "API Key",
+        "type": "string",
+        "description": "OMDb API key. Get a free key at https://www.omdbapi.com/apikey.aspx — falls back to the OMDB_API_KEY environment variable when unset.",
+        "secret": true
+      }
+    },
     "libraryTypes": [
       "movies",
       "tv_shows"

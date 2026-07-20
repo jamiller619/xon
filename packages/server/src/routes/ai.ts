@@ -22,9 +22,7 @@
 // // async function getAccessibleLibraryIds(
 // //   db: LibSQLDatabase,
 // //   userId: string,
-// //   role: string,
 // // ): Promise<string[] | null> {
-// //   if ((PRIVILEGED_ROLES as readonly string[]).includes(role)) return null
 // //   const rows = await db
 // //     .select({ libraryId: libraryAccess.libraryId })
 // //     .from(libraryAccess)
@@ -53,7 +51,7 @@
 //     )
 //     const libraryIdFilter = c.req.query('libraryId')
 
-//     // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+//     // const accessibleIds = await getAccessibleLibraryIds(db, user.id)
 
 //     const conditions = [
 //       eq(duplicateCandidates.status, 'pending'),
@@ -146,7 +144,7 @@
 //     const { libraryId, threshold } = c.req.valid('json')
 
 //     // Verify access
-//     // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+//     // const accessibleIds = await getAccessibleLibraryIds(db, user.id)
 //     // if (accessibleIds !== null && !accessibleIds.includes(libraryId)) {
 //     //   return c.json({ error: 'Forbidden' }, 403)
 //     // }
@@ -197,7 +195,7 @@
 //     }
 
 //     // Verify access
-//     // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+//     // const accessibleIds = await getAccessibleLibraryIds(db, user.id)
 //     // if (
 //     //   accessibleIds !== null &&
 //     //   !accessibleIds.includes(candidate.libraryId)
@@ -249,7 +247,7 @@
 //     const statusFilter = c.req.query('status') ?? 'pending'
 //     const libraryIdFilter = c.req.query('libraryId')
 
-//     // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+//     // const accessibleIds = await getAccessibleLibraryIds(db, user.id)
 
 //     const conditions = []
 
@@ -304,7 +302,6 @@
 //       // const accessibleIds = await getAccessibleLibraryIds(
 //       //   db,
 //       //   user.id,
-//       //   user.role,
 //       // )
 //       // if (accessibleIds !== null && !accessibleIds.includes(libraryId)) {
 //       //   return c.json({ error: 'Forbidden' }, 403)
@@ -346,7 +343,7 @@
 //       return c.json({ error: 'Suggestion is not pending' }, 409)
 //     }
 
-//     // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+//     // const accessibleIds = await getAccessibleLibraryIds(db, user.id)
 //     // if (
 //     //   accessibleIds !== null &&
 //     //   !accessibleIds.includes(suggestion.libraryId)
@@ -385,7 +382,7 @@
 //       return c.json({ error: 'Suggestion is not pending' }, 409)
 //     }
 
-//     // const accessibleIds = await getAccessibleLibraryIds(db, user.id, user.role)
+//     // const accessibleIds = await getAccessibleLibraryIds(db, user.id)
 //     // if (
 //     //   accessibleIds !== null &&
 //     //   !accessibleIds.includes(suggestion.libraryId)

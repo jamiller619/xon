@@ -1,0 +1,12 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(yarn typecheck)",
+      "Bash(yarn vitest *)",
+      "Bash(yarn test *)",
+      "Bash(yarn biome check *)",
+      "Bash(yarn lint)",
+      "Bash(yarn workspace @xon/web typecheck)"
+    ]
+  }
+}

@@ -1,4 +1,3 @@
-import { UserRole } from '@xon/shared'
 import { sql } from 'drizzle-orm'
 import { integer, primaryKey, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import { libraries } from './libraries.ts'
@@ -13,10 +12,6 @@ export const users = sqliteTable('users', {
   // displayName: text('display_name').notNull(),
   avatarUrl: text('avatar_url'),
   passwordHash: text('password_hash').notNull(),
-  role: text('role', { enum: ['admin', 'user', 'guest'] })
-    .$type<UserRole>()
-    .notNull()
-    .default(UserRole.User),
   // maxContentRating: text('max_content_rating', {
   //   enum: ['G', 'PG', 'PG-13', 'R', 'unrated', 'none'],
   // })

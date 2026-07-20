@@ -25,6 +25,12 @@ export function apiFetch(url: string, init?: RequestInit): Promise<Response> {
   return fetch(url, { ...init, headers })
 }
 
+export function apiPost(url: string): Promise<Response> {
+  return apiFetch(url, {
+    method: 'POST',
+  })
+}
+
 /**
  * Appends the current access token as a ?token= query param to a URL.
  * Use this for <img src>, <video src>, <track src>, and other browser-native

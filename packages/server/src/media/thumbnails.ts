@@ -37,7 +37,7 @@ export async function generateThumbnails(
 
 export async function writeThumbnailImages(
   thumbnailFileName: string,
-  mediaFilePath: string,
+  mediaFile: string | Buffer,
 ): Promise<ThumbnailPaths | undefined> {
   const thumbnailDir = path.join(config.get('appdata.cachePath'), 'thumbnails')
 
@@ -57,12 +57,12 @@ export async function writeThumbnailImages(
   try {
     let img: ReturnType<typeof sharp>
 
-    if (isRawImage(mediaFilePath)) {
-      logger.debug(`Converting RAW image: ${mediaFilePath}`)
-      const rawBuffer = await convertRawToJpeg(mediaFilePath)
+    if (typeof mediaFile === 'string' && isRawImage(mediaFile)) {
+      logger.debug(`Converting RAW image: ${mediaFile}`)
+      const rawBuffer = await convertRawToJpeg(mediaFile)
       img = sharp(rawBuffer)
     } else {
-      img = sharp(mediaFilePath)
+      img = sharp(mediaFile)
     }
 
     await Promise.all([

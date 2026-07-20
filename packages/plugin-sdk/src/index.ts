@@ -2,6 +2,7 @@ export { BackupTargetPlugin } from './BackupTargetPlugin.js'
 export { BasePlugin } from './BasePlugin.js'
 export { MediaProviderPlugin } from './MediaProviderPlugin.js'
 export * from './MetadataSourcePlugin.js'
+export { pluginSettingKey } from './settings.js'
 export type {
   BackupTargetConfigField,
   BackupTargetConfigSchema,
@@ -18,6 +19,7 @@ export type {
   PluginManifest,
   PluginRouteContext,
   PluginRouteResponse,
+  PluginSettingDefinition,
   RouteDefinition,
   RouteHandler,
   UIComponent,

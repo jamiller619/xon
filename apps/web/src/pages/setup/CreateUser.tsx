@@ -3,6 +3,7 @@ import { useState } from 'react'
 // import { useNavigate } from 'react-router-dom'
 import { AppleIcon, GoogleIcon } from '~/components/icons/brands'
 import authClient from '~/lib/authClient'
+import { styles as setupStyles } from './Setup'
 
 export default function CreateUser({
   styles,
@@ -66,7 +67,7 @@ export default function CreateUser({
   return (
     <Flex align="start" justify="center" gap="4">
       <div>
-        <h1 className={styles.heading}>Create an account?</h1>
+        <h4 className={setupStyles.heading}>Create an account?</h4>
         <p>
           Accounts are not required to use Xon, however, they do provide several
           security benefits. You can always change this decision later.

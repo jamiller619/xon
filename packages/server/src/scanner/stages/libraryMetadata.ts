@@ -1,5 +1,6 @@
 import path from 'node:path'
 import type { MetadataSourcePlugin } from '@xon/plugin-sdk'
+import deepmerge from 'deepmerge'
 import { getPluginsByCategory } from '../../plugins/pluginManager.js'
 import type { MediaJobData, PipelineStage } from '../pipeline.js'
 
@@ -26,6 +27,7 @@ export default {
     )
 
     const data: MediaJobData = { ...job.data }
+    data.metadata ??= {}
 
     for await (const plugin of plugins) {
       try {
@@ -34,15 +36,21 @@ export default {
         const pluginMeta = await plugin.instance.enrich(
           relativePath,
           job.libraryType,
+          {
+            title: data.title,
+            fileMetadata: data.fileMetadata,
+            metadata: data.metadata,
+          },
         )
 
         if (pluginMeta) {
-          ctx.logger.log(
-            `Plugin metadata for ${job.file.path}: ${JSON.stringify(pluginMeta, null, 2)}`,
-          )
+          ctx.logger.log(`Plugin metadata for ${job.file.path}`, {
+            plugin: plugin.manifest.id,
+            title: 'title' in pluginMeta ? pluginMeta.title : undefined,
+            fields: Object.keys(pluginMeta),
+          })
 
           data.title = 'title' in pluginMeta ? pluginMeta.title : data.title
-          data.metadata ??= {}
 
           if ('tmdbId' in pluginMeta && pluginMeta.tmdbId != null) {
             data.matchId = String(pluginMeta.tmdbId)
@@ -55,7 +63,14 @@ export default {
             data.matchIdSource = 'imdb'
           }
 
-          Object.assign(data.metadata, pluginMeta)
+          // Deep-merge so a plugin returning a partial nested object (e.g.
+          // OMDb's `images.poster`) can't clobber another plugin's entries
+          // (e.g. TMDb's `images.backdrop`). Arrays are replaced, not
+          // concatenated, so list fields like `genres` don't accumulate
+          // duplicates across plugins.
+          data.metadata = deepmerge(data.metadata, pluginMeta, {
+            arrayMerge: (_target, source) => source,
+          })
         }
       } catch (err) {
         job.errors.push(err as Error)

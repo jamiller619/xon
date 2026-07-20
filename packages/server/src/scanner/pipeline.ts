@@ -16,14 +16,29 @@ const stages: PipelineStage[] = [
   stage.thumbnail,
 ]
 
-export async function runPipeline(ctx: PipelineContext, jobs: MediaJob[]) {
+/**
+ * Stages for a metadata refresh of already-persisted items: re-runs metadata
+ * plugins against existing rows without touching the file (no drm/thumbnail
+ * probing — title and fileMetadata are seeded from the stored row).
+ */
+export const refreshStages: PipelineStage[] = [
+  stage.libraryMetadata,
+  stage.persist,
+  stage.person,
+]
+
+export async function runPipeline(
+  ctx: PipelineContext,
+  jobs: MediaJob[],
+  stageList: PipelineStage[] = stages,
+) {
   const limit = pLimit(availableParallelism())
   let processed = 0
 
   await Promise.all(
     jobs.map((job) =>
       limit(async () => {
-        for await (const stage of stages) {
+        for await (const stage of stageList) {
           const errorsBefore = job.errors.length
           const result = await runStage(ctx, job, stage)
 
@@ -41,7 +56,7 @@ export async function runPipeline(ctx: PipelineContext, jobs: MediaJob[]) {
 
             ctx.logger.log(`${stage.name} stage complete`, {
               file: job.file.path,
-              result: job.data,
+              fields: Object.keys(result),
             })
           }
         }
@@ -81,7 +96,7 @@ export type PipelineStage = {
 
 export type MediaJob = {
   id: string
-  type: 'new' | 'changed'
+  type: 'new' | 'changed' | 'refresh'
   file: FileEntry
   libraryId: string
   libraryType: LibraryType

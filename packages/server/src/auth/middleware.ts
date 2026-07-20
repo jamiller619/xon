@@ -19,6 +19,19 @@ export function makeSessionMiddleware(): MiddlewareHandler {
   }
 }
 
+/**
+ * Requires an authenticated user (set by the session middleware).
+ * Responds 401 for unauthenticated requests.
+ */
+export function requireAuth(): MiddlewareHandler {
+  return async (c: Context, next: Next) => {
+    if (!c.get('user')) {
+      return c.json({ error: 'Unauthorized' }, 401)
+    }
+    return next()
+  }
+}
+
 declare module 'hono' {
   interface ContextVariableMap {
     user: typeof auth.$Infer.Session.user | null

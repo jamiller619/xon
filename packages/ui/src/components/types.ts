@@ -1,2 +1,2 @@
 export type Variant = 'primary' | 'ghost' | 'danger' | 'success' | 'warning'
-export type Size = 'small' | 'large'
+export type Size = 'mini' | 'small' | 'large'

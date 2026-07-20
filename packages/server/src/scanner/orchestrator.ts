@@ -1,6 +1,8 @@
-import { basename } from 'node:path'
+import { basename, extname } from 'node:path'
 import { DataSourceType, LIBRARY_TYPE_DEFINITIONS } from '@xon/shared'
+import { and, eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
+import { mediaItems } from '../db/schema.ts'
 import { createLogger } from '../logger.ts'
 import * as libraryService from '../services/libraryService.ts'
 import { LocalDiscoverer } from './discoverers/LocalDiscoverer.ts'
@@ -9,13 +11,14 @@ import type {
   MediaDiscoverer,
 } from './discoverers/MediaDiscoverer.ts'
 import { PluginDiscoverer } from './discoverers/PluginDiscoverer.ts'
+import type { FileEntry } from './fileEntry.ts'
 import {
+  type MediaJob,
   type PipelineContext,
-  type PipelineStage,
+  refreshStages,
   runPipeline,
 } from './pipeline.ts'
 import { toLocalPath } from './scanner.ts'
-import * as stage from './stages.ts'
 
 const logger = createLogger('orchestrator')
 
@@ -178,6 +181,128 @@ export async function scanLibrary(
   logger.log(`Scan finished: "${library.name}"`, {
     ...summary,
     duration: Date.now() - scanStart,
+  })
+
+  return summary
+}
+
+/**
+ * Re-run metadata plugins against already-persisted media items — the whole
+ * library, or a single item when mediaItemId is given. Unlike a scan, this
+ * never touches the filesystem: jobs are built from stored rows and only the
+ * metadata/persist/person stages run.
+ */
+export async function refreshMetadata(
+  db: LibSQLDatabase,
+  libraryId: string,
+  mediaItemId?: string,
+  onProgress?: (progress: ScanProgress) => void,
+): Promise<ScanSummary> {
+  const refreshStart = Date.now()
+  const library = await libraryService.getLibraryById(db, libraryId)
+
+  if (!library) {
+    throw new Error(`Library not found: ${libraryId}`)
+  }
+
+  const items = await db
+    .select()
+    .from(mediaItems)
+    .where(
+      mediaItemId
+        ? and(
+            eq(mediaItems.libraryId, libraryId),
+            eq(mediaItems.id, mediaItemId),
+          )
+        : eq(mediaItems.libraryId, libraryId),
+    )
+
+  if (mediaItemId && items.length === 0) {
+    throw new Error(`Media item not found: ${mediaItemId}`)
+  }
+
+  const localSourcePaths = library.dataSources
+    .filter((ds) => ds.type === DataSourceType.local)
+    .map((ds) => toLocalPath(ds.path))
+
+  const jobs: MediaJob[] = items.map((item) => {
+    const file: FileEntry = {
+      id: item.filePath,
+      path: item.filePath,
+      name: basename(item.filePath),
+      size: item.fileSize,
+      createdAt: item.createdAt,
+      modifiedAt: item.updatedAt ?? item.createdAt,
+      ext: extname(item.filePath).toLowerCase(),
+      mediaType: item.mediaType,
+    }
+
+    // Seed existing match ids so plugins can do exact lookups (e.g. OMDb by
+    // IMDb id) instead of title searches, even when an earlier plugin misses.
+    const seed: Record<string, unknown> = {}
+    if (item.metadata.tmdbId != null) seed.tmdbId = item.metadata.tmdbId
+    if (item.metadata.imdbId != null) seed.imdbId = item.metadata.imdbId
+
+    return {
+      id: crypto.randomUUID(),
+      type: 'refresh',
+      file,
+      errors: [],
+      libraryId,
+      libraryType: library.type,
+      dataSourcePath:
+        localSourcePaths.find((p) => item.filePath.startsWith(p)) ?? '',
+      mediaTypes: [],
+      data: {
+        id: item.id,
+        title: item.title,
+        fileMetadata: item.fileMetadata,
+        metadata: seed,
+      },
+    }
+  })
+
+  const totalFiles = jobs.length
+
+  onProgress?.({
+    dataSourceId: libraryId,
+    phase: 'processing',
+    discoveredFiles: totalFiles,
+    totalFiles,
+    processedFiles: 0,
+    currentFile: null,
+    message: `Refreshing metadata for ${totalFiles} item${totalFiles === 1 ? '' : 's'} in ${library.name}`,
+  })
+
+  const ctx: PipelineContext = { db, libraryId, logger }
+
+  if (onProgress) {
+    ctx.onJobComplete = (processed, currentFile) => {
+      onProgress({
+        dataSourceId: libraryId,
+        phase: 'processing',
+        discoveredFiles: totalFiles,
+        totalFiles,
+        processedFiles: processed,
+        currentFile,
+        message: `Refreshing metadata ${processed}/${totalFiles}: ${basename(currentFile)}`,
+      })
+    }
+  }
+
+  await runPipeline(ctx, jobs, refreshStages)
+
+  const summary: ScanSummary = {
+    libraryId,
+    newItems: 0,
+    updatedItems: totalFiles,
+    removedItems: 0,
+    totalDiscovered: totalFiles,
+  }
+
+  logger.log(`Metadata refresh finished: "${library.name}"`, {
+    ...summary,
+    duration: Date.now() - refreshStart,
   })
 
   return summary

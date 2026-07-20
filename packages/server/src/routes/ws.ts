@@ -33,21 +33,16 @@ export function createWsServer(): {
 } {
   const wss = new WebSocketServer({ noServer: true })
 
-  wss.on(
-    'connection',
-    (ws: WebSocket, _req: IncomingMessage, isAdmin = false) => {
-      const listener = (event: XonEvent) => {
-        if (ws.readyState !== ws.OPEN) return
-        // Server log output may contain sensitive paths/data — admins only.
-        if (event.type === 'log:line' && !isAdmin) return
-        ws.send(JSON.stringify(event))
-      }
-      eventBus.on('event', listener)
-      ws.on('close', () => {
-        eventBus.off('event', listener)
-      })
-    },
-  )
+  wss.on('connection', (ws: WebSocket) => {
+    const listener = (event: XonEvent) => {
+      if (ws.readyState !== ws.OPEN) return
+      ws.send(JSON.stringify(event))
+    }
+    eventBus.on('event', listener)
+    ws.on('close', () => {
+      eventBus.off('event', listener)
+    })
+  })
 
   function handleUpgrade(
     req: IncomingMessage,
@@ -65,9 +60,8 @@ export function createWsServer(): {
           socket.destroy()
           return
         }
-        const isAdmin = session.user.role === 'admin'
         wss.handleUpgrade(req, socket, head, (ws) => {
-          wss.emit('connection', ws, req, isAdmin)
+          wss.emit('connection', ws, req)
         })
       })
   }

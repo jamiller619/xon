@@ -54,13 +54,12 @@ export default function Login() {
 //       }
 
 //       const body = (await res.json()) as { accessToken: string }
-//       // Decode username and role from the JWT payload (no library needed — just base64)
+//       // Decode username from the JWT payload (no library needed — just base64)
 //       const [, payloadB64] = body.accessToken.split('.')
 //       const payload = JSON.parse(atob(payloadB64 ?? '')) as {
 //         username: string
-//         role: string
 //       }
-//       setAuth(body.accessToken, payload.username, payload.role)
+//       setAuth(body.accessToken, payload.username)
 //       navigate('/', { replace: true })
 //     } catch {
 //       setError('Network error — please try again')
