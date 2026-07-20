@@ -5,8 +5,10 @@ import { Hono } from 'hono'
 import { createApp } from './app.ts'
 import db, { client } from './db/db.ts'
 import { migrateDatabase } from './db/migrate.ts'
+import { eventBus, type XonEvent } from './events.ts'
 import { makeStaticMiddleware } from './http/staticFiles.ts'
 import { closeLogger, createLogger, initLogger, setLogLevel } from './logger.ts'
+import { rebuildThumbnail } from './services/libraryThumbnailService.ts'
 
 const logger = createLogger('server')
 
@@ -61,6 +63,14 @@ export async function boot(): Promise<void> {
     await migrateDatabase(db)
 
     logger.log('Migrations complete')
+
+    // Regenerate a library's cached thumbnail once its posters have changed,
+    // instead of rebuilding on every dashboard request.
+    eventBus.on('event', (event: XonEvent) => {
+      if (event.type === 'scan:complete') {
+        void rebuildThumbnail(db, event.payload.libraryId)
+      }
+    })
 
     setPluginDatabase(client)
     logger.log('Plugin database configured')

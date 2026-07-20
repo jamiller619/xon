@@ -56,6 +56,7 @@ export default function RequireAuth({
 
   useEffect(() => {
     if (
+      areAnonLoginsEnabled === undefined ||
       !areAnonLoginsEnabled ||
       hasAttemptedSignIn.current ||
       isPending ||
@@ -69,6 +70,9 @@ export default function RequireAuth({
   }, [areAnonLoginsEnabled, data, isPending, isRefetching, loginAnonymously])
 
   useEffect(() => {
+    // Config hasn't resolved yet — don't redirect to /login until we know
+    // whether anonymous logins are enabled
+    if (areAnonLoginsEnabled === undefined) return
     if (isPending || isRefetching || isLoading) return
 
     const isAuthenticated = !!(!sessionError && data?.user)
@@ -90,7 +94,13 @@ export default function RequireAuth({
     navigate,
   ])
 
-  if (data?.user == null && (isLoading || isPending || isRefetching))
+  if (
+    data?.user == null &&
+    (areAnonLoginsEnabled === undefined ||
+      isLoading ||
+      isPending ||
+      isRefetching)
+  )
     return <p>Loading...</p>
   if (error || sessionError) return <p>{error ?? sessionError?.message}</p>
 

@@ -1,7 +1,7 @@
 {
   "version": "6",
   "dialect": "sqlite",
-  "id": "547cea54-6b30-4dd0-b495-245998778ac8",
+  "id": "3dafc251-20e8-45b5-8994-78b20f6a9639",
   "prevId": "00000000-0000-0000-0000-000000000000",
   "tables": {
     "accounts": {
@@ -286,14 +286,6 @@
           "notNull": false,
           "autoincrement": false,
           "default": false
-        },
-        "role": {
-          "name": "role",
-          "type": "text",
-          "primaryKey": false,
-          "notNull": true,
-          "autoincrement": false,
-          "default": "'user'"
         }
       },
       "indexes": {
@@ -761,6 +753,20 @@
           "name": "media_items_title_idx",
           "columns": [
             "title"
+          ],
+          "isUnique": false
+        },
+        "media_items_library_id_idx": {
+          "name": "media_items_library_id_idx",
+          "columns": [
+            "library_id"
+          ],
+          "isUnique": false
+        },
+        "media_items_created_at_idx": {
+          "name": "media_items_created_at_idx",
+          "columns": [
+            "created_at"
           ],
           "isUnique": false
         }

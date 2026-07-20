@@ -63,16 +63,22 @@ export default function Dashboard() {
                 className={styles.library}
               >
                 <Card.Thumb aspectRatio="4 / 3" className={styles.libraryThumb}>
-                  <span
-                    className={styles.libraryThumbnailBackdrop}
-                    style={{
-                      backgroundImage: `url(/api/libraries/${library.id}/thumbnail${
+                  <span className={styles.libraryThumbnailBackdrop}>
+                    <img
+                      src={`/api/libraries/${library.id}/thumbnail${
                         scanCompletedAt[library.id]
                           ? `?v=${scanCompletedAt[library.id]}`
                           : ''
-                      })`,
-                    }}
-                  />
+                      }`}
+                      alt=""
+                      loading="lazy"
+                      decoding="async"
+                      className={styles.libraryThumbnailImg}
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none'
+                      }}
+                    />
+                  </span>
                 </Card.Thumb>
                 <Card.Info>
                   <Card.Title>{library.name}</Card.Title>

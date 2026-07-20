@@ -3,6 +3,7 @@ import { readdir, readFile } from 'node:fs/promises'
 import { basename, dirname, extname, join } from 'node:path'
 import { Readable } from 'node:stream'
 import TmdbMetadataPlugin from '@xon/plugin-tmdb-metadata'
+import type { SortProps } from '@xon/shared'
 import { eq, inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
@@ -25,18 +26,38 @@ import * as mediaService from '../services/mediaService.ts'
 
 const tmdbPlugin = new TmdbMetadataPlugin()
 
+const mediaListQuerySchema = z.object({
+  sortBy: z
+    .enum(['createdAt', 'updatedAt', 'title', 'scannedAt', 'id'])
+    .optional(),
+  order: z.enum(['asc', 'desc']).optional().default('desc'),
+  page: z.coerce.number().int().min(1).optional().default(1),
+  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+})
+
 export function makeMediaRouter(db: LibSQLDatabase): Hono {
   const router = new Hono()
 
   // GET /media — list media items scoped to accessible libraries
-  router.get('/', async (c) => {
+  router.get('/', validate('query', mediaListQuerySchema), async (c) => {
     const user = c.get('user')
 
     if (!user) {
       return c.json({ error: 'Unauthorized' }, 401)
     }
 
-    const items = await mediaService.getMediaByUser(db, user.id)
+    const { sortBy, order, page, limit } = c.req.valid('query')
+    const pageProps = { pageNumber: page, pageSize: limit }
+    const sortProps: SortProps<MediaItem> | undefined = sortBy
+      ? { field: sortBy, order }
+      : undefined
+
+    const items = await mediaService.getMediaByUser(
+      db,
+      user.id,
+      pageProps,
+      sortProps,
+    )
 
     const etag = computeETag(items)
     if (c.req.header('If-None-Match') === etag) return c.body(null, 304)

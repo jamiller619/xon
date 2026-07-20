@@ -8,7 +8,7 @@ import { useScanStore } from '~/store/scanStore'
  * persists items in batches, so the UI can fill in while a scan runs without
  * refetching on every progress tick.
  */
-const REFRESH_THROTTLE_MS = 3000
+const REFRESH_THROTTLE_MS = 10000
 
 /**
  * Opens the shared event-stream connection, routes scan lifecycle events into

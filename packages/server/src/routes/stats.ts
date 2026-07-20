@@ -2,10 +2,40 @@ import { availableParallelism } from 'node:os'
 import type { StatsPayload } from '@xon/shared'
 import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
-import si from 'systeminformation'
+import si, { type Systeminformation } from 'systeminformation'
+
+const DISK_REFRESH_MS = 30_000
 
 export function makeStatsRouter(): Hono {
   const router = new Hono()
+
+  // os/system info never changes for the life of the process — collect once
+  // and share across every connection instead of re-collecting every tick.
+  const staticInfoPromise: Promise<
+    [Systeminformation.OsData, Systeminformation.SystemData]
+  > = Promise.all([si.osInfo(), si.system()])
+
+  // si.fsSize() spawns `df` — expensive enough that per-second polling isn't
+  // worth it. Cache it and dedupe concurrent refreshes across connections.
+  let diskCache: Systeminformation.FsSizeData[] = []
+  let diskFetchedAt = 0
+  let diskInFlight: Promise<Systeminformation.FsSizeData[]> | null = null
+
+  async function getDisk(): Promise<Systeminformation.FsSizeData[]> {
+    if (Date.now() - diskFetchedAt < DISK_REFRESH_MS) return diskCache
+
+    diskInFlight ??= si.fsSize().finally(() => {
+      diskInFlight = null
+    })
+
+    diskCache = await diskInFlight
+    diskFetchedAt = Date.now()
+    return diskCache
+  }
+
+  // Pre-warm both so the very first client connection doesn't pay for them.
+  void staticInfoPromise
+  void getDisk()
 
   router.get('/', async (c) => {
     return streamSSE(c, async (stream) => {
@@ -13,13 +43,13 @@ export function makeStatsRouter(): Hono {
       let prevCPUUsage = process.cpuUsage()
       let prevTime = process.hrtime.bigint()
 
+      const [os, sys] = await staticInfoPromise
+
       while (true) {
-        const [cpu, mem, disk, os, sys] = await Promise.all([
+        const [cpu, mem, disk] = await Promise.all([
           si.currentLoad(),
           si.mem(),
-          si.fsSize(),
-          si.osInfo(),
-          si.system(),
+          getDisk(),
         ])
 
         const cpuUsage = process.cpuUsage()

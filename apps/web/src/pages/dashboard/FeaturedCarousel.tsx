@@ -41,6 +41,24 @@ export default function FeaturedCarousel({ items }: FeaturedCarouselProps) {
   // Times each item has been shown; picks which of its backdrops to use so
   // repeat appearances cycle through them
   const [appearances, setAppearances] = useState<Record<string, number>>({})
+  // Fade keeps every slide mounted, so <img loading="lazy"> can't help — the
+  // browser treats them all as visible. Instead only fetch the current and
+  // next slide's backdrop, plus whatever has already loaded, so a cold
+  // dashboard load doesn't fetch every featured item's artwork up front.
+  const [loadedIndexes, setLoadedIndexes] = useState<Set<number>>(
+    () => new Set([0]),
+  )
+
+  useEffect(() => {
+    if (!items || items.length === 0) return
+
+    const nextIndex = (selectedIndex + 1) % items.length
+
+    setLoadedIndexes((prev) => {
+      if (prev.has(selectedIndex) && prev.has(nextIndex)) return prev
+      return new Set(prev).add(selectedIndex).add(nextIndex)
+    })
+  }, [selectedIndex, items])
 
   useEffect(() => {
     if (!emblaApi) return
@@ -88,7 +106,7 @@ export default function FeaturedCarousel({ items }: FeaturedCarouselProps) {
       onMouseLeave={() => setCycleKey((key) => key + 1)}
     >
       <div className={styles.container}>
-        {items.map((item) => {
+        {items.map((item, index) => {
           const backdrop = backdropUrl(item, appearances[item.id] ?? 0)
 
           return (
@@ -98,8 +116,14 @@ export default function FeaturedCarousel({ items }: FeaturedCarouselProps) {
               state={item}
               className={styles.slide}
             >
-              {backdrop && (
-                <img src={backdrop} alt="" className={styles.backdrop} />
+              {backdrop && loadedIndexes.has(index) && (
+                <img
+                  src={backdrop}
+                  alt=""
+                  className={styles.backdrop}
+                  decoding="async"
+                  {...(index === 0 ? { fetchPriority: 'high' } : {})}
+                />
               )}
               <span className={styles.scrim} />
               <div className={styles.info}>

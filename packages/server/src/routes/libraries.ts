@@ -1,3 +1,4 @@
+import { readFile } from 'node:fs/promises'
 import { DataSourceType, type Library, LibraryType } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
@@ -8,7 +9,7 @@ import type { MediaItem } from '../db/schema.ts'
 import { validate } from '../http/validate.ts'
 import type { ScannerHandle } from '../scanner/scannerHandle.ts'
 import * as libraryService from '../services/libraryService.ts'
-import { makeLibraryThumbnailRouter } from './libraryThumbnail.ts'
+import { getOrBuildThumbnail } from '../services/libraryThumbnailService.ts'
 import { makeScanRouter, triggerLibraryScan } from './scan.ts'
 
 const LIBRARIES_ALL_KEY = 'libraries:all'
@@ -202,7 +203,30 @@ export function makeLibrariesRouter(
       },
     )
 
-    .route('/', makeLibraryThumbnailRouter(db))
+    // GET /libraries/:id/thumbnail — cached poster-grid thumbnail, built on
+    // first request and regenerated when the library's scan completes
+    .get('/:id/thumbnail', async (c) => {
+      const id = c.req.param('id')
+
+      const library = await libraryService.getLibraryById(db, id)
+      if (!library) return c.json({ error: 'Not found' }, 404)
+
+      const thumbnail = await getOrBuildThumbnail(db, id)
+      if (!thumbnail) {
+        return c.json({ error: 'No posters available for this library' }, 404)
+      }
+
+      const etag = `"${Math.trunc(thumbnail.mtimeMs)}"`
+      if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
+
+      const buffer = await readFile(thumbnail.path)
+
+      return c.body(new Uint8Array(buffer), 200, {
+        'Content-Type': 'image/png',
+        'Cache-Control': 'public, max-age=86400',
+        ETag: etag,
+      })
+    })
     // .route('/:libraryId/sources', makeSourcesRouter(db))
     .route('/:libraryId/scan', makeScanRouter(db, scannerHandle))
 

@@ -38,8 +38,7 @@ CREATE TABLE `users` (
 	`image` text,
 	`created_at` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL,
 	`updated_at` integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL,
-	`is_anonymous` integer DEFAULT false,
-	`role` text DEFAULT 'user' NOT NULL
+	`is_anonymous` integer DEFAULT false
 );
 --> statement-breakpoint
 CREATE UNIQUE INDEX `users_email_unique` ON `users` (`email`);--> statement-breakpoint
@@ -112,6 +111,8 @@ CREATE TABLE `media_items` (
 CREATE INDEX `media_items_media_type_idx` ON `media_items` (`media_type`);--> statement-breakpoint
 CREATE INDEX `media_items_file_path_idx` ON `media_items` (`file_path`);--> statement-breakpoint
 CREATE INDEX `media_items_title_idx` ON `media_items` (`title`);--> statement-breakpoint
+CREATE INDEX `media_items_library_id_idx` ON `media_items` (`library_id`);--> statement-breakpoint
+CREATE INDEX `media_items_created_at_idx` ON `media_items` (`created_at`);--> statement-breakpoint
 CREATE TABLE `people` (
 	`id` text PRIMARY KEY NOT NULL,
 	`name` text NOT NULL,
@@ -131,4 +132,8 @@ CREATE TABLE `people_media` (
 	FOREIGN KEY (`media_id`) REFERENCES `media_items`(`id`) ON UPDATE no action ON DELETE cascade
 );
 --> statement-breakpoint
-CREATE UNIQUE INDEX `people_media_person_media_role_idx` ON `people_media` (`person_id`,`media_id`,`role`);
+CREATE UNIQUE INDEX `people_media_person_media_role_idx` ON `people_media` (`person_id`,`media_id`,`role`);--> statement-breakpoint
+-- Hand-written: Drizzle's schema builder can't express SQLite expression
+-- indexes, so this backs getFeaturedMedia() (mediaService.ts) but isn't
+-- modeled in schema/media.ts and won't be touched by a future db:generate.
+CREATE INDEX `media_items_featured_idx` ON `media_items` (json_extract(`metadata`, '$.voteAverage')) WHERE json_extract(`metadata`, '$.images.backdrop') IS NOT NULL;
