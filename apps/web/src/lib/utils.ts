@@ -1,19 +1,18 @@
 import type { MediaItem } from '@xon/shared'
 
 export function formatYear(data: MediaItem): string | undefined {
-  if ('releaseDate' in data.metadata) {
-    if (data.metadata.releaseDate.length > 4) {
-      return new Date(data.metadata.releaseDate).getFullYear().toString()
-    }
+  const releaseDate = data.metadata.releaseDate
+  if (typeof releaseDate !== 'string' || !releaseDate) return
+  if (releaseDate.length <= 4) return releaseDate
 
-    return data.metadata.releaseDate
-  }
+  const year = new Date(releaseDate).getFullYear()
+  return Number.isNaN(year) ? undefined : String(year)
 }
 
 export function formatDuration(data?: MediaItem): string | undefined {
   const value = data?.fileMetadata.duration
 
-  if (!value) return
+  if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return
 
   const totalSeconds = Math.round(value)
   const hours = Math.floor(totalSeconds / 3600)
@@ -30,10 +29,20 @@ export function formatDuration(data?: MediaItem): string | undefined {
 export function formatBytes(data?: MediaItem): string | undefined {
   const bytes = data?.fileSize
 
-  if (bytes == null) return
+  if (bytes == null || !Number.isFinite(bytes) || bytes < 0) return
   if (bytes < 1024) return `${bytes} B`
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
   if (bytes < 1024 * 1024 * 1024)
     return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
+}
+
+export function mediaPath(item: Pick<MediaItem, 'id' | 'title'>): string {
+  const slug = item.title
+    .trim()
+    .toLowerCase()
+    .replaceAll(/[^a-z0-9]+/g, '-')
+    .replaceAll(/^-|-$/g, '')
+
+  return `/media/${encodeURIComponent(slug || 'media')}/${item.id}`
 }

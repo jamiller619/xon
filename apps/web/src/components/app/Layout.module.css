@@ -52,19 +52,21 @@
 }
 
 .main {
+  display: flex;
+  flex-direction: column;
   flex: 1;
   /* Without this, wide content (e.g. the featured carousel's slide row)
      sets the flex item's minimum width and pushes the page past the
      viewport */
   min-width: 0;
-  /* display: flex;
-  flex-direction: column; */
+  min-height: 0;
   /* margin-left: var(--sidebar-width); */
-  /* overflow: hidden; */
+  overflow: hidden;
 }
 
 .content {
   flex: 1;
+  min-height: 0;
 }
 
 .contentWithPlayer {

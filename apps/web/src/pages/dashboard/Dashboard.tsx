@@ -59,7 +59,7 @@ export default function Dashboard() {
               <Card
                 as={Link}
                 key={library.id}
-                to={`/library/${library.id}`}
+                to={`/libraries/${library.id}`}
                 className={styles.library}
               >
                 <Card.Thumb aspectRatio="4 / 3" className={styles.libraryThumb}>

@@ -14,6 +14,7 @@ import clsx from 'clsx'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiFetch, thumbnailUrl } from '~/lib/apiFetch'
+import { mediaPath } from '~/lib/utils'
 import { useAudioStore } from '~/store/audioStore'
 import EditImages from '../EditImages'
 import ListView from './ListView'
@@ -43,7 +44,7 @@ export default function MediaCard({
   const [editImagesOpen, setEditImagesOpen] = useState(false)
   const isAudio = item.mediaType?.startsWith('audio/') ?? false
   const posterSrc = thumbnailUrl(item, 'medium')
-  const link = `/media/${encodeURIComponent(item.title.toLowerCase().replaceAll(' ', '-'))}/${item.id}`
+  const link = mediaPath(item)
 
   function handlePlay(e: React.MouseEvent) {
     e.preventDefault()
@@ -75,11 +76,8 @@ export default function MediaCard({
     return (
       <ListView
         item={item}
-        selectMode={selectMode}
         handleAddToQueue={handleAddToQueue}
         handlePlay={handlePlay}
-        onToggleSelect={onToggleSelect}
-        selected={selected}
       />
     )
   }

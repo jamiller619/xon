@@ -555,25 +555,37 @@ const OPENAPI_SPEC = {
             required: true,
             schema: { type: 'string' },
           },
-          { name: 'mediaCategory', in: 'query', schema: { type: 'string' } },
-          { name: 'mimeType', in: 'query', schema: { type: 'string' } },
           {
-            name: 'drmProtected',
+            name: 'mediaType',
             in: 'query',
-            schema: { type: 'string', enum: ['true', 'false'] },
+            schema: {
+              type: 'string',
+              enum: [
+                'video',
+                'audio',
+                'image',
+                'application',
+                'text',
+                'font',
+                'model',
+                'message',
+                'multipart',
+              ],
+            },
           },
           {
             name: 'sortBy',
             in: 'query',
             schema: {
               type: 'string',
-              enum: ['title', 'fileSize', 'releaseDate', 'rating', 'createdAt'],
+              enum: ['title', 'fileSize', 'createdAt'],
+              default: 'createdAt',
             },
           },
           {
             name: 'order',
             in: 'query',
-            schema: { type: 'string', enum: ['asc', 'desc'] },
+            schema: { type: 'string', enum: ['asc', 'desc'], default: 'desc' },
           },
           {
             name: 'page',

@@ -13,7 +13,7 @@ export default function Layout() {
   const setSidebarOpen = useAppStore((s) => s.setSidebarOpen)
 
   return (
-    <Flex>
+    <Flex className={styles.shell}>
       <Sidebar
         className={clsx(styles.sidebar, sidebarOpen && styles.open)}
         isOpen={sidebarOpen}

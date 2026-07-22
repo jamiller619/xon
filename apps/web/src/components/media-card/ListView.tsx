@@ -2,16 +2,13 @@ import type { MediaItem } from '@xon/shared'
 import { Badge } from '@xon/ui'
 import { Link } from 'react-router-dom'
 import { thumbnailUrl } from '~/lib/apiFetch'
-import { formatBytes, formatDuration, formatYear } from '~/lib/utils'
+import { formatBytes, formatDuration, formatYear, mediaPath } from '~/lib/utils'
 import styles from './MediaCard.module.css'
 
 type ListViewProps = {
   item: MediaItem
   handlePlay: (e: React.MouseEvent) => void
   handleAddToQueue: (e: React.MouseEvent) => void
-  selectMode?: boolean | undefined
-  selected?: boolean | undefined
-  onToggleSelect?: ((id: string) => void) | undefined
 }
 
 export default function ListView({
@@ -21,12 +18,13 @@ export default function ListView({
 }: ListViewProps) {
   const isAudio = item.mediaType?.startsWith('audio/') ?? false
   const posterSrc = thumbnailUrl(item, 'small')
+  const link = mediaPath(item)
 
   return (
-    <tr className={`${styles.listRow}`}>
+    <tr>
       <td className={styles.listThumbCell}>
         <Link
-          to={`/media/${item.id}`}
+          to={link}
           className={`${styles.listThumbLink} ${item.drmProtected ? styles.listThumbDrm : ''}`}
         >
           {posterSrc ? (
@@ -45,7 +43,7 @@ export default function ListView({
         </Link>
       </td>
       <td className={styles.listTitleCell}>
-        <Link to={`/media/${item.id}`} className={styles.listTitle}>
+        <Link to={link} className={styles.listTitle}>
           {item.title}
         </Link>
         {item.mediaType && (
@@ -60,25 +58,30 @@ export default function ListView({
       <td className={styles.listCell}>
         {new Date(item.createdAt).toLocaleString()}
       </td>
-      {isAudio && (
-        <td className={styles.listCell}>
-          <button
-            type="button"
-            className={styles.listPlayBtn}
-            onClick={handlePlay}
-          >
-            ▶
-          </button>
-          <button
-            type="button"
-            className={styles.listQueueBtn}
-            onClick={handleAddToQueue}
-            title="Add to queue"
-          >
-            +
-          </button>
-        </td>
-      )}
+      <td className={styles.listActionsCell}>
+        {isAudio && (
+          <>
+            <button
+              type="button"
+              className={styles.listPlayBtn}
+              onClick={handlePlay}
+              aria-label={`Play ${item.title}`}
+              title="Play"
+            >
+              ▶
+            </button>
+            <button
+              type="button"
+              className={styles.listQueueBtn}
+              onClick={handleAddToQueue}
+              aria-label={`Add ${item.title} to queue`}
+              title="Add to queue"
+            >
+              +
+            </button>
+          </>
+        )}
+      </td>
     </tr>
   )
 }

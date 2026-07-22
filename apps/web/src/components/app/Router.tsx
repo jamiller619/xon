@@ -58,7 +58,7 @@ export default function Router() {
         }
       >
         <Route path="/" element={<Dashboard />} />
-        <Route path="/library/:id" element={<LibraryBrowser />} />
+        <Route path="/libraries/:id" element={<LibraryBrowser />} />
         <Route path="/media/:title/:id" element={<Media />} />
         <Route path="/groups/:id" element={<GroupDetail />} />
         <Route path="/search" element={<Search />} />

@@ -1,11 +1,15 @@
 import { readFile } from 'node:fs/promises'
-import { DataSourceType, type Library, LibraryType } from '@xon/shared'
+import {
+  DataSourceType,
+  type Library,
+  LibraryType,
+  MediaType,
+} from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { requireAuth } from '../auth/middleware.ts'
 import { appCache, computeETag } from '../cache.ts'
-import type { MediaItem } from '../db/schema.ts'
 import { validate } from '../http/validate.ts'
 import type { ScannerHandle } from '../scanner/scannerHandle.ts'
 import * as libraryService from '../services/libraryService.ts'
@@ -15,11 +19,9 @@ import { makeScanRouter, triggerLibraryScan } from './scan.ts'
 const LIBRARIES_ALL_KEY = 'libraries:all'
 
 const libraryMediaQuerySchema = z.object({
-  types: z.array(z.enum(LibraryType)).optional(),
-  sortBy: z
-    .enum(['title', 'fileSize', 'releaseDate', 'rating', 'createdAt'])
-    .optional(),
-  order: z.enum(['asc', 'desc']),
+  mediaType: z.enum(MediaType.MainType).optional(),
+  sortBy: z.enum(['title', 'fileSize', 'createdAt']).default('createdAt'),
+  order: z.enum(['asc', 'desc']).default('desc'),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 })
@@ -171,14 +173,17 @@ export function makeLibrariesRouter(
           return c.json({ error: 'Not authenticated' }, 401)
         }
 
-        const { sortBy, order, page, limit } = c.req.valid('query')
+        const { mediaType, sortBy, order, page, limit } = c.req.valid('query')
+        const library = await libraryService.getLibraryById(db, libraryId)
+
+        if (!library) return c.json({ error: 'Not found' }, 404)
         const pageProps = {
           pageNumber: page,
           pageSize: limit,
         }
 
         const sortProps = {
-          field: sortBy as keyof MediaItem,
+          field: sortBy,
           order,
         }
 
@@ -187,6 +192,7 @@ export function makeLibrariesRouter(
           libraryId,
           pageProps,
           sortProps,
+          mediaType,
         )
 
         c.header('X-Total-Count', String(results.total))

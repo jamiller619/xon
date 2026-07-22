@@ -5,9 +5,3 @@ export type ViewProps = {
   items: MediaItem[]
   pageSize: number
 }
-
-export type ActiveFilter = {
-  key: string
-  label: string
-  onRemove: () => void
-}

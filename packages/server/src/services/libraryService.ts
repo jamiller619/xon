@@ -7,6 +7,11 @@ import { createLogger } from '../logger.ts'
 
 const logger = createLogger('library-service')
 
+type LibraryMediaSortFields = Pick<
+  MediaItem,
+  'title' | 'fileSize' | 'createdAt'
+>
+
 export async function createLibrary(
   db: LibSQLDatabase,
   data: typeof libraries.$inferInsert,
@@ -61,25 +66,33 @@ export async function getMediaByLibraryId(
   db: LibSQLDatabase,
   id: string,
   pageProps?: PageProps,
-  sortProps?: SortProps<MediaItem>,
+  sortProps?: SortProps<LibraryMediaSortFields>,
+  mediaType?: MediaType.MainType,
 ) {
   const sortDir = sortProps?.order === 'asc' ? asc : desc
   const pageSize = pageProps?.pageSize ?? 10
   const pageNumber = pageProps?.pageNumber ?? 1
-  const offset = pageNumber - 1 * pageSize
+  const offset = (pageNumber - 1) * pageSize
+  const filters = and(
+    eq(mediaItems.libraryId, id),
+    mediaType ? like(mediaItems.mediaType, `${mediaType}/%`) : undefined,
+  )
 
   const results = await db
     .select()
     .from(mediaItems)
-    .where(eq(mediaItems.libraryId, id))
-    .orderBy(sortDir(mediaItems[sortProps?.field ?? 'id']))
+    .where(filters)
+    .orderBy(
+      sortDir(mediaItems[sortProps?.field ?? 'createdAt']),
+      asc(mediaItems.id),
+    )
     .limit(pageSize)
     .offset(offset)
 
   const total = await db
     .select({ count: count() })
     .from(mediaItems)
-    .where(eq(mediaItems.libraryId, id))
+    .where(filters)
 
   return {
     data: results,
