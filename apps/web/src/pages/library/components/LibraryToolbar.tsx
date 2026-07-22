@@ -3,7 +3,13 @@ import {
   ListRegular as ListIcon,
 } from '@fluentui/react-icons'
 import { MediaType } from '@xon/shared'
-import { Label, Select, ToggleButton, ToggleButtonGroup } from '@xon/ui'
+import {
+  Checkbox,
+  Label,
+  Select,
+  ToggleButton,
+  ToggleButtonGroup,
+} from '@xon/ui'
 import styles from '../Library.module.css'
 import { makeSortKey, SORT_OPTIONS } from './libraryControls'
 
@@ -26,18 +32,22 @@ type LibraryToolbarProps = {
   viewMode: ViewMode
   currentSortKey: string
   mediaType: string
+  unmatchedOnly: boolean
   onViewModeChange: (viewMode: ViewMode) => void
   onSortOptionChange: (sortKey: string) => void
   onMediaTypeChange: (mediaType: string) => void
+  onUnmatchedOnlyChange: (unmatchedOnly: boolean) => void
 }
 
 export default function LibraryToolbar({
   viewMode,
   currentSortKey,
   mediaType,
+  unmatchedOnly,
   onViewModeChange,
   onSortOptionChange,
   onMediaTypeChange,
+  onUnmatchedOnlyChange,
 }: LibraryToolbarProps) {
   return (
     <div className={styles.toolbar}>
@@ -58,6 +68,13 @@ export default function LibraryToolbar({
             ))}
           </Select>
         </Label>
+
+        <Checkbox
+          className={styles.unmatchedFilter}
+          label="Unmatched titles"
+          checked={unmatchedOnly}
+          onChange={onUnmatchedOnlyChange}
+        />
 
         <Label size="small">
           Sort

@@ -13,6 +13,7 @@ type LibraryMediaOptions = {
   sortCol: SortColumn
   sortDir: SortDir
   mediaType: string
+  unmatchedOnly: boolean
 }
 
 type LibraryMediaResult = {
@@ -21,12 +22,12 @@ type LibraryMediaResult = {
 }
 
 export function useLibraryMedia(options: LibraryMediaOptions) {
-  const { libraryId, sortCol, sortDir, mediaType } = options
+  const { libraryId, sortCol, sortDir, mediaType, unmatchedOnly } = options
   const queryClient = useQueryClient()
   const queryKey = [
     'library-media',
     libraryId,
-    { sortCol, sortDir, mediaType },
+    { sortCol, sortDir, mediaType, unmatchedOnly },
   ] as const
 
   const query = useInfiniteQuery({
@@ -41,6 +42,7 @@ export function useLibraryMedia(options: LibraryMediaOptions) {
         page: String(pageParam),
       })
       if (mediaType) params.set('mediaType', mediaType)
+      if (unmatchedOnly) params.set('unmatched', 'true')
 
       const response = await apiFetch(
         `/api/libraries/${libraryId}/media?${params.toString()}`,

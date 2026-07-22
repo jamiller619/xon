@@ -30,6 +30,7 @@ export default function LibraryBrowser() {
     sortCol: controls.sortCol,
     sortDir: controls.sortDir,
     mediaType: controls.mediaType,
+    unmatchedOnly: controls.unmatchedOnly,
   })
   const items = mediaQuery.data?.pages.flatMap((page) => page.items) ?? []
   const viewProps = {
@@ -38,7 +39,7 @@ export default function LibraryBrowser() {
     hasNextPage: mediaQuery.hasNextPage,
     isFetchingNextPage: mediaQuery.isFetchingNextPage,
     onLoadMore: () => void mediaQuery.fetchNextPage(),
-    resetKey: `${controls.sortCol}:${controls.sortDir}:${controls.mediaType}`,
+    resetKey: `${controls.sortCol}:${controls.sortDir}:${controls.mediaType}:${controls.unmatchedOnly}`,
   }
 
   if (mediaQuery.error || libraryError) {
@@ -60,9 +61,11 @@ export default function LibraryBrowser() {
           viewMode={viewMode}
           currentSortKey={controls.currentSortKey}
           mediaType={controls.mediaType}
+          unmatchedOnly={controls.unmatchedOnly}
           onViewModeChange={setViewMode}
           onSortOptionChange={controls.handleSortOption}
           onMediaTypeChange={controls.setMediaType}
+          onUnmatchedOnlyChange={controls.setUnmatchedOnly}
         />
       </header>
 

@@ -1,6 +1,6 @@
 import crypto from 'node:crypto'
 import type { Library, MediaType, PageProps, SortProps } from '@xon/shared'
-import { and, asc, count, desc, eq, like } from 'drizzle-orm'
+import { and, asc, count, desc, eq, isNull, like } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { libraries, type MediaItem, mediaItems } from '../db/schema.ts'
 import { createLogger } from '../logger.ts'
@@ -68,6 +68,7 @@ export async function getMediaByLibraryId(
   pageProps?: PageProps,
   sortProps?: SortProps<LibraryMediaSortFields>,
   mediaType?: MediaType.MainType,
+  unmatchedOnly = false,
 ) {
   const sortDir = sortProps?.order === 'asc' ? asc : desc
   const pageSize = pageProps?.pageSize ?? 10
@@ -76,6 +77,7 @@ export async function getMediaByLibraryId(
   const filters = and(
     eq(mediaItems.libraryId, id),
     mediaType ? like(mediaItems.mediaType, `${mediaType}/%`) : undefined,
+    unmatchedOnly ? isNull(mediaItems.matchId) : undefined,
   )
 
   const results = await db

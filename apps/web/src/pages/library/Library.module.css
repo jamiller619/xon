@@ -56,6 +56,13 @@
   min-width: 9rem;
 }
 
+.unmatchedFilter {
+  min-height: 2rem;
+  flex-direction: row;
+  align-items: center;
+  font-size: var(--text-sm);
+}
+
 .filterChip {
   display: inline-flex;
   align-items: center;

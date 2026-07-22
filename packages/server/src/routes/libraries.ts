@@ -20,6 +20,7 @@ const LIBRARIES_ALL_KEY = 'libraries:all'
 
 const libraryMediaQuerySchema = z.object({
   mediaType: z.enum(MediaType.MainType).optional(),
+  unmatched: z.stringbool().optional().default(false),
   sortBy: z.enum(['title', 'fileSize', 'createdAt']).default('createdAt'),
   order: z.enum(['asc', 'desc']).default('desc'),
   page: z.coerce.number().int().min(1).optional().default(1),
@@ -173,7 +174,8 @@ export function makeLibrariesRouter(
           return c.json({ error: 'Not authenticated' }, 401)
         }
 
-        const { mediaType, sortBy, order, page, limit } = c.req.valid('query')
+        const { mediaType, unmatched, sortBy, order, page, limit } =
+          c.req.valid('query')
         const library = await libraryService.getLibraryById(db, libraryId)
 
         if (!library) return c.json({ error: 'Not found' }, 404)
@@ -193,6 +195,7 @@ export function makeLibrariesRouter(
           pageProps,
           sortProps,
           mediaType,
+          unmatched,
         )
 
         c.header('X-Total-Count', String(results.total))

@@ -36,7 +36,15 @@ describe('libraryService.getMediaByLibraryId', () => {
     await db
       .insert(mediaItems)
       .values([
-        makeMedia('video-1', 'library-1', 'Bravo', 'video/mp4', 200, now),
+        makeMedia(
+          'video-1',
+          'library-1',
+          'Bravo',
+          'video/mp4',
+          200,
+          now,
+          'tmdb-1',
+        ),
         makeMedia('audio-1', 'library-1', 'Alpha', 'audio/mpeg', 100, now),
         makeMedia('video-2', 'library-1', 'Charlie', 'video/mp4', 300, now),
         makeMedia('other-1', 'library-2', 'Other', 'video/mp4', 400, now),
@@ -69,6 +77,20 @@ describe('libraryService.getMediaByLibraryId', () => {
     expect(result.data.map((item) => item.id)).toEqual(['video-2', 'video-1'])
     expect(result.total).toBe(2)
   })
+
+  it('filters unmatched rows using a null match id', async () => {
+    const result = await getMediaByLibraryId(
+      db,
+      'library-1',
+      { pageNumber: 1, pageSize: 10 },
+      { field: 'title', order: 'asc' },
+      undefined,
+      true,
+    )
+
+    expect(result.data.map((item) => item.id)).toEqual(['audio-1', 'video-2'])
+    expect(result.total).toBe(2)
+  })
 })
 
 function makeMedia(
@@ -78,6 +100,7 @@ function makeMedia(
   mediaType: string,
   fileSize: number,
   createdAt: Date,
+  matchId: string | null = null,
 ) {
   return {
     id,
@@ -90,5 +113,6 @@ function makeMedia(
     metadata: {},
     scannedAt: createdAt,
     createdAt,
+    matchId,
   }
 }

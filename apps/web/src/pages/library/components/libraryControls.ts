@@ -27,6 +27,7 @@ export function useLibraryControls() {
   const rawSortCol = searchParams.get('sort')
   const rawSortDir = searchParams.get('order')
   const rawMediaType = searchParams.get('type')
+  const unmatchedOnly = searchParams.get('unmatched') === 'true'
 
   const sortCol = SORT_COLUMNS.has(rawSortCol as SortColumn)
     ? (rawSortCol as SortColumn)
@@ -73,14 +74,24 @@ export function useLibraryControls() {
     })
   }
 
+  function setUnmatchedOnly(value: boolean) {
+    updateParams((next) => {
+      if (value) next.set('unmatched', 'true')
+      else next.delete('unmatched')
+      next.delete('page')
+    })
+  }
+
   return {
     sortCol,
     sortDir,
     mediaType,
+    unmatchedOnly,
     currentSortKey: makeSortKey(sortCol, sortDir),
     handleSort,
     handleSortOption,
     setMediaType,
+    setUnmatchedOnly,
   }
 }
 
