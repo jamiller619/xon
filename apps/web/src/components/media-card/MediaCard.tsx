@@ -10,7 +10,6 @@ import {
 } from '@fluentui/react-icons'
 import type { MediaItem } from '@xon/shared'
 import { Card, ContextMenu, type ContextMenuItem, Dialog } from '@xon/ui'
-import clsx from 'clsx'
 import { type ComponentPropsWithRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiFetch, thumbnailUrl } from '~/lib/apiFetch'
@@ -25,9 +24,6 @@ interface MediaCardProps {
   listView?: boolean
   isFavorited?: boolean
   onToggleFavorite?: (id: string, currentlyFavorited: boolean) => void
-  selectMode?: boolean
-  selected?: boolean
-  onToggleSelect?: (id: string) => void
   listRowProps?: ComponentPropsWithRef<'tr'> & { 'data-index'?: number }
 }
 
@@ -36,9 +32,6 @@ export default function MediaCard({
   listView,
   isFavorited,
   onToggleFavorite,
-  selectMode,
-  selected,
-  onToggleSelect,
   listRowProps,
 }: MediaCardProps) {
   const playTrack = useAudioStore((s) => s.playTrack)
@@ -95,21 +88,8 @@ export default function MediaCard({
             <span>{isAudio ? '♪' : '▶'}</span>
           </div>
         )}
-        {item.drmProtected && !selectMode && (
-          <div className={styles.drmBadge}>🔒</div>
-        )}
-        {selectMode && (
-          <div className={styles.selectOverlay}>
-            <input
-              type="checkbox"
-              checked={selected ?? false}
-              onChange={() => onToggleSelect?.(item.id)}
-              onClick={(e) => e.stopPropagation()}
-              className={styles.selectCheckbox}
-            />
-          </div>
-        )}
-        {!selectMode && onToggleFavorite && (
+        {item.drmProtected && <div className={styles.drmBadge}>🔒</div>}
+        {onToggleFavorite && (
           <button
             type="button"
             className={styles.favoriteBtn}
@@ -119,7 +99,7 @@ export default function MediaCard({
             {isFavorited ? '♥' : '♡'}
           </button>
         )}
-        {!selectMode && isAudio && (
+        {isAudio && (
           <div className={styles.audioOverlay}>
             <button
               type="button"
@@ -148,21 +128,6 @@ export default function MediaCard({
       </Card.Info>
     </>
   )
-
-  if (selectMode) {
-    return (
-      <Card
-        className={clsx(styles.card, selected && styles.cardSelected)}
-        // onClick={() => onToggleSelect?.(item.id)}
-        // onKeyDown={(e) =>
-        //   (e.key === 'Enter' || e.key === ' ') && onToggleSelect?.(item.id)
-        // }
-        // aria-label={`${selected ? 'Deselect' : 'Select'} ${item.title}`}
-      >
-        {cardContent}
-      </Card>
-    )
-  }
 
   const contextMenuItems: ContextMenuItem[] = [
     {
