@@ -3,5 +3,8 @@ import type { MediaItem } from '@xon/shared'
 export type ViewProps = {
   isLoading: boolean
   items: MediaItem[]
-  pageSize: number
+  hasNextPage: boolean
+  isFetchingNextPage: boolean
+  onLoadMore: () => void
+  resetKey: string
 }

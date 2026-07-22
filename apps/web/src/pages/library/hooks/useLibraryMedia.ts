@@ -1,4 +1,4 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query'
+import { useInfiniteQuery, useQueryClient } from '@tanstack/react-query'
 import type { MediaItem } from '@xon/shared'
 import { useEffect } from 'react'
 import { apiFetch } from '~/lib/apiFetch'
@@ -6,11 +6,10 @@ import { subscribeToEvents } from '~/lib/eventStream'
 import type { SortColumn, SortDir } from '../components/libraryControls'
 
 const SCAN_REFRESH_THROTTLE_MS = 3000
+const PAGE_SIZE = 40
 
 type LibraryMediaOptions = {
   libraryId: string | undefined
-  page: number
-  pageSize: number
   sortCol: SortColumn
   sortDir: SortDir
   mediaType: string
@@ -22,24 +21,24 @@ type LibraryMediaResult = {
 }
 
 export function useLibraryMedia(options: LibraryMediaOptions) {
-  const { libraryId, page, pageSize, sortCol, sortDir, mediaType } = options
+  const { libraryId, sortCol, sortDir, mediaType } = options
   const queryClient = useQueryClient()
   const queryKey = [
     'library-media',
     libraryId,
-    { page, pageSize, sortCol, sortDir, mediaType },
+    { sortCol, sortDir, mediaType },
   ] as const
 
-  const query = useQuery<LibraryMediaResult>({
+  const query = useInfiniteQuery({
     queryKey,
     enabled: !!libraryId,
-    placeholderData: (previous) => previous,
-    queryFn: async ({ signal }) => {
+    initialPageParam: 1,
+    queryFn: async ({ pageParam, signal }): Promise<LibraryMediaResult> => {
       const params = new URLSearchParams({
         order: sortDir,
         sortBy: sortCol,
-        limit: String(pageSize),
-        page: String(page),
+        limit: String(PAGE_SIZE),
+        page: String(pageParam),
       })
       if (mediaType) params.set('mediaType', mediaType)
 
@@ -53,6 +52,15 @@ export function useLibraryMedia(options: LibraryMediaOptions) {
       const totalHeader = response.headers.get('X-Total-Count')
       const total = totalHeader == null ? Number.NaN : Number(totalHeader)
       return { items, total: Number.isFinite(total) ? total : items.length }
+    },
+    getNextPageParam: (lastPage, pages, lastPageParam) => {
+      const loadedCount = pages.reduce(
+        (count, page) => count + page.items.length,
+        0,
+      )
+      return loadedCount < lastPage.total && lastPage.items.length > 0
+        ? lastPageParam + 1
+        : undefined
     },
   })
 

@@ -13,6 +13,7 @@
   "dependencies": {
     "@fluentui/react-icons": "^2.0.324",
     "@tanstack/react-query": "^5.100.11",
+    "@tanstack/react-virtual": "^3.14.8",
     "@xon/ui": "*",
     "better-auth": "^1.6.11",
     "clsx": "^2.1.1",

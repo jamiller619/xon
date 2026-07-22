@@ -1,5 +1,6 @@
 import type { MediaItem } from '@xon/shared'
 import { Badge } from '@xon/ui'
+import type { ComponentPropsWithRef } from 'react'
 import { Link } from 'react-router-dom'
 import { thumbnailUrl } from '~/lib/apiFetch'
 import { formatBytes, formatDuration, formatYear, mediaPath } from '~/lib/utils'
@@ -9,19 +10,21 @@ type ListViewProps = {
   item: MediaItem
   handlePlay: (e: React.MouseEvent) => void
   handleAddToQueue: (e: React.MouseEvent) => void
+  rowProps?: ComponentPropsWithRef<'tr'> & { 'data-index'?: number }
 }
 
 export default function ListView({
   item,
   handlePlay,
   handleAddToQueue,
+  rowProps,
 }: ListViewProps) {
   const isAudio = item.mediaType?.startsWith('audio/') ?? false
   const posterSrc = thumbnailUrl(item, 'small')
   const link = mediaPath(item)
 
   return (
-    <tr>
+    <tr {...rowProps}>
       <td className={styles.listThumbCell}>
         <Link
           to={link}

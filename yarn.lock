@@ -1970,6 +1970,18 @@
   dependencies:
     "@tanstack/query-core" "5.100.11"
 
+"@tanstack/react-virtual@^3.14.8":
+  version "3.14.8"
+  resolved "https://registry.yarnpkg.com/@tanstack/react-virtual/-/react-virtual-3.14.8.tgz#8b9224181b7b87ee7da76ea25e28df1d6885b3cc"
+  integrity sha512-O39GJQpAYEJcIu3uN1//YtmhjSEOyw75vg9CKCatBDPiD5hKtZQoJHfferyrB/LdOD3UWaoMLWtdEjarwIwdDw==
+  dependencies:
+    "@tanstack/virtual-core" "3.17.6"
+
+"@tanstack/virtual-core@3.17.6":
+  version "3.17.6"
+  resolved "https://registry.yarnpkg.com/@tanstack/virtual-core/-/virtual-core-3.17.6.tgz#eaf853f21920b9dec3445c61ce13275b2f50ccf2"
+  integrity sha512-h0/Ebo18CkOrChlQIhNtQkM5ySUnh/GumQ/D1st3hG2HWUPEF+ILUc2k29UtivCi/9G7w7G3/f7Xyd5cCFbKBw==
+
 "@tokenizer/inflate@^0.4.1":
   version "0.4.1"
   resolved "https://registry.yarnpkg.com/@tokenizer/inflate/-/inflate-0.4.1.tgz#fa6cdb8366151b3cc8426bf9755c1ea03a2fba08"

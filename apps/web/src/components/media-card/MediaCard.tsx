@@ -11,7 +11,7 @@ import {
 import type { MediaItem } from '@xon/shared'
 import { Card, ContextMenu, type ContextMenuItem, Dialog } from '@xon/ui'
 import clsx from 'clsx'
-import { useState } from 'react'
+import { type ComponentPropsWithRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiFetch, thumbnailUrl } from '~/lib/apiFetch'
 import { mediaPath } from '~/lib/utils'
@@ -28,6 +28,7 @@ interface MediaCardProps {
   selectMode?: boolean
   selected?: boolean
   onToggleSelect?: (id: string) => void
+  listRowProps?: ComponentPropsWithRef<'tr'> & { 'data-index'?: number }
 }
 
 export default function MediaCard({
@@ -38,6 +39,7 @@ export default function MediaCard({
   selectMode,
   selected,
   onToggleSelect,
+  listRowProps,
 }: MediaCardProps) {
   const playTrack = useAudioStore((s) => s.playTrack)
   const addToQueue = useAudioStore((s) => s.addToQueue)
@@ -78,6 +80,7 @@ export default function MediaCard({
         item={item}
         handleAddToQueue={handleAddToQueue}
         handlePlay={handlePlay}
+        {...(listRowProps ? { rowProps: listRowProps } : {})}
       />
     )
   }

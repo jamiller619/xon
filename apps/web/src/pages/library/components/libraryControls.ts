@@ -26,14 +26,12 @@ export function useLibraryControls() {
   const [searchParams, setSearchParams] = useSearchParams()
   const rawSortCol = searchParams.get('sort')
   const rawSortDir = searchParams.get('order')
-  const rawPage = Number(searchParams.get('page'))
   const rawMediaType = searchParams.get('type')
 
   const sortCol = SORT_COLUMNS.has(rawSortCol as SortColumn)
     ? (rawSortCol as SortColumn)
     : 'createdAt'
   const sortDir: SortDir = rawSortDir === 'asc' ? 'asc' : 'desc'
-  const page = Number.isInteger(rawPage) && rawPage > 0 ? rawPage : 1
   const mediaType = MEDIA_TYPES.has(rawMediaType as MediaType.MainType)
     ? (rawMediaType as MediaType.MainType)
     : ''
@@ -43,14 +41,6 @@ export function useLibraryControls() {
       const next = new URLSearchParams(previous)
       update(next)
       return next
-    })
-  }
-
-  function setPage(nextPage: number | ((page: number) => number)) {
-    const value = typeof nextPage === 'function' ? nextPage(page) : nextPage
-    updateParams((next) => {
-      if (value > 1) next.set('page', String(value))
-      else next.delete('page')
     })
   }
 
@@ -86,10 +76,8 @@ export function useLibraryControls() {
   return {
     sortCol,
     sortDir,
-    page,
     mediaType,
     currentSortKey: makeSortKey(sortCol, sortDir),
-    setPage,
     handleSort,
     handleSortOption,
     setMediaType,
