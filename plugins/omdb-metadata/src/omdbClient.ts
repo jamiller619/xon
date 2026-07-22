@@ -47,23 +47,46 @@ export interface OmdbResult {
   Error?: string
 }
 
+export interface OmdbSearchResult {
+  imdbId: string
+  title: string
+  year: string
+  type: 'movie' | 'series' | 'episode'
+  poster?: string | undefined
+}
+
+interface OmdbSearchResponse {
+  Search?: Array<{
+    Title: string
+    Year: string
+    imdbID: string
+    Type: 'movie' | 'series' | 'episode'
+    Poster: string
+  }>
+  totalResults?: string
+  Response: 'True' | 'False'
+  Error?: string
+}
+
 type FetchFn = (url: string, init?: RequestInit) => Promise<Response>
 
 export class OmdbClient {
   readonly #apiKey: string
   readonly #fetchFn: FetchFn
-  readonly #cache = new Map<string, CacheEntry<OmdbResult | null>>()
+  readonly #cache = new Map<string, CacheEntry<unknown>>()
 
   constructor(apiKey: string, fetchFn: FetchFn) {
     this.#apiKey = apiKey
     this.#fetchFn = fetchFn
   }
 
-  async #get(params: Record<string, string>): Promise<OmdbResult | null> {
+  async #get<T extends { Response: 'True' | 'False' }>(
+    params: Record<string, string>,
+  ): Promise<T | null> {
     const cacheKey = JSON.stringify(params)
     const cached = this.#cache.get(cacheKey)
     if (cached !== undefined && Date.now() < cached.expiresAt) {
-      return cached.data
+      return cached.data as T | null
     }
 
     const url = new URL(OMDB_BASE)
@@ -76,7 +99,7 @@ export class OmdbClient {
     const res = await this.#fetchFn(url.toString())
     if (!res.ok) return null
 
-    const data = (await res.json()) as OmdbResult
+    const data = (await res.json()) as T
     const result = data.Response === 'True' ? data : null
     this.#cache.set(cacheKey, {
       data: result,
@@ -85,9 +108,23 @@ export class OmdbClient {
     return result
   }
 
+  async searchTitles(
+    title: string,
+    type: 'movie' | 'series',
+  ): Promise<OmdbSearchResult[]> {
+    const result = await this.#get<OmdbSearchResponse>({ s: title, type })
+    return (result?.Search ?? []).map((item) => ({
+      imdbId: item.imdbID,
+      title: item.Title,
+      year: item.Year,
+      type: item.Type,
+      ...(present(item.Poster) && { poster: present(item.Poster) }),
+    }))
+  }
+
   /** Look up any title (movie, series, or episode) directly by its IMDb id */
   async fetchByImdbId(imdbId: string): Promise<Metadata | undefined> {
-    const result = await this.#get({ i: imdbId })
+    const result = await this.#get<OmdbResult>({ i: imdbId })
     return result ? toMetadata(result) : undefined
   }
 
@@ -98,7 +135,7 @@ export class OmdbClient {
     const params: Record<string, string> = { t: title, type: 'movie' }
     if (year != null) params.y = String(year)
 
-    const result = await this.#get(params)
+    const result = await this.#get<OmdbResult>(params)
     return result ? toMetadata(result) : undefined
   }
 
@@ -109,7 +146,7 @@ export class OmdbClient {
     const params: Record<string, string> = { t: title, type: 'series' }
     if (year != null) params.y = String(year)
 
-    const result = await this.#get(params)
+    const result = await this.#get<OmdbResult>(params)
     return result ? toMetadata(result) : undefined
   }
 
@@ -118,7 +155,7 @@ export class OmdbClient {
     season: number,
     episode: number,
   ): Promise<Metadata | undefined> {
-    const result = await this.#get({
+    const result = await this.#get<OmdbResult>({
       t: seriesTitle,
       Season: String(season),
       Episode: String(episode),
@@ -163,6 +200,7 @@ function toMetadata(result: OmdbResult): Metadata {
   const data: Metadata = {
     imdbId: result.imdbID,
     title: present(result.Title),
+    year: toNumber(result.Year),
     overview: present(result.Plot),
     releaseDate: toIsoDate(result.Released),
     rated: present(result.Rated),
@@ -182,6 +220,9 @@ function toMetadata(result: OmdbResult): Metadata {
       result.Ratings?.find((r) => r.Source === 'Rotten Tomatoes')?.Value,
     ),
   }
+
+  const poster = present(result.Poster)
+  if (poster) data.images = { poster: [{ src: poster }] }
 
   if (result.Type === 'episode') {
     data.episodeTitle = present(result.Title)

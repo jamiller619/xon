@@ -1,5 +1,7 @@
 import {
   type EnrichOptions,
+  type MetadataSearchQuery,
+  type MetadataSearchResult,
   MetadataSourcePlugin,
   type PluginContext,
 } from '@xon/plugin-sdk'
@@ -42,6 +44,74 @@ export default class TmdbMetadataPlugin extends MetadataSourcePlugin {
     return this.#client?.searchMovies(title, year)
   }
 
+  override getSearchAvailability() {
+    return this.#client
+      ? { available: true }
+      : { available: false, reason: 'TMDb API key is not configured' }
+  }
+
+  override async search(
+    query: MetadataSearchQuery,
+  ): Promise<MetadataSearchResult[]> {
+    if (!this.#client) return []
+
+    if (query.libraryType === LibraryType.TVShows) {
+      const results = await this.#client.searchTv(query.title)
+      return (results ?? []).slice(0, query.limit).map((result) => ({
+        id: String(result.tmdbId),
+        title: result.title,
+        mediaKind: 'series',
+        ...(result.firstAirDate && {
+          releaseDate: result.firstAirDate,
+          year: Number(result.firstAirDate.slice(0, 4)) || undefined,
+        }),
+        ...(result.poster && { posterUrl: result.poster }),
+        ...(result.overview && { description: result.overview }),
+      }))
+    }
+
+    const results = await this.#client.searchMovies(
+      query.title,
+      query.year == null ? undefined : String(query.year),
+    )
+    return (results ?? []).slice(0, query.limit).map((result) => ({
+      id: String(result.tmdbId),
+      title: result.title,
+      mediaKind: 'movie',
+      ...(result.releaseDate && {
+        releaseDate: result.releaseDate,
+        year: Number(result.releaseDate.slice(0, 4)) || undefined,
+      }),
+      ...(result.poster && { posterUrl: result.poster }),
+    }))
+  }
+
+  override async resolveMatch(
+    id: string,
+    query: MetadataSearchQuery,
+  ): Promise<Metadata | undefined> {
+    if (!this.#client) return
+    const numericId = Number(id)
+    if (!Number.isInteger(numericId) || numericId <= 0) return
+
+    const metadata =
+      query.libraryType === LibraryType.TVShows
+        ? await this.#client.fetchTvMetadataById(
+            numericId,
+            query.fileMetadata?.seasons?.[0],
+            query.fileMetadata?.episodeNumbers?.[0],
+          )
+        : await this.#client.fetchMovieMetadataById(
+            numericId,
+            this.#ctx?.settings.get<string>('language') || 'en',
+          )
+
+    if (metadata && this.#ctx?.settings.get<boolean>('saveImages')) {
+      await this.#saveImagesLocally(metadata)
+    }
+    return metadata
+  }
+
   async fetchPersonImage(
     personId: number,
   ): Promise<PersonImageResult | undefined> {
@@ -62,8 +132,25 @@ export default class TmdbMetadataPlugin extends MetadataSourcePlugin {
     const year = Number(fileMetadata?.year) || undefined
 
     try {
-      const metadata =
-        libraryType === LibraryType.TVShows
+      const imdbId = options?.metadata?.imdbId ?? options?.metadata?.imdbID
+      const exact =
+        typeof imdbId === 'string' && imdbId.startsWith('tt')
+          ? await this.#client?.findByImdbId(imdbId)
+          : undefined
+      const metadata = exact
+        ? exact.type === 'series'
+          ? await this.#client?.fetchTvMetadataById(
+              exact.id,
+              fileMetadata?.seasons?.[0],
+              fileMetadata?.episodeNumbers?.[0],
+            )
+          : await this.#client?.fetchMovieMetadataById(
+              exact.id,
+              options?.lang ||
+                this.#ctx?.settings.get<string>('language') ||
+                'en',
+            )
+        : libraryType === LibraryType.TVShows
           ? await this.#client?.fetchTvMetadata(
               title,
               fileMetadata?.seasons?.[0],

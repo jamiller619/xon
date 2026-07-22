@@ -80,6 +80,14 @@
   &.danger {
     background: red;
   }
+
+  &.borderRadiusSmall {
+    border-radius: var(--border-radius-2);
+  }
+
+  &.borderRadiusNone {
+    border-radius: 0;
+  }
 }
 
 .label {
@@ -118,4 +126,10 @@
 
 .iconButton {
   width: var(--height);
+  padding-inline: 0;
+
+  svg {
+    width: 1rem;
+    height: 1rem;
+  }
 }

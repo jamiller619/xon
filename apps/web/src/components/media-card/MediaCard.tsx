@@ -16,6 +16,7 @@ import { apiFetch, thumbnailUrl } from '~/lib/apiFetch'
 import { mediaPath } from '~/lib/utils'
 import { useAudioStore } from '~/store/audioStore'
 import EditImages from '../EditImages'
+import FixMatchDialog from '../fix-match/FixMatchDialog'
 import ListView from './ListView'
 import styles from './MediaCard.module.css'
 
@@ -37,6 +38,7 @@ export default function MediaCard({
   const playTrack = useAudioStore((s) => s.playTrack)
   const addToQueue = useAudioStore((s) => s.addToQueue)
   const [editImagesOpen, setEditImagesOpen] = useState(false)
+  const [fixMatchOpen, setFixMatchOpen] = useState(false)
   const isAudio = item.mediaType?.startsWith('audio/') ?? false
   const posterSrc = thumbnailUrl(item, 'medium')
   const link = mediaPath(item)
@@ -154,6 +156,7 @@ export default function MediaCard({
     {
       label: 'Fix match',
       icon: <FixMatchIcon />,
+      onClick: () => setFixMatchOpen(true),
     },
     {
       label: 'Refresh metadata',
@@ -185,6 +188,13 @@ export default function MediaCard({
       >
         <EditImages images={item.metadata.images} />
       </Dialog>
+      {fixMatchOpen && (
+        <FixMatchDialog
+          item={item}
+          open={fixMatchOpen}
+          onOpenChange={setFixMatchOpen}
+        />
+      )}
     </>
   )
 }

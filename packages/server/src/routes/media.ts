@@ -2,7 +2,6 @@ import { createReadStream } from 'node:fs'
 import { readdir, readFile } from 'node:fs/promises'
 import { basename, dirname, extname, join } from 'node:path'
 import { Readable } from 'node:stream'
-import TmdbMetadataPlugin from '@xon/plugin-tmdb-metadata'
 import type { SortProps } from '@xon/shared'
 import { eq, inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
@@ -24,8 +23,12 @@ import {
   spawnTranscodeSegment,
 } from '../media/transcode.ts'
 import * as mediaService from '../services/mediaService.ts'
-
-const tmdbPlugin = new TmdbMetadataPlugin()
+import {
+  applyMatch,
+  getMatchContext,
+  getMatchProviders,
+  searchMatches,
+} from '../services/metadataMatchingService.ts'
 
 const mediaListQuerySchema = z.object({
   sortBy: z
@@ -173,15 +176,46 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     return c.json(updated[0] as MediaItem)
   })
 
-  router.get('/find-match', async (c) => {
-    const title = c.req.query('title')
+  const matchSearchSchema = z.object({
+    query: z.string().trim().min(1).max(200),
+  })
+  const applyMatchSchema = z.object({
+    providerId: z.string().min(1).max(200),
+    matchId: z.string().min(1).max(200),
+  })
 
-    if (!title) return c.json({ error: 'Missing title' }, 400)
+  router.get('/:id/match-providers', async (c) => {
+    const context = await getMatchContext(db, c.req.param('id'))
+    if (!context) return c.json({ error: 'Not found' }, 404)
+    return c.json(getMatchProviders(context))
+  })
 
-    const year = c.req.query('year')
-    const results = await tmdbPlugin.findMatch(title, year)
+  router.get(
+    '/:id/matches',
+    validate('query', matchSearchSchema),
+    async (c) => {
+      const context = await getMatchContext(db, c.req.param('id'))
+      if (!context) return c.json({ error: 'Not found' }, 404)
+      const { query } = c.req.valid('query')
+      return c.json({
+        providers: await searchMatches(context, query),
+      })
+    },
+  )
 
-    return c.json(results)
+  router.post('/:id/match', validate('json', applyMatchSchema), async (c) => {
+    const context = await getMatchContext(db, c.req.param('id'))
+    if (!context) return c.json({ error: 'Not found' }, 404)
+    const { providerId, matchId } = c.req.valid('json')
+
+    try {
+      return c.json(await applyMatch(db, context, providerId, matchId))
+    } catch (error) {
+      return c.json(
+        { error: error instanceof Error ? error.message : String(error) },
+        422,
+      )
+    }
   })
 
   const bulkSchema = z.object({

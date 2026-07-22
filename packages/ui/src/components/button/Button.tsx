@@ -2,13 +2,14 @@ import { Button as UIButton } from '@base-ui/react'
 import clsx from 'clsx'
 import { useFormStatus } from 'react-dom'
 import surfaceStyles from '../surface/Surface.module.css'
-import type { Size, Variant } from '../types.js'
+import type { BorderRadius, Size, Variant } from '../types.js'
 import styles from './Button.module.css'
 
 export type ButtonProps = UIButton.Props & {
   variant?: Variant | undefined
   size?: Size | undefined
   block?: boolean | undefined
+  borderRadius?: BorderRadius
   /**
    * Force the loading spinner on. When omitted, a `type="submit"` button
    * automatically shows the spinner while its parent form's action is pending
@@ -24,6 +25,7 @@ export default function Button({
   size,
   block = false,
   loading,
+  borderRadius,
   type = 'button',
   disabled,
   children,
@@ -49,9 +51,13 @@ export default function Button({
         {
           [styles.large as string]: size === 'large',
           [styles.small as string]: size === 'small',
-          [styles.mini as string]: size === 'mini',
+          [styles.mini as string]: size === 'xsmall',
           [styles.block as string]: block,
           [styles.loading as string]: isLoading,
+          [styles.borderRadiusSmall as string]: borderRadius === 'small',
+          [styles.borderRadiusMedium as string]: borderRadius === 'medium',
+          [styles.borderRadiusLarge as string]: borderRadius === 'large',
+          [styles.borderRadiusNone as string]: borderRadius === 'none',
         },
       )}
     >

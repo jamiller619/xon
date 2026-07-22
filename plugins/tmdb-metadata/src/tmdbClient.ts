@@ -104,6 +104,9 @@ interface TmdbTvDetailsResult extends TmdbTvSearchResult {
     cast: Array<{ id: number; name: string; character: string; order: number }>
     crew: Array<{ id: number; name: string; job: string; department: string }>
   }
+  external_ids?: {
+    imdb_id?: string | null
+  }
 }
 
 interface TmdbEpisodeResult {
@@ -117,6 +120,11 @@ interface TmdbEpisodeResult {
 
 interface SearchResponse<T> {
   results: T[]
+}
+
+interface FindResponse {
+  movie_results: TmdbMovieSearchResult[]
+  tv_results: TmdbTvSearchResult[]
 }
 
 interface TmdbPersonImagesResult {
@@ -149,6 +157,14 @@ export interface MovieSearchResult {
   title: string
   poster: string
   releaseDate: string
+}
+
+export interface TvSearchResult {
+  tmdbId: number
+  title: string
+  poster: string
+  firstAirDate: string
+  overview: string
 }
 
 const KEY_JOBS = new Set([
@@ -237,6 +253,33 @@ export class TmdbClient {
     }))
   }
 
+  async searchTv(title: string): Promise<TvSearchResult[] | undefined> {
+    const resp = await this.#get<SearchResponse<TmdbTvSearchResult>>(
+      '/search/tv',
+      { query: title },
+    )
+
+    return resp?.results.map((result) => ({
+      tmdbId: result.id,
+      title: result.name,
+      poster: constructURL(posterSizes.medium, result.poster_path),
+      firstAirDate: result.first_air_date,
+      overview: result.overview,
+    }))
+  }
+
+  async findByImdbId(
+    imdbId: string,
+  ): Promise<{ id: number; type: 'movie' | 'series' } | undefined> {
+    const response = await this.#get<FindResponse>(`/find/${imdbId}`, {
+      external_source: 'imdb_id',
+    })
+    const movie = response?.movie_results[0]
+    if (movie) return { id: movie.id, type: 'movie' }
+    const series = response?.tv_results[0]
+    if (series) return { id: series.id, type: 'series' }
+  }
+
   async fetchMovieMetadata(
     title: string,
     year?: number,
@@ -246,8 +289,15 @@ export class TmdbClient {
     const first = search?.[0]
     if (!first) return
 
+    return this.fetchMovieMetadataById(first.tmdbId, lang)
+  }
+
+  async fetchMovieMetadataById(
+    movieId: number,
+    lang?: string,
+  ): Promise<Metadata | undefined> {
     const details = await this.#get<TmdbMovieDetailsResult>(
-      `/movie/${first.tmdbId}`,
+      `/movie/${movieId}`,
       {
         append_to_response: 'credits',
       },
@@ -283,7 +333,7 @@ export class TmdbClient {
 
     data.images ??= {}
     const language = lang || 'en'
-    const images = await this.fetchMovieImages(first.tmdbId, language)
+    const images = await this.fetchMovieImages(movieId, language)
 
     if (images?.backdrops) {
       data.images.backdrop = images.backdrops
@@ -315,24 +365,27 @@ export class TmdbClient {
     season?: number,
     episode?: number,
   ): Promise<Metadata | undefined> {
-    const search = await this.#get<SearchResponse<TmdbTvSearchResult>>(
-      '/search/tv',
-      {
-        query: seriesTitle,
-      },
-    )
-    const first = search?.results[0]
+    const search = await this.searchTv(seriesTitle)
+    const first = search?.[0]
     if (!first) return
 
-    const details = await this.#get<TmdbTvDetailsResult>(`/tv/${first.id}`, {
-      append_to_response: 'credits',
+    return this.fetchTvMetadataById(first.tmdbId, season, episode)
+  }
+
+  async fetchTvMetadataById(
+    seriesId: number,
+    season?: number,
+    episode?: number,
+  ): Promise<Metadata | undefined> {
+    const details = await this.#get<TmdbTvDetailsResult>(`/tv/${seriesId}`, {
+      append_to_response: 'credits,external_ids',
     })
     if (!details) return
 
     const episodeDetails =
       season != null && episode != null
         ? await this.#get<TmdbEpisodeResult>(
-            `/tv/${first.id}/season/${season}/episode/${episode}`,
+            `/tv/${seriesId}/season/${season}/episode/${episode}`,
           )
         : null
 
@@ -340,8 +393,11 @@ export class TmdbClient {
     const crew = details.credits?.crew ?? []
 
     const metadata: Metadata = {
-      tmdbId: first.id,
-      seriesId: first.id,
+      tmdbId: seriesId,
+      seriesId,
+      ...(details.external_ids?.imdb_id && {
+        imdbId: details.external_ids.imdb_id,
+      }),
       title: details.name,
       originalTitle: details.original_name,
       overview: details.overview,

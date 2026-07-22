@@ -24,7 +24,7 @@
 }
 
 .close {
-  border-radius: 1000px;
+  /* border-radius: 1000px;
   corner-shape: round;
   display: flex;
   padding: var(--space-xs);
@@ -33,7 +33,7 @@
   width: 30px;
   height: 30px;
   line-height: 0.9;
-  color: var(--color-gray-11);
+  color: var(--color-gray-11); */
 }
 
 .header {

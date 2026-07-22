@@ -1,4 +1,5 @@
 import { Dialog as UIDialog } from '@base-ui/react'
+import { DismissFilled as CloseIcon } from '@fluentui/react-icons'
 import type { ReactNode } from 'react'
 import { Button, type ButtonProps, Flex } from '../../index.js'
 import styles from './Dialog.module.css'
@@ -35,7 +36,11 @@ export default function Dialog({
           <Flex align="center" gap="3" className={styles.header}>
             <UIDialog.Close
               className={styles.close}
-              render={(props) => <Button.Icon {...props}>🗙</Button.Icon>}
+              render={(props) => (
+                <Button.Icon {...props}>
+                  <CloseIcon />
+                </Button.Icon>
+              )}
             />
             <UIDialog.Title className={styles.title}>{title}</UIDialog.Title>
           </Flex>

@@ -1,0 +1,136 @@
+.dialog {
+  width: min(46rem, calc(100vw - 3rem));
+  max-height: min(48rem, calc(100dvh - 6rem));
+  display: grid;
+  grid-template-rows: auto auto auto minmax(8rem, 1fr) auto;
+  gap: var(--space-md);
+}
+
+.currentMatch {
+  min-width: 0;
+  padding: var(--space-sm);
+  border-radius: var(--border-radius-3);
+  background: var(--color-gray-a2);
+}
+
+.currentPoster,
+.resultPoster {
+  flex: none;
+  display: grid;
+  place-items: center;
+  overflow: hidden;
+  color: var(--color-gray-10);
+  background: var(--color-gray-5);
+}
+
+.currentPoster {
+  width: 3.5rem;
+  aspect-ratio: 5 / 7;
+  border-radius: var(--border-radius-2);
+}
+
+.currentPoster img,
+.resultPoster img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.currentDetails,
+.resultText {
+  min-width: 0;
+}
+
+.currentDetails span,
+.resultText span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.currentDetails > div > span:last-child {
+  color: var(--color-gray-11);
+  white-space: nowrap;
+}
+
+.providerScroll {
+  min-height: 8rem;
+  max-height: 26rem;
+}
+
+.provider {
+  min-width: 0;
+  margin-inline: 0;
+  display: grid;
+  gap: var(--space-sm);
+  padding: var(--space-sm);
+}
+
+.provider + .provider {
+  margin-top: var(--space-sm);
+}
+
+.results {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--space-xs);
+
+  button {
+    border-radius: var(--border-radius-2);
+  }
+}
+
+.result {
+  width: 100%;
+  min-width: 0;
+  height: auto;
+  padding: var(--space-xs);
+  text-align: left;
+  justify-content: stretch;
+}
+
+.result > span {
+  width: 100%;
+}
+
+.resultPoster {
+  width: 3rem;
+  aspect-ratio: 5 / 7;
+  border-radius: var(--border-radius-2);
+}
+
+.resultText.resultText > span:last-child {
+  width: 100%;
+  color: var(--color-gray-11);
+  font-size: var(--text-xs);
+  white-space: nowrap;
+}
+
+.error,
+.warning {
+  margin: 0;
+  font-size: var(--text-sm);
+}
+
+.error {
+  color: var(--color-red-11);
+}
+
+.warning {
+  color: var(--color-yellow-11);
+}
+
+.muted {
+  margin: 0;
+  color: var(--color-gray-11);
+  font-size: var(--text-sm);
+}
+
+.actions {
+  padding-top: var(--space-xs);
+}
+
+@media (max-width: 40rem) {
+  .results {
+    grid-template-columns: 1fr;
+  }
+}

@@ -1,5 +1,7 @@
 import {
   type EnrichOptions,
+  type MetadataSearchQuery,
+  type MetadataSearchResult,
   MetadataSourcePlugin,
   type PluginContext,
 } from '@xon/plugin-sdk'
@@ -28,6 +30,38 @@ export default class OmdbMetadataPlugin extends MetadataSourcePlugin {
     }
 
     this.#client = new OmdbClient(apiKey, context.fetch)
+  }
+
+  override getSearchAvailability() {
+    return this.#client
+      ? { available: true }
+      : { available: false, reason: 'OMDb API key is not configured' }
+  }
+
+  override async search(
+    query: MetadataSearchQuery,
+  ): Promise<MetadataSearchResult[]> {
+    if (!this.#client) return []
+    const type = query.libraryType === LibraryType.TVShows ? 'series' : 'movie'
+    const results = await this.#client.searchTitles(query.title, type)
+
+    return results.slice(0, query.limit).map((result) => ({
+      id: result.imdbId,
+      title: result.title,
+      mediaKind: result.type === 'series' ? 'series' : 'movie',
+      ...(Number.parseInt(result.year, 10) > 0 && {
+        year: Number.parseInt(result.year, 10),
+      }),
+      ...(result.poster && { posterUrl: result.poster }),
+    }))
+  }
+
+  override async resolveMatch(
+    id: string,
+    _query: MetadataSearchQuery,
+  ): Promise<Metadata | undefined> {
+    if (!this.#client || !id.startsWith('tt')) return
+    return this.#client.fetchByImdbId(id)
   }
 
   override async enrich(

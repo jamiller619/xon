@@ -13,15 +13,15 @@
     }
   }
 
-  &.sm {
+  &.small {
     border-radius: var(--border-radius-4);
   }
 
-  &.md {
+  &.medium {
     border-radius: var(--border-radius-6);
   }
 
-  &.lg {
+  &.large {
     border-radius: var(--border-radius-8);
   }
 }
