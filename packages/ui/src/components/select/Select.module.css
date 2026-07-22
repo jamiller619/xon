@@ -20,7 +20,7 @@
 
   /* Surface look, owned locally: the surface class sets the `background`
      shorthand, which would wipe out the fallback chevron image below. */
-  background-color: var(--color-gray-a1);
+  background-color: var(--color-gray-a2);
   backdrop-filter: blur(16px) saturate(150%);
 
   color: var(--color-text);
@@ -38,10 +38,20 @@
   background-position: right var(--space-md) center;
   background-size: 0.75em;
   padding-right: calc(var(--space-md) + 1.25em);
+  transition: background 0.15s ease;
+
+  &:hover {
+    background: var(--color-gray-6);
+  }
+
+  &:active {
+    background: var(--color-gray-5);
+  }
 
   &:disabled {
-    filter: grayscale(50%) saturate(20%);
-    cursor: not-allowed;
+    background: var(--color-gray-a1);
+    color: var(--color-text-muted);
+    cursor: auto;
   }
 
   &.small {
@@ -112,7 +122,7 @@
       mask:
         url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 12 12'%3E%3Cpath d='M2.5 4.5 6 8l3.5-3.5' fill='none' stroke='%23000' stroke-width='1.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E")
         no-repeat center / contain;
-      color: var(--color-gray-11);
+      color: currentColor;
       transition: rotate 0.15s ease;
     }
 

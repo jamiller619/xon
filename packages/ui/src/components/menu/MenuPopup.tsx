@@ -1,5 +1,6 @@
 import { Menu as UIMenu } from '@base-ui/react'
 import { ChevronRightRegular } from '@fluentui/react-icons'
+import clsx from 'clsx'
 import { css } from 'inline-css-modules'
 import type { MouseEventHandler, ReactNode } from 'react'
 
@@ -28,7 +29,7 @@ const styles = css<
   }
 
   .popup {
-    min-width: 160px;
+    min-width: 240px;
     background: var(--menu-bg);
     border: var(--menu-border);
     border-radius: var(--menu-border-radius);
@@ -122,13 +123,14 @@ export type MenuPositionProps = Pick<
 >
 
 export function MenuPopup({
+  className,
   items,
   ...position
-}: { items: MenuItems } & MenuPositionProps) {
+}: { items: MenuItems } & MenuPositionProps & UIMenu.Positioner.Props) {
   return (
     <UIMenu.Portal>
       <UIMenu.Positioner className={styles.positioner} {...position}>
-        <UIMenu.Popup className={styles.popup}>
+        <UIMenu.Popup className={clsx(styles.popup, className)}>
           {keyed(items).map(({ key, item }) =>
             item === 'separator' ? (
               <UIMenu.Separator key={key} className={styles.separator} />

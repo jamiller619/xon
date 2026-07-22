@@ -1,7 +1,7 @@
 import clsx from 'clsx'
 import { css } from 'inline-css-modules'
 import type { HTMLAttributes, PropsWithChildren } from 'react'
-import type { Variant } from './types.js'
+import type { Size, Variant } from './types.js'
 
 const styles = css`
   .badge {
@@ -28,22 +28,33 @@ const styles = css`
       outline: 2px solid var(--color-gray-8);
       outline-offset: -2px;
     }
+
+    &.small {
+      font-size: var(--text-xs);
+    }
   }
 `
 
 type BadgeProps = PropsWithChildren<HTMLAttributes<HTMLDivElement>> & {
   variant?: Variant
+  size?: Size
 }
 
 export default function Badge({
   children,
   className,
   variant,
+  size,
   ...props
 }: BadgeProps) {
   return (
     <div
-      className={clsx(styles.badge, className, variant && styles[variant])}
+      className={clsx(
+        styles.badge,
+        className,
+        variant && styles[variant],
+        size && styles[size],
+      )}
       {...props}
     >
       {children}

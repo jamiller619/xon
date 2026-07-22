@@ -32,7 +32,7 @@ const styles = css`
   }
 
   .textbox {
-    background-color: var(--color-gray-5);
+    background-color: var(--color-gray-a2);
     border: none;
     font: inherit;
     font-size: var(--text-sm);

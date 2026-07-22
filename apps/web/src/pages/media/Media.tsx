@@ -120,7 +120,7 @@ export default function Media() {
             </>
           )}
         </div>
-        <Flex dir="col" gap="7" align="start">
+        <Flex dir="col" gap="5" align="start">
           <div>
             <div className={styles.logo}>
               {data.metadata.images?.logo ? (

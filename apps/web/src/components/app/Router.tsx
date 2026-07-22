@@ -28,9 +28,7 @@ const AdminSettings = lazy(() => import('~/pages/admin/settings/AdminSettings'))
 const AdminUsers = lazy(() => import('~/pages/admin/users/AdminUsers'))
 const Dashboard = lazy(() => import('~/pages/dashboard/Dashboard'))
 const GroupDetail = lazy(() => import('~/pages/group-detail/GroupDetail'))
-const LibraryBrowser = lazy(
-  () => import('~/pages/library-browser/LibraryBrowser'),
-)
+const LibraryBrowser = lazy(() => import('~/pages/library/Library'))
 const Login = lazy(() => import('~/pages/login/Login'))
 const Media = lazy(() => import('~/pages/media/Media'))
 const NotFound = lazy(() => import('~/pages/not-found/NotFound'))
@@ -60,7 +58,7 @@ export default function Router() {
         }
       >
         <Route path="/" element={<Dashboard />} />
-        <Route path="/libraries/:id" element={<LibraryBrowser />} />
+        <Route path="/library/:id" element={<LibraryBrowser />} />
         <Route path="/media/:title/:id" element={<Media />} />
         <Route path="/groups/:id" element={<GroupDetail />} />
         <Route path="/search" element={<Search />} />

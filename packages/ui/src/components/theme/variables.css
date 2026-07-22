@@ -83,11 +83,11 @@
   /* Shared look for menu-like popups: the Select picker and ContextMenu
      consume these so the two can't drift apart. */
   --menu-bg: var(--color-gray-3);
-  --menu-border: 1px solid var(--color-gray-5);
+  /* --menu-border: 1px solid var(--color-gray-5); */
   --menu-border-radius: var(--border-radius-2);
   --menu-shadow: var(--shadow-3);
   --menu-padding: var(--space-2xs);
-  --menu-item-padding: var(--space-2xs) var(--space-xs);
+  --menu-item-padding: var(--space-xs) var(--space-md);
   --menu-item-border-radius: var(--border-radius-1);
   --menu-item-gap: var(--space-xs);
   --menu-item-font-size: var(--text-sm);

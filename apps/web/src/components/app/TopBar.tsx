@@ -138,7 +138,7 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
 
   return (
     <Surface as="header" borderRadius="none" className={styles.header}>
-      <Button.Icon onClick={onMenuClick}>
+      <Button.Icon onClick={onMenuClick} size="small">
         <MenuIcon />
       </Button.Icon>
       <div className={styles.searchWrapper} ref={wrapperRef}>

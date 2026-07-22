@@ -68,26 +68,3 @@ Button.Icon = function IconButton(props: ButtonProps) {
     <Button {...props} className={clsx(styles.iconButton, props.className)} />
   )
 }
-
-export function IconButton({
-  children,
-  className,
-  variant,
-  ...props
-}: ButtonProps) {
-  return (
-    <Button
-      {...props}
-      className={clsx(
-        styles.iconButton,
-        className,
-        variant &&
-          styles[variant] && {
-            [styles[variant]]: true,
-          },
-      )}
-    >
-      {children}
-    </Button>
-  )
-}

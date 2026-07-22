@@ -1,4 +1,5 @@
 .button {
+  --height: 2.5rem;
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -9,7 +10,7 @@
   corner-shape: var(--corner-shape);
   border: none;
 
-  min-height: 2.5rem;
+  min-height: var(--height);
   padding-block: var(--space-xs);
   padding-inline: var(--space-md);
 
@@ -56,12 +57,12 @@
   }
 
   &.small {
-    height: 2rem;
+    --height: 2rem;
     font-size: var(--text-sm);
   }
 
   &.large {
-    height: 4rem;
+    --height: 4rem;
     padding-inline: var(--space-md);
     font-size: var(--text-lg);
   }
@@ -116,11 +117,5 @@
 }
 
 .iconButton {
-  padding: 0;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
+  width: var(--height);
 }

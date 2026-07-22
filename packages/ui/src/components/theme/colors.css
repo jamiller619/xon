@@ -36,7 +36,7 @@
   --color-accent-12: var(--violet-12);
 
   --color-gray-a1: oklch(from var(--color-gray-2) l c h / 0.9);
-  --color-gray-a2: oklch(from var(--color-gray-11) l c h / 0.2);
+  --color-gray-a2: oklch(from var(--color-gray-11) l c h / 0.15);
   /* --color-gray-a2: oklch(from var(--color-gray-2) l c h / 0.7); */
   --color-gray-a3: oklch(from var(--color-gray-2) l c h / 0.5);
   --color-gray-a4: oklch(from var(--color-gray-2) l c h / 0.2);

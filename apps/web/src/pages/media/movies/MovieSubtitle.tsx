@@ -5,6 +5,7 @@ import {
 } from '@fluentui/react-icons'
 import type { MediaItem } from '@xon/shared'
 import { Badge, Flex } from '@xon/ui'
+import { formatDuration, formatYear } from '~/lib/utils'
 import Resolution from '../components/Resolution'
 import styles from '../Media.module.css'
 import * as icons from './icons'
@@ -15,10 +16,10 @@ export default function MovieSubtitle({ data }: { data: MediaItem }) {
   const metascore = data.metadata.metascore
   const imdbRating = data.metadata.imdbRating
   const rating = data.metadata.rated
-  const year = parseYear(data)
+  const year = formatYear(data)
 
   return (
-    <>
+    <Flex gap="3" dir="col">
       <Flex gap="4" className={styles.subtitle} align="center">
         {year && (
           <Flex gap="1" align="center">
@@ -38,7 +39,7 @@ export default function MovieSubtitle({ data }: { data: MediaItem }) {
         )}
         <Flex gap="1" align="center">
           <ClockIcon />
-          <span>{parseDuration(data.fileMetadata.duration * 1000)}</span>
+          <span>{formatDuration(data)}</span>
         </Flex>
         {genres && genres.length > 0 && (
           <span>{genres.slice(0, 3).join(' · ')}</span>
@@ -70,31 +71,6 @@ export default function MovieSubtitle({ data }: { data: MediaItem }) {
           </Flex>
         )}
       </Flex>
-    </>
+    </Flex>
   )
-}
-
-function parseYear(data: MediaItem) {
-  if ('releaseDate' in data.metadata) {
-    if (data.metadata.releaseDate.length > 4) {
-      return new Date(data.metadata.releaseDate).getFullYear()
-    }
-
-    return data.metadata.releaseDate
-  }
-}
-
-function parseDuration(value?: number) {
-  if (!value) return null
-
-  const totalSeconds = Math.round(value / 1000)
-  const hours = Math.floor(totalSeconds / 3600)
-  const minutes = Math.floor((totalSeconds % 3600) / 60)
-  const seconds = hours > 0 ? 0 : totalSeconds % 60
-
-  return new Intl.DurationFormat(undefined, { style: 'narrow' }).format({
-    hours,
-    minutes,
-    seconds,
-  })
 }

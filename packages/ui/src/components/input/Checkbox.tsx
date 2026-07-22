@@ -1,7 +1,7 @@
 import { Checkbox as UICheckbox } from '@base-ui/react'
 import clsx from 'clsx'
 import type { ReactNode } from 'react'
-import Label from '../label/Label.jsx'
+import Label from '../Label.jsx'
 import styles from './Checkbox.module.css'
 
 type CheckboxProps = Omit<UICheckbox.Root.Props, 'onCheckedChange'> & {

@@ -4,7 +4,7 @@
   corner-shape: var(--corner-shape);
 
   .surface {
-    background: var(--color-gray-4);
+    background: var(--color-gray-a2);
     backdrop-filter: none;
     border-radius: var(--border-radius-5);
 
@@ -29,6 +29,10 @@
 a.surface,
 button.surface:not([disabled]) {
   &:hover {
-    background: var(--color-gray-a2);
+    background: var(--color-gray-6);
+  }
+
+  &:active {
+    background: var(--color-gray-5);
   }
 }

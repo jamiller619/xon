@@ -2,11 +2,7 @@ import { ContextMenu as UIContextMenu } from '@base-ui/react'
 import clsx from 'clsx'
 import { css } from 'inline-css-modules'
 import type { ReactNode } from 'react'
-import {
-  type MenuItem,
-  type MenuItems,
-  MenuPopup,
-} from '../menu/MenuPopup.jsx'
+import { type MenuItem, type MenuItems, MenuPopup } from '../menu/MenuPopup.jsx'
 
 export type ContextMenuItem = MenuItem
 
@@ -20,12 +16,19 @@ export type ContextMenuProps = Omit<UIContextMenu.Root.Props, 'children'> & {
   children: ReactNode
 }
 
-const styles = css<'trigger'> /*css*/`
+const styles = css<'trigger' | 'popup'>`
   /* The trigger is a wrapper div; display: contents keeps it out of layout so
      children size themselves as if they weren't wrapped (flex/grid children,
      container queries, etc. all still see the original parent). */
   .trigger {
     display: contents;
+  }
+
+  .popup {
+    svg {
+      width: 16px;
+      height: 16px;
+    }
   }
 `
 
@@ -59,7 +62,7 @@ export default function ContextMenu({
       <UIContextMenu.Trigger className={clsx(styles.trigger, className)}>
         {children}
       </UIContextMenu.Trigger>
-      <MenuPopup items={items} />
+      <MenuPopup items={items} className={styles.popup} />
     </UIContextMenu.Root>
   )
 }

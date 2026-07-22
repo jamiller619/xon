@@ -3,6 +3,8 @@ import {
   Delete16Regular as DeleteIcon,
   LinkEdit16Regular as FixMatchIcon,
   ImageEdit16Regular as ImageEditIcon,
+  TabDesktop16Regular as OpenIcon,
+  TabDesktopCopyRegular as OpenInNewTabIcon,
   Play16Regular as PlayIcon,
   ArrowSyncRegular as RefreshIcon,
 } from '@fluentui/react-icons'
@@ -162,6 +164,14 @@ export default function MediaCard({
   }
 
   const contextMenuItems: ContextMenuItem[] = [
+    {
+      label: 'Open',
+      icon: <OpenIcon />,
+    },
+    {
+      label: 'Open in new tab',
+      icon: <OpenInNewTabIcon />,
+    },
     {
       label: 'Play',
       icon: <PlayIcon />,

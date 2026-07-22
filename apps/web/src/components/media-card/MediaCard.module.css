@@ -204,14 +204,14 @@
 }
 
 /* List view row */
-.listRow {
+/* .listRow {
   border-bottom: 1px solid rgba(255, 255, 255, 0.05);
   transition: background 0.1s ease;
-}
+} */
 
-.listRow:hover {
+/* .listRow:hover {
   background: rgba(255, 255, 255, 0.03);
-}
+} */
 
 .listThumbCell {
   padding: 6px 12px;
@@ -261,25 +261,6 @@
 
 .listTitle:hover {
   color: #a09bff;
-}
-
-.listFileType {
-  display: inline-block;
-  margin-top: 2px;
-  padding: 0px 4px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-  font-size: 0.65rem;
-  color: #888;
-  text-transform: uppercase;
-}
-
-.listCell {
-  padding: 8px 12px;
-  font-size: 0.8rem;
-  color: #888;
-  white-space: nowrap;
 }
 
 /* Selection mode */
