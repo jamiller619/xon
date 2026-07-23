@@ -66,11 +66,41 @@ export function artworkUrl(
  * thumbnail-sized UI surfaces.
  */
 export function thumbnailUrl(
-  item: { id: string; metadata?: { images?: { poster?: PosterInput } } },
+  item: {
+    id: string
+    updatedAt?: Date | string | null
+    metadata?: { images?: { poster?: PosterInput } }
+  },
   size: 'small' | 'medium' | 'large' = 'medium',
 ): string | undefined {
   const first = posterImages(item.metadata?.images?.poster)[0]
   if (!first) return undefined
 
-  return apiUrl(`/api/media/${item.id}/thumbnail?size=${size}`)
+  // The thumbnail endpoint is intentionally cached as immutable. Give each
+  // poster revision a distinct URL so an invalidated media query also causes
+  // <img> elements to load the user's newly selected artwork.
+  const revision = thumbnailRevision(first, item.updatedAt)
+  return apiUrl(`/api/media/${item.id}/thumbnail?size=${size}&v=${revision}`)
+}
+
+function thumbnailRevision(
+  poster: ReturnType<typeof posterImages>[number],
+  updatedAt: Date | string | null | undefined,
+): string {
+  const value = [
+    poster.src,
+    poster.thumbnails?.small ?? '',
+    poster.thumbnails?.medium ?? '',
+    poster.thumbnails?.large ?? '',
+    updatedAt == null ? '' : String(updatedAt),
+  ].join('\0')
+
+  // FNV-1a keeps local file paths out of request URLs while producing a stable
+  // cache key for the current poster metadata.
+  let hash = 0x811c9dc5
+  for (let index = 0; index < value.length; index += 1) {
+    hash ^= value.charCodeAt(index)
+    hash = Math.imul(hash, 0x01000193)
+  }
+  return (hash >>> 0).toString(36)
 }

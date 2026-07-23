@@ -9,9 +9,11 @@ import { ffmpegPath, ffprobePath } from './binaries.ts'
 import { type ThumbnailPaths, writeThumbnailImages } from './thumbnails.ts'
 
 const logger = createLogger('video-thumbnails')
-const GENERATED_POSTER_COUNT = 3
+const GENERATED_IMAGE_COUNT = 3
 const RANDOM_FRAME_START = 0.05
 const RANDOM_FRAME_RANGE = 0.9
+const BACKDROP_WIDTH = 1280
+const BACKDROP_HEIGHT = 720
 
 // const VIDEO_CATEGORIES = new Set<string>([
 //   MediaCategory.Movies,
@@ -65,9 +67,10 @@ function extractFrame(
   filePath: string,
   timestamp: number,
   outputPath: string,
+  videoFilter?: string,
 ): Promise<boolean> {
   return new Promise((resolve) => {
-    const proc = spawn(ffmpegPath, [
+    const args = [
       '-nostdin',
       '-ss',
       String(timestamp),
@@ -75,11 +78,13 @@ function extractFrame(
       filePath,
       '-frames:v',
       '1',
+      ...(videoFilter ? ['-vf', videoFilter] : []),
       '-q:v',
       '2',
       '-y',
       outputPath,
-    ])
+    ]
+    const proc = spawn(ffmpegPath, args)
 
     // Drain stdout and capture stderr so the pipe buffer never fills and hangs the process
     proc.stdout?.resume()
@@ -172,7 +177,7 @@ export async function generateVideoPosters(
 
   const posters: PosterImage[] = []
 
-  for (let index = 0; index < GENERATED_POSTER_COUNT; index++) {
+  for (let index = 0; index < GENERATED_IMAGE_COUNT; index++) {
     // Avoid credits and black leader frames by sampling within the middle 90%.
     const timestamp =
       duration * (RANDOM_FRAME_START + Math.random() * RANDOM_FRAME_RANGE)
@@ -221,6 +226,71 @@ export async function generateVideoPosters(
   return posters
 }
 
+/**
+ * Extract three frames from random points in a video as 16:9 backdrop JPEGs.
+ * Frames are scaled and center-cropped so portrait and ultrawide videos still
+ * produce consistent backdrop artwork.
+ */
+export async function generateVideoBackdrops(
+  filePath: string,
+  mediaItemId: string,
+): Promise<string[] | undefined> {
+  logger.debug(`Generating video backdrops: ${filePath}`)
+
+  const duration = await getVideoDuration(filePath)
+  if (duration === null) {
+    logger.error('Could not determine video duration for backdrop generation', {
+      filePath,
+    })
+    return undefined
+  }
+
+  const directory = join(
+    config.get('appdata.cachePath'),
+    'media-images',
+    mediaItemId,
+  )
+  try {
+    await mkdir(directory, { recursive: true })
+  } catch (err) {
+    logger.error('Failed to create video backdrop directory', {
+      dir: directory,
+      error: String(err),
+    })
+    return undefined
+  }
+
+  const backdrops: string[] = []
+  const videoFilter =
+    `scale=${BACKDROP_WIDTH}:${BACKDROP_HEIGHT}:force_original_aspect_ratio=increase,` +
+    `crop=${BACKDROP_WIDTH}:${BACKDROP_HEIGHT}`
+
+  for (let index = 0; index < GENERATED_IMAGE_COUNT; index++) {
+    const timestamp =
+      duration * (RANDOM_FRAME_START + Math.random() * RANDOM_FRAME_RANGE)
+    const outputPath = join(directory, `backdrop_${randomUUID()}.jpg`)
+
+    logger.debug(
+      `Extracting backdrop frame ${index + 1} at ${timestamp.toFixed(1)}s: ${filePath}`,
+    )
+    const frameExtracted = await extractFrame(
+      filePath,
+      timestamp,
+      outputPath,
+      videoFilter,
+    )
+    if (!frameExtracted) {
+      await unlink(outputPath).catch(() => undefined)
+      await removeGeneratedFiles(backdrops)
+      return undefined
+    }
+    backdrops.push(outputPath)
+  }
+
+  logger.debug(`Generated ${backdrops.length} video backdrops: ${filePath}`)
+  return backdrops
+}
+
 async function removeGeneratedPosters(posters: PosterImage[]): Promise<void> {
   await Promise.all(
     posters.flatMap((poster) =>
@@ -229,4 +299,8 @@ async function removeGeneratedPosters(posters: PosterImage[]): Promise<void> {
       ),
     ),
   )
+}
+
+async function removeGeneratedFiles(paths: string[]): Promise<void> {
+  await Promise.all(paths.map((path) => unlink(path).catch(() => undefined)))
 }

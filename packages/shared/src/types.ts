@@ -92,6 +92,11 @@ export interface Library {
   dataSources: DataSource[]
 }
 
+export interface LibraryStats {
+  totalItems: number
+  totalSize: number
+}
+
 export enum DataSourceType {
   local = 'local',
   plugin = 'plugin',

@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
-import type { Library } from '@xon/shared'
+import type { Library, LibraryStats } from '@xon/shared'
+import prettyBytes from 'pretty-bytes'
 import { useParams } from 'react-router-dom'
 import { apiFetch } from '~/lib/apiFetch'
 import { useAppStore } from '~/store/appStore'
@@ -26,6 +27,19 @@ export default function LibraryBrowser() {
     },
     enabled: !!id,
   })
+
+  const { data: libraryStats, error: libraryStatsError } =
+    useQuery<LibraryStats>({
+      queryKey: ['library-stats', id],
+      queryFn: async ({ signal }) => {
+        const response = await apiFetch(`/api/libraries/${id}/stats`, {
+          signal,
+        })
+        if (!response.ok) throw new Error('Failed to load library stats')
+        return response.json()
+      },
+      enabled: !!id,
+    })
 
   const mediaQuery = useLibraryMedia({
     libraryId: id,
@@ -57,7 +71,28 @@ export default function LibraryBrowser() {
       <header className={styles.header}>
         <div className={styles.titleContainer}>
           <h1 className={styles.title}>{library?.name ?? 'Library'}</h1>
-          <span>{library?.dataSources.map((ds) => ds.path).join(', ')}</span>
+          <div className={styles.libraryStats}>
+            {library?.dataSources.length ? (
+              <span
+                className={styles.libraryPath}
+                title={library.dataSources
+                  .map((source) => source.path)
+                  .join(', ')}
+              >
+                {library.dataSources.map((source) => source.path).join(', ')}
+              </span>
+            ) : null}
+            {libraryStats && (
+              <>
+                <span>
+                  {libraryStats.totalItems.toLocaleString()}{' '}
+                  {libraryStats.totalItems === 1 ? 'item' : 'items'}
+                </span>
+                <span>{prettyBytes(libraryStats.totalSize)}</span>
+              </>
+            )}
+            {libraryStatsError && <span>Stats unavailable</span>}
+          </div>
         </div>
         <LibraryToolbar
           viewMode={viewMode}

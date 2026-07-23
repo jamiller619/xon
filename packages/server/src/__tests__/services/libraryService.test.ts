@@ -3,7 +3,10 @@ import { MediaType } from '@xon/shared'
 import { drizzle, type LibSQLDatabase } from 'drizzle-orm/libsql'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { mediaItems } from '../../db/schema.ts'
-import { getMediaByLibraryId } from '../../services/libraryService.ts'
+import {
+  getLibraryStats,
+  getMediaByLibraryId,
+} from '../../services/libraryService.ts'
 
 describe('libraryService.getMediaByLibraryId', () => {
   let client: Client
@@ -90,6 +93,15 @@ describe('libraryService.getMediaByLibraryId', () => {
 
     expect(result.data.map((item) => item.id)).toEqual(['audio-1', 'video-2'])
     expect(result.total).toBe(2)
+  })
+
+  it('reports aggregate item and storage totals for a library', async () => {
+    const result = await getLibraryStats(db, 'library-1')
+
+    expect(result).toEqual({
+      totalItems: 3,
+      totalSize: 600,
+    })
   })
 })
 

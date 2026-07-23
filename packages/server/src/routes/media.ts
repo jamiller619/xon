@@ -34,7 +34,10 @@ import {
   needsTranscoding,
   spawnTranscodeSegment,
 } from '../media/transcode.ts'
-import { generateVideoPosters } from '../media/videoThumbnails.ts'
+import {
+  generateVideoBackdrops,
+  generateVideoPosters,
+} from '../media/videoThumbnails.ts'
 import { rebuildThumbnail } from '../services/libraryThumbnailService.ts'
 import * as mediaService from '../services/mediaService.ts'
 import {
@@ -559,6 +562,45 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
             unlink(path).catch(() => undefined),
           ),
         ),
+      )
+      throw error
+    }
+
+    void rebuildThumbnail(db, item.libraryId)
+    return c.json({ images }, 201)
+  })
+
+  // POST /media/:id/images/backdrops/generate — append three 16:9 frames
+  // captured from random points in the item's video.
+  router.post('/:id/images/backdrops/generate', async (c) => {
+    const id = c.req.param('id')
+    const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
+    const item = rows[0]
+    if (!item) return c.json({ error: 'Not found' }, 404)
+    if (!item.mediaType.startsWith('video/')) {
+      return c.json(
+        { error: 'Images can only be created from video items' },
+        400,
+      )
+    }
+
+    const backdrops = await generateVideoBackdrops(item.filePath, id)
+    if (!backdrops) {
+      return c.json({ error: 'Could not create images from this video' }, 500)
+    }
+
+    const images = normalizedArtworkImages(item.metadata)
+    images.backdrop.push(...backdrops)
+    const metadata = { ...item.metadata, images }
+
+    try {
+      await db
+        .update(mediaItems)
+        .set({ metadata, updatedAt: new Date() })
+        .where(eq(mediaItems.id, id))
+    } catch (error) {
+      await Promise.all(
+        backdrops.map((path) => unlink(path).catch(() => undefined)),
       )
       throw error
     }

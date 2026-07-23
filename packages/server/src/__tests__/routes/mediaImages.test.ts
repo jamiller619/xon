@@ -13,6 +13,7 @@ import { Hono } from 'hono'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const testConfig = vi.hoisted(() => ({ cachePath: '' }))
+const generateVideoBackdrops = vi.hoisted(() => vi.fn())
 const generateVideoPosters = vi.hoisted(() => vi.fn())
 
 vi.mock('../../config.ts', () => ({
@@ -26,6 +27,7 @@ vi.mock('../../services/libraryThumbnailService.ts', () => ({
 }))
 
 vi.mock('../../media/videoThumbnails.ts', () => ({
+  generateVideoBackdrops,
   generateVideoPosters,
 }))
 
@@ -166,6 +168,31 @@ describe('Media artwork routes', () => {
     expect(
       (item.metadata.images as { poster: unknown[] }).poster.slice(-3),
     ).toEqual(posters)
+  })
+
+  it('appends three backdrops generated from the video', async () => {
+    const backdrops = [1, 2, 3].map(
+      (index) => `${cachePath}/media-images/media-1/backdrop-${index}.jpg`,
+    )
+    generateVideoBackdrops.mockResolvedValueOnce(backdrops)
+
+    const response = await app.request(
+      '/media/media-1/images/backdrops/generate',
+      { method: 'POST' },
+    )
+
+    expect(response.status).toBe(201)
+    expect(generateVideoBackdrops).toHaveBeenCalledWith(
+      '/videos/movie.mp4',
+      'media-1',
+    )
+    const body = (await response.json()) as {
+      images: { backdrop: string[] }
+    }
+    expect(body.images.backdrop.slice(-3)).toEqual(backdrops)
+    expect(
+      (item.metadata.images as { backdrop: string[] }).backdrop.slice(-3),
+    ).toEqual(backdrops)
   })
 
   it('serves a cached artwork entry with its detected content type', async () => {

@@ -1,6 +1,6 @@
 import crypto from 'node:crypto'
 import type { Library, MediaType, PageProps, SortProps } from '@xon/shared'
-import { and, asc, count, desc, eq, isNull, like } from 'drizzle-orm'
+import { and, asc, count, desc, eq, isNull, like, sql } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { libraries, type MediaItem, mediaItems } from '../db/schema.ts'
 import { createLogger } from '../logger.ts'
@@ -99,6 +99,21 @@ export async function getMediaByLibraryId(
   return {
     data: results,
     total: total[0]?.count ?? 0,
+  }
+}
+
+export async function getLibraryStats(db: LibSQLDatabase, libraryId: string) {
+  const [stats] = await db
+    .select({
+      totalItems: count(),
+      totalSize: sql<number>`coalesce(sum(${mediaItems.fileSize}), 0)`,
+    })
+    .from(mediaItems)
+    .where(eq(mediaItems.libraryId, libraryId))
+
+  return {
+    totalItems: stats?.totalItems ?? 0,
+    totalSize: Number(stats?.totalSize ?? 0),
   }
 }
 

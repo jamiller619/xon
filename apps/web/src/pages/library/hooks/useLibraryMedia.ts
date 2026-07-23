@@ -95,6 +95,9 @@ export function useLibraryMedia(options: LibraryMediaOptions) {
       void queryClient.invalidateQueries({
         queryKey: ['library-media', libraryId],
       })
+      void queryClient.invalidateQueries({
+        queryKey: ['library-stats', libraryId],
+      })
     })
   }, [libraryId, queryClient])
 

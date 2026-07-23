@@ -162,6 +162,22 @@ export function makeLibrariesRouter(
       return c.json({ success: result })
     })
 
+    // GET /libraries/:libraryId/stats — aggregate library-wide media totals
+    .get('/:libraryId/stats', async (c) => {
+      const libraryId = c.req.param('libraryId')
+      const user = c.get('user')
+
+      if (!user) {
+        return c.json({ error: 'Not authenticated' }, 401)
+      }
+
+      const library = await libraryService.getLibraryById(db, libraryId)
+      if (!library) return c.json({ error: 'Not found' }, 404)
+
+      const stats = await libraryService.getLibraryStats(db, libraryId)
+      return c.json(stats)
+    })
+
     // GET /libraries/:libraryId/media — list media items with filtering, sorting, pagination
     .get(
       '/:libraryId/media',

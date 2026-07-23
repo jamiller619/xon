@@ -309,7 +309,7 @@ export default function EditImages({ item }: { item: MediaItem }) {
   )
   const artworkRef = useRef(artwork)
   const [busyKind, setBusyKind] = useState<
-    ArtworkKind | 'saving' | 'generating'
+    ArtworkKind | 'saving' | `generating-${'poster' | 'backdrop'}`
   >()
   const [error, setError] = useState<string>()
 
@@ -434,13 +434,13 @@ export default function EditImages({ item }: { item: MediaItem }) {
     }
   }
 
-  async function createImages() {
-    setBusyKind('generating')
+  async function createImages(kind: 'poster' | 'backdrop') {
+    setBusyKind(`generating-${kind}`)
     setError(undefined)
 
     try {
       const response = await apiFetch(
-        `/api/media/${item.id}/images/posters/generate`,
+        `/api/media/${item.id}/images/${kind}s/generate`,
         { method: 'POST' },
       )
       if (!response.ok) {
@@ -497,9 +497,10 @@ export default function EditImages({ item }: { item: MediaItem }) {
             items={artwork[kind]}
             busy={busyKind != null}
             uploading={busyKind === kind}
-            creating={kind === 'poster' && busyKind === 'generating'}
-            {...(kind === 'poster' && item.mediaType?.startsWith('video/')
-              ? { onCreate: () => void createImages() }
+            creating={busyKind === `generating-${kind}`}
+            {...((kind === 'poster' || kind === 'backdrop') &&
+            item.mediaType?.startsWith('video/')
+              ? { onCreate: () => void createImages(kind) }
               : {})}
             onUpload={(file) => void upload(kind, file)}
             onReorder={(items) => reorder(kind, items)}

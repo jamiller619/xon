@@ -16,9 +16,11 @@ vi.mock('../../config.ts', () => ({
 }))
 vi.mock('../../media/thumbnails.ts', () => ({ writeThumbnailImages }))
 
-const { generateVideoPosters, generateVideoThumbnails } = await import(
-  '../../media/videoThumbnails.js'
-)
+const {
+  generateVideoBackdrops,
+  generateVideoPosters,
+  generateVideoThumbnails,
+} = await import('../../media/videoThumbnails.js')
 
 type FakeProc = EventEmitter & {
   stdout: EventEmitter & { resume: ReturnType<typeof vi.fn> }
@@ -147,5 +149,55 @@ describe('generateVideoPosters', () => {
       generateVideoPosters('/videos/movie.mp4', 'media-1'),
     ).resolves.toBeUndefined()
     expect(writeThumbnailImages).not.toHaveBeenCalled()
+  })
+})
+
+describe('generateVideoBackdrops', () => {
+  it('creates three 16:9 backdrops from three random video times', async () => {
+    setupSpawnMock([
+      { type: 'ffprobe', duration: 100 },
+      { type: 'ffmpeg' },
+      { type: 'ffmpeg' },
+      { type: 'ffmpeg' },
+    ])
+    vi.spyOn(Math, 'random')
+      .mockReturnValueOnce(0)
+      .mockReturnValueOnce(0.5)
+      .mockReturnValueOnce(1)
+
+    const result = await generateVideoBackdrops('/videos/movie.mp4', 'media-1')
+
+    expect(result).toHaveLength(3)
+    expect(spawn.mock.calls.slice(1).map((call) => call[1])).toEqual([
+      expect.arrayContaining(['5']),
+      expect.arrayContaining(['50']),
+      expect.arrayContaining(['95']),
+    ])
+    for (const call of spawn.mock.calls.slice(1)) {
+      expect(call[1]).toEqual(
+        expect.arrayContaining([
+          '-vf',
+          'scale=1280:720:force_original_aspect_ratio=increase,crop=1280:720',
+        ]),
+      )
+    }
+    for (const backdrop of result ?? []) {
+      expect(backdrop).toMatch(
+        /^\/data\/cache\/media-images\/media-1\/backdrop_.+\.jpg$/,
+      )
+    }
+  })
+
+  it('removes completed backdrops when a later extraction fails', async () => {
+    setupSpawnMock([
+      { type: 'ffprobe', duration: 100 },
+      { type: 'ffmpeg' },
+      { type: 'ffmpeg', exitCode: 1 },
+    ])
+
+    await expect(
+      generateVideoBackdrops('/videos/movie.mp4', 'media-1'),
+    ).resolves.toBeUndefined()
+    expect(unlink).toHaveBeenCalledTimes(2)
   })
 })
