@@ -39,3 +39,8 @@
 .header {
   margin-block-end: var(--space-md);
 }
+
+.headerActions {
+  margin-inline-start: auto;
+  white-space: nowrap;
+}

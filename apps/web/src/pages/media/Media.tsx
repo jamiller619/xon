@@ -8,7 +8,7 @@ import { Link, useLocation, useParams } from 'react-router-dom'
 import { BackgroundSlideshow } from '~/components/background-slideshow/BackgroundSlideshow'
 import PluginSlot from '~/components/PluginSlot'
 import useQueryAPIHelper from '~/hooks/useQueryAPIHelper'
-import { apiUrl, thumbnailUrl } from '~/lib/apiFetch'
+import { artworkUrl, thumbnailUrl } from '~/lib/apiFetch'
 import basename from '~/lib/basename'
 import ActionButtons from './components/ActionButtons'
 import styles from './Media.module.css'
@@ -72,12 +72,24 @@ export default function Media() {
   const fileName = basename(data.filePath)
   const description = data.description ?? data.metadata.overview
   const posterSrc = thumbnailUrl(data, 'large')
+  const backdrops = Array.isArray(data.metadata.images?.backdrop)
+    ? data.metadata.images.backdrop.map((_, index) =>
+        artworkUrl(data.id, 'backdrop', index),
+      )
+    : data.metadata.images?.backdrop
+      ? [artworkUrl(data.id, 'backdrop', 0)]
+      : []
+  const logos = Array.isArray(data.metadata.images?.logo)
+    ? data.metadata.images.logo
+    : data.metadata.images?.logo
+      ? [data.metadata.images.logo]
+      : []
 
   return (
     <div className={styles.page}>
-      {Array.isArray(data.metadata.images?.backdrop) && (
+      {backdrops.length > 0 && (
         <BackgroundSlideshow
-          images={data.metadata.images.backdrop}
+          images={backdrops}
           kenBurns={{
             zoom: 1.03,
             pan: 0,
@@ -123,9 +135,9 @@ export default function Media() {
         <Flex dir="col" gap="5" align="start">
           <div>
             <div className={styles.logo}>
-              {data.metadata.images?.logo ? (
+              {logos.length > 0 ? (
                 <img
-                  src={apiUrl(data.metadata.images.logo)}
+                  src={artworkUrl(data.id, 'logo', 0)}
                   alt={data.title ?? fileName}
                   loading="lazy"
                   className={styles.logo}

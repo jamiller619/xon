@@ -17,3 +17,10 @@ Xon is a self-hosted media center platform built on Node.js/Electron with a plug
 - ExifTool + FFprobe for media metadata
 - Google's Magika for file type detection (https://github.com/google/magika)
 - No sync I/O APIs
+
+## Design Rules
+- Borders should rarely, if ever, separate sections. Prefer typography and
+  spacing; use a change in surface color or elevation only when a section needs
+  stronger visual grouping.
+- Use borders when they communicate a meaningful boundary or state, such as an
+  image thumbnail, upload target, input, focus ring, or selected item.

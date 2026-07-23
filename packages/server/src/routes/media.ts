@@ -1,10 +1,12 @@
+import { randomUUID } from 'node:crypto'
 import { createReadStream } from 'node:fs'
-import { readdir, readFile } from 'node:fs/promises'
-import { basename, dirname, extname, join } from 'node:path'
+import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises'
+import { basename, dirname, extname, join, resolve, sep } from 'node:path'
 import { Readable } from 'node:stream'
 import type { SortProps } from '@xon/shared'
 import { eq, inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
+import { fileTypeFromBuffer } from 'file-type'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { computeETag } from '../cache.ts'
@@ -22,6 +24,7 @@ import {
   needsTranscoding,
   spawnTranscodeSegment,
 } from '../media/transcode.ts'
+import { rebuildThumbnail } from '../services/libraryThumbnailService.ts'
 import * as mediaService from '../services/mediaService.ts'
 import {
   applyMatch,
@@ -38,6 +41,79 @@ const mediaListQuerySchema = z.object({
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
 })
+
+const ARTWORK_KINDS = ['poster', 'backdrop', 'logo'] as const
+type ArtworkKind = (typeof ARTWORK_KINDS)[number]
+
+const imageSourceSchema = z.string().trim().min(1).max(8192)
+const posterImageSchema = z.union([
+  imageSourceSchema,
+  z.object({
+    src: imageSourceSchema,
+    thumbnails: z
+      .object({
+        small: imageSourceSchema,
+        medium: imageSourceSchema,
+        large: imageSourceSchema,
+      })
+      .optional(),
+  }),
+])
+const artworkImagesSchema = z.object({
+  poster: z.array(posterImageSchema).max(100),
+  backdrop: z.array(imageSourceSchema).max(100),
+  logo: z.array(imageSourceSchema).max(100),
+})
+
+type PosterEntry = z.infer<typeof posterImageSchema>
+type ArtworkImages = z.infer<typeof artworkImagesSchema>
+
+const MAX_ARTWORK_UPLOAD_BYTES = 20 * 1024 * 1024
+const SUPPORTED_ARTWORK_MIME_TYPES = new Set([
+  'image/avif',
+  'image/gif',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+])
+
+function isArtworkKind(value: string): value is ArtworkKind {
+  return ARTWORK_KINDS.includes(value as ArtworkKind)
+}
+
+function imageSource(entry: PosterEntry): string {
+  return typeof entry === 'string' ? entry : entry.src
+}
+
+function imageList(value: unknown): PosterEntry[] {
+  if (!value) return []
+  return Array.isArray(value) ? value : [value as PosterEntry]
+}
+
+function artworkSources(images: ArtworkImages): string[] {
+  return [...images.poster.map(imageSource), ...images.backdrop, ...images.logo]
+}
+
+function cachedArtworkDirectory(mediaId: string): string {
+  return resolve(join(config.get('appdata.cachePath'), 'media-images', mediaId))
+}
+
+function isCachedArtworkPath(source: string, mediaId: string): boolean {
+  const directory = cachedArtworkDirectory(mediaId)
+  const candidate = resolve(source)
+  return candidate.startsWith(`${directory}${sep}`)
+}
+
+function normalizedArtworkImages(
+  metadata: Record<string, unknown>,
+): ArtworkImages {
+  const images = (metadata.images ?? {}) as Record<string, unknown>
+  return {
+    poster: imageList(images.poster),
+    backdrop: imageList(images.backdrop).map(imageSource),
+    logo: imageList(images.logo).map(imageSource),
+  }
+}
 
 export function makeMediaRouter(db: LibSQLDatabase): Hono {
   const router = new Hono()
@@ -137,6 +213,145 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       'Cache-Control': 'public, max-age=86400',
       ETag: etag,
     })
+  })
+
+  // GET /media/:id/images/:kind/:index — serve the indexed artwork entry.
+  // Remote artwork redirects to its provider; local/cache files are streamed.
+  router.get('/:id/images/:kind/:index', async (c) => {
+    const id = c.req.param('id')
+    const kind = c.req.param('kind')
+    const index = Number.parseInt(c.req.param('index'), 10)
+
+    if (!isArtworkKind(kind) || !Number.isInteger(index) || index < 0) {
+      return c.json({ error: 'Not found' }, 404)
+    }
+
+    const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
+    const item = rows[0]
+    if (!item) return c.json({ error: 'Not found' }, 404)
+
+    const images = normalizedArtworkImages(item.metadata)
+    const entry = images[kind][index]
+    if (!entry) return c.json({ error: 'Not found' }, 404)
+
+    const source = typeof entry === 'string' ? entry : imageSource(entry)
+    if (/^https?:\/\//i.test(source) || source.startsWith('/api/')) {
+      return c.redirect(source, 302)
+    }
+
+    let data: Buffer
+    try {
+      data = await readFile(source)
+    } catch {
+      return c.json({ error: 'Image not found' }, 404)
+    }
+
+    const detected = await fileTypeFromBuffer(data)
+    if (!detected || !SUPPORTED_ARTWORK_MIME_TYPES.has(detected.mime)) {
+      return c.json({ error: 'Unsupported image type' }, 415)
+    }
+
+    const etag = computeETag([source, data.length])
+    if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
+
+    return c.body(new Uint8Array(data), 200, {
+      'Content-Type': detected.mime,
+      'Cache-Control': 'private, no-cache',
+      ETag: etag,
+    })
+  })
+
+  // PUT /media/:id/images — persist the explicit display order for all
+  // artwork groups and remove uploaded cache files no longer referenced.
+  router.put(
+    '/:id/images',
+    validate('json', artworkImagesSchema),
+    async (c) => {
+      const id = c.req.param('id')
+      const nextImages = c.req.valid('json')
+      const rows = await db
+        .select()
+        .from(mediaItems)
+        .where(eq(mediaItems.id, id))
+      const item = rows[0]
+      if (!item) return c.json({ error: 'Not found' }, 404)
+
+      const previousImages = normalizedArtworkImages(item.metadata)
+      const metadata = { ...item.metadata, images: nextImages }
+
+      await db
+        .update(mediaItems)
+        .set({ metadata, updatedAt: new Date() })
+        .where(eq(mediaItems.id, id))
+
+      const retained = new Set(artworkSources(nextImages))
+      const removedCacheFiles = artworkSources(previousImages).filter(
+        (source) => isCachedArtworkPath(source, id) && !retained.has(source),
+      )
+      await Promise.all(
+        removedCacheFiles.map((source) =>
+          unlink(source).catch(() => undefined),
+        ),
+      )
+      void rebuildThumbnail(db, item.libraryId)
+
+      return c.json({ images: nextImages })
+    },
+  )
+
+  // POST /media/:id/images/:kind — copy an uploaded image into the configured
+  // cache directory and append it to the requested artwork group.
+  router.post('/:id/images/:kind', async (c) => {
+    const id = c.req.param('id')
+    const kind = c.req.param('kind')
+    if (!isArtworkKind(kind)) {
+      return c.json({ error: 'Unknown artwork type' }, 400)
+    }
+
+    const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
+    const item = rows[0]
+    if (!item) return c.json({ error: 'Not found' }, 404)
+
+    const form = await c.req.parseBody()
+    const file = form.file
+    if (!(file instanceof File)) {
+      return c.json({ error: 'Choose an image to upload' }, 400)
+    }
+    if (file.size === 0 || file.size > MAX_ARTWORK_UPLOAD_BYTES) {
+      return c.json({ error: 'Image must be between 1 byte and 20 MB' }, 413)
+    }
+
+    const data = Buffer.from(await file.arrayBuffer())
+    const detected = await fileTypeFromBuffer(data)
+    if (!detected || !SUPPORTED_ARTWORK_MIME_TYPES.has(detected.mime)) {
+      return c.json(
+        { error: 'Upload a JPEG, PNG, WebP, GIF, or AVIF image' },
+        415,
+      )
+    }
+
+    const directory = cachedArtworkDirectory(id)
+    const destination = join(directory, `${randomUUID()}.${detected.ext}`)
+    await mkdir(directory, { recursive: true })
+    await writeFile(destination, data)
+
+    const images = normalizedArtworkImages(item.metadata)
+    if (kind === 'poster') images.poster.push(destination)
+    else images[kind].push(destination)
+
+    const metadata = { ...item.metadata, images }
+    try {
+      await db
+        .update(mediaItems)
+        .set({ metadata, updatedAt: new Date() })
+        .where(eq(mediaItems.id, id))
+    } catch (error) {
+      await unlink(destination).catch(() => undefined)
+      throw error
+    }
+
+    void rebuildThumbnail(db, item.libraryId)
+    return c.json({ images }, 201)
   })
 
   const updateMediaSchema = z.object({

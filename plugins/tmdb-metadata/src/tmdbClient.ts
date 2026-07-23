@@ -9,6 +9,7 @@ import {
 
 const TMDB_BASE = 'https://api.themoviedb.org/3'
 const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
+const MAX_POSTERS = 3
 
 interface CacheEntry<T> {
   data: T
@@ -336,25 +337,27 @@ export class TmdbClient {
     const images = await this.fetchMovieImages(movieId, language)
 
     if (images?.backdrops) {
-      data.images.backdrop = images.backdrops
-        .slice(0, 5)
-        .map((i) => constructURL(backdropSizes.large, i.file_path))
+      data.images.backdrop = images.backdrops.map((i) =>
+        constructURL(backdropSizes.large, i.file_path),
+      )
     }
 
-    const poster = pickByLanguage(images?.posters ?? [], language)
-    if (poster) {
-      data.images.poster = [
-        { src: constructURL(posterSizes.xlarge, poster.file_path) },
-      ]
+    const posters = pickPostersByLanguage(images?.posters ?? [], language)
+    if (posters.length > 0) {
+      data.images.poster = posters.map((poster) => ({
+        src: constructURL(posterSizes.xlarge, poster.file_path),
+      }))
     } else if (details.poster_path) {
       data.images.poster = [
         { src: constructURL(posterSizes.xlarge, details.poster_path) },
       ]
     }
 
-    const logo = pickByLanguage(images?.logos ?? [], language)
-    if (logo) {
-      data.images.logo = constructURL(logoSizes.original, logo.file_path)
+    const logos = rankByLanguage(images?.logos ?? [], language)
+    if (logos.length > 0) {
+      data.images.logo = logos.map((logo) =>
+        constructURL(logoSizes.original, logo.file_path),
+      )
     }
 
     return data
@@ -466,27 +469,32 @@ function constructURL(size: string, imagePath?: string | null | undefined) {
   return new URL(`${size}${imagePath}`, secureBaseURL).href
 }
 
-/**
- * Pick the single best image for a language: exact language match first,
- * then language-neutral, then anything, ranked by TMDb votes within each
- * group.
- */
-function pickByLanguage(
+function pickPostersByLanguage(
   images: ImageResult[],
   lang: string,
-): ImageResult | undefined {
+): ImageResult[] {
+  return rankByLanguage(images, lang).slice(0, MAX_POSTERS)
+}
+
+function rankByLanguage(images: ImageResult[], lang: string): ImageResult[] {
   const matches = images.filter((i) => i.iso_639_1 === lang)
   const neutral = images.filter((i) => i.iso_639_1 === null)
-  const candidates = matches.length
-    ? matches
-    : neutral.length
-      ? neutral
-      : images
+  const remaining = images.filter(
+    (i) => i.iso_639_1 !== lang && i.iso_639_1 !== null,
+  )
 
-  return [...candidates].sort(
+  return [
+    ...rankImages(matches),
+    ...rankImages(neutral),
+    ...rankImages(remaining),
+  ]
+}
+
+function rankImages(images: ImageResult[]): ImageResult[] {
+  return [...images].sort(
     (a, b) =>
       b.vote_average - a.vote_average ||
       b.vote_count - a.vote_count ||
       b.width - a.width,
-  )[0]
+  )
 }

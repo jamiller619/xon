@@ -9,7 +9,13 @@ import {
   ArrowSyncRegular as RefreshIcon,
 } from '@fluentui/react-icons'
 import type { MediaItem } from '@xon/shared'
-import { Card, ContextMenu, type ContextMenuItem, Dialog } from '@xon/ui'
+import {
+  Button,
+  Card,
+  ContextMenu,
+  type ContextMenuItem,
+  Dialog,
+} from '@xon/ui'
 import { type ComponentPropsWithRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useRefreshMetadataConfirmation } from '~/components/confirmation/ConfirmationProvider'
@@ -69,6 +75,16 @@ export default function MediaCard({
     e.preventDefault()
     e.stopPropagation()
     onToggleFavorite?.(item.id, isFavorited ?? false)
+  }
+
+  function handleRefreshMetadata() {
+    confirmRefresh(() =>
+      apiFetch(`/api/libraries/${item.libraryId}/scan/refresh`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ mediaItemId: item.id }),
+      }),
+    )
   }
 
   if (listView) {
@@ -163,14 +179,7 @@ export default function MediaCard({
     {
       label: 'Refresh metadata',
       icon: <RefreshIcon />,
-      onClick: () =>
-        confirmRefresh(() =>
-          apiFetch(`/api/libraries/${item.libraryId}/scan/refresh`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ mediaItemId: item.id }),
-          }),
-        ),
+      onClick: handleRefreshMetadata,
     },
     {
       label: 'Delete',
@@ -189,8 +198,14 @@ export default function MediaCard({
         open={editImagesOpen}
         onOpenChange={setEditImagesOpen}
         title={`${item.title}: Edit images`}
+        headerActions={
+          <Button size="small" onClick={handleRefreshMetadata}>
+            <RefreshIcon aria-hidden="true" />
+            Refresh Metadata
+          </Button>
+        }
       >
-        <EditImages images={item.metadata.images} />
+        <EditImages item={item} />
       </Dialog>
       {fixMatchOpen && (
         <FixMatchDialog

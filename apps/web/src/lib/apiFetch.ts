@@ -51,11 +51,19 @@ export function apiUrl(url: string | string[]): string {
   return `${url}${sep}token=${token}`
 }
 
+export function artworkUrl(
+  mediaId: string,
+  kind: 'poster' | 'backdrop' | 'logo',
+  index: number,
+): string {
+  return apiUrl(`/api/media/${mediaId}/images/${kind}/${index}`)
+}
+
 /**
  * Resolve a media item's poster to a servable image URL. Remote posters
- * (e.g. TMDB `https://…`) are used directly; locally generated thumbnails are
- * served through the API by id + size, since their on-disk paths aren't
- * web-accessible.
+ * (e.g. TMDB `https://…`) are used directly. Locally generated thumbnail sets
+ * use the size endpoint, while other local images are served by their ordered
+ * artwork index because on-disk cache paths aren't web-accessible.
  */
 export function thumbnailUrl(
   item: { id: string; metadata?: { images?: { poster?: PosterInput } } },
@@ -64,9 +72,9 @@ export function thumbnailUrl(
   const first = posterImages(item.metadata?.images?.poster)[0]
   if (!first) return undefined
 
-  const url = /^https?:\/\//.test(first.src)
-    ? first.src
-    : `/api/media/${item.id}/thumbnail?size=${size}`
+  if (/^https?:\/\//.test(first.src)) return apiUrl(first.src)
 
-  return apiUrl(url)
+  return first.thumbnails
+    ? apiUrl(`/api/media/${item.id}/thumbnail?size=${size}`)
+    : artworkUrl(item.id, 'poster', 0)
 }

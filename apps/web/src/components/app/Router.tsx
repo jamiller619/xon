@@ -35,6 +35,9 @@ const NotFound = lazy(() => import('~/pages/not-found/NotFound'))
 const Search = lazy(() => import('~/pages/search/Search'))
 const Settings = lazy(() => import('~/pages/settings/Settings'))
 const Setup = lazy(() => import('~/pages/setup/Setup'))
+const DragReorderSpike = import.meta.env.DEV
+  ? lazy(() => import('~/pages/dev/DragReorderSpike'))
+  : undefined
 
 export default function Router() {
   return (
@@ -74,6 +77,12 @@ export default function Router() {
         <Route path="/admin/health" element={<AdminHealth />} />
         <Route path="/admin/logs" element={<LogViewer />} />
         <Route path="/settings" element={<Settings />} />
+        {DragReorderSpike && (
+          <Route
+            path="/dev/drag-reorder-spike"
+            element={<DragReorderSpike />}
+          />
+        )}
       </Route>
       <Route
         path="*"

@@ -258,6 +258,8 @@ export async function refreshMetadata(
         title: item.title,
         fileMetadata: item.fileMetadata,
         metadata: seed,
+        matchId: item.matchId,
+        matchIdSource: item.matchIdSource,
       },
     }
   })

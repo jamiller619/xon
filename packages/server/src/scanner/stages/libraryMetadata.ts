@@ -1,9 +1,12 @@
 import path from 'node:path'
-import type { MetadataSourcePlugin } from '@xon/plugin-sdk'
-import { LibraryType } from '@xon/shared'
+import type { MetadataSearchQuery, MetadataSourcePlugin } from '@xon/plugin-sdk'
+import { LibraryType, type MediaType } from '@xon/shared'
 import { normalizeMediaTitle } from '../../media/filenameParser.ts'
 import { mergeMetadata } from '../../media/metadataMerge.ts'
-import { getPluginsByCategory } from '../../plugins/pluginManager.js'
+import {
+  getPluginsByCategory,
+  type PluginEntry,
+} from '../../plugins/pluginManager.js'
 import type { MediaJobData, PipelineStage } from '../pipeline.js'
 
 export default {
@@ -20,9 +23,7 @@ export default {
       }
     }
 
-    const plugins = getPluginsByCategory<MetadataSourcePlugin>(
-      'MetadataSource',
-    ).filter((p) => p.manifest.libraryTypes.includes(job.libraryType))
+    const { plugins, matchedProvider } = getMetadataPlugins(job)
 
     ctx.logger.log(
       `Matched metadata plugins: [${plugins.map((p) => p.manifest.id).join(', ') ?? 'none'}] for file: ${job.file.path}`,
@@ -30,6 +31,9 @@ export default {
 
     const data: MediaJobData = { ...job.data }
     data.metadata ??= {}
+    if (matchedProvider && !data.matchIdSource) {
+      data.matchIdSource = matchedProvider.manifest.id
+    }
     const storedMetadata = data.metadata
     let refreshedMetadata = {}
 
@@ -49,15 +53,17 @@ export default {
       try {
         const relativePath = path.relative(job.dataSourcePath, job.file.path)
 
-        const pluginMeta = await plugin.instance.enrich(
-          relativePath,
-          job.libraryType,
-          {
-            title: data.title,
-            fileMetadata: data.fileMetadata,
-            metadata: data.metadata,
-          },
-        )
+        const pluginMeta =
+          plugin === matchedProvider && data.matchId
+            ? await plugin.instance.resolveMatch(
+                data.matchId,
+                makeSearchQuery(job, data),
+              )
+            : await plugin.instance.enrich(relativePath, job.libraryType, {
+                title: data.title,
+                fileMetadata: data.fileMetadata,
+                metadata: data.metadata,
+              })
 
         if (pluginMeta) {
           ctx.logger.log(`Plugin metadata for ${job.file.path}`, {
@@ -68,15 +74,17 @@ export default {
 
           data.title = 'title' in pluginMeta ? pluginMeta.title : data.title
 
-          if ('tmdbId' in pluginMeta && pluginMeta.tmdbId != null) {
-            data.matchId = String(pluginMeta.tmdbId)
-            data.matchIdSource = 'tmdb'
-          } else if ('imdbId' in pluginMeta && pluginMeta.imdbId != null) {
-            data.matchId = pluginMeta.imdbId
-            data.matchIdSource = 'imdb'
-          } else if ('imdbID' in pluginMeta && pluginMeta.imdbID != null) {
-            data.matchId = pluginMeta.imdbID
-            data.matchIdSource = 'imdb'
+          if (job.type !== 'refresh' || !data.matchId) {
+            if ('tmdbId' in pluginMeta && pluginMeta.tmdbId != null) {
+              data.matchId = String(pluginMeta.tmdbId)
+              data.matchIdSource = plugin.manifest.id
+            } else if ('imdbId' in pluginMeta && pluginMeta.imdbId != null) {
+              data.matchId = pluginMeta.imdbId
+              data.matchIdSource = plugin.manifest.id
+            } else if ('imdbID' in pluginMeta && pluginMeta.imdbID != null) {
+              data.matchId = pluginMeta.imdbID
+              data.matchIdSource = plugin.manifest.id
+            }
           }
 
           // Preserve arrays from higher-priority providers while adding new
@@ -97,3 +105,73 @@ export default {
     }
   },
 } satisfies PipelineStage
+
+type MetadataPlugin = PluginEntry<MetadataSourcePlugin>
+type MetadataPluginSelection = {
+  plugins: MetadataPlugin[]
+  matchedProvider?: MetadataPlugin | undefined
+}
+
+function getMetadataPlugins(
+  job: Parameters<PipelineStage['run']>[1],
+): MetadataPluginSelection {
+  const plugins = getPluginsByCategory<MetadataSourcePlugin>(
+    'MetadataSource',
+  ).filter((plugin) => plugin.manifest.libraryTypes.includes(job.libraryType))
+
+  const storedMatchSource =
+    job.data.matchIdSource ??
+    (job.data.matchId ? inferMatchSource(job.data.matchId) : undefined)
+
+  const matchedProvider =
+    job.type === 'refresh' && job.data.matchId && storedMatchSource
+      ? plugins.find((plugin) =>
+          providerMatchesSource(plugin, storedMatchSource),
+        )
+      : undefined
+
+  return {
+    plugins: matchedProvider
+      ? [
+          matchedProvider,
+          ...plugins.filter((plugin) => plugin !== matchedProvider),
+        ]
+      : plugins,
+    matchedProvider,
+  }
+}
+
+function makeSearchQuery(
+  job: Parameters<PipelineStage['run']>[1],
+  data: MediaJobData,
+): MetadataSearchQuery {
+  const year = Number(data.fileMetadata?.year ?? data.metadata?.year)
+  return {
+    title: data.title ?? '',
+    ...(Number.isFinite(year) && year > 0 ? { year } : {}),
+    libraryType: job.libraryType,
+    mediaType: job.file.mediaType.split('/')[0] as MediaType.MainType,
+    limit: 10,
+    fileMetadata: data.fileMetadata,
+  }
+}
+
+function providerMatchesSource(
+  plugin: MetadataPlugin,
+  source: string,
+): boolean {
+  const pluginId = plugin.manifest.id.toLowerCase()
+  const normalizedSource = source.toLowerCase()
+  if (pluginId === normalizedSource) return true
+
+  return (
+    (normalizedSource === 'tmdb' && pluginId.includes('tmdb')) ||
+    (normalizedSource === 'imdb' &&
+      (pluginId.includes('omdb') || pluginId.includes('imdb')))
+  )
+}
+
+function inferMatchSource(matchId: string): string | undefined {
+  if (/^tt\d+$/i.test(matchId)) return 'imdb'
+  if (/^\d+$/.test(matchId)) return 'tmdb'
+}

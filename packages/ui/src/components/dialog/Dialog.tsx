@@ -9,6 +9,7 @@ type DialogProps = Omit<UIDialog.Root.Props, 'children'> & {
   triggerText?: string
   title: string
   description?: ReactNode
+  headerActions?: ReactNode
   children: ReactNode
   buttonProps?: ButtonProps
   showCloseButton?: boolean
@@ -18,6 +19,7 @@ export default function Dialog({
   triggerText,
   title,
   description,
+  headerActions,
   children,
   buttonProps,
   showCloseButton = true,
@@ -47,6 +49,9 @@ export default function Dialog({
               />
             )}
             <UIDialog.Title className={styles.title}>{title}</UIDialog.Title>
+            {headerActions != null && (
+              <div className={styles.headerActions}>{headerActions}</div>
+            )}
           </Flex>
           {description && (
             <UIDialog.Description>{description}</UIDialog.Description>

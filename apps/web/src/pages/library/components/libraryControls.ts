@@ -9,10 +9,10 @@ export const SORT_OPTIONS: ReadonlyArray<{
   col: SortColumn
   dir: SortDir
 }> = [
-  { label: 'Date Added (newest)', col: 'createdAt', dir: 'desc' },
-  { label: 'Date Added (oldest)', col: 'createdAt', dir: 'asc' },
   { label: 'Title A→Z', col: 'title', dir: 'asc' },
   { label: 'Title Z→A', col: 'title', dir: 'desc' },
+  { label: 'Date Added (newest)', col: 'createdAt', dir: 'desc' },
+  { label: 'Date Added (oldest)', col: 'createdAt', dir: 'asc' },
   { label: 'File Size (largest)', col: 'fileSize', dir: 'desc' },
   { label: 'File Size (smallest)', col: 'fileSize', dir: 'asc' },
 ]
@@ -31,8 +31,8 @@ export function useLibraryControls() {
 
   const sortCol = SORT_COLUMNS.has(rawSortCol as SortColumn)
     ? (rawSortCol as SortColumn)
-    : 'createdAt'
-  const sortDir: SortDir = rawSortDir === 'asc' ? 'asc' : 'desc'
+    : 'title'
+  const sortDir: SortDir = rawSortDir === 'desc' ? 'desc' : 'asc'
   const mediaType = MEDIA_TYPES.has(rawMediaType as MediaType.MainType)
     ? (rawMediaType as MediaType.MainType)
     : ''
@@ -47,9 +47,9 @@ export function useLibraryControls() {
 
   function setSort(col: SortColumn, dir: SortDir) {
     updateParams((next) => {
-      if (col === 'createdAt') next.delete('sort')
+      if (col === 'title') next.delete('sort')
       else next.set('sort', col)
-      if (dir === 'desc') next.delete('order')
+      if (dir === 'asc') next.delete('order')
       else next.set('order', dir)
       next.delete('page')
     })

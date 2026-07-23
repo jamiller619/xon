@@ -15,6 +15,8 @@ import {
 
 export type { ImageResult, PersonImageResult }
 
+type ArtworkEntry = string | { src: string; [key: string]: unknown }
+
 export default class TmdbMetadataPlugin extends MetadataSourcePlugin {
   override mediaTypes = [MediaType.MainType.Video]
 
@@ -184,7 +186,7 @@ export default class TmdbMetadataPlugin extends MetadataSourcePlugin {
   async #saveImagesLocally(metadata: Metadata): Promise<void> {
     const ctx = this.#ctx
     const images = metadata.images as
-      | Record<string, string | string[]>
+      | Record<string, ArtworkEntry | ArtworkEntry[]>
       | undefined
 
     if (!ctx || !images) return
@@ -193,12 +195,22 @@ export default class TmdbMetadataPlugin extends MetadataSourcePlugin {
 
     for (const [kind, value] of Object.entries(images)) {
       if (Array.isArray(value)) {
-        const count = limit > 0 ? Math.min(limit, value.length) : value.length
+        const count =
+          kind === 'poster' && limit > 0
+            ? Math.min(limit, value.length)
+            : value.length
         for (let i = 0; i < count; i++) {
-          value[i] = await this.#saveImage(value[i] ?? '')
+          const image = value[i]
+          if (typeof image === 'string') {
+            value[i] = await this.#saveImage(image)
+          } else if (image) {
+            image.src = await this.#saveImage(image.src)
+          }
         }
       } else if (typeof value === 'string') {
         images[kind] = await this.#saveImage(value)
+      } else if (value) {
+        value.src = await this.#saveImage(value.src)
       }
     }
   }
