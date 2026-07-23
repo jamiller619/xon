@@ -8,6 +8,7 @@ import { Card, ContextMenu, Flex, Surface, XScroller } from '@xon/ui'
 import clsx from 'clsx'
 import type { HTMLAttributes } from 'react'
 import { Link } from 'react-router-dom'
+import { useRefreshMetadataConfirmation } from '~/components/confirmation/ConfirmationProvider'
 import MediaCard from '~/components/media-card/MediaCard'
 import PluginSlot from '~/components/PluginSlot'
 import useQueryAPIHelper from '~/hooks/useQueryAPIHelper'
@@ -21,6 +22,7 @@ import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
 
 export default function Dashboard() {
+  const confirmRefresh = useRefreshMetadataConfirmation()
   const { data: recentMedia } = useQuery<MediaItem[]>(
     useQueryAPIHelper('recentMedia'),
   )
@@ -51,7 +53,9 @@ export default function Dashboard() {
                   label: 'Refresh metadata',
                   icon: <RefreshIcon />,
                   onClick: () =>
-                    apiPost(`/api/libraries/${library.id}/scan/refresh`),
+                    confirmRefresh(() =>
+                      apiPost(`/api/libraries/${library.id}/scan/refresh`),
+                    ),
                 },
               ]}
               key={library.id}

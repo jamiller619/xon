@@ -2,6 +2,7 @@ import { Theme } from '@xon/ui'
 import { AnimatePresence, motion } from 'motion/react'
 import { Suspense } from 'react'
 import Router from '~/components/app/Router'
+import { ConfirmationProvider } from '~/components/confirmation/ConfirmationProvider'
 import ErrorBoundary from '~/components/error-boundary/ErrorBoundary'
 import ThemeLoader from '~/components/ThemeLoader'
 
@@ -30,9 +31,11 @@ export default function App() {
     <Theme>
       <ErrorBoundary>
         <ThemeLoader />
-        <Suspense fallback={<PageLoader />}>
-          <Router />
-        </Suspense>
+        <ConfirmationProvider>
+          <Suspense fallback={<PageLoader />}>
+            <Router />
+          </Suspense>
+        </ConfirmationProvider>
       </ErrorBoundary>
     </Theme>
   )

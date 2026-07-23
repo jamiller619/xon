@@ -20,6 +20,10 @@ export {
   type ContextMenuProps,
   default as ContextMenu,
 } from './components/context-menu/ContextMenu.jsx'
+export {
+  type ConfirmationDialogProps,
+  default as ConfirmationDialog,
+} from './components/dialog/ConfirmationDialog.jsx'
 export { default as Dialog } from './components/dialog/Dialog.jsx'
 export { default as Field } from './components/Field.js'
 export { default as Flex } from './components/flex/Flex.jsx'

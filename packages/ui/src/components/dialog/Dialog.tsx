@@ -8,9 +8,10 @@ type DialogProps = Omit<UIDialog.Root.Props, 'children'> & {
   /** Renders a trigger button. Omit when controlling the dialog via `open`. */
   triggerText?: string
   title: string
-  description?: string
+  description?: ReactNode
   children: ReactNode
   buttonProps?: ButtonProps
+  showCloseButton?: boolean
 }
 
 export default function Dialog({
@@ -19,6 +20,7 @@ export default function Dialog({
   description,
   children,
   buttonProps,
+  showCloseButton = true,
   ...props
 }: DialogProps) {
   return (
@@ -34,14 +36,16 @@ export default function Dialog({
         <UIDialog.Backdrop className={styles.backdrop} />
         <UIDialog.Popup className={styles.popup}>
           <Flex align="center" gap="3" className={styles.header}>
-            <UIDialog.Close
-              className={styles.close}
-              render={(props) => (
-                <Button.Icon {...props}>
-                  <CloseIcon />
-                </Button.Icon>
-              )}
-            />
+            {showCloseButton && (
+              <UIDialog.Close
+                className={styles.close}
+                render={(props) => (
+                  <Button.Icon {...props}>
+                    <CloseIcon />
+                  </Button.Icon>
+                )}
+              />
+            )}
             <UIDialog.Title className={styles.title}>{title}</UIDialog.Title>
           </Flex>
           {description && (

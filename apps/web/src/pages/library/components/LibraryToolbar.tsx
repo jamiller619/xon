@@ -12,6 +12,7 @@ import {
   ToggleButton,
   ToggleButtonGroup,
 } from '@xon/ui'
+import { useRefreshMetadataConfirmation } from '~/components/confirmation/ConfirmationProvider'
 import styles from '../Library.module.css'
 import { makeSortKey, SORT_OPTIONS } from './libraryControls'
 
@@ -55,6 +56,8 @@ export default function LibraryToolbar({
   onUnmatchedOnlyChange,
   onRefreshMetadata,
 }: LibraryToolbarProps) {
+  const confirmRefresh = useRefreshMetadataConfirmation()
+
   return (
     <div className={styles.toolbar}>
       <div className={styles.filters}>
@@ -119,7 +122,7 @@ export default function LibraryToolbar({
         <Button
           loading={isRefreshingMetadata}
           disabled={isRefreshingMetadata}
-          onClick={onRefreshMetadata}
+          onClick={() => confirmRefresh(onRefreshMetadata)}
         >
           <RefreshIcon />
           {isRefreshingMetadata ? 'Refreshing metadata' : 'Refresh metadata'}

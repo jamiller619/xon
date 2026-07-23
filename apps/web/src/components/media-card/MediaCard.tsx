@@ -12,6 +12,7 @@ import type { MediaItem } from '@xon/shared'
 import { Card, ContextMenu, type ContextMenuItem, Dialog } from '@xon/ui'
 import { type ComponentPropsWithRef, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { useRefreshMetadataConfirmation } from '~/components/confirmation/ConfirmationProvider'
 import { apiFetch, thumbnailUrl } from '~/lib/apiFetch'
 import { mediaPath } from '~/lib/utils'
 import { useAudioStore } from '~/store/audioStore'
@@ -35,6 +36,7 @@ export default function MediaCard({
   onToggleFavorite,
   listRowProps,
 }: MediaCardProps) {
+  const confirmRefresh = useRefreshMetadataConfirmation()
   const playTrack = useAudioStore((s) => s.playTrack)
   const addToQueue = useAudioStore((s) => s.addToQueue)
   const [editImagesOpen, setEditImagesOpen] = useState(false)
@@ -162,11 +164,13 @@ export default function MediaCard({
       label: 'Refresh metadata',
       icon: <RefreshIcon />,
       onClick: () =>
-        apiFetch(`/api/libraries/${item.libraryId}/scan/refresh`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ mediaItemId: item.id }),
-        }),
+        confirmRefresh(() =>
+          apiFetch(`/api/libraries/${item.libraryId}/scan/refresh`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ mediaItemId: item.id }),
+          }),
+        ),
     },
     {
       label: 'Delete',
