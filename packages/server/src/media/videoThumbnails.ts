@@ -1,13 +1,17 @@
 import { spawn } from 'node:child_process'
+import { randomUUID } from 'node:crypto'
 import { mkdir, unlink } from 'node:fs/promises'
 import { dirname, join } from 'node:path'
-// import { MediaCategory } from '@xon/shared'
+import type { PosterImage } from '@xon/shared'
 import config from '../config.ts'
 import { createLogger } from '../logger.ts'
 import { ffmpegPath, ffprobePath } from './binaries.ts'
 import { type ThumbnailPaths, writeThumbnailImages } from './thumbnails.ts'
 
 const logger = createLogger('video-thumbnails')
+const GENERATED_POSTER_COUNT = 3
+const RANDOM_FRAME_START = 0.05
+const RANDOM_FRAME_RANGE = 0.9
 
 // const VIDEO_CATEGORIES = new Set<string>([
 //   MediaCategory.Movies,
@@ -146,4 +150,83 @@ export async function generateVideoThumbnails(
   logger.debug(`Thumbnails generated: ${filePath}`)
 
   return paths
+}
+
+/**
+ * Extract three frames from random points in a video and turn each frame into
+ * a poster with its own thumbnail set.
+ */
+export async function generateVideoPosters(
+  filePath: string,
+  mediaItemId: string,
+): Promise<PosterImage[] | undefined> {
+  logger.debug(`Generating video posters: ${filePath}`)
+
+  const duration = await getVideoDuration(filePath)
+  if (duration === null) {
+    logger.error('Could not determine video duration for poster generation', {
+      filePath,
+    })
+    return undefined
+  }
+
+  const posters: PosterImage[] = []
+
+  for (let index = 0; index < GENERATED_POSTER_COUNT; index++) {
+    // Avoid credits and black leader frames by sampling within the middle 90%.
+    const timestamp =
+      duration * (RANDOM_FRAME_START + Math.random() * RANDOM_FRAME_RANGE)
+    const thumbnailName = `${mediaItemId}_poster_${randomUUID()}`
+    const tmpPath = join(
+      config.get('appdata.path'),
+      '.tmp',
+      `${thumbnailName}.jpg`,
+    )
+
+    try {
+      await mkdir(dirname(tmpPath), { recursive: true })
+    } catch (err) {
+      logger.error('Failed to create video poster temp directory', {
+        dir: dirname(tmpPath),
+        error: String(err),
+      })
+      await removeGeneratedPosters(posters)
+      return undefined
+    }
+
+    logger.debug(
+      `Extracting poster frame ${index + 1} at ${timestamp.toFixed(1)}s: ${filePath}`,
+    )
+    const frameExtracted = await extractFrame(filePath, timestamp, tmpPath)
+    if (!frameExtracted) {
+      await unlink(tmpPath).catch(() => undefined)
+      await removeGeneratedPosters(posters)
+      return undefined
+    }
+
+    const thumbnails = await writeThumbnailImages(thumbnailName, tmpPath)
+    await unlink(tmpPath).catch(() => undefined)
+    if (!thumbnails) {
+      await removeGeneratedPosters(posters)
+      return undefined
+    }
+
+    posters.push({
+      src: thumbnails.large,
+      thumbnails,
+    })
+  }
+
+  logger.debug(`Generated ${posters.length} video posters: ${filePath}`)
+  return posters
+}
+
+async function removeGeneratedPosters(posters: PosterImage[]): Promise<void> {
+  await Promise.all(
+    posters.flatMap((poster) =>
+      Object.values(poster.thumbnails ?? {}).map((path) =>
+        unlink(path).catch(() => undefined),
+      ),
+    ),
+  )
 }

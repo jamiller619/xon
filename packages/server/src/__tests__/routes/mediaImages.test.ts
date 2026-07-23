@@ -13,6 +13,7 @@ import { Hono } from 'hono'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 const testConfig = vi.hoisted(() => ({ cachePath: '' }))
+const generateVideoPosters = vi.hoisted(() => vi.fn())
 
 vi.mock('../../config.ts', () => ({
   default: {
@@ -24,11 +25,17 @@ vi.mock('../../services/libraryThumbnailService.ts', () => ({
   rebuildThumbnail: vi.fn(),
 }))
 
+vi.mock('../../media/videoThumbnails.ts', () => ({
+  generateVideoPosters,
+}))
+
 const { makeMediaRouter } = await import('../../routes/media.ts')
 
 type TestMediaItem = {
   id: string
   libraryId: string
+  filePath: string
+  mediaType: string
   metadata: Record<string, unknown>
   updatedAt?: Date
 }
@@ -61,6 +68,8 @@ describe('Media artwork routes', () => {
     item = {
       id: 'media-1',
       libraryId: 'library-1',
+      filePath: '/videos/movie.mp4',
+      mediaType: 'video/mp4',
       metadata: {
         images: {
           poster: [
@@ -127,6 +136,36 @@ describe('Media artwork routes', () => {
       ),
     )
     await expect(readFile(saved as string)).resolves.toEqual(png)
+  })
+
+  it('appends three posters generated from the video', async () => {
+    const posters = [1, 2, 3].map((index) => ({
+      src: `/cache/poster-${index}_large.jpg`,
+      thumbnails: {
+        small: `/cache/poster-${index}_small.jpg`,
+        medium: `/cache/poster-${index}_medium.jpg`,
+        large: `/cache/poster-${index}_large.jpg`,
+      },
+    }))
+    generateVideoPosters.mockResolvedValueOnce(posters)
+
+    const response = await app.request(
+      '/media/media-1/images/posters/generate',
+      { method: 'POST' },
+    )
+
+    expect(response.status).toBe(201)
+    expect(generateVideoPosters).toHaveBeenCalledWith(
+      '/videos/movie.mp4',
+      'media-1',
+    )
+    const body = (await response.json()) as {
+      images: { poster: unknown[] }
+    }
+    expect(body.images.poster.slice(-3)).toEqual(posters)
+    expect(
+      (item.metadata.images as { poster: unknown[] }).poster.slice(-3),
+    ).toEqual(posters)
   })
 
   it('serves a cached artwork entry with its detected content type', async () => {

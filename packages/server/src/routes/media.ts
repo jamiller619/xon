@@ -1,13 +1,23 @@
-import { randomUUID } from 'node:crypto'
+import { createHash, randomUUID } from 'node:crypto'
+import { lookup } from 'node:dns/promises'
 import { createReadStream } from 'node:fs'
-import { mkdir, readdir, readFile, unlink, writeFile } from 'node:fs/promises'
+import {
+  mkdir,
+  readdir,
+  readFile,
+  rename,
+  unlink,
+  writeFile,
+} from 'node:fs/promises'
+import { isIP } from 'node:net'
 import { basename, dirname, extname, join, resolve, sep } from 'node:path'
 import { Readable } from 'node:stream'
-import type { SortProps } from '@xon/shared'
+import { posterImages, type SortProps } from '@xon/shared'
 import { eq, inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { fileTypeFromBuffer } from 'file-type'
 import { Hono } from 'hono'
+import sharp from 'sharp'
 import { z } from 'zod'
 import { computeETag } from '../cache.ts'
 import config from '../config.ts'
@@ -24,6 +34,7 @@ import {
   needsTranscoding,
   spawnTranscodeSegment,
 } from '../media/transcode.ts'
+import { generateVideoPosters } from '../media/videoThumbnails.ts'
 import { rebuildThumbnail } from '../services/libraryThumbnailService.ts'
 import * as mediaService from '../services/mediaService.ts'
 import {
@@ -69,6 +80,16 @@ type PosterEntry = z.infer<typeof posterImageSchema>
 type ArtworkImages = z.infer<typeof artworkImagesSchema>
 
 const MAX_ARTWORK_UPLOAD_BYTES = 20 * 1024 * 1024
+const MAX_THUMBNAIL_SOURCE_BYTES = 25 * 1024 * 1024
+const THUMBNAIL_FETCH_TIMEOUT_MS = 8_000
+const MAX_THUMBNAIL_REDIRECTS = 3
+const THUMBNAIL_DIMENSIONS = {
+  small: 150,
+  medium: 300,
+  large: 600,
+} as const
+type ThumbnailSize = keyof typeof THUMBNAIL_DIMENSIONS
+
 const SUPPORTED_ARTWORK_MIME_TYPES = new Set([
   'image/avif',
   'image/gif',
@@ -112,6 +133,191 @@ function normalizedArtworkImages(
     poster: imageList(images.poster),
     backdrop: imageList(images.backdrop).map(imageSource),
     logo: imageList(images.logo).map(imageSource),
+  }
+}
+
+function renderedThumbnailPath(
+  mediaId: string,
+  source: string,
+  size: ThumbnailSize,
+): string {
+  const sourceHash = createHash('sha256')
+    .update(source)
+    .digest('hex')
+    .slice(0, 16)
+  return join(
+    config.get('appdata.cachePath'),
+    'thumbnails',
+    'rendered',
+    `${mediaId}-${sourceHash}-${size}.webp`,
+  )
+}
+
+async function readRemoteThumbnailSource(
+  source: string,
+): Promise<Buffer | null> {
+  try {
+    let url = new URL(source)
+    let response: Response | undefined
+
+    for (let redirects = 0; redirects <= MAX_THUMBNAIL_REDIRECTS; redirects++) {
+      if (!(await isSafeRemoteUrl(url))) return null
+
+      response = await fetch(url, {
+        redirect: 'manual',
+        signal: AbortSignal.timeout(THUMBNAIL_FETCH_TIMEOUT_MS),
+      })
+      if (![301, 302, 303, 307, 308].includes(response.status)) break
+
+      const location = response.headers.get('location')
+      if (!location || redirects === MAX_THUMBNAIL_REDIRECTS) return null
+      url = new URL(location, url)
+    }
+
+    if (!response?.ok) return null
+
+    const contentType = response.headers.get('content-type')
+    if (contentType && !contentType.toLowerCase().startsWith('image/')) {
+      return null
+    }
+
+    const contentLength = Number(response.headers.get('content-length'))
+    if (
+      Number.isFinite(contentLength) &&
+      contentLength > MAX_THUMBNAIL_SOURCE_BYTES
+    ) {
+      return null
+    }
+
+    if (!response.body) return null
+
+    const reader = response.body.getReader()
+    const chunks: Uint8Array[] = []
+    let total = 0
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      total += value.byteLength
+      if (total > MAX_THUMBNAIL_SOURCE_BYTES) {
+        await reader.cancel()
+        return null
+      }
+      chunks.push(value)
+    }
+    return Buffer.concat(chunks, total)
+  } catch {
+    return null
+  }
+}
+
+async function isSafeRemoteUrl(url: URL): Promise<boolean> {
+  if (
+    url.protocol !== 'https:' ||
+    url.username ||
+    url.password ||
+    url.hostname === 'localhost'
+  ) {
+    return false
+  }
+
+  try {
+    const addresses = await lookup(url.hostname, { all: true, verbatim: true })
+    return (
+      addresses.length > 0 &&
+      addresses.every(({ address }) => !isPrivateAddress(address))
+    )
+  } catch {
+    return false
+  }
+}
+
+function isPrivateAddress(address: string): boolean {
+  const version = isIP(address)
+  if (version === 4) {
+    const [a = 0, b = 0] = address.split('.').map(Number)
+    return (
+      a === 0 ||
+      a === 10 ||
+      a === 127 ||
+      (a === 100 && b >= 64 && b <= 127) ||
+      (a === 169 && b === 254) ||
+      (a === 172 && b >= 16 && b <= 31) ||
+      (a === 192 && b === 168) ||
+      (a === 198 && (b === 18 || b === 19)) ||
+      a >= 224
+    )
+  }
+
+  if (version === 6) {
+    const normalized = address.toLowerCase()
+    if (normalized.startsWith('::ffff:')) {
+      return isPrivateAddress(normalized.slice('::ffff:'.length))
+    }
+    return (
+      normalized === '::' ||
+      normalized === '::1' ||
+      normalized.startsWith('fc') ||
+      normalized.startsWith('fd') ||
+      /^fe[89ab]/.test(normalized)
+    )
+  }
+
+  return true
+}
+
+async function readThumbnailSource(source: string): Promise<Buffer | null> {
+  if (/^https?:\/\//i.test(source)) {
+    return readRemoteThumbnailSource(source)
+  }
+
+  // Relative API URLs cannot be resolved safely from the headless server.
+  if (source.startsWith('/api/')) return null
+
+  try {
+    return await readFile(source)
+  } catch {
+    return null
+  }
+}
+
+async function renderThumbnail(
+  mediaId: string,
+  source: string,
+  size: ThumbnailSize,
+): Promise<Buffer | null> {
+  const cachePath = renderedThumbnailPath(mediaId, source, size)
+
+  try {
+    return await readFile(cachePath)
+  } catch {
+    // Generate the cache entry below.
+  }
+
+  const original = await readThumbnailSource(source)
+  if (!original) return null
+
+  try {
+    const data = await sharp(original)
+      .resize(THUMBNAIL_DIMENSIONS[size], THUMBNAIL_DIMENSIONS[size], {
+        fit: 'inside',
+        withoutEnlargement: true,
+      })
+      .webp({ quality: 75 })
+      .toBuffer()
+
+    const temporaryPath = `${cachePath}.${randomUUID()}.tmp`
+    try {
+      await mkdir(dirname(cachePath), { recursive: true })
+      await writeFile(temporaryPath, data)
+      await rename(temporaryPath, cachePath)
+    } catch {
+      await unlink(temporaryPath).catch(() => undefined)
+      // A cache write failure should not prevent serving the resized image.
+    }
+
+    return data
+  } catch {
+    return null
   }
 }
 
@@ -178,39 +384,58 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     return c.json(data)
   })
 
-  const THUMBNAIL_SIZES = new Set(['small', 'medium', 'large'])
+  const THUMBNAIL_SIZES = new Set<ThumbnailSize>(['small', 'medium', 'large'])
 
-  // GET /media/:id/thumbnail?size=small|medium|large — serve a locally
-  // generated thumbnail from the cache. Files are named deterministically
-  // (<id>_<size>.jpg), so the item id + size is enough to locate them.
+  // GET /media/:id/thumbnail?size=small|medium|large — the single thumbnail
+  // API for local, uploaded, and remote posters. Existing generated JPEGs are
+  // served directly; other poster sources are resized and cached as WebP.
   router.get('/:id/thumbnail', async (c) => {
     const id = c.req.param('id')
-    const size = c.req.query('size') ?? 'medium'
+    const requestedSize = c.req.query('size') ?? 'medium'
 
     // Guard against path traversal — ids are UUIDs.
-    if (!/^[a-zA-Z0-9-]+$/.test(id) || !THUMBNAIL_SIZES.has(size)) {
+    if (
+      !/^[a-zA-Z0-9-]+$/.test(id) ||
+      !THUMBNAIL_SIZES.has(requestedSize as ThumbnailSize)
+    ) {
       return c.json({ error: 'Not found' }, 404)
     }
+    const size = requestedSize as ThumbnailSize
 
-    const filePath = join(
-      config.get('appdata.cachePath'),
-      'thumbnails',
-      `${id}_${size}.jpg`,
-    )
+    const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
+    const item = rows[0]
+    if (!item) return c.json({ error: 'Not found' }, 404)
 
-    let data: Buffer
-    try {
-      data = await readFile(filePath)
-    } catch {
-      return c.json({ error: 'Not found' }, 404)
+    const poster = posterImages(
+      (item.metadata.images as { poster?: unknown } | undefined)?.poster as
+        | Parameters<typeof posterImages>[0]
+        | undefined,
+    )[0]
+    if (!poster) return c.json({ error: 'Not found' }, 404)
+
+    let data: Buffer | null = null
+    let contentType = 'image/jpeg'
+    const generatedPath = poster.thumbnails?.[size]
+    if (generatedPath) {
+      try {
+        data = await readFile(generatedPath)
+      } catch {
+        // Fall back to the poster source and repair the display cache.
+      }
     }
 
-    const etag = `"${id}-${size}-${data.length}"`
+    if (!data) {
+      data = await renderThumbnail(id, poster.src, size)
+      contentType = 'image/webp'
+    }
+    if (!data) return c.json({ error: 'Image not found' }, 404)
+
+    const etag = computeETag([id, poster.src, size, data.length])
     if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
 
     return c.body(new Uint8Array(data), 200, {
-      'Content-Type': 'image/jpeg',
-      'Cache-Control': 'public, max-age=86400',
+      'Content-Type': contentType,
+      'Cache-Control': 'public, max-age=86400, immutable',
       ETag: etag,
     })
   })
@@ -298,6 +523,49 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       return c.json({ images: nextImages })
     },
   )
+
+  // POST /media/:id/images/posters/generate — append three posters captured
+  // from random points in the item's video.
+  router.post('/:id/images/posters/generate', async (c) => {
+    const id = c.req.param('id')
+    const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
+    const item = rows[0]
+    if (!item) return c.json({ error: 'Not found' }, 404)
+    if (!item.mediaType.startsWith('video/')) {
+      return c.json(
+        { error: 'Images can only be created from video items' },
+        400,
+      )
+    }
+
+    const posters = await generateVideoPosters(item.filePath, id)
+    if (!posters) {
+      return c.json({ error: 'Could not create images from this video' }, 500)
+    }
+
+    const images = normalizedArtworkImages(item.metadata)
+    images.poster.push(...posters)
+    const metadata = { ...item.metadata, images }
+
+    try {
+      await db
+        .update(mediaItems)
+        .set({ metadata, updatedAt: new Date() })
+        .where(eq(mediaItems.id, id))
+    } catch (error) {
+      await Promise.all(
+        posters.flatMap((poster) =>
+          Object.values(poster.thumbnails ?? {}).map((path) =>
+            unlink(path).catch(() => undefined),
+          ),
+        ),
+      )
+      throw error
+    }
+
+    void rebuildThumbnail(db, item.libraryId)
+    return c.json({ images }, 201)
+  })
 
   // POST /media/:id/images/:kind — copy an uploaded image into the configured
   // cache directory and append it to the requested artwork group.

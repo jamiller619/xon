@@ -10,8 +10,15 @@ import { useQueryClient } from '@tanstack/react-query'
 import type { MediaItem, PosterImage } from '@xon/shared'
 import { ScrollArea } from '@xon/ui'
 import { css } from 'inline-css-modules'
-import { type ChangeEvent, useRef, useState } from 'react'
+import {
+  type ChangeEvent,
+  useCallback,
+  useEffect,
+  useRef,
+  useState,
+} from 'react'
 import { apiFetch, artworkUrl, getAPIError } from '~/lib/apiFetch'
+import { subscribeToEvents } from '~/lib/eventStream'
 
 type ArtworkKind = 'poster' | 'backdrop' | 'logo'
 type PosterEntry = string | PosterImage
@@ -91,6 +98,7 @@ const styles = css`
   }
 
   .sectionTitle {
+    margin: 0;
     font-size: var(--text-lg);
     font-weight: 600;
     line-height: 1.2;
@@ -300,15 +308,17 @@ export default function EditImages({ item }: { item: MediaItem }) {
     makeArtworkState(item.metadata.images as ImagesMetadata | undefined),
   )
   const artworkRef = useRef(artwork)
-  const [busyKind, setBusyKind] = useState<ArtworkKind | 'saving'>()
+  const [busyKind, setBusyKind] = useState<
+    ArtworkKind | 'saving' | 'generating'
+  >()
   const [error, setError] = useState<string>()
 
-  function commit(next: ArtworkState) {
+  const commit = useCallback((next: ArtworkState) => {
     artworkRef.current = next
     setArtwork(next)
-  }
+  }, [])
 
-  function invalidateArtworkQueries() {
+  const invalidateArtworkQueries = useCallback(() => {
     void Promise.all([
       queryClient.invalidateQueries({
         queryKey: ['library-media', item.libraryId],
@@ -318,7 +328,51 @@ export default function EditImages({ item }: { item: MediaItem }) {
       queryClient.invalidateQueries({ queryKey: ['featuredMedia'] }),
       queryClient.invalidateQueries({ queryKey: ['libraries'] }),
     ])
-  }
+  }, [item.libraryId, queryClient])
+
+  const reloadArtwork = useCallback(async () => {
+    try {
+      const response = await apiFetch(`/api/media/${item.id}`)
+      if (!response.ok) {
+        throw new Error(
+          await getAPIError(response, 'Could not reload the images'),
+        )
+      }
+      const latest = (await response.json()) as MediaItem
+      commit(
+        makeArtworkState(latest.metadata.images as ImagesMetadata | undefined),
+      )
+      invalidateArtworkQueries()
+    } catch (reloadError) {
+      setError(
+        reloadError instanceof Error
+          ? reloadError.message
+          : 'Could not reload the images',
+      )
+    }
+  }, [commit, invalidateArtworkQueries, item.id])
+
+  useEffect(() => {
+    const images = item.metadata.images as ImagesMetadata | undefined
+    // Saving invalidates the parent query, which gives us a new `images`
+    // object even when it contains the optimistic order we already committed.
+    // Rebuilding in that case replaces every item key and remounts every image.
+    if (artworkMatchesImages(artworkRef.current, images)) return
+    commit(makeArtworkState(images))
+  }, [commit, item.metadata.images])
+
+  useEffect(
+    () =>
+      subscribeToEvents((event) => {
+        if (
+          (event.type === 'scan:complete' || event.type === 'scan:error') &&
+          event.payload.libraryId === item.libraryId
+        ) {
+          void reloadArtwork()
+        }
+      }),
+    [item.libraryId, reloadArtwork],
+  )
 
   async function persist(next: ArtworkState, rollback: ArtworkState) {
     setBusyKind('saving')
@@ -380,6 +434,32 @@ export default function EditImages({ item }: { item: MediaItem }) {
     }
   }
 
+  async function createImages() {
+    setBusyKind('generating')
+    setError(undefined)
+
+    try {
+      const response = await apiFetch(
+        `/api/media/${item.id}/images/posters/generate`,
+        { method: 'POST' },
+      )
+      if (!response.ok) {
+        throw new Error(await getAPIError(response, 'Could not create images'))
+      }
+      const data = (await response.json()) as { images: ArtworkImages }
+      commit(makeArtworkState(data.images))
+      invalidateArtworkQueries()
+    } catch (createError) {
+      setError(
+        createError instanceof Error
+          ? createError.message
+          : 'Could not create images',
+      )
+    } finally {
+      setBusyKind(undefined)
+    }
+  }
+
   function reorder(kind: ArtworkKind, items: ArtworkItem[]) {
     if (busyKind) return
     const rollback = artworkRef.current
@@ -417,6 +497,10 @@ export default function EditImages({ item }: { item: MediaItem }) {
             items={artwork[kind]}
             busy={busyKind != null}
             uploading={busyKind === kind}
+            creating={kind === 'poster' && busyKind === 'generating'}
+            {...(kind === 'poster' && item.mediaType?.startsWith('video/')
+              ? { onCreate: () => void createImages() }
+              : {})}
             onUpload={(file) => void upload(kind, file)}
             onReorder={(items) => reorder(kind, items)}
             onDelete={(key) => remove(kind, key)}
@@ -435,6 +519,8 @@ function ImageSection({
   items,
   busy,
   uploading,
+  creating,
+  onCreate,
   onUpload,
   onReorder,
   onDelete,
@@ -446,6 +532,8 @@ function ImageSection({
   items: ArtworkItem[]
   busy: boolean
   uploading: boolean
+  creating: boolean
+  onCreate?: () => void
   onUpload: (file: File) => void
   onReorder: (items: ArtworkItem[]) => void
   onDelete: (key: string) => void
@@ -510,6 +598,19 @@ function ImageSection({
                 onChange={handleFile}
               />
             </li>
+            {onCreate && (
+              <li className={styles.upload}>
+                <button
+                  type="button"
+                  className={styles.uploadButton}
+                  disabled={busy}
+                  onClick={onCreate}
+                >
+                  <ImageAddIcon aria-hidden="true" />
+                  <span>{creating ? 'Creating…' : 'Create images'}</span>
+                </button>
+              </li>
+            )}
           </ul>
         </DragDropProvider>
       </div>
@@ -600,6 +701,40 @@ function makeArtworkState(images?: ImagesMetadata): ArtworkState {
     backdrop: makeItems('backdrop', toList(images?.backdrop)),
     logo: makeItems('logo', toList(images?.logo)),
   }
+}
+
+function artworkMatchesImages(
+  state: ArtworkState,
+  images?: ImagesMetadata,
+): boolean {
+  return ARTWORK_SECTIONS.every(({ kind }) => {
+    const entries = toList(images?.[kind]).filter(
+      (entry) => sourceOf(entry).length > 0,
+    )
+    const items = state[kind]
+
+    return (
+      entries.length === items.length &&
+      entries.every((entry, index) => entriesEqual(entry, items[index]?.value))
+    )
+  })
+}
+
+function entriesEqual(
+  left: PosterEntry,
+  right: PosterEntry | undefined,
+): boolean {
+  if (right == null || typeof left !== typeof right) return false
+  if (typeof left === 'string' || typeof right === 'string') {
+    return left === right
+  }
+
+  return (
+    left.src === right.src &&
+    left.thumbnails?.small === right.thumbnails?.small &&
+    left.thumbnails?.medium === right.thumbnails?.medium &&
+    left.thumbnails?.large === right.thumbnails?.large
+  )
 }
 
 function toArtworkImages(state: ArtworkState): ArtworkImages {

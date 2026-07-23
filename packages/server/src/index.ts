@@ -159,6 +159,7 @@ export {} from // acceptSuggestedGroup,
 './media/smartGrouping.ts'
 export { generateThumbnails } from './media/thumbnails.ts'
 export {
+  generateVideoPosters,
   generateVideoThumbnails,
   // isVideoCategory,
 } from './media/videoThumbnails.ts'

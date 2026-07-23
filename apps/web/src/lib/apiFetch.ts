@@ -60,10 +60,10 @@ export function artworkUrl(
 }
 
 /**
- * Resolve a media item's poster to a servable image URL. Remote posters
- * (e.g. TMDB `https://…`) are used directly. Locally generated thumbnail sets
- * use the size endpoint, while other local images are served by their ordered
- * artwork index because on-disk cache paths aren't web-accessible.
+ * Resolve a media item's poster to a resized image served by our thumbnail
+ * endpoint. Keeping every poster behind this endpoint prevents remote
+ * full-resolution artwork and local originals from being sent directly to
+ * thumbnail-sized UI surfaces.
  */
 export function thumbnailUrl(
   item: { id: string; metadata?: { images?: { poster?: PosterInput } } },
@@ -72,9 +72,5 @@ export function thumbnailUrl(
   const first = posterImages(item.metadata?.images?.poster)[0]
   if (!first) return undefined
 
-  if (/^https?:\/\//.test(first.src)) return apiUrl(first.src)
-
-  return first.thumbnails
-    ? apiUrl(`/api/media/${item.id}/thumbnail?size=${size}`)
-    : artworkUrl(item.id, 'poster', 0)
+  return apiUrl(`/api/media/${item.id}/thumbnail?size=${size}`)
 }
