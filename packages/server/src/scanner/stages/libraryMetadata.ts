@@ -1,6 +1,8 @@
 import path from 'node:path'
 import type { MetadataSourcePlugin } from '@xon/plugin-sdk'
-import deepmerge from 'deepmerge'
+import { LibraryType } from '@xon/shared'
+import { normalizeMediaTitle } from '../../media/filenameParser.ts'
+import { mergeMetadata } from '../../media/metadataMerge.ts'
 import { getPluginsByCategory } from '../../plugins/pluginManager.js'
 import type { MediaJobData, PipelineStage } from '../pipeline.js'
 
@@ -28,6 +30,20 @@ export default {
 
     const data: MediaJobData = { ...job.data }
     data.metadata ??= {}
+    const storedMetadata = data.metadata
+    let refreshedMetadata = {}
+
+    if (
+      typeof data.title === 'string' &&
+      (job.libraryType === LibraryType.Movies ||
+        job.libraryType === LibraryType.TVShows)
+    ) {
+      const normalizedTitle = normalizeMediaTitle(
+        data.title,
+        path.extname(job.file.path),
+      )
+      if (normalizedTitle) data.title = normalizedTitle
+    }
 
     for await (const plugin of plugins) {
       try {
@@ -63,13 +79,12 @@ export default {
             data.matchIdSource = 'imdb'
           }
 
-          // Deep-merge so a plugin returning a partial nested object (e.g.
-          // OMDb's `images.poster`) can't clobber another plugin's entries
-          // (e.g. TMDb's `images.backdrop`). Arrays are replaced, not
-          // concatenated, so list fields like `genres` don't accumulate
-          // duplicates across plugins.
-          data.metadata = deepmerge(data.metadata, pluginMeta, {
-            arrayMerge: (_target, source) => source,
+          // Preserve arrays from higher-priority providers while adding new
+          // values from later providers. Duplicate values are removed so
+          // repeated refreshes remain idempotent.
+          refreshedMetadata = mergeMetadata(refreshedMetadata, pluginMeta)
+          data.metadata = mergeMetadata(storedMetadata, refreshedMetadata, {
+            incomingArraysFirst: true,
           })
         }
       } catch (err) {

@@ -8,12 +8,14 @@ import LibraryToolbar from './components/LibraryToolbar'
 import ListView from './components/ListView'
 import { useLibraryControls } from './components/libraryControls'
 import { useLibraryMedia } from './hooks/useLibraryMedia'
+import { useRefreshLibraryMetadata } from './hooks/useRefreshLibraryMetadata'
 import styles from './Library.module.css'
 
 export default function LibraryBrowser() {
   const { id } = useParams<{ id: string }>()
   const { viewMode, setViewMode } = useAppStore()
   const controls = useLibraryControls()
+  const metadataRefresh = useRefreshLibraryMetadata(id)
 
   const { data: library, error: libraryError } = useQuery<Library>({
     queryKey: ['library', id],
@@ -62,12 +64,22 @@ export default function LibraryBrowser() {
           currentSortKey={controls.currentSortKey}
           mediaType={controls.mediaType}
           unmatchedOnly={controls.unmatchedOnly}
+          isRefreshingMetadata={metadataRefresh.isRefreshing}
           onViewModeChange={setViewMode}
           onSortOptionChange={controls.handleSortOption}
           onMediaTypeChange={controls.setMediaType}
           onUnmatchedOnlyChange={controls.setUnmatchedOnly}
+          onRefreshMetadata={metadataRefresh.refresh}
         />
       </header>
+
+      {metadataRefresh.error && (
+        <div className={styles.error} role="alert">
+          {metadataRefresh.error instanceof Error
+            ? metadataRefresh.error.message
+            : 'Could not refresh library metadata'}
+        </div>
+      )}
 
       {viewMode === 'grid' ? (
         <GridView {...viewProps} />

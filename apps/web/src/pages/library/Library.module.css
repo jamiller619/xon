@@ -52,6 +52,12 @@
   gap: var(--space-md);
 }
 
+.toolbarActions {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
 .filterSelect {
   min-width: 9rem;
 }
@@ -233,5 +239,10 @@
   .toolbar {
     align-items: flex-start;
     flex-direction: column-reverse;
+  }
+
+  .toolbarActions {
+    width: 100%;
+    justify-content: space-between;
   }
 }

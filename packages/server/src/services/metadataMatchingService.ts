@@ -4,10 +4,10 @@ import type {
   MetadataSourcePlugin,
 } from '@xon/plugin-sdk'
 import type { MediaType, Metadata } from '@xon/shared'
-import deepmerge from 'deepmerge'
 import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { libraries, mediaItems } from '../db/schema.ts'
+import { mergeMetadata } from '../media/metadataMerge.ts'
 import {
   getPluginsByCategory,
   type PluginEntry,
@@ -174,9 +174,7 @@ export async function applyMatch(
         },
       )
       if (enriched) {
-        metadata = deepmerge(metadata, enriched, {
-          arrayMerge: (_target, source) => source,
-        })
+        metadata = mergeMetadata(metadata, enriched)
       }
     } catch (error) {
       warnings.push({

@@ -16,7 +16,6 @@
 
   color: var(--color-text);
   font-size: var(--text-sm);
-  /* font-size: 14px; */
   font-weight: 400;
   font-family: inherit;
 
@@ -25,15 +24,7 @@
   user-select: none;
   transition: transform 0.1s ease;
 
-  &:hover:not([data-disabled]) {
-    /* background: var(--color-gray-7); */
-    /* transform: scale(1.02); */
-  }
-
-  &:active:not([data-disabled]) {
-    /* background: var(--color-gray-4); */
-    /* transform: scale(0.97); */
-  }
+  background: var(--color-gray-a2);
 
   &[data-disabled] {
     filter: grayscale(50%) saturate(20%) opacity(50%);

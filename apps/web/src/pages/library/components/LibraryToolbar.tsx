@@ -1,9 +1,11 @@
 import {
-  GridRegular as GridIcon,
-  ListRegular as ListIcon,
+  Grid16Regular as GridIcon,
+  List16Regular as ListIcon,
+  ArrowSync16Regular as RefreshIcon,
 } from '@fluentui/react-icons'
 import { MediaType } from '@xon/shared'
 import {
+  Button,
   Checkbox,
   Label,
   Select,
@@ -33,10 +35,12 @@ type LibraryToolbarProps = {
   currentSortKey: string
   mediaType: string
   unmatchedOnly: boolean
+  isRefreshingMetadata: boolean
   onViewModeChange: (viewMode: ViewMode) => void
   onSortOptionChange: (sortKey: string) => void
   onMediaTypeChange: (mediaType: string) => void
   onUnmatchedOnlyChange: (unmatchedOnly: boolean) => void
+  onRefreshMetadata: () => void
 }
 
 export default function LibraryToolbar({
@@ -44,10 +48,12 @@ export default function LibraryToolbar({
   currentSortKey,
   mediaType,
   unmatchedOnly,
+  isRefreshingMetadata,
   onViewModeChange,
   onSortOptionChange,
   onMediaTypeChange,
   onUnmatchedOnlyChange,
+  onRefreshMetadata,
 }: LibraryToolbarProps) {
   return (
     <div className={styles.toolbar}>
@@ -69,13 +75,6 @@ export default function LibraryToolbar({
           </Select>
         </Label>
 
-        <Checkbox
-          className={styles.unmatchedFilter}
-          label="Unmatched titles"
-          checked={unmatchedOnly}
-          onChange={onUnmatchedOnlyChange}
-        />
-
         <Label size="small">
           Sort
           <Select
@@ -95,6 +94,13 @@ export default function LibraryToolbar({
           </Select>
         </Label>
 
+        <Checkbox
+          className={styles.unmatchedFilter}
+          label="Unmatched titles"
+          checked={unmatchedOnly}
+          onChange={onUnmatchedOnlyChange}
+        />
+
         {mediaType && (
           <span className={styles.filterChip}>
             Type: {mediaType}
@@ -109,24 +115,34 @@ export default function LibraryToolbar({
         )}
       </div>
 
-      <ToggleButtonGroup value={[viewMode]}>
-        <ToggleButton
-          onClick={() => onViewModeChange('grid')}
-          value="grid"
-          aria-label="Grid view"
-          title="Grid view"
+      <div className={styles.toolbarActions}>
+        <Button
+          loading={isRefreshingMetadata}
+          disabled={isRefreshingMetadata}
+          onClick={onRefreshMetadata}
         >
-          <GridIcon />
-        </ToggleButton>
-        <ToggleButton
-          onClick={() => onViewModeChange('list')}
-          value="list"
-          aria-label="List view"
-          title="List view"
-        >
-          <ListIcon />
-        </ToggleButton>
-      </ToggleButtonGroup>
+          <RefreshIcon />
+          {isRefreshingMetadata ? 'Refreshing metadata' : 'Refresh metadata'}
+        </Button>
+        <ToggleButtonGroup value={[viewMode]}>
+          <ToggleButton
+            onClick={() => onViewModeChange('grid')}
+            value="grid"
+            aria-label="Grid view"
+            title="Grid view"
+          >
+            <GridIcon />
+          </ToggleButton>
+          <ToggleButton
+            onClick={() => onViewModeChange('list')}
+            value="list"
+            aria-label="List view"
+            title="List view"
+          >
+            <ListIcon />
+          </ToggleButton>
+        </ToggleButtonGroup>
+      </div>
     </div>
   )
 }
