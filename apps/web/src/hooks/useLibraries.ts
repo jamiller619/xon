@@ -1,34 +1,39 @@
-import type { Library } from '@xon/shared'
-import { useCallback, useEffect, useState } from 'react'
-import { apiFetch } from '~/lib/apiFetch'
+import { useQuery } from '@tanstack/react-query'
+import { Library } from '@xon/shared'
+import type { InferRequestType, InferResponseType } from 'hono/client'
+import { librariesAPI } from '../lib/rpc'
+
+/** A library as actually serialized over the wire (dates are strings). */
+export type LibraryResponse = InferResponseType<
+  typeof librariesAPI.index.$get,
+  200
+>[number]
+
+export type CreateLibraryInput = InferRequestType<
+  typeof librariesAPI.index.$post
+>['json']
+
+const librariesQuery = {
+  queryKey: ['libraries'] as const,
+  queryFn: async () => {
+    const res = await librariesAPI.index.$get()
+
+    if (!res.ok) throw new Error(res.statusText)
+
+    return res.json()
+  },
+}
+
+export const createLibraryMutation = {
+  mutationFn: async (data: CreateLibraryInput) => {
+    const res = await librariesAPI.index.$post({ json: data })
+
+    if (!res.ok) throw new Error(res.statusText)
+
+    return res.json()
+  },
+}
 
 export default function useLibraries() {
-  const [libraries, setLibraries] = useState<Library[]>([])
-  const [isLoading, setIsLoading] = useState(true)
-  const [error, setError] = useState<string | null>(null)
-
-  const fetchLibraries = useCallback(async () => {
-    setIsLoading(true)
-
-    try {
-      const res = await apiFetch('/api/libraries')
-      const data = (await res.json()) as Library[]
-      setLibraries(data)
-    } catch {
-      setError('Failed to load libraries')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [])
-
-  useEffect(() => {
-    void fetchLibraries()
-  }, [fetchLibraries])
-
-  return {
-    libraries,
-    isLoading,
-    error,
-    fetchLibraries,
-  }
+  return useQuery(librariesQuery)
 }

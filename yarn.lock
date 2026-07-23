@@ -4359,12 +4359,12 @@ quick-lru@^5.1.1:
   resolved "https://registry.yarnpkg.com/quick-lru/-/quick-lru-5.1.1.tgz#366493e6b3e42a3a6885e2e99d18f80fb7a8c932"
   integrity sha512-WuyALRjWPDGtt/wzJiadO5AXY+8hZ80hVpe6MyivgraREW751X3SbhRvG3eLKOYN+8VEvqLcf3wdnt44Z4S4SA==
 
-react-dom@^19.0.0:
-  version "19.2.6"
-  resolved "https://registry.yarnpkg.com/react-dom/-/react-dom-19.2.6.tgz#44a81b0bcca22da814c00847d09d01c8615529b7"
-  integrity sha512-0prMI+hvBbPjsWnxDLxlCGyM8PN6UuWjEUCYmZhO67xIV9Xasa/r/vDnq+Xyq4Lo27g8QSbO5YzARu0D1Sps3g==
+react-dom@19.3.0-canary-28cd4bb0-20260723:
+  version "19.3.0-canary-28cd4bb0-20260723"
+  resolved "https://registry.yarnpkg.com/react-dom/-/react-dom-19.3.0-canary-28cd4bb0-20260723.tgz#b182830a8a90e8db325084c7ac1025171af16dad"
+  integrity sha512-0WNG2bdTd/lSdP8FplCO3bsljVS4rezTbkAxrljv6/bZAV6or9d2SfkHoT0qKZXZY8j7vAaBnnwh6vdtT0p0Dw==
   dependencies:
-    scheduler "^0.27.0"
+    scheduler "0.28.0-canary-28cd4bb0-20260723"
 
 react-draggable@^4.4.6, react-draggable@^4.5.0:
   version "4.5.0"
@@ -4419,10 +4419,10 @@ react-router@7.15.0:
     cookie "^1.0.1"
     set-cookie-parser "^2.6.0"
 
-react@^19.0.0:
-  version "19.2.6"
-  resolved "https://registry.yarnpkg.com/react/-/react-19.2.6.tgz#3dadb8e12b2a7934c1d5317973e5dce1301f9a4d"
-  integrity sha512-sfWGGfavi0xr8Pg0sVsyHMAOziVYKgPLNrS7ig+ivMNb3wbCBw3KxtflsGBAwD3gYQlE/AEZsTLgToRrSCjb0Q==
+react@19.3.0-canary-28cd4bb0-20260723:
+  version "19.3.0-canary-28cd4bb0-20260723"
+  resolved "https://registry.yarnpkg.com/react/-/react-19.3.0-canary-28cd4bb0-20260723.tgz#4b3fa753a440f4170993b20e154d875b7b46b06e"
+  integrity sha512-5wSWU5Vm/QxLtTWlf+ZNCpM7FuG4sR71e5xOPvZJM0qnaoxCZOBk1sCUqd67z8ofaq1BS0T7X0OnCFib+/FDGQ==
 
 readable-stream@^3.0.2:
   version "3.6.2"
@@ -4597,10 +4597,10 @@ safe-buffer@~5.2.0:
   resolved "https://registry.yarnpkg.com/safe-buffer/-/safe-buffer-5.2.1.tgz#1eaf9fa9bdb1fdd4ec75f58f9cdb4e6b7827eec6"
   integrity sha512-rp3So07KcdmmKbGvgaNxQSJr7bGVSVk5S9Eq1F+ppbRo70+YeaDxkw5Dd8NPN+GD6bjnYm2VuPuCXmpuYvmCXQ==
 
-scheduler@^0.27.0:
-  version "0.27.0"
-  resolved "https://registry.yarnpkg.com/scheduler/-/scheduler-0.27.0.tgz#0c4ef82d67d1e5c1e359e8fc76d3a87f045fe5bd"
-  integrity sha512-eNv+WrVbKu1f3vbYJT/xtiF5syA5HPIMtf9IgY/nKg0sWqzAUEvqY/xm7OcZc/qafLx/iO9FgOmeSAp4v5ti/Q==
+scheduler@0.28.0-canary-28cd4bb0-20260723:
+  version "0.28.0-canary-28cd4bb0-20260723"
+  resolved "https://registry.yarnpkg.com/scheduler/-/scheduler-0.28.0-canary-28cd4bb0-20260723.tgz#404fa52ba938b7195da6a440e2868384f796dc9d"
+  integrity sha512-MV4SrZXOvGgKCeT8JaQHqMw9gIGQDNbg2p51cI/jScAUkRenN3GfbOAanu+VUUYwuHDMwlw/U5ZZD3sKgEiW1w==
 
 semver-compare@^1.0.0:
   version "1.0.0"

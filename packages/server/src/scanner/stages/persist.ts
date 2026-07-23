@@ -40,7 +40,7 @@ async function saveChangedMediaItem(ctx: PipelineContext, job: MediaJob) {
   }
 
   if (JSON.stringify(combinedMetadata) !== JSON.stringify(mediaItem.metadata)) {
-    ctx.logger.log(
+    ctx.logger.debug(
       `Persist stage: Updating metadata for media item ${mediaItem.id}`,
     )
     await ctx.db
@@ -73,7 +73,7 @@ async function saveRefreshedMediaItem(ctx: PipelineContext, job: MediaJob) {
     ...job.data.metadata,
   }
 
-  ctx.logger.log(
+  ctx.logger.debug(
     `Persist stage: Refreshing metadata for media item ${mediaItem.id}`,
   )
 

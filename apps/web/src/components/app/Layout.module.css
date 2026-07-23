@@ -73,6 +73,46 @@
   padding-bottom: 88px;
 }
 
+:global(::view-transition-group(.sidebar-open)),
+:global(::view-transition-group(.sidebar-close)) {
+  overflow: clip;
+  animation-duration: 240ms;
+  animation-timing-function: cubic-bezier(0.2, 0, 0, 1);
+}
+
+:global(::view-transition-old(.sidebar-open)),
+:global(::view-transition-old(.sidebar-close)),
+:global(::view-transition-new(.sidebar-open)) {
+  object-fit: none;
+  object-position: left top;
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+:global(::view-transition-new(.sidebar-close)) {
+  object-fit: none;
+  object-position: left top;
+  animation: none;
+  mix-blend-mode: normal;
+}
+
+:global(::view-transition-old(.sidebar-open)),
+:global(::view-transition-new(.sidebar-close)) {
+  opacity: 0;
+}
+
+:global(::view-transition-new(.sidebar-open)),
+:global(::view-transition-old(.sidebar-close)) {
+  opacity: 1;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  :global(::view-transition-group(.sidebar-open)),
+  :global(::view-transition-group(.sidebar-close)) {
+    animation: none;
+  }
+}
+
 @media (max-width: 768px) {
   .overlay.visible {
     display: block;

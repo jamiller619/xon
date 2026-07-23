@@ -27,6 +27,7 @@ export default function ListView({
   onSort,
 }: ListViewProps) {
   const wrapperRef = useRef<HTMLDivElement>(null)
+  const previousResetKey = useRef(resetKey)
   const { scrollElement, scrollMargin } = useScrollViewport(wrapperRef)
   const rowCount = items.length + (hasNextPage ? 1 : 0)
   const rowVirtualizer = useVirtualizer({
@@ -43,7 +44,10 @@ export default function ListView({
   const isVirtualized = !isLoading && items.length > 0
 
   useEffect(() => {
-    if (resetKey) scrollElement?.scrollTo({ top: 0 })
+    if (previousResetKey.current !== resetKey) {
+      scrollElement?.scrollTo({ top: 0 })
+      previousResetKey.current = resetKey
+    }
   }, [resetKey, scrollElement])
 
   useEffect(() => {

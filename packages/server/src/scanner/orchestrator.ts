@@ -81,7 +81,7 @@ export async function scanLibrary(
         ? `${dataSource.pluginId}:${dataSource.path}`
         : toLocalPath(dataSource.path)
 
-    logger.log(`Scanning data source: ${sourceLabel}`)
+    logger.debug(`Scanning data source: ${sourceLabel}`)
 
     const discoverer = discoverers[dataSource.type]
 
@@ -118,7 +118,9 @@ export async function scanLibrary(
     const totalFiles = discovery.jobs.length
 
     if (totalFiles === 0) {
-      logger.log(`No new or changed files found in data source: ${sourceLabel}`)
+      logger.debug(
+        `No new or changed files found in data source: ${sourceLabel}`,
+      )
       onProgress?.({
         dataSourceId: dataSource.path,
         phase: 'processing',
@@ -163,7 +165,9 @@ export async function scanLibrary(
       }
     }
 
-    logger.log(`Beginning pipeline stage for ${library.name} / ${sourceLabel}`)
+    logger.debug(
+      `Beginning pipeline stage for ${library.name} / ${sourceLabel}`,
+    )
 
     await runPipeline(ctx, discovery.jobs)
 
@@ -178,7 +182,7 @@ export async function scanLibrary(
     totalDiscovered,
   }
 
-  logger.log(`Scan finished: "${library.name}"`, {
+  logger.debug(`Scan finished: "${library.name}"`, {
     ...summary,
     duration: Date.now() - scanStart,
   })
@@ -302,7 +306,7 @@ export async function refreshMetadata(
     totalDiscovered: totalFiles,
   }
 
-  logger.log(`Metadata refresh finished: "${library.name}"`, {
+  logger.debug(`Metadata refresh finished: "${library.name}"`, {
     ...summary,
     duration: Date.now() - refreshStart,
   })

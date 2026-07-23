@@ -4,6 +4,7 @@ import prettyBytes from 'pretty-bytes'
 import { useParams } from 'react-router-dom'
 import { apiFetch } from '~/lib/apiFetch'
 import { useAppStore } from '~/store/appStore'
+import Page from '../Page'
 import GridView from './components/GridView'
 import LibraryToolbar from './components/LibraryToolbar'
 import ListView from './components/ListView'
@@ -67,10 +68,10 @@ export default function LibraryBrowser() {
   }
 
   return (
-    <div className={styles.browser}>
+    <Page>
       <header className={styles.header}>
         <div className={styles.titleContainer}>
-          <h1 className={styles.title}>{library?.name ?? 'Library'}</h1>
+          <Page.Title>{library?.name ?? 'Library'}</Page.Title>
           <div className={styles.libraryStats}>
             {library?.dataSources.length ? (
               <span
@@ -126,6 +127,6 @@ export default function LibraryBrowser() {
           onSort={controls.handleSort}
         />
       )}
-    </div>
+    </Page>
   )
 }

@@ -74,6 +74,8 @@ export default function GridView({
     return () => observer.disconnect()
   }, [])
 
+  const previousResetKey = useRef(resetKey)
+
   const rowVirtualizer = useVirtualizer({
     count: rowCount,
     getScrollElement: () => scrollElement,
@@ -88,7 +90,10 @@ export default function GridView({
   const lastVirtualRowIndex = virtualRows.at(-1)?.index
 
   useEffect(() => {
-    if (resetKey) scrollElement?.scrollTo({ top: 0 })
+    if (previousResetKey.current !== resetKey) {
+      scrollElement?.scrollTo({ top: 0 })
+      previousResetKey.current = resetKey
+    }
   }, [resetKey, scrollElement])
 
   useEffect(() => {

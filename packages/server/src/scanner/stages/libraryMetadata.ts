@@ -15,7 +15,7 @@ export default {
   run: async (ctx, job) => {
     if (job.type === 'changed') {
       if (Object.keys(job.data.metadata ?? {}).length > 0) {
-        ctx.logger.log(
+        ctx.logger.debug(
           `Skipping metadata stage with existing data for changed file: ${job.file.path}`,
         )
 
@@ -25,7 +25,7 @@ export default {
 
     const { plugins, matchedProvider } = getMetadataPlugins(job)
 
-    ctx.logger.log(
+    ctx.logger.debug(
       `Matched metadata plugins: [${plugins.map((p) => p.manifest.id).join(', ') ?? 'none'}] for file: ${job.file.path}`,
     )
 
@@ -66,7 +66,7 @@ export default {
               })
 
         if (pluginMeta) {
-          ctx.logger.log(`Plugin metadata for ${job.file.path}`, {
+          ctx.logger.debug(`Plugin metadata for ${job.file.path}`, {
             plugin: plugin.manifest.id,
             title: 'title' in pluginMeta ? pluginMeta.title : undefined,
             fields: Object.keys(pluginMeta),

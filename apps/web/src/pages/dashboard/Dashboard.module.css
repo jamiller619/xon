@@ -6,10 +6,6 @@
   color: #888;
 }
 
-.page {
-  padding: var(--space-md);
-}
-
 .section {
   /* background: var(--color-gray-2); */
   /* border-radius: var(--border-radius-2); */
@@ -57,41 +53,4 @@
   justify-content: center;
   height: 100%;
   color: var(--color-gray-10);
-}
-
-.library {
-  min-width: 250px;
-}
-
-/* The 3D-tilted backdrop needs its perspective on the thumb (its parent) */
-.libraryThumb {
-  perspective: 1000px;
-}
-
-.libraryThumbnailBackdrop {
-  display: block;
-  position: relative;
-  width: 100%;
-  height: 100%;
-  overflow: hidden;
-  transform: rotateX(20deg) rotateY(-10deg) scale(1.5);
-
-  &::before {
-    content: "";
-    position: absolute;
-    z-index: 1;
-    inset: 0;
-    background-image: linear-gradient(45deg, black, transparent);
-  }
-}
-
-.libraryThumbnailImg {
-  display: block;
-  position: absolute;
-  z-index: 0;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  object-position: center;
 }

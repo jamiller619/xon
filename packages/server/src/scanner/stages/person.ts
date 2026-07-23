@@ -34,7 +34,7 @@ export default {
       | undefined
 
     if (!tmdbPlugin) {
-      ctx.logger.log(`TMDB plugin not found, skipping person stage`)
+      ctx.logger.debug(`TMDB plugin not found, skipping person stage`)
 
       return
     }

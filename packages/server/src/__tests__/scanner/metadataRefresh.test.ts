@@ -87,7 +87,7 @@ describe('metadata refresh matching', () => {
       errors: [],
     }
     const ctx = {
-      logger: { log: vi.fn(), error: vi.fn() },
+      logger: { debug: vi.fn(), error: vi.fn() },
     } as unknown as PipelineContext
 
     const result = await libraryMetadata.run(ctx, job)
@@ -161,7 +161,7 @@ describe('metadata refresh matching', () => {
 
     await libraryMetadata.run(
       {
-        logger: { log: vi.fn(), error: vi.fn() },
+        logger: { debug: vi.fn(), error: vi.fn() },
       } as unknown as PipelineContext,
       job,
     )
@@ -209,7 +209,7 @@ describe('metadata refresh matching', () => {
 
     const result = await libraryMetadata.run(
       {
-        logger: { log: vi.fn(), error: vi.fn() },
+        logger: { debug: vi.fn(), error: vi.fn() },
       } as unknown as PipelineContext,
       job,
     )

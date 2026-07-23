@@ -30,8 +30,8 @@
     "pdfjs-dist": "^5.5.207",
     "pretty-bytes": "^7.1.0",
     "pretty-ms": "^9.3.0",
-    "react": "^19.0.0",
-    "react-dom": "^19.0.0",
+    "react": "19.3.0-canary-28cd4bb0-20260723",
+    "react-dom": "19.3.0-canary-28cd4bb0-20260723",
     "react-grid-layout": "^2.2.3",
     "react-router-dom": "^7.0.0",
     "zustand": "^5.0.0"

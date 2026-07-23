@@ -1,28 +1,22 @@
-import {
-  ArrowSyncRegular as RefreshIcon,
-  FolderSearchRegular as ScanIcon,
-} from '@fluentui/react-icons'
 import { useQuery } from '@tanstack/react-query'
 import type { MediaItem } from '@xon/shared'
-import { Card, ContextMenu, Flex, Surface, XScroller } from '@xon/ui'
+import { Flex, Surface, XScroller } from '@xon/ui'
 import clsx from 'clsx'
 import type { HTMLAttributes } from 'react'
 import { Link } from 'react-router-dom'
-import { useRefreshMetadataConfirmation } from '~/components/confirmation/ConfirmationProvider'
 import MediaCard from '~/components/media-card/MediaCard'
 import PluginSlot from '~/components/PluginSlot'
 import useQueryAPIHelper from '~/hooks/useQueryAPIHelper'
-import { apiPost } from '~/lib/apiFetch'
-import { librariesQuery } from '~/lib/librariesApi'
-import { useScanStore } from '~/store/scanStore'
 import System from './cards/System'
 import styles from './Dashboard.module.css'
 import FeaturedCarousel from './FeaturedCarousel'
 import 'react-grid-layout/css/styles.css'
 import 'react-resizable/css/styles.css'
+import LibraryCard from '~/components/LibraryCard'
+import useLibraries from '~/hooks/useLibraries'
+import Page from '../Page'
 
 export default function Dashboard() {
-  const confirmRefresh = useRefreshMetadataConfirmation()
   const { data: recentMedia } = useQuery<MediaItem[]>(
     useQueryAPIHelper('recentMedia'),
   )
@@ -31,65 +25,16 @@ export default function Dashboard() {
     useQueryAPIHelper('featuredMedia'),
   )
 
-  const { data: libraries } = useQuery(librariesQuery)
-  // Cache-busts library thumbnails once a scan (re)generates them
-  const scanCompletedAt = useScanStore((s) => s.completedAt)
+  const { data: libraries } = useLibraries()
 
   return (
-    <Flex dir="col" gap="4" className={styles.page}>
+    <Page>
       <PluginSlot injectionPoint="dashboard-widget" />
       <FeaturedCarousel key="featured" items={featuredMedia} />
       <Flex gap="4">
         <DashboardSection key="my-libraries" title="Libraries">
           {libraries?.map((library) => (
-            <ContextMenu
-              items={[
-                {
-                  label: 'Scan library',
-                  icon: <ScanIcon />,
-                  onClick: () => apiPost(`/api/libraries/${library.id}/scan`),
-                },
-                {
-                  label: 'Refresh metadata',
-                  icon: <RefreshIcon />,
-                  onClick: () =>
-                    confirmRefresh(() =>
-                      apiPost(`/api/libraries/${library.id}/scan/refresh`),
-                    ),
-                },
-              ]}
-              key={library.id}
-            >
-              <Card
-                as={Link}
-                key={library.id}
-                to={`/libraries/${library.id}`}
-                className={styles.library}
-              >
-                <Card.Thumb aspectRatio="4 / 3" className={styles.libraryThumb}>
-                  <span className={styles.libraryThumbnailBackdrop}>
-                    <img
-                      src={`/api/libraries/${library.id}/thumbnail${
-                        scanCompletedAt[library.id]
-                          ? `?v=${scanCompletedAt[library.id]}`
-                          : ''
-                      }`}
-                      alt=""
-                      loading="lazy"
-                      decoding="async"
-                      className={styles.libraryThumbnailImg}
-                      onError={(e) => {
-                        e.currentTarget.style.display = 'none'
-                      }}
-                    />
-                  </span>
-                </Card.Thumb>
-                <Card.Info>
-                  <Card.Title>{library.name}</Card.Title>
-                  {/* <Card.Meta>{library.type}</Card.Meta> */}
-                </Card.Info>
-              </Card>
-            </ContextMenu>
+            <LibraryCard key={library.id} data={library} withLink />
           ))}
         </DashboardSection>
         <DashboardSection key="continue-watching" title="Continue Watching" />
@@ -100,7 +45,7 @@ export default function Dashboard() {
         media={recentMedia}
       />
       <System key="system" />
-    </Flex>
+    </Page>
   )
 }
 
@@ -117,7 +62,7 @@ function DashboardSection({
   return (
     <XScroller>
       <Surface
-        borderRadius="sm"
+        borderRadius="small"
         className={clsx(styles.section, className)}
         {...props}
       >

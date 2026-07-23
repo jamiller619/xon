@@ -57,7 +57,7 @@ export async function runPipeline(
           if (result) {
             Object.assign(job.data, result)
 
-            ctx.logger.log(`${stage.name} stage complete`, {
+            ctx.logger.debug(`${stage.name} stage complete`, {
               file: job.file.path,
               fields: Object.keys(result),
             })

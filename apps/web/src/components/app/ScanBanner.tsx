@@ -1,7 +1,6 @@
-import { useQuery } from '@tanstack/react-query'
 import { Flex, Progress, Surface } from '@xon/ui'
+import useLibraries from '~/hooks/useLibraries'
 import { useScanEvents } from '~/hooks/useScanEvents'
-import { librariesQuery } from '~/lib/librariesApi'
 import type { ScanEntry } from '~/store/scanStore'
 import { useScanStore } from '~/store/scanStore'
 import styles from './ScanBanner.module.css'
@@ -16,7 +15,7 @@ export default function ScanBanner() {
   useScanEvents()
 
   const scans = useScanStore((s) => s.scans)
-  const { data: libraries } = useQuery(librariesQuery)
+  const { data: libraries } = useLibraries()
 
   const entries = Object.values(scans)
   if (entries.length === 0) return null

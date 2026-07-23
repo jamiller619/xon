@@ -37,10 +37,14 @@ function saveHistory(query: string) {
 }
 
 type TopBarProps = {
+  isSidebarOpen?: boolean
   onMenuClick?: () => void
 }
 
-export default function TopBar({ onMenuClick }: TopBarProps) {
+export default function TopBar({
+  isSidebarOpen = false,
+  onMenuClick,
+}: TopBarProps) {
   const navigate = useNavigate()
   const [query, setQuery] = useState('')
   const [suggestions, setSuggestions] = useState<SuggestionItem[]>([])
@@ -138,7 +142,13 @@ export default function TopBar({ onMenuClick }: TopBarProps) {
 
   return (
     <Surface as="header" borderRadius="none" className={styles.header}>
-      <Button.Icon onClick={onMenuClick} size="small">
+      <Button.Icon
+        aria-controls="main-navigation"
+        aria-expanded={isSidebarOpen}
+        aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
+        onClick={onMenuClick}
+        size="small"
+      >
         <MenuIcon />
       </Button.Icon>
       <div className={styles.searchWrapper} ref={wrapperRef}>

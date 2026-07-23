@@ -10,6 +10,7 @@ import {
   Library20Filled as ManageLibrariesOnIcon,
   MoviesAndTv20Regular as MoviesIcon,
   MusicNote220Regular as MusicIcon,
+  Image20Regular as PhotosIcon,
   TextBulletList20Regular as PlaylistIcon,
   WindowConsole20Regular as ServerOutputIcon,
   WindowConsole20Filled as ServerOutputOnIcon,
@@ -24,8 +25,8 @@ import clsx from 'clsx'
 import { NavLink } from 'react-router-dom'
 import Logo from '~/components/logo/Logo'
 import PluginSlot from '~/components/PluginSlot'
+import useLibraries from '~/hooks/useLibraries'
 import useQueryAPIHelper from '~/hooks/useQueryAPIHelper'
-import { librariesQuery } from '~/lib/librariesApi'
 import styles from './Sidebar.module.css'
 
 interface SidebarProps {
@@ -34,7 +35,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ className, isOpen }: SidebarProps) {
-  const { data: libraries } = useQuery(librariesQuery)
+  const { data: libraries } = useLibraries()
 
   const { data: groups } = useQuery<Group[]>(useQueryAPIHelper('groups'))
 
@@ -44,6 +45,7 @@ export default function Sidebar({ className, isOpen }: SidebarProps) {
   return (
     <Surface
       as="nav"
+      id="main-navigation"
       borderRadius="none"
       className={clsx(styles.sidebar, className, isOpen && styles.open)}
       aria-label="Main navigation"
@@ -180,5 +182,7 @@ function LibraryIcon({ type }: { type?: LibraryType | undefined }) {
       return <TVIcon />
     case LibraryType.Music:
       return <MusicIcon />
+    case LibraryType.Photos:
+      return <PhotosIcon />
   }
 }

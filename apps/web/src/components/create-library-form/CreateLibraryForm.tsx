@@ -1,23 +1,37 @@
-import { DataSourceType, MediaType } from '@xon/shared'
-import {
-  Button,
-  Checkbox,
-  Dialog,
-  Flex,
-  Label,
-  Surface,
-  Textbox,
-} from '@xon/ui'
-import clsx from 'clsx'
-import { type SubmitEvent, useState } from 'react'
-import * as api from '~/lib/api'
+import { useMutation } from '@tanstack/react-query'
+import { DataSourceType, LibraryType } from '@xon/shared'
+import { Button, Dialog, Field, Flex, RadioGroup, Textbox } from '@xon/ui'
+import { useEffect, useState } from 'react'
+import { createLibraryMutation } from '~/hooks/useLibraries'
 import styles from './CreateLibraryForm.module.css'
 import MediaFolderBrowser from './MediaFolderBrowser'
 
-const ALL_MEDIA_TYPES: { label: MediaType.MainType; emoji: string }[] = [
-  { label: MediaType.MainType.Video, emoji: '📺' },
-  { label: MediaType.MainType.Audio, emoji: '🎵' },
-  { label: MediaType.MainType.Image, emoji: '🖼️' },
+const LIBRARY_TYPES = [
+  {
+    label: 'Movies',
+    icon: '🍿',
+    value: LibraryType.Movies,
+  },
+  {
+    label: 'TV Shows',
+    icon: '📺',
+    value: LibraryType.TVShows,
+  },
+  {
+    label: 'Music',
+    icon: '🎶',
+    value: LibraryType.Music,
+  },
+  {
+    label: 'Photos',
+    icon: '🖼️',
+    value: LibraryType.Photos,
+  },
+  {
+    label: 'Home Videos',
+    icon: '📹',
+    value: LibraryType.HomeVideos,
+  },
 ]
 
 interface CreateLibraryFormProps {
@@ -26,110 +40,89 @@ interface CreateLibraryFormProps {
   formClassName?: string | undefined
 }
 
-export function CreateLibraryForm({
+export default function CreateLibraryForm({
   onSuccess,
-  submitLabel = 'Create Library',
   formClassName,
 }: CreateLibraryFormProps) {
-  const [name, setName] = useState('')
-  const [description, setDescription] = useState('')
-  const [mediaCategories, setMediaCategories] = useState<MediaType.MainType[]>(
-    [],
-  )
+  const [name, setName] = useState<string>('')
+  const [description, setDescription] = useState<string>('')
   const [sourcePath, setSourcePath] = useState('')
-  const [loading, setLoading] = useState(false)
-  const [error, setError] = useState<string | null>(null)
+  const [libraryType, setLibraryType] = useState<LibraryType | undefined>()
+  const mutation = useMutation(createLibraryMutation)
 
-  function toggleMediaType(type: MediaType.MainType) {
-    setMediaCategories((prev) =>
-      prev.includes(type) ? prev.filter((t) => t !== type) : [...prev, type],
-    )
-  }
+  const canFormSubmit =
+    name.trim() !== '' &&
+    (libraryType?.length || 0) > 0 &&
+    sourcePath.trim() !== ''
 
-  async function handleSubmit(e: SubmitEvent) {
-    e.preventDefault()
-    setError(null)
-    setLoading(true)
-
-    try {
-      const dataSource = {
-        type: DataSourceType.local,
-        path: sourcePath.trim(),
-      }
-
-      const library = await api.createLibrary({
-        name,
-        description: description.trim() || undefined,
-        mediaCategories,
-        dataSources: [dataSource],
-      })
-
-      onSuccess(library.id)
-    } catch (err) {
-      setError(`Failed to create library: ${err}`)
-    } finally {
-      setLoading(false)
+  useEffect(() => {
+    if (mutation.isSuccess) {
+      onSuccess(mutation.data.id)
     }
+  }, [mutation, onSuccess])
+
+  // A React 19 form action: useFormStatus tracks the returned promise, so the
+  // submit button drives its own spinner while this is in flight.
+  async function handleSubmit() {
+    if (!libraryType) return
+
+    await mutation.mutateAsync({
+      name,
+      description,
+      type: libraryType,
+      dataSources: [{ type: DataSourceType.local, path: sourcePath }],
+    })
   }
 
   return (
-    <form className={clsx(styles.form, formClassName)} onSubmit={handleSubmit}>
-      <Label>
-        Library Name
+    <Flex
+      as="form"
+      action={handleSubmit}
+      dir="col"
+      gap="4"
+      className={formClassName}
+    >
+      <Field label="Library Name">
         <Textbox
+          placeholder="e.g. Movies"
           value={name}
           onChange={(e) => setName(e.target.value)}
-          required
-          placeholder="e.g. Movies, Music, Photos"
-          block={true}
+          block
         />
-      </Label>
-      <Label>
-        Description
+      </Field>
+      <Field label="Description (optional)">
         <Textbox
           value={description}
           onChange={(e) => setDescription(e.target.value)}
-          placeholder="Optional description"
-          block={true}
+          block
         />
-      </Label>
-      <span>Media Types (leave empty for all)</span>
-      <Surface className={styles.well}>
-        {ALL_MEDIA_TYPES.map(({ label, emoji }) => (
-          <Checkbox
-            className={styles.checkbox}
-            key={label}
-            label={
-              <>
-                <span>{emoji}</span> {label}
-              </>
-            }
-            checked={mediaCategories.includes(label)}
-            onChange={() => toggleMediaType(label)}
-          />
-        ))}
-      </Surface>
-      <Flex justify="between" align="center" gap="3">
-        <Label>Path to Media Files</Label>
+      </Field>
+      <Field label="Media Type">
+        <RadioGroup
+          items={LIBRARY_TYPES}
+          value={libraryType ?? ''}
+          onChange={(value) => setLibraryType(value as LibraryType)}
+        />
+      </Field>
+      <Field label="Location">
         <Textbox
+          className={styles.locationTextbox}
+          placeholder="e.g. /Volumes/Movies"
           value={sourcePath}
-          required
           onChange={(e) => setSourcePath(e.target.value)}
-          style={{ flex: 1 }}
-          block={true}
+          block
         />
-      </Flex>
-      <Dialog triggerText="📂 Browse..." title="Select Media Folder">
-        <MediaFolderBrowser onSelect={setSourcePath} />
-      </Dialog>
-      {error && <div className={styles.error}>{error}</div>}
-      <Button
-        type="submit"
-        block
-        disabled={loading || !name.trim() || !sourcePath.trim()}
-      >
-        {loading ? 'Creating...' : submitLabel}
+        <Dialog
+          triggerText="📂 Browse..."
+          title="Select Media Folder"
+          buttonProps={{ block: true }}
+        >
+          <MediaFolderBrowser onSelect={setSourcePath} />
+        </Dialog>
+      </Field>
+      <Button type="submit" variant="primary" disabled={!canFormSubmit}>
+        Finish Setup
       </Button>
-    </form>
+    </Flex>
   )
 }
