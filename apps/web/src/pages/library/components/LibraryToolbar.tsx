@@ -6,9 +6,9 @@ import {
 import { MediaType } from '@xon/shared'
 import {
   Button,
-  Checkbox,
   Label,
   Select,
+  Switch,
   ToggleButton,
   ToggleButtonGroup,
 } from '@xon/ui'
@@ -94,7 +94,7 @@ export default function LibraryToolbar({
           </Select>
         </Label>
 
-        <Checkbox
+        <Switch
           className={styles.unmatchedFilter}
           label="Unmatched titles"
           checked={unmatchedOnly}

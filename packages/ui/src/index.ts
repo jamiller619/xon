@@ -26,6 +26,10 @@ export { default as Flex } from './components/flex/Flex.jsx'
 export { default as HorizontalRule } from './components/HorizontalRule.js'
 export { default as Checkbox } from './components/input/Checkbox.jsx'
 export {
+  default as Switch,
+  type SwitchProps,
+} from './components/input/Switch.jsx'
+export {
   default as Textbox,
   type TextboxProps,
 } from './components/input/Textbox.jsx'

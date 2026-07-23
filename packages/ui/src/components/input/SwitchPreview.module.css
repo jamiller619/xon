@@ -1,0 +1,38 @@
+/* Hallmark · pre-emit critique: P5 H4 E5 S4 R5 V4 */
+
+.preview {
+  display: grid;
+  gap: var(--space-md);
+  max-width: 32rem;
+  padding: var(--space-xl);
+  color: var(--color-text);
+
+  h1 {
+    margin: 0 0 var(--space-sm);
+    font-size: var(--text-xl);
+  }
+}
+
+.row {
+  display: grid;
+  grid-template-columns: minmax(6rem, 0.35fr) minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-md);
+  min-width: 0;
+
+  code {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+  }
+}
+
+@media (max-width: 24rem) {
+  .preview {
+    padding: var(--space-md);
+  }
+
+  .row {
+    grid-template-columns: minmax(0, 1fr);
+    gap: var(--space-2xs);
+  }
+}

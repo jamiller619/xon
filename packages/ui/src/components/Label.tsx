@@ -7,6 +7,7 @@ const styles = css`
     display: flex;
     flex-direction: column;
     gap: var(--space-2xs);
+    letter-spacing: 0.03em;
   }
 
   .small {
