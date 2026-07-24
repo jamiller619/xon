@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 const testConfig = vi.hoisted(() => ({ cachePath: '' }))
 const generateVideoBackdrops = vi.hoisted(() => vi.fn())
 const generateVideoPosters = vi.hoisted(() => vi.fn())
+const findMatchedPosters = vi.hoisted(() => vi.fn())
 
 vi.mock('../../config.ts', () => ({
   default: {
@@ -31,6 +32,16 @@ vi.mock('../../media/videoThumbnails.ts', () => ({
   generateVideoPosters,
 }))
 
+vi.mock(
+  '../../services/metadataMatchingService.ts',
+  async (importOriginal) => ({
+    ...(await importOriginal<
+      typeof import('../../services/metadataMatchingService.ts')
+    >()),
+    findMatchedPosters,
+  }),
+)
+
 const { makeMediaRouter } = await import('../../routes/media.ts')
 
 type TestMediaItem = {
@@ -38,6 +49,7 @@ type TestMediaItem = {
   libraryId: string
   filePath: string
   mediaType: string
+  matchId: string | null
   metadata: Record<string, unknown>
   updatedAt?: Date
 }
@@ -72,6 +84,7 @@ describe('Media artwork routes', () => {
       libraryId: 'library-1',
       filePath: '/videos/movie.mp4',
       mediaType: 'video/mp4',
+      matchId: '603',
       metadata: {
         images: {
           poster: [
@@ -84,6 +97,7 @@ describe('Media artwork routes', () => {
       },
     }
     app = new Hono().route('/media', makeMediaRouter(testDatabase(item)))
+    findMatchedPosters.mockReset()
   })
 
   afterEach(async () => {
@@ -168,6 +182,73 @@ describe('Media artwork routes', () => {
     expect(
       (item.metadata.images as { poster: unknown[] }).poster.slice(-3),
     ).toEqual(posters)
+  })
+
+  it('appends up to six new posters per request for a matched title', async () => {
+    findMatchedPosters.mockResolvedValue([
+      { src: 'https://images.example/first.jpg' },
+      { src: 'https://images.example/third.jpg' },
+      { src: 'https://images.example/fourth.jpg' },
+      { src: 'https://images.example/fifth.jpg' },
+      { src: 'https://images.example/sixth.jpg' },
+      { src: 'https://images.example/seventh.jpg' },
+      { src: 'https://images.example/eighth.jpg' },
+      { src: 'https://images.example/ninth.jpg' },
+    ])
+
+    const firstResponse = await app.request(
+      '/media/media-1/images/posters/find',
+      {
+        method: 'POST',
+      },
+    )
+
+    expect(firstResponse.status).toBe(201)
+    expect(findMatchedPosters).toHaveBeenCalledWith(
+      expect.anything(),
+      'media-1',
+    )
+    const firstBody = (await firstResponse.json()) as {
+      images: { poster: Array<{ src: string }> }
+    }
+    expect(firstBody.images.poster).toHaveLength(8)
+    expect(firstBody.images.poster.at(-1)).toEqual({
+      src: 'https://images.example/eighth.jpg',
+    })
+
+    const secondResponse = await app.request(
+      '/media/media-1/images/posters/find',
+      {
+        method: 'POST',
+      },
+    )
+
+    expect(secondResponse.status).toBe(201)
+    const secondBody = (await secondResponse.json()) as {
+      images: { poster: Array<{ src: string }> }
+    }
+    expect(secondBody.images.poster).toEqual([
+      { src: 'https://images.example/first.jpg' },
+      { src: 'https://images.example/second.jpg' },
+      { src: 'https://images.example/third.jpg' },
+      { src: 'https://images.example/fourth.jpg' },
+      { src: 'https://images.example/fifth.jpg' },
+      { src: 'https://images.example/sixth.jpg' },
+      { src: 'https://images.example/seventh.jpg' },
+      { src: 'https://images.example/eighth.jpg' },
+      { src: 'https://images.example/ninth.jpg' },
+    ])
+  })
+
+  it('rejects poster discovery for an unmatched title', async () => {
+    item.matchId = null
+
+    const response = await app.request('/media/media-1/images/posters/find', {
+      method: 'POST',
+    })
+
+    expect(response.status).toBe(409)
+    expect(findMatchedPosters).not.toHaveBeenCalled()
   })
 
   it('appends three backdrops generated from the video', async () => {

@@ -1,4 +1,4 @@
-import type { Metadata } from '@xon/shared'
+import type { Metadata, PosterImage } from '@xon/shared'
 import {
   backdropSizes,
   logoSizes,
@@ -9,7 +9,7 @@ import {
 
 const TMDB_BASE = 'https://api.themoviedb.org/3'
 const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
-const MAX_POSTERS = 3
+const MAX_INITIAL_POSTERS = 3
 
 interface CacheEntry<T> {
   data: T
@@ -342,7 +342,10 @@ export class TmdbClient {
       )
     }
 
-    const posters = pickPostersByLanguage(images?.posters ?? [], language)
+    const posters = rankByLanguage(images?.posters ?? [], language).slice(
+      0,
+      MAX_INITIAL_POSTERS,
+    )
     if (posters.length > 0) {
       data.images.poster = posters.map((poster) => ({
         src: constructURL(posterSizes.xlarge, poster.file_path),
@@ -458,6 +461,20 @@ export class TmdbClient {
     })
   }
 
+  async fetchPostersById(
+    mediaKind: 'movie' | 'tv',
+    mediaId: number,
+    lang = 'en',
+  ): Promise<PosterImage[]> {
+    const images = await this.#get<TmdbMovieImagesResult>(
+      `/${mediaKind}/${mediaId}/images`,
+    )
+
+    return rankByLanguage(images?.posters ?? [], lang).map((poster) => ({
+      src: constructURL(posterSizes.xlarge, poster.file_path),
+    }))
+  }
+
   clearCache(): void {
     this.#cache.clear()
   }
@@ -467,13 +484,6 @@ function constructURL(size: string, imagePath?: string | null | undefined) {
   if (!imagePath) return ''
 
   return new URL(`${size}${imagePath}`, secureBaseURL).href
-}
-
-function pickPostersByLanguage(
-  images: ImageResult[],
-  lang: string,
-): ImageResult[] {
-  return rankByLanguage(images, lang).slice(0, MAX_POSTERS)
 }
 
 function rankByLanguage(images: ImageResult[], lang: string): ImageResult[] {

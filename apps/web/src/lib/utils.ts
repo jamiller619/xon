@@ -1,4 +1,23 @@
 import type { MediaItem } from '@xon/shared'
+import prettyBytes from 'pretty-bytes'
+
+export function truncateMiddle(text: string, maxLength: number): string {
+  const characters = Array.from(text)
+  const limit = Math.max(0, Math.floor(maxLength))
+
+  if (characters.length <= limit) return text
+  if (limit <= 3) return '.'.repeat(limit)
+
+  const visibleCharacters = limit - 3
+  const startLength = Math.ceil(visibleCharacters / 2)
+  const endLength = Math.floor(visibleCharacters / 2)
+
+  return [
+    ...characters.slice(0, startLength),
+    '...',
+    ...(endLength > 0 ? characters.slice(-endLength) : []),
+  ].join('')
+}
 
 export function formatYear(data: MediaItem): string | undefined {
   const releaseDate = data.metadata.releaseDate
@@ -29,12 +48,14 @@ export function formatDuration(data?: MediaItem): string | undefined {
 export function formatBytes(data?: MediaItem): string | undefined {
   const bytes = data?.fileSize
 
-  if (bytes == null || !Number.isFinite(bytes) || bytes < 0) return
-  if (bytes < 1024) return `${bytes} B`
-  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
-  if (bytes < 1024 * 1024 * 1024)
-    return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
-  return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
+  // if (bytes == null || !Number.isFinite(bytes) || bytes < 0) return
+  // if (bytes < 1024) return `${bytes} B`
+  // if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`
+  // if (bytes < 1024 * 1024 * 1024)
+  //   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`
+  // return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)}
+  // GB`
+  return bytes == null ? undefined : prettyBytes(bytes)
 }
 
 export function mediaPath(item: Pick<MediaItem, 'id' | 'title'>): string {

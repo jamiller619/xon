@@ -3,7 +3,7 @@ import type {
   MetadataSearchResult,
   MetadataSourcePlugin,
 } from '@xon/plugin-sdk'
-import type { MediaType, Metadata } from '@xon/shared'
+import type { MediaType, Metadata, PosterImage } from '@xon/shared'
 import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { libraries, mediaItems } from '../db/schema.ts'
@@ -136,6 +136,31 @@ export async function searchMatches(
   )
 }
 
+export async function findMatchedPosters(
+  db: LibSQLDatabase,
+  mediaId: string,
+): Promise<Array<string | PosterImage>> {
+  const context = await getMatchContext(db, mediaId)
+  if (!context) throw new Error('Media item was not found')
+
+  const { matchId } = context.item
+  if (!matchId) throw new Error('This title does not have a metadata match')
+
+  const source = context.item.matchIdSource ?? inferMatchSource(matchId)
+  const selected = applicablePlugins(context).find((plugin) =>
+    source ? providerMatchesSource(plugin, source) : false,
+  )
+  if (!selected) throw new Error('Matched metadata provider is unavailable')
+  if (!selected.instance.getSearchAvailability().available) {
+    throw new Error('Matched metadata provider is not configured')
+  }
+
+  return selected.instance.findPosters(
+    matchId,
+    searchQuery(context, context.item.title),
+  )
+}
+
 export async function applyMatch(
   db: LibSQLDatabase,
   context: MatchContext,
@@ -210,4 +235,24 @@ export async function applyMatch(
     .get()
 
   return { item, warnings }
+}
+
+function providerMatchesSource(
+  plugin: PluginEntry<MetadataSourcePlugin>,
+  source: string,
+): boolean {
+  const pluginId = plugin.manifest.id.toLowerCase()
+  const normalizedSource = source.toLowerCase()
+  if (pluginId === normalizedSource) return true
+
+  return (
+    (normalizedSource === 'tmdb' && pluginId.includes('tmdb')) ||
+    (normalizedSource === 'imdb' &&
+      (pluginId.includes('omdb') || pluginId.includes('imdb')))
+  )
+}
+
+function inferMatchSource(matchId: string): string | undefined {
+  if (/^tt\d+$/i.test(matchId)) return 'imdb'
+  if (/^\d+$/.test(matchId)) return 'tmdb'
 }

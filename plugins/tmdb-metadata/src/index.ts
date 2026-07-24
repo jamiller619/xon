@@ -5,7 +5,12 @@ import {
   MetadataSourcePlugin,
   type PluginContext,
 } from '@xon/plugin-sdk'
-import { LibraryType, MediaType, type Metadata } from '@xon/shared'
+import {
+  LibraryType,
+  MediaType,
+  type Metadata,
+  type PosterImage,
+} from '@xon/shared'
 import {
   type ImageResult,
   type MovieSearchResult,
@@ -112,6 +117,28 @@ export default class TmdbMetadataPlugin extends MetadataSourcePlugin {
       await this.#saveImagesLocally(metadata)
     }
     return metadata
+  }
+
+  override async findPosters(
+    id: string,
+    query: MetadataSearchQuery,
+  ): Promise<Array<string | PosterImage>> {
+    if (!this.#client) return []
+    const numericId = Number(id)
+    if (!Number.isInteger(numericId) || numericId <= 0) return []
+
+    const posters = await this.#client.fetchPostersById(
+      query.libraryType === LibraryType.TVShows ? 'tv' : 'movie',
+      numericId,
+      this.#ctx?.settings.get<string>('language') || 'en',
+    )
+    const metadata: Metadata = { images: { poster: posters } }
+
+    if (this.#ctx?.settings.get<boolean>('saveImages')) {
+      await this.#saveImagesLocally(metadata)
+    }
+
+    return metadata.images.poster as PosterImage[]
   }
 
   async fetchPersonImage(

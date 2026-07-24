@@ -1,4 +1,4 @@
-import type { LibraryType, MediaType, Metadata } from '@xon/shared'
+import type { LibraryType, MediaType, Metadata, PosterImage } from '@xon/shared'
 import { BasePlugin } from './BasePlugin.js'
 
 export interface EnrichOptions {
@@ -72,6 +72,17 @@ export abstract class MetadataSourcePlugin extends BasePlugin {
     _query: MetadataSearchQuery,
   ): Promise<Metadata | undefined> {
     return undefined
+  }
+
+  /**
+   * Fetch every poster available for an already-matched title.
+   * Providers that do not support artwork discovery return an empty list.
+   */
+  async findPosters(
+    _id: string,
+    _query: MetadataSearchQuery,
+  ): Promise<Array<string | PosterImage>> {
+    return []
   }
 
   /**

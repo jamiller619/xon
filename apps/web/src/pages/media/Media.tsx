@@ -1,20 +1,39 @@
+import { Play16Regular as PlayIcon } from '@fluentui/react-icons'
 import { useQuery } from '@tanstack/react-query'
 import type { MediaItem } from '@xon/shared'
-import { Badge, Flex, Surface, XScroller } from '@xon/ui'
+import { Button, Flex, Surface, XScroller } from '@xon/ui'
 import clsx from 'clsx'
-import prettyBytes from 'pretty-bytes'
-import { lazy, type ReactNode, Suspense, useState } from 'react'
+// import prettyBytes from 'pretty-bytes'
+import { type ReactNode, useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { BackgroundSlideshow } from '~/components/background-slideshow/BackgroundSlideshow'
 import PluginSlot from '~/components/PluginSlot'
 import useQueryAPIHelper from '~/hooks/useQueryAPIHelper'
 import { artworkUrl, thumbnailUrl } from '~/lib/apiFetch'
 import basename from '~/lib/basename'
-import ActionButtons from './components/ActionButtons'
+import { formatBytes, truncateMiddle } from '~/lib/utils'
 import styles from './Media.module.css'
+import Cast from './movies/Cast'
 import MovieSubtitle from './movies/MovieSubtitle'
 
-const VideoPlayer = lazy(() => import('~/components/viewers/VideoPlayer'))
+const META_KEYS_TO_HIDE = [
+  'images',
+  'overview',
+  'duration',
+  'tmdbId',
+  'imdbId',
+  'title',
+  'originalTitle',
+  'voteAverage',
+  'rated',
+  'imdbRating',
+  'imdbVotes',
+  'metascore',
+  'rottenTomatoesRating',
+  'genres',
+  'crew',
+  'actors',
+]
 
 function MetaRow({ label, children }: { label: string; children: ReactNode }) {
   return (
@@ -25,16 +44,82 @@ function MetaRow({ label, children }: { label: string; children: ReactNode }) {
   )
 }
 
+function MiddleTruncatedPath({ filePath }: { filePath: string }) {
+  const pathRef = useRef<HTMLSpanElement>(null)
+  const [displayPath, setDisplayPath] = useState(filePath)
+
+  useEffect(() => {
+    const pathElement = pathRef.current
+    if (!pathElement) return
+
+    const context = document.createElement('canvas').getContext('2d')
+    if (!context) return
+
+    const updateDisplayPath = () => {
+      const styles = window.getComputedStyle(pathElement)
+      const characters = Array.from(filePath)
+      const letterSpacing = Number.parseFloat(styles.letterSpacing) || 0
+      const availableWidth = pathElement.clientWidth
+
+      context.font =
+        styles.font ||
+        `${styles.fontWeight} ${styles.fontSize} ${styles.fontFamily}`
+
+      const measure = (text: string) =>
+        context.measureText(text).width +
+        Math.max(0, Array.from(text).length - 1) * letterSpacing
+
+      if (measure(filePath) <= availableWidth) {
+        setDisplayPath(filePath)
+        return
+      }
+
+      let shortestFit = '...'
+      let low = 4
+      let high = characters.length - 1
+
+      while (low <= high) {
+        const middle = Math.floor((low + high) / 2)
+        const candidate = truncateMiddle(filePath, middle)
+
+        if (measure(candidate) <= availableWidth) {
+          shortestFit = candidate
+          low = middle + 1
+        } else {
+          high = middle - 1
+        }
+      }
+
+      setDisplayPath(shortestFit)
+    }
+
+    updateDisplayPath()
+    const resizeObserver = new ResizeObserver(updateDisplayPath)
+    resizeObserver.observe(pathElement)
+
+    return () => resizeObserver.disconnect()
+  }, [filePath])
+
+  return (
+    <span
+      ref={pathRef}
+      className={styles.filePath}
+      title={filePath}
+      aria-label={filePath}
+    >
+      {displayPath}
+    </span>
+  )
+}
+
 export default function Media() {
   const { id } = useParams<{ id: string }>()
-  const initialData = useLocation().state as MediaItem
+  const placeholderData = useLocation().state as MediaItem
 
   const { data, error } = useQuery<MediaItem>({
     ...useQueryAPIHelper('mediaById', { id }),
-    initialData,
+    placeholderData,
   })
-
-  const [showPlayer, setShowPlayer] = useState(false)
 
   if (error || !data) {
     return (
@@ -56,24 +141,20 @@ export default function Media() {
 
   const metaEntries = Object.entries(parsedMeta).filter(
     ([k, v]) =>
-      k !== 'tags' &&
-      k !== 'aiTags' &&
+      !META_KEYS_TO_HIDE.includes(k) &&
       v !== null &&
       v !== undefined &&
       v !== '' &&
       !Array.isArray(v),
   )
   const metaArrayEntries = Object.entries(parsedMeta).filter(
-    ([k, v]) => k !== 'tags' && k !== 'aiTags' && Array.isArray(v),
+    ([k, v]) => !META_KEYS_TO_HIDE.includes(k) && Array.isArray(v),
   )
-  const tags = Array.isArray(parsedMeta.tags)
-    ? (parsedMeta.tags as string[])
-    : []
   const fileName = basename(data.filePath)
   const description = data.description ?? data.metadata.overview
   const posterSrc = thumbnailUrl(data, 'large')
   const backdrops = Array.isArray(data.metadata.images?.backdrop)
-    ? data.metadata.images.backdrop.map((_, index) =>
+    ? data.metadata.images.backdrop.map((_backdrop: unknown, index: number) =>
         artworkUrl(data.id, 'backdrop', index),
       )
     : data.metadata.images?.backdrop
@@ -104,32 +185,20 @@ export default function Media() {
         gap="7"
       >
         <div className={styles.poster}>
-          {showPlayer && data.id ? (
-            <Suspense fallback={null}>
-              <VideoPlayer
-                mediaId={data.id}
-                {...(data.mediaType ? { mimeType: data.mediaType } : {})}
-                onClose={() => setShowPlayer(false)}
-              />
-            </Suspense>
+          {data.drmProtected && (
+            <div className={styles.drmOverlay}>
+              <span className={styles.lockIcon}>🔒</span>
+            </div>
+          )}
+          {posterSrc ? (
+            <img
+              src={posterSrc}
+              alt={data.title ?? fileName}
+              loading="lazy"
+              className={styles.posterImg}
+            />
           ) : (
-            <>
-              {data.drmProtected && (
-                <div className={styles.drmOverlay}>
-                  <span className={styles.lockIcon}>🔒</span>
-                </div>
-              )}
-              {posterSrc ? (
-                <img
-                  src={posterSrc}
-                  alt={data.title ?? fileName}
-                  loading="lazy"
-                  className={styles.posterImg}
-                />
-              ) : (
-                <div className={styles.posterPlaceholder}></div>
-              )}
-            </>
+            <div className={styles.posterPlaceholder}></div>
           )}
         </div>
         <Flex dir="col" gap="5" align="start">
@@ -148,7 +217,13 @@ export default function Media() {
             </div>
           </div>
           <MovieSubtitle data={data} />
-          <ActionButtons item={data} />
+          {/* <ActionButtons item={data} /> */}
+          <Flex dir="row" gap="3">
+            <Button variant="primary">
+              <PlayIcon />
+              Play
+            </Button>
+          </Flex>
         </Flex>
       </Flex>
 
@@ -166,95 +241,49 @@ export default function Media() {
       {/* Main Content Area */}
       <Surface
         className={clsx(styles.content, styles.container)}
-        borderRadius="sm"
+        borderRadius="medium"
       >
-        {/* Title + actions */}
-        <Flex gap="3" dir="col">
-          {data.drmProtected && (
-            <div className={styles.drmNotice}>
-              <span className={styles.drmBadge}>DRM Protected</span>
-              <p className={styles.drmText}>
-                This item is protected by digital rights management and cannot
-                be played in the browser.
-              </p>
+        <Flex gap="5">
+          <Flex dir="col" gap="5" className={styles.contentStart}>
+            <div className={styles.description}>
+              <p>{description}</p>
             </div>
-          )}
-
-          {description && <p className={styles.description}>{description}</p>}
-
-          {tags.length > 0 && (
-            <div className={styles.tags}>
-              {tags.map((tag) => (
-                <Badge key={tag}>{tag}</Badge>
-              ))}
-            </div>
-          )}
-        </Flex>
-
-        <table className={styles.metaTable}>
-          <tbody>
-            {data.mediaType && (
-              <MetaRow label="Format">{data.mediaType}</MetaRow>
-            )}
-            <MetaRow label="File size">{prettyBytes(data.fileSize)}</MetaRow>
-            <MetaRow label="File name">{fileName}</MetaRow>
-            <MetaRow label="Date added">
-              {new Date(data.createdAt).toLocaleString()}
-            </MetaRow>
-            {data.scannedAt && (
-              <MetaRow label="Last scanned">
-                {new Date(data.scannedAt).toLocaleString()}
-              </MetaRow>
-            )}
-            {metaEntries
-              .filter(
-                ([key]) => !['images', 'overview', 'duration'].includes(key),
-              )
-              .map(([key, val]) => {
-                return (
-                  <MetaRow key={key} label={key}>
-                    {JSON.stringify(val)}
+            <Cast data={data.cast} />
+          </Flex>
+          <div className={styles.metaTableContainer}>
+            <table className={styles.metaTable}>
+              <tbody>
+                {data.mediaType && (
+                  <MetaRow label="Format">{data.mediaType}</MetaRow>
+                )}
+                <MetaRow label="File size">{formatBytes(data)}</MetaRow>
+                <MetaRow label="File path">
+                  <MiddleTruncatedPath filePath={data.filePath} />
+                </MetaRow>
+                <MetaRow label="Date added">
+                  {new Date(data.createdAt).toLocaleString()}
+                </MetaRow>
+                {data.scannedAt && (
+                  <MetaRow label="Last scanned">
+                    {new Date(data.scannedAt).toLocaleString()}
                   </MetaRow>
-                )
-              })}
-            {metaArrayEntries.map(([key, val]) => (
-              <MetaRow key={key} label={key}>
-                {parseArray(key, val)}
-              </MetaRow>
-            ))}
-          </tbody>
-        </table>
-
-        {/* Cast */}
-        {data?.cast && data.cast.length > 0 && (
-          <XScroller>
-            <section>
-              <Flex justify="between" align="center">
-                <h2 className={styles.heading}>Cast</h2>
-                <XScroller.ButtonPrev />
-                <XScroller.ButtonNext />
-              </Flex>
-              <XScroller.Viewport className={styles.castList}>
-                {data.cast.map((c) => (
-                  <div key={c.id}>
-                    <div className={styles.castImage}>
-                      {c.avatarUrl ? (
-                        <img src={c.avatarUrl} alt={c.name} />
-                      ) : (
-                        <img
-                          src={`https://api.dicebear.com/10.x/dylan/svg?seed=${c.name}-${c.role}`}
-                          alt="avatar"
-                        />
-                      )}
-                    </div>
-                    <div className={styles.castName}>{c.name}</div>
-                    <span className={styles.castRole}>as {c.role}</span>
-                  </div>
+                )}
+                {metaEntries.map(([key, val]) => {
+                  return (
+                    <MetaRow key={key} label={key}>
+                      {parseValue(val)}
+                    </MetaRow>
+                  )
+                })}
+                {metaArrayEntries.map(([key, val]) => (
+                  <MetaRow key={key} label={key}>
+                    {parseArray(key, val)}
+                  </MetaRow>
                 ))}
-              </XScroller.Viewport>
-            </section>
-          </XScroller>
-        )}
+              </tbody>
+            </table>
+          </div>
+        </Flex>
 
         {/* Related items placeholder */}
         <section>
@@ -268,11 +297,11 @@ export default function Media() {
   )
 }
 
-type CastMember = {
-  id: number
-  name: string
-  character: string
-  order: number
+function parseValue(value?: unknown): ReactNode {
+  if (typeof value === 'string') return value
+  if (typeof value === 'number') return value.toString()
+
+  return JSON.stringify(value)
 }
 
 function parseArray(key: string, arr: unknown[]): ReactNode {

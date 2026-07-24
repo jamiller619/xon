@@ -1,5 +1,5 @@
 import type { PluginContext } from '@xon/plugin-sdk'
-import { LibraryType } from '@xon/shared'
+import { LibraryType, MediaType } from '@xon/shared'
 import { describe, expect, it, vi } from 'vitest'
 import TmdbMetadataPlugin from '../index.js'
 import { TmdbClient } from '../tmdbClient.js'
@@ -32,7 +32,7 @@ function image(
 }
 
 describe('TMDb artwork metadata', () => {
-  it('keeps at most three posters without restricting backdrops or logos', async () => {
+  it('keeps three posters on initial scans without restricting other artwork', async () => {
     const details = {
       id: 603,
       imdb_id: 'tt0133093',
@@ -165,6 +165,62 @@ describe('TMDb artwork metadata', () => {
       '/saved/logo-neutral-high.png',
       '/saved/logo-neutral-low.png',
       '/saved/logo-fr.png',
+    ])
+  })
+
+  it('finds and saves every poster for an existing match', async () => {
+    const images = {
+      backdrops: [],
+      posters: [
+        image('/poster-en.jpg', 'en', 1),
+        image('/poster-neutral-low.jpg', null, 2),
+        image('/poster-neutral-high.jpg', null, 3),
+        image('/poster-fr.jpg', 'fr', 4),
+      ],
+      logos: [],
+    }
+    const save = vi.fn(async (url: string) => {
+      const filename = new URL(url).pathname.split('/').at(-1)
+      return `/saved/${filename}`
+    })
+    const fetch = makeFetch([images])
+    const context = {
+      settings: {
+        get: vi.fn((key: string) => {
+          if (key === 'apiKey') return 'key'
+          if (key === 'language') return 'en'
+          if (key === 'saveImages') return true
+          if (key === 'imageLimit') return 0
+        }),
+        getAll: vi.fn(() => ({})),
+      },
+      images: { save },
+      fetch,
+      logger: {
+        info: vi.fn(),
+        warn: vi.fn(),
+        error: vi.fn(),
+      },
+    } as unknown as PluginContext
+    const plugin = new TmdbMetadataPlugin()
+    await plugin.init(context)
+
+    const posters = await plugin.findPosters('603', {
+      title: 'The Matrix',
+      libraryType: LibraryType.Movies,
+      mediaType: MediaType.MainType.Video,
+      limit: 10,
+    })
+
+    expect(save).toHaveBeenCalledTimes(4)
+    expect(fetch).toHaveBeenCalledWith(
+      expect.not.stringContaining('include_image_language'),
+    )
+    expect(posters).toEqual([
+      { src: '/saved/poster-en.jpg' },
+      { src: '/saved/poster-neutral-high.jpg' },
+      { src: '/saved/poster-neutral-low.jpg' },
+      { src: '/saved/poster-fr.jpg' },
     ])
   })
 })

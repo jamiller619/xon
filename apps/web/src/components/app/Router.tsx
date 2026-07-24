@@ -29,28 +29,16 @@ const AdminUsers = lazy(() => import('~/pages/admin/users/AdminUsers'))
 const Dashboard = lazy(() => import('~/pages/dashboard/Dashboard'))
 const GroupDetail = lazy(() => import('~/pages/group-detail/GroupDetail'))
 const LibraryBrowser = lazy(() => import('~/pages/library/Library'))
-const Login = lazy(() => import('~/pages/login/Login'))
 const Media = lazy(() => import('~/pages/media/Media'))
 const NotFound = lazy(() => import('~/pages/not-found/NotFound'))
 const Search = lazy(() => import('~/pages/search/Search'))
 const Settings = lazy(() => import('~/pages/settings/Settings'))
 const Setup = lazy(() => import('~/pages/setup/Setup'))
-const DragReorderSpike = import.meta.env.DEV
-  ? lazy(() => import('~/pages/dev/DragReorderSpike'))
-  : undefined
 
 export default function Router() {
   return (
     <Routes>
       <Route path="/setup" element={<Setup />} />
-      <Route
-        path="/login"
-        element={
-          <RequireSetup>
-            <Login />
-          </RequireSetup>
-        }
-      />
       <Route
         element={
           <RequireSetup>
@@ -77,12 +65,6 @@ export default function Router() {
         <Route path="/admin/health" element={<AdminHealth />} />
         <Route path="/admin/logs" element={<LogViewer />} />
         <Route path="/settings" element={<Settings />} />
-        {DragReorderSpike && (
-          <Route
-            path="/dev/drag-reorder-spike"
-            element={<DragReorderSpike />}
-          />
-        )}
       </Route>
       <Route
         path="*"

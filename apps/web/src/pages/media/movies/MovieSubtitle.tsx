@@ -13,6 +13,7 @@ import * as icons from './icons'
 export default function MovieSubtitle({ data }: { data: MediaItem }) {
   const genres = data.metadata.genres ?? []
   const rottenTomatoes = data.metadata.rottenTomatoesRating
+  const rtFresh = rottenTomatoes >= 60
   const metascore = data.metadata.metascore
   const imdbRating = data.metadata.imdbRating
   const rating = data.metadata.rated
@@ -54,7 +55,11 @@ export default function MovieSubtitle({ data }: { data: MediaItem }) {
         )}
         {rottenTomatoes && (
           <Flex align="center">
-            <icons.RottenTomatoes />
+            {rtFresh ? (
+              <icons.RottenTomatoes />
+            ) : (
+              <icons.RottenTomatoesRotten />
+            )}
             <span className={styles.rottenTomatoes}>{rottenTomatoes}%</span>
           </Flex>
         )}

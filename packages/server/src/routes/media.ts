@@ -42,6 +42,7 @@ import { rebuildThumbnail } from '../services/libraryThumbnailService.ts'
 import * as mediaService from '../services/mediaService.ts'
 import {
   applyMatch,
+  findMatchedPosters,
   getMatchContext,
   getMatchProviders,
   searchMatches,
@@ -83,6 +84,7 @@ type PosterEntry = z.infer<typeof posterImageSchema>
 type ArtworkImages = z.infer<typeof artworkImagesSchema>
 
 const MAX_ARTWORK_UPLOAD_BYTES = 20 * 1024 * 1024
+const MAX_FOUND_POSTERS_PER_REQUEST = 6
 const MAX_THUMBNAIL_SOURCE_BYTES = 25 * 1024 * 1024
 const THUMBNAIL_FETCH_TIMEOUT_MS = 8_000
 const MAX_THUMBNAIL_REDIRECTS = 3
@@ -526,6 +528,48 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       return c.json({ images: nextImages })
     },
   )
+
+  // POST /media/:id/images/posters/find — append every poster exposed by the
+  // provider associated with the item's existing metadata match.
+  router.post('/:id/images/posters/find', async (c) => {
+    const id = c.req.param('id')
+    const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
+    const item = rows[0]
+    if (!item) return c.json({ error: 'Not found' }, 404)
+    if (!item.matchId) {
+      return c.json({ error: 'This title does not have a metadata match' }, 409)
+    }
+
+    try {
+      const found = await findMatchedPosters(db, id)
+      const images = normalizedArtworkImages(item.metadata)
+      const existing = new Set(images.poster.map(imageSource))
+      let added = 0
+
+      for (const poster of found) {
+        const source = imageSource(poster)
+        if (existing.has(source)) continue
+        existing.add(source)
+        images.poster.push(poster)
+        added += 1
+        if (added === MAX_FOUND_POSTERS_PER_REQUEST) break
+      }
+
+      const metadata = { ...item.metadata, images }
+      await db
+        .update(mediaItems)
+        .set({ metadata, updatedAt: new Date() })
+        .where(eq(mediaItems.id, id))
+
+      void rebuildThumbnail(db, item.libraryId)
+      return c.json({ images }, 201)
+    } catch (error) {
+      return c.json(
+        { error: error instanceof Error ? error.message : String(error) },
+        422,
+      )
+    }
+  })
 
   // POST /media/:id/images/posters/generate — append three posters captured
   // from random points in the item's video.

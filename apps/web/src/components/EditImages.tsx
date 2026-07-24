@@ -4,6 +4,7 @@ import { useSortable } from '@dnd-kit/react/sortable'
 import {
   Delete20Regular as DeleteIcon,
   ImageAdd20Regular as ImageAddIcon,
+  ImageSearch20Regular as ImageSearchIcon,
   ReOrderDotsVertical20Regular as ReorderIcon,
 } from '@fluentui/react-icons'
 import { useQueryClient } from '@tanstack/react-query'
@@ -309,7 +310,10 @@ export default function EditImages({ item }: { item: MediaItem }) {
   )
   const artworkRef = useRef(artwork)
   const [busyKind, setBusyKind] = useState<
-    ArtworkKind | 'saving' | `generating-${'poster' | 'backdrop'}`
+    | ArtworkKind
+    | 'saving'
+    | 'finding-posters'
+    | `generating-${'poster' | 'backdrop'}`
   >()
   const [error, setError] = useState<string>()
 
@@ -460,6 +464,32 @@ export default function EditImages({ item }: { item: MediaItem }) {
     }
   }
 
+  async function findImages() {
+    setBusyKind('finding-posters')
+    setError(undefined)
+
+    try {
+      const response = await apiFetch(
+        `/api/media/${item.id}/images/posters/find`,
+        { method: 'POST' },
+      )
+      if (!response.ok) {
+        throw new Error(await getAPIError(response, 'Could not find images'))
+      }
+      const data = (await response.json()) as { images: ArtworkImages }
+      commit(makeArtworkState(data.images))
+      invalidateArtworkQueries()
+    } catch (findError) {
+      setError(
+        findError instanceof Error
+          ? findError.message
+          : 'Could not find images',
+      )
+    } finally {
+      setBusyKind(undefined)
+    }
+  }
+
   function reorder(kind: ArtworkKind, items: ArtworkItem[]) {
     if (busyKind) return
     const rollback = artworkRef.current
@@ -498,7 +528,12 @@ export default function EditImages({ item }: { item: MediaItem }) {
             busy={busyKind != null}
             uploading={busyKind === kind}
             creating={busyKind === `generating-${kind}`}
+            finding={busyKind === 'finding-posters'}
+            {...(kind === 'poster' && item.matchId
+              ? { onFind: () => void findImages() }
+              : {})}
             {...((kind === 'poster' || kind === 'backdrop') &&
+            !item.matchId &&
             item.mediaType?.startsWith('video/')
               ? { onCreate: () => void createImages(kind) }
               : {})}
@@ -521,7 +556,9 @@ function ImageSection({
   busy,
   uploading,
   creating,
+  finding,
   onCreate,
+  onFind,
   onUpload,
   onReorder,
   onDelete,
@@ -534,7 +571,9 @@ function ImageSection({
   busy: boolean
   uploading: boolean
   creating: boolean
+  finding: boolean
   onCreate?: () => void
+  onFind?: () => void
   onUpload: (file: File) => void
   onReorder: (items: ArtworkItem[]) => void
   onDelete: (key: string) => void
@@ -609,6 +648,19 @@ function ImageSection({
                 >
                   <ImageAddIcon aria-hidden="true" />
                   <span>{creating ? 'Creating…' : 'Create images'}</span>
+                </button>
+              </li>
+            )}
+            {onFind && (
+              <li className={styles.upload}>
+                <button
+                  type="button"
+                  className={styles.uploadButton}
+                  disabled={busy}
+                  onClick={onFind}
+                >
+                  <ImageSearchIcon aria-hidden="true" />
+                  <span>{finding ? 'Finding…' : 'Find images'}</span>
                 </button>
               </li>
             )}
