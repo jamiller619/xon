@@ -1,14 +1,17 @@
 import {
+  ImageEdit16Regular as ImageEditIcon,
   ArrowSyncRegular as RefreshIcon,
   FolderSearchRegular as ScanIcon,
 } from '@fluentui/react-icons'
 import type { Library } from '@xon/shared'
-import { Card, ContextMenu } from '@xon/ui'
+import { Card, ContextMenu, Dialog } from '@xon/ui'
 import { css } from 'inline-css-modules'
+import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { apiPost } from '~/lib/apiFetch'
 import { useScanStore } from '~/store/scanStore'
 import { useRefreshMetadataConfirmation } from './confirmation/ConfirmationProvider'
+import EditImages from './EditImages'
 
 const styles = css`
   .library {
@@ -50,55 +53,91 @@ const styles = css`
 `
 
 type LibraryCardProps = {
-  data: Library
+  data: Omit<Library, 'createdAt' | 'updatedAt'> & {
+    createdAt: Date | string
+    updatedAt: Date | string | null
+  }
   withLink?: boolean
 }
 
 export default function LibraryCard({ data, withLink }: LibraryCardProps) {
   const confirmRefresh = useRefreshMetadataConfirmation()
   const scanCompletedAt = useScanStore((s) => s.completedAt)
-  const cardProps = withLink ? { as: Link, to: `/libraries/${data.id}` } : {}
+  const [editImagesOpen, setEditImagesOpen] = useState(false)
+  const thumbnailRevision =
+    scanCompletedAt[data.id] ?? data.updatedAt ?? data.createdAt
+  const cardContent = (
+    <>
+      <Card.Thumb aspectRatio="4 / 3" className={styles.libraryThumb}>
+        <span className={styles.libraryThumbnailBackdrop}>
+          <img
+            src={`/api/libraries/${data.id}/thumbnail?v=${encodeURIComponent(String(thumbnailRevision))}`}
+            alt=""
+            loading="lazy"
+            decoding="async"
+            className={styles.libraryThumbnailImg}
+            onLoad={(e) => {
+              e.currentTarget.style.display = ''
+            }}
+            onError={(e) => {
+              e.currentTarget.style.display = 'none'
+            }}
+          />
+        </span>
+      </Card.Thumb>
+      <Card.Info>
+        <Card.Title>{data.name}</Card.Title>
+      </Card.Info>
+    </>
+  )
 
   return (
-    <ContextMenu
-      items={[
-        {
-          label: 'Scan library',
-          icon: <ScanIcon />,
-          onClick: () => apiPost(`/api/libraries/${data.id}/scan`),
-        },
-        {
-          label: 'Refresh metadata',
-          icon: <RefreshIcon />,
-          onClick: () =>
-            confirmRefresh(() =>
-              apiPost(`/api/libraries/${data.id}/scan/refresh`),
-            ),
-        },
-      ]}
-      key={data.id}
-    >
-      <Card {...cardProps} key={data.id} className={styles.library}>
-        <Card.Thumb aspectRatio="4 / 3" className={styles.libraryThumb}>
-          <span className={styles.libraryThumbnailBackdrop}>
-            <img
-              src={`/api/libraries/${data.id}/thumbnail${
-                scanCompletedAt[data.id] ? `?v=${scanCompletedAt[data.id]}` : ''
-              }`}
-              alt=""
-              loading="lazy"
-              decoding="async"
-              className={styles.libraryThumbnailImg}
-              onError={(e) => {
-                e.currentTarget.style.display = 'none'
-              }}
-            />
-          </span>
-        </Card.Thumb>
-        <Card.Info>
-          <Card.Title>{data.name}</Card.Title>
-        </Card.Info>
-      </Card>
-    </ContextMenu>
+    <>
+      <ContextMenu
+        items={[
+          {
+            label: 'Scan library',
+            icon: <ScanIcon />,
+            onClick: () => apiPost(`/api/libraries/${data.id}/scan`),
+          },
+          {
+            label: 'Edit images',
+            icon: <ImageEditIcon />,
+            onClick: () => setEditImagesOpen(true),
+          },
+          {
+            label: 'Refresh metadata',
+            icon: <RefreshIcon />,
+            onClick: () =>
+              confirmRefresh(() =>
+                apiPost(`/api/libraries/${data.id}/scan/refresh`),
+              ),
+          },
+        ]}
+        key={data.id}
+      >
+        {withLink ? (
+          <Card
+            as={Link}
+            to={`/libraries/${data.id}`}
+            key={data.id}
+            className={styles.library}
+          >
+            {cardContent}
+          </Card>
+        ) : (
+          <Card key={data.id} className={styles.library}>
+            {cardContent}
+          </Card>
+        )}
+      </ContextMenu>
+      <Dialog
+        open={editImagesOpen}
+        onOpenChange={setEditImagesOpen}
+        title={`${data.name}: Edit images`}
+      >
+        <EditImages library={data} />
+      </Dialog>
+    </>
   )
 }

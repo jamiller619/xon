@@ -6,7 +6,7 @@ import type { Size, Variant } from './types.js'
 const styles = css`
   .badge {
     display: inline-block;
-    padding: var(--space-2xs) var(--space-xs);
+    padding: var(--space-2xs) var(--space-sm);
     border-radius: var(--border-radius-3);
     corner-shape: var(--corner-shape);
     font-weight: 500;
@@ -19,14 +19,14 @@ const styles = css`
     
     &.primary {
       color: var(--color-accent-12);
-      background: var(--color-accent-4);
+      background: var(--color-accent-3);
     }
 
     &.ghost {
       background-color: transparent;
-      backdrop-filter: blur(8px);
-      outline: 2px solid var(--color-gray-8);
-      outline-offset: -2px;
+      backdrop-filter: blur(3px);
+      outline: 1px solid var(--color-gray-11);
+      outline-offset: -1px;
     }
 
     &.small {

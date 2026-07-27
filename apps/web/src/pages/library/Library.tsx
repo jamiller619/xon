@@ -53,6 +53,7 @@ export default function LibraryBrowser() {
   const viewProps = {
     isLoading: mediaQuery.isPending,
     items,
+    library: library ?? undefined,
     hasNextPage: mediaQuery.hasNextPage,
     isFetchingNextPage: mediaQuery.isFetchingNextPage,
     onLoadMore: () => void mediaQuery.fetchNextPage(),

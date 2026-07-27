@@ -90,6 +90,9 @@ export interface Library {
   type: LibraryType
   scanSchedule: string | null
   dataSources: DataSource[]
+  images: {
+    poster: string[]
+  }
 }
 
 export interface LibraryStats {
@@ -191,10 +194,11 @@ export function posterUrl(
 export interface CastMember {
   id: string
   name: string
+  character?: string
   description?: string | null
   avatarUrl?: string | null
-  metadata: Record<string, unknown>
-  role: string
+  metadata?: Record<string, unknown>
+  role?: string
   order?: number | null
 }
 

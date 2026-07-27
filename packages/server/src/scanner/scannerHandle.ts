@@ -8,7 +8,12 @@ import { scanRegistry } from './scanRegistry.ts'
 
 const logger = createLogger('scanner-handle')
 
-const CHILD_ENTRY = fileURLToPath(new URL('./childMain.ts', import.meta.url))
+const CHILD_ENTRY = fileURLToPath(
+  new URL(
+    import.meta.url.endsWith('.ts') ? './childMain.ts' : './childMain.js',
+    import.meta.url,
+  ),
+)
 
 type PendingJob = {
   libraryId: string
@@ -22,6 +27,7 @@ export type ScannerHandle = {
     libraryId: string,
     mediaItemId?: string,
   ) => Promise<ScanSummary>
+  onScanTriggered: (listener: (libraryId: string) => void) => () => void
   stop: () => Promise<void>
 }
 
@@ -30,6 +36,7 @@ const MAX_RESTARTS_PER_WINDOW = 5
 
 export async function startScannerChild(): Promise<ScannerHandle> {
   const pending = new Map<ScanJobId, PendingJob>()
+  const scanTriggerListeners = new Set<(libraryId: string) => void>()
   const restartTimestamps: number[] = []
   let child: ChildProcess
   let stopping = false
@@ -53,6 +60,11 @@ export async function startScannerChild(): Promise<ScannerHandle> {
         break
       case 'ready':
         logger.log('Scanner child reported ready')
+        break
+      case 'scan-trigger':
+        for (const listener of scanTriggerListeners) {
+          listener(msg.libraryId)
+        }
         break
       case 'progress': {
         const state = scanRegistry.get(msg.libraryId)
@@ -173,8 +185,14 @@ export async function startScannerChild(): Promise<ScannerHandle> {
       })
     },
 
+    onScanTriggered(listener) {
+      scanTriggerListeners.add(listener)
+      return () => scanTriggerListeners.delete(listener)
+    },
+
     async stop() {
       stopping = true
+      scanTriggerListeners.clear()
       if (!child.connected) return
 
       const msg: ParentToChild = { type: 'shutdown' }

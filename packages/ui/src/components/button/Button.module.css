@@ -26,6 +26,12 @@
 
   background: var(--color-gray-a2);
 
+  &.link {
+    padding: 0;
+    background: none;
+    color: var(--color-accent-8);
+  }
+
   &[data-disabled] {
     filter: grayscale(50%) saturate(20%) opacity(50%);
     cursor: not-allowed;

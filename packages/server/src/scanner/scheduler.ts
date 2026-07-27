@@ -82,12 +82,10 @@ export async function startScheduler(
       }
     }
 
-    // Filesystem watchers for local data sources
-    // if (!lib.watchEnabled) continue
-
+    // Filesystem watchers for local data sources. Watching defaults to enabled
+    // for existing libraries that predate the watchEnabled field.
     for (const source of lib.dataSources) {
-      if (source.type !== 'local') continue
-      // if (source.type !== 'local' || !source.enabled) continue
+      if (source.type !== 'local' || source.watchEnabled === false) continue
 
       try {
         const watchPath = toLocalPath(source.path)

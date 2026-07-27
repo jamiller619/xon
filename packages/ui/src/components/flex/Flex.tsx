@@ -23,6 +23,7 @@ type FlexOwnProps<C extends ElementType> = {
   align?: FlexAlign
   justify?: FlexJustify
   as?: C
+  wrap?: boolean
 }
 
 type FlexProps<C extends ElementType> = FlexOwnProps<C> &
@@ -46,7 +47,14 @@ export default function Flex<C extends ElementType = 'div'>({
     Component,
     {
       className: clsx(styles.flex, className),
-      style: resolveStyle({ ...style }, dir, gap, align, justify, wrap),
+      style: resolveStyle(
+        { ...style },
+        dir,
+        gap,
+        align,
+        justify,
+        wrap === true ? 'wrap' : wrap === false ? 'nowrap' : undefined,
+      ),
       ...props,
     },
     children,

@@ -22,10 +22,10 @@ import {
   setPluginDatabase,
   setPluginSettingsSource,
 } from './plugins/pluginManager.ts'
+import { makeOpenDirectoryRouter } from './routes/openDirectory.ts'
 import { triggerLibraryScan } from './routes/scan.ts'
 import { createWsServer, WS_PATH } from './routes/ws.ts'
 import { startScannerChild } from './scanner/scannerHandle.ts'
-import { startScheduler } from './scanner/scheduler.ts'
 
 // Bundled plugins ship alongside the server package, two levels up from packages/server/
 const BUNDLED_PLUGINS_DIR = path.join(
@@ -76,7 +76,8 @@ export async function boot(): Promise<void> {
     logger.log('Plugin database configured')
 
     setPluginSettingsSource({
-      get: (key) => (config.getStore() as unknown as Record<string, unknown>)[key],
+      get: (key) =>
+        (config.getStore() as unknown as Record<string, unknown>)[key],
     })
 
     setPluginAppDataPath(config.get('appdata.path'))
@@ -94,12 +95,12 @@ export async function boot(): Promise<void> {
     const scannerHandle = await startScannerChild()
     logger.log('Scanner child process ready')
 
-    // Route scheduled/watch-triggered scans through triggerLibraryScan so they
-    // update the scan registry and emit scan events, same as manual scans
-    const scheduler = await startScheduler(db, async (_, id) => {
+    // The scanner child owns schedules and filesystem watchers so recursive
+    // watcher setup cannot block the HTTP process. Route its triggers through
+    // the normal registry/event path, just like manual scans.
+    const removeScanTriggerListener = scannerHandle.onScanTriggered((id) => {
       triggerLibraryScan(scannerHandle, id)
     })
-    logger.log('Scheduler started')
 
     let tlsCert: string | undefined
     let tlsKey: string | undefined
@@ -153,6 +154,7 @@ export async function boot(): Promise<void> {
     const app = new Hono()
 
     app.route('/', apiApp)
+    app.route('/opendir', makeOpenDirectoryRouter(db))
 
     if (webClientDir) {
       logger.log(`Serving web client from ${webClientDir}`)
@@ -195,7 +197,7 @@ export async function boot(): Promise<void> {
       shuttingDown = true
       logger.log('Shutting down')
       emitPluginEvent('server:shutdown', {})
-      scheduler.stop()
+      removeScanTriggerListener()
       await scannerHandle.stop()
 
       for (const ws of wss.clients) ws.terminate()

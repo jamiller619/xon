@@ -8,7 +8,7 @@ import {
   ReOrderDotsVertical20Regular as ReorderIcon,
 } from '@fluentui/react-icons'
 import { useQueryClient } from '@tanstack/react-query'
-import type { MediaItem, PosterImage } from '@xon/shared'
+import type { Library, MediaItem, PosterImage } from '@xon/shared'
 import { ScrollArea } from '@xon/ui'
 import { css } from 'inline-css-modules'
 import {
@@ -18,7 +18,7 @@ import {
   useRef,
   useState,
 } from 'react'
-import { apiFetch, artworkUrl, getAPIError } from '~/lib/apiFetch'
+import { apiFetch, apiUrl, artworkUrl, getAPIError } from '~/lib/apiFetch'
 import { subscribeToEvents } from '~/lib/eventStream'
 
 type ArtworkKind = 'poster' | 'backdrop' | 'logo'
@@ -303,10 +303,21 @@ const styles = css`
   }
 `
 
-export default function EditImages({ item }: { item: MediaItem }) {
+type EditImagesProps =
+  | { item: MediaItem; library?: never }
+  | { item?: never; library: Pick<Library, 'id' | 'images'> }
+
+export default function EditImages({ item, library }: EditImagesProps) {
+  const libraryMode = library != null
+  const targetId = library?.id ?? item?.id ?? ''
+  const libraryId = library?.id ?? item?.libraryId ?? ''
+  const suppliedImages = library?.images ?? item?.metadata.images
+  const endpoint = libraryMode
+    ? `/api/libraries/${targetId}`
+    : `/api/media/${targetId}`
   const queryClient = useQueryClient()
   const [artwork, setArtwork] = useState<ArtworkState>(() =>
-    makeArtworkState(item.metadata.images as ImagesMetadata | undefined),
+    makeArtworkState(suppliedImages as ImagesMetadata | undefined),
   )
   const artworkRef = useRef(artwork)
   const [busyKind, setBusyKind] = useState<
@@ -325,27 +336,27 @@ export default function EditImages({ item }: { item: MediaItem }) {
   const invalidateArtworkQueries = useCallback(() => {
     void Promise.all([
       queryClient.invalidateQueries({
-        queryKey: ['library-media', item.libraryId],
+        queryKey: ['library-media', libraryId],
       }),
       queryClient.invalidateQueries({ queryKey: ['mediaById'] }),
       queryClient.invalidateQueries({ queryKey: ['recentMedia'] }),
       queryClient.invalidateQueries({ queryKey: ['featuredMedia'] }),
       queryClient.invalidateQueries({ queryKey: ['libraries'] }),
     ])
-  }, [item.libraryId, queryClient])
+  }, [libraryId, queryClient])
 
   const reloadArtwork = useCallback(async () => {
     try {
-      const response = await apiFetch(`/api/media/${item.id}`)
+      const response = await apiFetch(endpoint)
       if (!response.ok) {
         throw new Error(
           await getAPIError(response, 'Could not reload the images'),
         )
       }
-      const latest = (await response.json()) as MediaItem
-      commit(
-        makeArtworkState(latest.metadata.images as ImagesMetadata | undefined),
-      )
+      const latest = (await response.json()) as MediaItem | Library
+      const images =
+        'metadata' in latest ? latest.metadata.images : latest.images
+      commit(makeArtworkState(images as ImagesMetadata | undefined))
       invalidateArtworkQueries()
     } catch (reloadError) {
       setError(
@@ -354,47 +365,48 @@ export default function EditImages({ item }: { item: MediaItem }) {
           : 'Could not reload the images',
       )
     }
-  }, [commit, invalidateArtworkQueries, item.id])
+  }, [commit, endpoint, invalidateArtworkQueries])
 
   useEffect(() => {
-    const images = item.metadata.images as ImagesMetadata | undefined
+    const images = suppliedImages as ImagesMetadata | undefined
     // Saving invalidates the parent query, which gives us a new `images`
     // object even when it contains the optimistic order we already committed.
     // Rebuilding in that case replaces every item key and remounts every image.
     if (artworkMatchesImages(artworkRef.current, images)) return
     commit(makeArtworkState(images))
-  }, [commit, item.metadata.images])
+  }, [commit, suppliedImages])
 
   useEffect(
     () =>
       subscribeToEvents((event) => {
         if (
           (event.type === 'scan:complete' || event.type === 'scan:error') &&
-          event.payload.libraryId === item.libraryId
+          event.payload.libraryId === libraryId
         ) {
           void reloadArtwork()
         }
       }),
-    [item.libraryId, reloadArtwork],
+    [libraryId, reloadArtwork],
   )
 
   async function persist(next: ArtworkState, rollback: ArtworkState) {
     setBusyKind('saving')
     setError(undefined)
     try {
-      const response = await apiFetch(`/api/media/${item.id}/images`, {
+      const images = toArtworkImages(next)
+      const response = await apiFetch(`${endpoint}/images`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(toArtworkImages(next)),
+        body: JSON.stringify(libraryMode ? { poster: images.poster } : images),
       })
       if (!response.ok) {
         throw new Error(
           await getAPIError(response, 'Could not save the image order'),
         )
       }
-      // Keep the current item keys and image URLs. Rebuilding the state here
-      // remounts every <img>, causing a visible reload after each reorder.
-      commit(next)
+      // Keep the current item keys while updating the API indices to match the
+      // persisted order. Rebuilding the whole state would remount every image.
+      commit(reindexArtwork(next))
       invalidateArtworkQueries()
     } catch (saveError) {
       commit(rollback)
@@ -415,7 +427,7 @@ export default function EditImages({ item }: { item: MediaItem }) {
     form.set('file', file)
 
     try {
-      const response = await apiFetch(`/api/media/${item.id}/images/${kind}`, {
+      const response = await apiFetch(`${endpoint}/images/${kind}`, {
         method: 'POST',
         body: form,
       })
@@ -443,10 +455,9 @@ export default function EditImages({ item }: { item: MediaItem }) {
     setError(undefined)
 
     try {
-      const response = await apiFetch(
-        `/api/media/${item.id}/images/${kind}s/generate`,
-        { method: 'POST' },
-      )
+      const response = await apiFetch(`${endpoint}/images/${kind}s/generate`, {
+        method: 'POST',
+      })
       if (!response.ok) {
         throw new Error(await getAPIError(response, 'Could not create images'))
       }
@@ -469,10 +480,9 @@ export default function EditImages({ item }: { item: MediaItem }) {
     setError(undefined)
 
     try {
-      const response = await apiFetch(
-        `/api/media/${item.id}/images/posters/find`,
-        { method: 'POST' },
-      )
+      const response = await apiFetch(`${endpoint}/images/posters/find`, {
+        method: 'POST',
+      })
       if (!response.ok) {
         throw new Error(await getAPIError(response, 'Could not find images'))
       }
@@ -517,10 +527,13 @@ export default function EditImages({ item }: { item: MediaItem }) {
             {error}
           </p>
         )}
-        {ARTWORK_SECTIONS.map(({ kind, title, singular }) => (
+        {ARTWORK_SECTIONS.filter(
+          ({ kind }) => !libraryMode || kind === 'poster',
+        ).map(({ kind, title, singular }) => (
           <ImageSection
             key={kind}
-            mediaId={item.id}
+            targetId={targetId}
+            libraryMode={libraryMode}
             kind={kind}
             title={title}
             singular={singular}
@@ -529,14 +542,16 @@ export default function EditImages({ item }: { item: MediaItem }) {
             uploading={busyKind === kind}
             creating={busyKind === `generating-${kind}`}
             finding={busyKind === 'finding-posters'}
-            {...(kind === 'poster' && item.matchId
+            {...(kind === 'poster' && item?.matchId
               ? { onFind: () => void findImages() }
               : {})}
-            {...((kind === 'poster' || kind === 'backdrop') &&
-            !item.matchId &&
-            item.mediaType?.startsWith('video/')
-              ? { onCreate: () => void createImages(kind) }
-              : {})}
+            {...(libraryMode && kind === 'poster'
+              ? { onCreate: () => void createImages('poster') }
+              : (kind === 'poster' || kind === 'backdrop') &&
+                  !item?.matchId &&
+                  item?.mediaType?.startsWith('video/')
+                ? { onCreate: () => void createImages(kind) }
+                : {})}
             onUpload={(file) => void upload(kind, file)}
             onReorder={(items) => reorder(kind, items)}
             onDelete={(key) => remove(kind, key)}
@@ -548,7 +563,8 @@ export default function EditImages({ item }: { item: MediaItem }) {
 }
 
 function ImageSection({
-  mediaId,
+  targetId,
+  libraryMode,
   kind,
   title,
   singular,
@@ -563,7 +579,8 @@ function ImageSection({
   onReorder,
   onDelete,
 }: {
-  mediaId: string
+  targetId: string
+  libraryMode: boolean
   kind: ArtworkKind
   title: string
   singular: string
@@ -608,7 +625,8 @@ function ImageSection({
             {items.map((image, index) => (
               <ArtworkCard
                 key={image.key}
-                mediaId={mediaId}
+                targetId={targetId}
+                libraryMode={libraryMode}
                 kind={kind}
                 title={singular}
                 image={image}
@@ -672,7 +690,8 @@ function ImageSection({
 }
 
 function ArtworkCard({
-  mediaId,
+  targetId,
+  libraryMode,
   kind,
   title,
   image,
@@ -680,7 +699,8 @@ function ArtworkCard({
   disabled,
   onDelete,
 }: {
-  mediaId: string
+  targetId: string
+  libraryMode: boolean
   kind: ArtworkKind
   title: string
   image: ArtworkItem
@@ -693,7 +713,9 @@ function ArtworkCard({
     index,
     disabled,
   })
-  const artworkSource = artworkUrl(mediaId, kind, image.sourceIndex)
+  const artworkSource = libraryMode
+    ? apiUrl(`/api/libraries/${targetId}/images/poster/${image.sourceIndex}`)
+    : artworkUrl(targetId, kind, image.sourceIndex)
   const src = `${artworkSource}${artworkSource.includes('?') ? '&' : '?'}v=${encodeURIComponent(image.key)}`
 
   return (
@@ -753,6 +775,23 @@ function makeArtworkState(images?: ImagesMetadata): ArtworkState {
     poster: makeItems('poster', toList(images?.poster)),
     backdrop: makeItems('backdrop', toList(images?.backdrop)),
     logo: makeItems('logo', toList(images?.logo)),
+  }
+}
+
+function reindexArtwork(state: ArtworkState): ArtworkState {
+  return {
+    poster: state.poster.map((image, sourceIndex) => ({
+      ...image,
+      sourceIndex,
+    })),
+    backdrop: state.backdrop.map((image, sourceIndex) => ({
+      ...image,
+      sourceIndex,
+    })),
+    logo: state.logo.map((image, sourceIndex) => ({
+      ...image,
+      sourceIndex,
+    })),
   }
 }
 

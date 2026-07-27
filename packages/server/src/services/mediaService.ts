@@ -1,7 +1,17 @@
-import type { MediaItem, PageProps, SortProps } from '@xon/shared'
-import { and, asc, desc, eq, getTableColumns, sql } from 'drizzle-orm'
+import type { Library, MediaItem, PageProps, SortProps } from '@xon/shared'
+import {
+  and,
+  asc,
+  desc,
+  eq,
+  getTableColumns,
+  inArray,
+  ne,
+  sql,
+} from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { libraries, mediaItems, people, peopleMedia } from '../db/schema.ts'
+import * as libraryService from './libraryService.ts'
 
 export async function getMediaById(
   db: LibSQLDatabase,
@@ -33,6 +43,28 @@ export async function getMediaById(
   return {
     ...media,
     cast,
+  }
+}
+
+export async function getMediaByIdWithLibrary(
+  db: LibSQLDatabase,
+  id: string,
+): Promise<(MediaItem & { library: Library }) | undefined> {
+  const media = await getMediaById(db, id)
+
+  if (!media) {
+    return undefined
+  }
+
+  const library = await libraryService.getLibraryById(db, media.libraryId)
+
+  if (!library) {
+    return undefined
+  }
+
+  return {
+    ...media,
+    library,
   }
 }
 
@@ -151,6 +183,290 @@ export async function getFeaturedMedia(
     .sort((a, b) => a.sortKey - b.sortKey)
     .slice(0, limit)
     .map((entry) => entry.item)
+}
+
+/**
+ * "More like this" for a single item. Half the shelf is selected by shared
+ * people and half by shared genres so one kind of similarity cannot crowd out
+ * the other. People include normalized names from the people table and
+ * people-bearing metadata such as actors, writers, directors, and crew.
+ */
+export async function getRelatedMedia(
+  db: LibSQLDatabase,
+  id: string,
+  limit = 12,
+): Promise<MediaItem[]> {
+  const resultLimit = Math.max(0, Math.trunc(limit))
+
+  if (resultLimit === 0) return []
+
+  const source = await db
+    .select({
+      libraryId: mediaItems.libraryId,
+      metadata: mediaItems.metadata,
+    })
+    .from(mediaItems)
+    .where(eq(mediaItems.id, id))
+    .get()
+
+  if (!source) return []
+
+  const sourceGenres = genreSet(source.metadata.genres)
+
+  const sourcePersonNames = peopleFromMetadata(source.metadata)
+  const sourcePeople = await db
+    .select({ name: people.name })
+    .from(peopleMedia)
+    .innerJoin(people, eq(peopleMedia.personId, people.id))
+    .where(eq(peopleMedia.mediaId, id))
+  for (const person of sourcePeople) {
+    sourcePersonNames.add(normalizePersonName(person.name))
+  }
+
+  const candidates = await db
+    .select({
+      id: mediaItems.id,
+      createdAt: mediaItems.createdAt,
+      updatedAt: mediaItems.updatedAt,
+      libraryId: mediaItems.libraryId,
+      filePath: mediaItems.filePath,
+      fileSize: mediaItems.fileSize,
+      fileMetadata: mediaItems.fileMetadata,
+      mediaType: mediaItems.mediaType,
+      matchId: mediaItems.matchId,
+      matchIdSource: mediaItems.matchIdSource,
+      title: mediaItems.title,
+      description: mediaItems.description,
+      metadata: mediaItems.metadata,
+      drmProtected: mediaItems.drmProtected,
+      scannedAt: mediaItems.scannedAt,
+      tags: mediaItems.tags,
+    })
+    .from(mediaItems)
+    .where(
+      and(eq(mediaItems.libraryId, source.libraryId), ne(mediaItems.id, id)),
+    )
+
+  if (candidates.length === 0) return []
+
+  // Merge normalized database cast names with metadata credits for each item.
+  const peopleByMedia = new Map(
+    candidates.map((candidate) => [
+      candidate.id,
+      peopleFromMetadata(candidate.metadata),
+    ]),
+  )
+  if (sourcePersonNames.size > 0) {
+    const candidatePeople = await db
+      .select({
+        mediaId: peopleMedia.mediaId,
+        name: people.name,
+      })
+      .from(peopleMedia)
+      .innerJoin(people, eq(peopleMedia.personId, people.id))
+      .where(
+        inArray(
+          peopleMedia.mediaId,
+          candidates.map((c) => c.id),
+        ),
+      )
+
+    for (const row of candidatePeople) {
+      peopleByMedia.get(row.mediaId)?.add(normalizePersonName(row.name))
+    }
+  }
+
+  const voteAverage = (item: (typeof candidates)[number]) =>
+    Number(item.metadata.voteAverage) || 0
+
+  const scored = candidates.map((item) => ({
+    item,
+    sharedGenres: intersectionSize(
+      genreSet(item.metadata.genres),
+      sourceGenres,
+    ),
+    sharedPeople: intersectionSize(
+      peopleByMedia.get(item.id) ?? new Set(),
+      sourcePersonNames,
+    ),
+  }))
+
+  const tieBreak = (a: (typeof scored)[number], b: (typeof scored)[number]) =>
+    voteAverage(b.item) - voteAverage(a.item) ||
+    a.item.id.localeCompare(b.item.id)
+
+  const byPeople = scored
+    .filter((entry) => entry.sharedPeople > 0)
+    .sort((a, b) => b.sharedPeople - a.sharedPeople || tieBreak(a, b))
+  const byGenres = scored
+    .filter((entry) => entry.sharedGenres > 0)
+    .sort((a, b) => b.sharedGenres - a.sharedGenres || tieBreak(a, b))
+
+  return selectBalancedRelated(byPeople, byGenres, resultLimit)
+}
+
+function genreSet(value: unknown): Set<string> {
+  if (!Array.isArray(value)) return new Set()
+
+  return new Set(
+    value.map((genre) => String(genre).trim().toLowerCase()).filter(Boolean),
+  )
+}
+
+const PERSON_METADATA_KEYS = new Set([
+  'actors',
+  'artists',
+  'authors',
+  'cast',
+  'cinematographers',
+  'composers',
+  'contributors',
+  'creators',
+  'crew',
+  'directors',
+  'editors',
+  'illustrators',
+  'narrators',
+  'performers',
+  'photographers',
+  'producers',
+  'writers',
+])
+
+function peopleFromMetadata(metadata: Record<string, unknown>): Set<string> {
+  const result = new Set<string>()
+
+  for (const [key, value] of Object.entries(metadata)) {
+    const normalizedKey = key.toLowerCase().replaceAll(/[^a-z]/g, '')
+    if (!PERSON_METADATA_KEYS.has(normalizedKey)) continue
+
+    for (const name of personNames(value)) {
+      const normalizedName = normalizePersonName(name)
+      if (normalizedName) result.add(normalizedName)
+    }
+  }
+
+  return result
+}
+
+function personNames(value: unknown): string[] {
+  if (typeof value === 'string') return [value]
+  if (Array.isArray(value)) return value.flatMap(personNames)
+  if (!value || typeof value !== 'object') return []
+
+  const name = (value as Record<string, unknown>).name
+  return typeof name === 'string' ? [name] : []
+}
+
+function normalizePersonName(value: string): string {
+  return value
+    .normalize('NFKD')
+    .replaceAll(/\p{Diacritic}/gu, '')
+    .replaceAll(/\s*\([^)]*\)\s*$/g, '')
+    .toLowerCase()
+    .replaceAll(/[^\p{Letter}\p{Number}]+/gu, ' ')
+    .trim()
+}
+
+function intersectionSize<T>(left: Set<T>, right: Set<T>): number {
+  let count = 0
+  for (const value of left) {
+    if (right.has(value)) count++
+  }
+  return count
+}
+
+type RelatedScore = {
+  item: MediaItem
+  sharedGenres: number
+  sharedPeople: number
+}
+
+function selectBalancedRelated(
+  byPeople: RelatedScore[],
+  byGenres: RelatedScore[],
+  limit: number,
+): MediaItem[] {
+  const selected: MediaItem[] = []
+  const selectedIds = new Set<string>()
+  const peopleTarget = Math.ceil(limit / 2)
+  const genreTarget = limit - peopleTarget
+  let peopleCount = 0
+  let genreCount = 0
+  let peopleIndex = 0
+  let genreIndex = 0
+
+  const takeNext = (
+    entries: RelatedScore[],
+    start: number,
+  ): [RelatedScore | undefined, number] => {
+    let index = start
+    let entry = entries[index]
+    while (entry && selectedIds.has(entry.item.id)) {
+      index++
+      entry = entries[index]
+    }
+    return [entry, index + 1]
+  }
+
+  // Alternate buckets to keep the shelf visibly diverse.
+  while (peopleCount < peopleTarget || genreCount < genreTarget) {
+    let added = false
+
+    if (peopleCount < peopleTarget) {
+      const [entry, nextIndex] = takeNext(byPeople, peopleIndex)
+      peopleIndex = nextIndex
+      if (entry) {
+        selected.push(entry.item)
+        selectedIds.add(entry.item.id)
+        peopleCount++
+        added = true
+      } else {
+        peopleCount = peopleTarget
+      }
+    }
+
+    if (genreCount < genreTarget) {
+      const [entry, nextIndex] = takeNext(byGenres, genreIndex)
+      genreIndex = nextIndex
+      if (entry) {
+        selected.push(entry.item)
+        selectedIds.add(entry.item.id)
+        genreCount++
+        added = true
+      } else {
+        genreCount = genreTarget
+      }
+    }
+
+    if (!added) break
+  }
+
+  // If one category is sparse, backfill unused slots from the other.
+  while (selected.length < limit) {
+    let added = false
+    const [peopleEntry, nextPeopleIndex] = takeNext(byPeople, peopleIndex)
+    peopleIndex = nextPeopleIndex
+    if (peopleEntry) {
+      selected.push(peopleEntry.item)
+      selectedIds.add(peopleEntry.item.id)
+      added = true
+    }
+
+    if (selected.length < limit) {
+      const [genreEntry, nextGenreIndex] = takeNext(byGenres, genreIndex)
+      genreIndex = nextGenreIndex
+      if (genreEntry) {
+        selected.push(genreEntry.item)
+        selectedIds.add(genreEntry.item.id)
+        added = true
+      }
+    }
+
+    if (!added) break
+  }
+
+  return selected
 }
 
 /** FNV-1a string hash — cheap deterministic sort key for the daily rotation. */

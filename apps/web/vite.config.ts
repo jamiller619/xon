@@ -28,6 +28,9 @@ export default defineConfig({
           })
         },
       },
+      '/opendir': {
+        target: 'http://localhost:6019',
+      },
     },
   },
   build: {

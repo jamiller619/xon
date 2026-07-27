@@ -18,6 +18,7 @@ type ListViewProps = ViewProps & {
 export default function ListView({
   isLoading,
   items,
+  library,
   hasNextPage,
   isFetchingNextPage,
   onLoadMore,
@@ -139,6 +140,7 @@ export default function ListView({
                   key={item.id}
                   item={item}
                   listView
+                  library={library}
                   listRowProps={{
                     ref: rowVirtualizer.measureElement,
                     'data-index': virtualRow.index,

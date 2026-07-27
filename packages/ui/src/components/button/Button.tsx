@@ -6,7 +6,7 @@ import type { BorderRadius, Size, Variant } from '../types.js'
 import styles from './Button.module.css'
 
 export type ButtonProps = UIButton.Props & {
-  variant?: Variant | undefined
+  variant?: Variant | 'link' | undefined
   size?: Size | undefined
   block?: boolean | undefined
   borderRadius?: BorderRadius
@@ -45,7 +45,7 @@ export default function Button({
       {...props}
       className={clsx(
         styles.button,
-        surfaceStyles.surface,
+        variant !== 'link' && surfaceStyles.surface,
         className,
         variant && styles[variant],
         {

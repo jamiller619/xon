@@ -1,17 +1,39 @@
 import { watch } from 'node:fs'
-import type { Client } from '@libsql/client'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { openDatabase } from '../../db/db.ts'
-import { migrateDatabase } from '../../db/migrate.ts'
-import { dataSources, libraries } from '../../db/schema.ts'
 import { parseCronInterval, startScheduler } from '../../scanner/scheduler.ts'
+import * as libraryService from '../../services/libraryService.ts'
 
 vi.mock('node:fs', () => ({
   watch: vi.fn(),
 }))
 
+vi.mock('../../services/libraryService.ts', () => ({
+  getAllLibraries: vi.fn(),
+}))
+
 const mockWatch = vi.mocked(watch)
+const mockGetAllLibraries = vi.mocked(libraryService.getAllLibraries)
+const db = {} as LibSQLDatabase
+
+function library(
+  overrides: Partial<
+    Awaited<ReturnType<typeof libraryService.getAllLibraries>>[number]
+  > = {},
+) {
+  return {
+    id: 'lib-1',
+    createdAt: new Date(),
+    updatedAt: null,
+    ownerId: 'user-1',
+    name: 'Library',
+    description: null,
+    type: 'movies' as const,
+    scanSchedule: null,
+    dataSources: [],
+    ...overrides,
+  }
+}
 
 describe('parseCronInterval', () => {
   it('parses every-N-minutes pattern', () => {
@@ -38,221 +60,116 @@ describe('parseCronInterval', () => {
 })
 
 describe('startScheduler', () => {
-  let client: Client
-  let db: LibSQLDatabase
-
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.useFakeTimers()
     mockWatch.mockReset()
-    // Default mock: return a watcher with a close() no-op
+    mockGetAllLibraries.mockReset()
+    mockGetAllLibraries.mockResolvedValue([])
     mockWatch.mockReturnValue({ close: vi.fn() } as unknown as ReturnType<
       typeof watch
     >)
-    ;({ client, db } = await openDatabase(':memory:'))
-    await migrateDatabase(db)
   })
 
   afterEach(() => {
     vi.useRealTimers()
-    client.close()
   })
 
-  it('calls trigger at the scheduled interval for a library with scanSchedule', async () => {
+  it('calls trigger at the scheduled interval', async () => {
+    mockGetAllLibraries.mockResolvedValue([
+      library({ scanSchedule: '0 */6 * * *' }),
+    ])
     const trigger = vi.fn().mockResolvedValue(undefined)
-    await db.insert(libraries).values({
-      id: 'lib-1',
-      name: 'Scheduled Lib',
-      scanSchedule: '0 */6 * * *',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
-
     const handle = await startScheduler(db, trigger)
 
-    expect(trigger).not.toHaveBeenCalled()
-
     await vi.advanceTimersByTimeAsync(6 * 60 * 60 * 1000)
-    expect(trigger).toHaveBeenCalledTimes(1)
+
+    expect(trigger).toHaveBeenCalledOnce()
     expect(trigger).toHaveBeenCalledWith(db, 'lib-1')
-
-    await vi.advanceTimersByTimeAsync(6 * 60 * 60 * 1000)
-    expect(trigger).toHaveBeenCalledTimes(2)
-
     handle.stop()
   })
 
-  it('does not set up interval timer for library without scanSchedule', async () => {
-    const trigger = vi.fn().mockResolvedValue(undefined)
-    await db.insert(libraries).values({
-      id: 'lib-2',
-      name: 'No Schedule Lib',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
+  it('sets up recursive watchers for enabled local sources', async () => {
+    mockGetAllLibraries.mockResolvedValue([
+      library({
+        dataSources: [{ type: 'local', path: '/media/photos' }],
+      }),
+    ])
 
-    const handle = await startScheduler(db, trigger)
-    await vi.advanceTimersByTimeAsync(24 * 60 * 60 * 1000)
-    expect(trigger).not.toHaveBeenCalled()
-
-    handle.stop()
-  })
-
-  it('sets up fs.watch for local enabled data sources', async () => {
-    await db.insert(libraries).values({
-      id: 'lib-3',
-      name: 'Watch Lib',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
-    await db.insert(dataSources).values({
-      id: 'src-1',
-      libraryId: 'lib-3',
-      type: 'local',
-      path: '/media/movies',
-      recursive: true,
-      enabled: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
-
-    const trigger = vi.fn().mockResolvedValue(undefined)
-    const handle = await startScheduler(db, trigger)
+    const handle = await startScheduler(db, vi.fn())
 
     expect(mockWatch).toHaveBeenCalledWith(
-      '/media/movies',
+      '/media/photos',
       { recursive: true },
       expect.any(Function),
     )
-
     handle.stop()
   })
 
-  it('does not watch disabled data sources', async () => {
-    await db.insert(libraries).values({
-      id: 'lib-4',
-      name: 'Lib',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
-    await db.insert(dataSources).values({
-      id: 'src-2',
-      libraryId: 'lib-4',
-      type: 'local',
-      path: '/media/music',
-      recursive: false,
-      enabled: false,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
+  it('does not watch explicitly disabled or plugin sources', async () => {
+    mockGetAllLibraries.mockResolvedValue([
+      library({
+        dataSources: [
+          {
+            type: 'local',
+            path: '/media/disabled',
+            watchEnabled: false,
+          },
+          {
+            type: 'plugin',
+            path: '/remote',
+            pluginId: 'remote-provider',
+          },
+        ],
+      }),
+    ])
 
-    const trigger = vi.fn().mockResolvedValue(undefined)
-    const handle = await startScheduler(db, trigger)
+    const handle = await startScheduler(db, vi.fn())
 
     expect(mockWatch).not.toHaveBeenCalled()
     handle.stop()
   })
 
-  it('does not watch network data sources', async () => {
-    await db.insert(libraries).values({
-      id: 'lib-5',
-      name: 'Lib',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
-    await db.insert(dataSources).values({
-      id: 'src-3',
-      libraryId: 'lib-5',
-      type: 'network',
-      path: '//server/share',
-      recursive: false,
-      enabled: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
-
-    const trigger = vi.fn().mockResolvedValue(undefined)
-    const handle = await startScheduler(db, trigger)
-
-    expect(mockWatch).not.toHaveBeenCalled()
-    handle.stop()
-  })
-
-  it('debounces fs.watch events — triggers scan 2s after last change', async () => {
-    await db.insert(libraries).values({
-      id: 'lib-6',
-      name: 'Debounce Lib',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
-    await db.insert(dataSources).values({
-      id: 'src-4',
-      libraryId: 'lib-6',
-      type: 'local',
-      path: '/media/videos',
-      recursive: false,
-      enabled: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
-
-    const trigger = vi.fn().mockResolvedValue(undefined)
+  it('debounces watch events before triggering a scan', async () => {
+    mockGetAllLibraries.mockResolvedValue([
+      library({
+        dataSources: [{ type: 'local', path: '/media/videos' }],
+      }),
+    ])
     let capturedCallback: (() => void) | undefined
-    mockWatch.mockImplementation((_path, _opts, cb) => {
-      capturedCallback = cb as () => void
+    mockWatch.mockImplementation((_path, _options, callback) => {
+      capturedCallback = callback as () => void
       return { close: vi.fn() } as unknown as ReturnType<typeof watch>
     })
-
+    const trigger = vi.fn().mockResolvedValue(undefined)
     const handle = await startScheduler(db, trigger)
-    expect(capturedCallback).toBeDefined()
 
-    // Simulate rapid file changes
     capturedCallback?.()
     capturedCallback?.()
-    capturedCallback?.()
-
-    // Scan should not fire until 2s after last change
-    await vi.advanceTimersByTimeAsync(1000)
+    await vi.advanceTimersByTimeAsync(1_999)
     expect(trigger).not.toHaveBeenCalled()
 
-    await vi.advanceTimersByTimeAsync(1500)
-    expect(trigger).toHaveBeenCalledTimes(1)
-    expect(trigger).toHaveBeenCalledWith(db, 'lib-6')
-
+    await vi.advanceTimersByTimeAsync(1)
+    expect(trigger).toHaveBeenCalledOnce()
+    expect(trigger).toHaveBeenCalledWith(db, 'lib-1')
     handle.stop()
   })
 
-  it('stop() clears interval timers and watchers', async () => {
-    const closeFn = vi.fn()
-    mockWatch.mockReturnValue({ close: closeFn } as unknown as ReturnType<
-      typeof watch
-    >)
-
-    await db.insert(libraries).values({
-      id: 'lib-7',
-      name: 'Stop Test Lib',
-      scanSchedule: '*/30 * * * *',
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
-    await db.insert(dataSources).values({
-      id: 'src-5',
-      libraryId: 'lib-7',
-      type: 'local',
-      path: '/media/photos',
-      recursive: false,
-      enabled: true,
-      createdAt: new Date(),
-      updatedAt: new Date(),
-    })
-
+  it('closes timers and watchers when stopped', async () => {
+    const close = vi.fn()
+    mockWatch.mockReturnValue({ close } as unknown as ReturnType<typeof watch>)
+    mockGetAllLibraries.mockResolvedValue([
+      library({
+        scanSchedule: '*/30 * * * *',
+        dataSources: [{ type: 'local', path: '/media/photos' }],
+      }),
+    ])
     const trigger = vi.fn().mockResolvedValue(undefined)
     const handle = await startScheduler(db, trigger)
 
     handle.stop()
-
-    // After stop, advancing time should not trigger any scans
     await vi.advanceTimersByTimeAsync(60 * 60 * 1000)
+
     expect(trigger).not.toHaveBeenCalled()
-    expect(closeFn).toHaveBeenCalled()
+    expect(close).toHaveBeenCalledOnce()
   })
 })

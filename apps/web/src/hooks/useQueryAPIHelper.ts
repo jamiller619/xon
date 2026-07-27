@@ -2,6 +2,8 @@ const ROUTES = {
   libraries: '/api/libraries',
   groups: '/api/groups',
   mediaById: '/api/media/:id',
+  mediaByIdWithLibrary: '/api/media/:id?withLibrary=true',
+  relatedMedia: '/api/media/:id/related',
   mediaByLibrary: '/api/libraries/:libraryId/media',
   recentMedia: '/api/media?sortBy=createdAt&order=desc&page=1&limit=10',
   featuredMedia: '/api/media/featured',

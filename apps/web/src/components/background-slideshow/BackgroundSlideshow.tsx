@@ -19,6 +19,8 @@ import { createPortal } from 'react-dom'
 export interface BackgroundSlideshowProps {
   /** Image URLs to cycle through, in order. */
   images: string[]
+  /** Height of the background layer. Default `"100%"`. */
+  height?: CSSProperties['height']
   /**
    * How long each image stays fully visible before the next crossfade begins.
    * Default `12000` (12s).
@@ -59,6 +61,7 @@ interface InternalProps extends BackgroundSlideshowProps {
 
 function Slideshow({
   images,
+  height = '100%',
   intervalMs = 12_000,
   fadeMs = 1_500,
   zIndex = -1,
@@ -73,6 +76,12 @@ function Slideshow({
     images.length ? clampIndex(startIndex, images.length) : 0,
   )
   const [paused, setPaused] = useState(false)
+  const [requestedImages, setRequestedImages] = useState<Set<string>>(() => {
+    const initialImage = images.length
+      ? images[clampIndex(startIndex, images.length)]
+      : undefined
+    return initialImage ? new Set([initialImage]) : new Set()
+  })
   const layerRefs = useRef<(HTMLDivElement | null)[]>([])
 
   // Client-only mount — avoids SSR/hydration mismatch for the portal.
@@ -82,6 +91,30 @@ function Slideshow({
   useEffect(() => {
     setIndex((i) => (images.length ? clampIndex(i, images.length) : 0))
   }, [images.length])
+
+  // A hidden CSS background is still downloaded by the browser. Request only
+  // the active image and the one that will be shown next, then retain images
+  // that have already appeared so their outgoing crossfades remain intact.
+  useEffect(() => {
+    if (images.length === 0) return
+
+    const activeImage = images[index]
+    const nextImage = images[(index + 1) % images.length]
+
+    setRequestedImages((requested) => {
+      if (
+        (!activeImage || requested.has(activeImage)) &&
+        (!nextImage || requested.has(nextImage))
+      ) {
+        return requested
+      }
+
+      const nextRequested = new Set(requested)
+      if (activeImage) nextRequested.add(activeImage)
+      if (nextImage) nextRequested.add(nextImage)
+      return nextRequested
+    })
+  }, [images, index])
 
   // Pause cycling while the tab is hidden.
   useEffect(() => {
@@ -135,7 +168,10 @@ function Slideshow({
 
   const wrapperStyle: CSSProperties = {
     position: 'fixed',
-    inset: 0,
+    top: 0,
+    right: 0,
+    left: 0,
+    height,
     zIndex,
     overflow: 'hidden',
     pointerEvents: 'none',
@@ -146,6 +182,8 @@ function Slideshow({
     <div style={wrapperStyle} aria-hidden="true">
       {images.map((src, i) => {
         const active = i === index
+        if (!active && !requestedImages.has(src)) return null
+
         const layerStyle: CSSProperties = {
           position: 'absolute',
           inset: 0,

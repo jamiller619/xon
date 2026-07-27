@@ -1,0 +1,1 @@
+ALTER TABLE `libraries` ADD `images` text DEFAULT '{"poster":[]}' NOT NULL;

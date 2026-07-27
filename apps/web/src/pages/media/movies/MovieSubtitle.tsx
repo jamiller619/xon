@@ -20,62 +20,58 @@ export default function MovieSubtitle({ data }: { data: MediaItem }) {
   const year = formatYear(data)
 
   return (
-    <Flex gap="3" dir="col">
-      <Flex gap="4" className={styles.subtitle} align="center">
-        {year && (
-          <Flex gap="1" align="center">
-            <CalendarIcon />
-            <span>{year}</span>
-          </Flex>
-        )}
-        {rating && <Badge variant="ghost">{rating}</Badge>}
-        {data.fileMetadata.resolution && (
-          <Badge variant="primary">
-            <Resolution
-              height={data.fileMetadata.resolution.height}
-              width={data.fileMetadata.resolution.width}
-              layout="$n $a"
-            />
-          </Badge>
-        )}
+    <Flex gap="4" className={styles.subtitle} align="center" justify="between">
+      {year && (
         <Flex gap="1" align="center">
-          <ClockIcon />
-          <span>{formatDuration(data)}</span>
+          <CalendarIcon />
+          <span>{year}</span>
         </Flex>
-        {genres && genres.length > 0 && (
-          <span>{genres.slice(0, 3).join(' · ')}</span>
-        )}
+      )}
+      {rating && (
+        <Badge variant="ghost" className={styles.rating}>
+          {rating}
+        </Badge>
+      )}
+      {data.fileMetadata.resolution && (
+        <Badge variant="primary">
+          <Resolution
+            height={data.fileMetadata.resolution.height}
+            width={data.fileMetadata.resolution.width}
+            layout="$n $a"
+          />
+        </Badge>
+      )}
+      <Flex gap="1" align="center">
+        <ClockIcon />
+        <span>{formatDuration(data)}</span>
       </Flex>
-      <Flex gap="4" className={styles.subtitle} align="center">
-        {data.metadata.voteAverage && (
-          <Flex gap="1" align="center">
-            <StarIcon className={styles.ratingIcon as string} />
-            <span>{data.metadata.voteAverage.toFixed(1)}</span>
-          </Flex>
-        )}
-        {rottenTomatoes && (
-          <Flex align="center">
-            {rtFresh ? (
-              <icons.RottenTomatoes />
-            ) : (
-              <icons.RottenTomatoesRotten />
-            )}
-            <span className={styles.rottenTomatoes}>{rottenTomatoes}%</span>
-          </Flex>
-        )}
-        {metascore && (
-          <Flex align="center">
-            <icons.Metascore />
-            <span className={styles.metascore}>{metascore}</span>
-          </Flex>
-        )}
-        {imdbRating && (
-          <Flex gap="1" align="center">
-            <icons.IMDb />
-            <span className={styles.imdbRating}>{imdbRating}</span>
-          </Flex>
-        )}
-      </Flex>
+      {genres && genres.length > 0 && (
+        <span>{genres.slice(0, 3).join(' · ')}</span>
+      )}
+      {data.metadata.voteAverage && (
+        <Flex gap="1" align="center">
+          <StarIcon className={styles.ratingIcon as string} />
+          <span>{data.metadata.voteAverage.toFixed(1)}</span>
+        </Flex>
+      )}
+      {rottenTomatoes && (
+        <Flex align="center">
+          {rtFresh ? <icons.RottenTomatoes /> : <icons.RottenTomatoesRotten />}
+          <span className={styles.rottenTomatoes}>{rottenTomatoes}%</span>
+        </Flex>
+      )}
+      {metascore && (
+        <Flex align="center">
+          <icons.Metascore />
+          <span className={styles.metascore}>{metascore}</span>
+        </Flex>
+      )}
+      {imdbRating && (
+        <Flex gap="1" align="center">
+          <icons.IMDb />
+          <span className={styles.imdbRating}>{imdbRating}</span>
+        </Flex>
+      )}
     </Flex>
   )
 }

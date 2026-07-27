@@ -379,14 +379,31 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
   // GET /media/:id — get single media item
   router.get('/:id', async (c) => {
     const id = c.req.param('id')
-    const data = await mediaService.getMediaById(db, id)
+    const withLibrary = c.req.query('withLibrary')
+    const data = withLibrary
+      ? await mediaService.getMediaByIdWithLibrary(db, id)
+      : await mediaService.getMediaById(db, id)
 
     if (!data) return c.json({ error: 'Not found' }, 404)
     const etag = `"${data.updatedAt?.getTime()}"`
+
     if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
     c.header('ETag', etag)
-    // return c.json({ ...itemWithUrls, pluginMetadata })
+
     return c.json(data)
+  })
+
+  // GET /media/:id/related — genre + shared-cast "more like this"
+  router.get('/:id/related', async (c) => {
+    const id = c.req.param('id')
+    const items = await mediaService.getRelatedMedia(db, id)
+
+    const etag = computeETag(items)
+    if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
+
+    c.header('ETag', etag)
+
+    return c.json(items)
   })
 
   const THUMBNAIL_SIZES = new Set<ThumbnailSize>(['small', 'medium', 'large'])

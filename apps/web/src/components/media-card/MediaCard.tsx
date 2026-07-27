@@ -8,7 +8,7 @@ import {
   Play16Regular as PlayIcon,
   ArrowSyncRegular as RefreshIcon,
 } from '@fluentui/react-icons'
-import type { MediaItem } from '@xon/shared'
+import type { Library, MediaItem } from '@xon/shared'
 import {
   Button,
   Card,
@@ -29,6 +29,7 @@ import styles from './MediaCard.module.css'
 
 interface MediaCardProps {
   item: MediaItem
+  library?: Library | undefined
   listView?: boolean
   isFavorited?: boolean
   onToggleFavorite?: (id: string, currentlyFavorited: boolean) => void
@@ -37,6 +38,7 @@ interface MediaCardProps {
 
 export default function MediaCard({
   item,
+  library,
   listView,
   isFavorited,
   onToggleFavorite,
@@ -190,7 +192,15 @@ export default function MediaCard({
   return (
     <>
       <ContextMenu items={contextMenuItems}>
-        <Card as={Link} to={link} className={styles.card} state={item}>
+        <Card
+          as={Link}
+          to={link}
+          className={styles.card}
+          state={{
+            ...item,
+            library,
+          }}
+        >
           {cardContent}
         </Card>
       </ContextMenu>

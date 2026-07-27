@@ -16,6 +16,10 @@ export const libraries = sqliteTable('libraries', {
   dataSources: text('data_sources', { mode: 'json' })
     .$type<DataSource[]>()
     .notNull(),
+  images: text('images', { mode: 'json' })
+    .$type<{ poster: string[] }>()
+    .notNull()
+    .default({ poster: [] }),
 })
 
 export type Library = typeof libraries.$inferSelect

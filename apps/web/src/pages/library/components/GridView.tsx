@@ -45,6 +45,7 @@ const styles = css`
 export default function GridView({
   isLoading,
   items,
+  library,
   hasNextPage,
   isFetchingNextPage,
   onLoadMore,
@@ -152,7 +153,7 @@ export default function GridView({
               }}
             >
               {rowItems.map((item) => (
-                <MediaCard key={item.id} item={item} />
+                <MediaCard key={item.id} item={item} library={library} />
               ))}
               {virtualRow.index === mediaRowCount && (
                 <div

@@ -6,6 +6,7 @@ import {
   MediaType,
 } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
+import { fileTypeFromBuffer } from 'file-type'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { requireAuth } from '../auth/middleware.ts'
@@ -13,10 +14,27 @@ import { appCache, computeETag } from '../cache.ts'
 import { validate } from '../http/validate.ts'
 import type { ScannerHandle } from '../scanner/scannerHandle.ts'
 import * as libraryService from '../services/libraryService.ts'
-import { getOrBuildThumbnail } from '../services/libraryThumbnailService.ts'
+import {
+  generateLibraryPoster,
+  getOrBuildThumbnail,
+  removeLibraryPoster,
+  storeLibraryPoster,
+} from '../services/libraryThumbnailService.ts'
 import { makeScanRouter, triggerLibraryScan } from './scan.ts'
 
 const LIBRARIES_ALL_KEY = 'libraries:all'
+const MAX_LIBRARY_IMAGE_BYTES = 20 * 1024 * 1024
+const SUPPORTED_LIBRARY_IMAGE_TYPES = new Set([
+  'image/avif',
+  'image/gif',
+  'image/jpeg',
+  'image/png',
+  'image/webp',
+])
+
+const libraryImagesSchema = z.object({
+  poster: z.array(z.string().trim().min(1).max(8192)).max(100),
+})
 
 const libraryMediaQuerySchema = z.object({
   mediaType: z.enum(MediaType.MainType).optional(),
@@ -228,13 +246,148 @@ export function makeLibrariesRouter(
       },
     )
 
-    // GET /libraries/:id/thumbnail — cached poster-grid thumbnail, built on
-    // first request and regenerated when the library's scan completes
+    // Library artwork is stored as an ordered poster collection. The first
+    // poster is used by the thumbnail route below.
+    .get('/:id/images/poster/:index', async (c) => {
+      const id = c.req.param('id')
+      const index = Number(c.req.param('index'))
+      if (!Number.isInteger(index) || index < 0) {
+        return c.json({ error: 'Unknown image' }, 404)
+      }
+
+      const library = await libraryService.getLibraryById(db, id)
+      const source = library?.images.poster[index]
+      if (!source) return c.json({ error: 'Unknown image' }, 404)
+
+      try {
+        const data = await readFile(source)
+        const detected = await fileTypeFromBuffer(data)
+        if (!detected || !SUPPORTED_LIBRARY_IMAGE_TYPES.has(detected.mime)) {
+          return c.json({ error: 'Unsupported image' }, 415)
+        }
+        return c.body(new Uint8Array(data), 200, {
+          'Content-Type': detected.mime,
+          'Cache-Control': 'private, no-cache',
+        })
+      } catch {
+        return c.json({ error: 'Image not found' }, 404)
+      }
+    })
+    .put('/:id/images', validate('json', libraryImagesSchema), async (c) => {
+      const id = c.req.param('id')
+      const images = c.req.valid('json')
+      const library = await libraryService.getLibraryById(db, id)
+      if (!library) return c.json({ error: 'Not found' }, 404)
+
+      const existing = new Set(library.images.poster)
+      if (images.poster.some((source) => !existing.has(source))) {
+        return c.json({ error: 'Images can only be reordered or removed' }, 400)
+      }
+
+      await libraryService.updateLibrary(db, id, {
+        images,
+        updatedAt: new Date(),
+      })
+      appCache.invalidate(LIBRARIES_ALL_KEY)
+
+      const retained = new Set(images.poster)
+      await Promise.all(
+        library.images.poster
+          .filter((source) => !retained.has(source))
+          .map((source) => removeLibraryPoster(id, source)),
+      )
+      return c.json({ images })
+    })
+    .post('/:id/images/poster', async (c) => {
+      const id = c.req.param('id')
+      const library = await libraryService.getLibraryById(db, id)
+      if (!library) return c.json({ error: 'Not found' }, 404)
+
+      const form = await c.req.parseBody()
+      const file = form.file
+      if (!(file instanceof File)) {
+        return c.json({ error: 'Choose an image to upload' }, 400)
+      }
+      if (file.size === 0 || file.size > MAX_LIBRARY_IMAGE_BYTES) {
+        return c.json({ error: 'Image must be between 1 byte and 20 MB' }, 413)
+      }
+
+      const data = Buffer.from(await file.arrayBuffer())
+      const detected = await fileTypeFromBuffer(data)
+      if (!detected || !SUPPORTED_LIBRARY_IMAGE_TYPES.has(detected.mime)) {
+        return c.json(
+          { error: 'Upload a JPEG, PNG, WebP, GIF, or AVIF image' },
+          415,
+        )
+      }
+
+      const source = await storeLibraryPoster(id, data, detected.ext)
+      const images = {
+        poster: [...library.images.poster, source],
+      }
+      try {
+        await libraryService.updateLibrary(db, id, {
+          images,
+          updatedAt: new Date(),
+        })
+      } catch (error) {
+        await removeLibraryPoster(id, source)
+        throw error
+      }
+      appCache.invalidate(LIBRARIES_ALL_KEY)
+      return c.json({ images }, 201)
+    })
+    .post('/:id/images/posters/generate', async (c) => {
+      const id = c.req.param('id')
+      const library = await libraryService.getLibraryById(db, id)
+      if (!library) return c.json({ error: 'Not found' }, 404)
+
+      const source = await generateLibraryPoster(db, id)
+      if (!source) {
+        return c.json(
+          { error: 'No media posters are available to create an image' },
+          422,
+        )
+      }
+
+      const images = {
+        poster: [...library.images.poster, source],
+      }
+      try {
+        await libraryService.updateLibrary(db, id, {
+          images,
+          updatedAt: new Date(),
+        })
+      } catch (error) {
+        await removeLibraryPoster(id, source)
+        throw error
+      }
+      appCache.invalidate(LIBRARIES_ALL_KEY)
+      return c.json({ images }, 201)
+    })
+    // GET /libraries/:id/thumbnail — use the selected library poster, falling
+    // back to the cached poster grid built from library media.
     .get('/:id/thumbnail', async (c) => {
       const id = c.req.param('id')
 
       const library = await libraryService.getLibraryById(db, id)
       if (!library) return c.json({ error: 'Not found' }, 404)
+
+      const selectedPoster = library.images.poster[0]
+      if (selectedPoster) {
+        try {
+          const buffer = await readFile(selectedPoster)
+          const detected = await fileTypeFromBuffer(buffer)
+          if (detected && SUPPORTED_LIBRARY_IMAGE_TYPES.has(detected.mime)) {
+            return c.body(new Uint8Array(buffer), 200, {
+              'Content-Type': detected.mime,
+              'Cache-Control': 'private, no-cache',
+            })
+          }
+        } catch {
+          // Fall back to the generated poster grid below.
+        }
+      }
 
       const thumbnail = await getOrBuildThumbnail(db, id)
       if (!thumbnail) {

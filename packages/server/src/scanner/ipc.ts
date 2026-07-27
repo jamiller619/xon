@@ -14,6 +14,7 @@ export type ParentToChild =
 
 export type ChildToParent =
   | { type: 'ready' }
+  | { type: 'scan-trigger'; libraryId: string }
   | {
       type: 'progress'
       jobId: ScanJobId

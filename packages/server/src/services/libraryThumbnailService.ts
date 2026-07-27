@@ -1,5 +1,13 @@
-import { mkdir, readFile, rename, stat, writeFile } from 'node:fs/promises'
-import { join } from 'node:path'
+import { randomUUID } from 'node:crypto'
+import {
+  mkdir,
+  readFile,
+  rename,
+  stat,
+  unlink,
+  writeFile,
+} from 'node:fs/promises'
+import { join, resolve, sep } from 'node:path'
 import { type Metadata, posterUrl } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import sharp from 'sharp'
@@ -78,6 +86,12 @@ function thumbnailPath(libraryId: string): string {
   return join(thumbnailDir(), `${libraryId}.png`)
 }
 
+function libraryImagesDir(libraryId: string): string {
+  return resolve(
+    join(config.get('appdata.cachePath'), 'library-images', libraryId),
+  )
+}
+
 async function buildThumbnail(
   db: LibSQLDatabase,
   libraryId: string,
@@ -110,6 +124,37 @@ async function buildThumbnail(
   if (loaded.length === 0) return null
 
   return buildGrid(loaded)
+}
+
+export async function storeLibraryPoster(
+  libraryId: string,
+  data: Buffer,
+  extension = 'png',
+): Promise<string> {
+  const directory = libraryImagesDir(libraryId)
+  const destination = join(directory, `${randomUUID()}.${extension}`)
+  await mkdir(directory, { recursive: true })
+  await writeFile(destination, data)
+  return destination
+}
+
+export async function generateLibraryPoster(
+  db: LibSQLDatabase,
+  libraryId: string,
+): Promise<string | null> {
+  const buffer = await buildThumbnail(db, libraryId)
+  if (!buffer) return null
+  return storeLibraryPoster(libraryId, buffer)
+}
+
+export async function removeLibraryPoster(
+  libraryId: string,
+  source: string,
+): Promise<void> {
+  const directory = libraryImagesDir(libraryId)
+  const candidate = resolve(source)
+  if (!candidate.startsWith(`${directory}${sep}`)) return
+  await unlink(candidate).catch(() => undefined)
 }
 
 /**
