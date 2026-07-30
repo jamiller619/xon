@@ -1,5 +1,5 @@
 import type { StatsPayload } from '@xon/shared'
-import { Progress, Surface } from '@xon/ui'
+import { Flex, Surface } from '@xon/ui'
 import clsx from 'clsx'
 import prettyBytes from 'pretty-bytes'
 import prettyMs from 'pretty-ms'
@@ -77,7 +77,7 @@ export default function System({ className, ...props }: SystemProps) {
   return (
     <Surface
       as="section"
-      borderRadius="sm"
+      borderRadius="small"
       className={clsx(dashboardStyles.section, className)}
       {...props}
     >
@@ -91,38 +91,26 @@ export default function System({ className, ...props }: SystemProps) {
               {data.system?.platform} {data.system?.release}
             </dd>
           </div>
-          <div className={styles.row}>
-            <dt>Uptime</dt>
-            <dd>{data.process && formatUptime(data.process.uptime)}</dd>
-          </div>
-          {/* {data.network?.map((n) => (
-            <div key={n.iface} className={styles.row}>
-              <dt>{n.iface}</dt>
-              <dd>
-                {n.rx} / {n.rxSec} / {n.tx} / {n.txSec}
-              </dd>
-            </div>
-          ))} */}
-          <div>
-            <div className={styles.row}>
-              <dt>CPU Usage</dt>
-              <dd>
+          <Flex gap="3" dir="row" justify="evenly" className={styles.metrics}>
+            <Surface as={Flex} dir="col" align="center" borderRadius="small">
+              <dd className={styles.big}>
                 <CPUUsage value={data.cpu} />
               </dd>
-            </div>
-            <Progress value={data.cpu} max={100} />
-          </div>
-          <div>
-            <div className={styles.row}>
-              <dt>Memory Usage</dt>
-              <dd>
+              <dt className={styles.eyebrow}>CPU Usage</dt>
+            </Surface>
+            <Surface as={Flex} dir="col" align="center" borderRadius="small">
+              <dd className={styles.big}>
                 <MemUsage value={data.memory} />
               </dd>
-            </div>
-            {data.memory && (
-              <Progress value={data.memory.used} max={data.memory.total} />
-            )}
-          </div>
+              <dt className={styles.eyebrow}>Memory Usage</dt>
+            </Surface>
+            <Surface as={Flex} dir="col" align="center" borderRadius="small">
+              <dd className={styles.big}>
+                {data.process && formatUptime(data.process.uptime)}
+              </dd>
+              <dt className={styles.eyebrow}>Uptime</dt>
+            </Surface>
+          </Flex>
           <div className={styles.charts}>
             <div className={styles.chartTile}>
               <div className={styles.row}>
@@ -168,9 +156,7 @@ function MemUsage({ value }: { value?: StatsPayload['memory'] }) {
   }
 
   return (
-    <span className={usageClassName}>
-      {value && `${prettyBytes(value.used)} / ${prettyBytes(value.total)}`}
-    </span>
+    <span className={usageClassName}>{value && prettyBytes(value.used)}</span>
   )
 }
 

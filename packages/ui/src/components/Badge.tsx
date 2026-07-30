@@ -6,10 +6,11 @@ import type { Size, Variant } from './types.js'
 const styles = css`
   .badge {
     display: inline-block;
-    padding: var(--space-2xs) var(--space-sm);
-    border-radius: var(--border-radius-3);
+    padding: var(--space-2xs) var(--space-xs);
+    border-radius: var(--border-radius-2);
     corner-shape: var(--corner-shape);
     font-weight: 500;
+    letter-spacing: 0.02em;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -19,14 +20,14 @@ const styles = css`
     
     &.primary {
       color: var(--color-accent-12);
-      background: var(--color-accent-3);
+      background: var(--color-accent-7);
     }
 
     &.ghost {
       background-color: transparent;
       backdrop-filter: blur(3px);
-      outline: 1px solid var(--color-gray-11);
-      outline-offset: -1px;
+      outline: 2px solid var(--color-gray-11);
+      outline-offset: -2px;
     }
 
     &.small {

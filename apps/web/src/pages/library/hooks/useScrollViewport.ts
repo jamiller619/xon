@@ -1,24 +1,14 @@
 import { type RefObject, useLayoutEffect, useState } from 'react'
 import { useLocation } from 'react-router-dom'
+import { findScrollViewport } from '~/lib/scrollViewport'
 
 const scrollPositions = new Map<string, number>()
 
-function findScrollViewport(element: HTMLElement) {
-  let parent = element.parentElement
-
-  while (parent) {
-    const overflowY = getComputedStyle(parent).overflowY
-    if (overflowY === 'auto' || overflowY === 'scroll') return parent
-    parent = parent.parentElement
-  }
-
-  return null
-}
-
 export function useScrollViewport(ref: RefObject<HTMLElement | null>) {
-  const { key: locationKey } = useLocation()
+  const { pathname } = useLocation()
   const [scrollElement, setScrollElement] = useState<HTMLElement | null>(null)
   const [scrollMargin, setScrollMargin] = useState(0)
+  const initialOffset = scrollPositions.get(pathname) ?? 0
 
   useLayoutEffect(() => {
     const element = ref.current
@@ -28,14 +18,14 @@ export function useScrollViewport(ref: RefObject<HTMLElement | null>) {
     setScrollElement(viewport)
     if (!viewport) return
 
-    const savedPosition = scrollPositions.get(locationKey)
-    let positionRestored = savedPosition === undefined
+    let saveFrame: number | undefined
 
-    const restorePosition = () => {
-      if (positionRestored || savedPosition === undefined) return
-
-      viewport.scrollTop = savedPosition
-      positionRestored = Math.abs(viewport.scrollTop - savedPosition) < 1
+    const savePosition = () => {
+      if (saveFrame !== undefined) cancelAnimationFrame(saveFrame)
+      saveFrame = requestAnimationFrame(() => {
+        scrollPositions.set(pathname, viewport.scrollTop)
+        saveFrame = undefined
+      })
     }
 
     const updateMargin = () => {
@@ -44,23 +34,22 @@ export function useScrollViewport(ref: RefObject<HTMLElement | null>) {
           viewport.getBoundingClientRect().top +
           viewport.scrollTop,
       )
-      restorePosition()
     }
 
     updateMargin()
     const observer = new ResizeObserver(updateMargin)
     observer.observe(element)
     observer.observe(viewport)
+    viewport.addEventListener('scroll', savePosition, { passive: true })
     window.addEventListener('resize', updateMargin)
 
     return () => {
-      if (positionRestored) {
-        scrollPositions.set(locationKey, viewport.scrollTop)
-      }
+      if (saveFrame !== undefined) cancelAnimationFrame(saveFrame)
       observer.disconnect()
+      viewport.removeEventListener('scroll', savePosition)
       window.removeEventListener('resize', updateMargin)
     }
-  }, [locationKey, ref])
+  }, [pathname, ref])
 
-  return { scrollElement, scrollMargin }
+  return { initialOffset, scrollElement, scrollMargin }
 }

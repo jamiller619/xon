@@ -27,7 +27,7 @@
 }
 
 a.surface,
-button.surface:not([disabled]) {
+button.surface:not([disabled]):not([data-popup-open]) {
   &:hover {
     background: var(--color-gray-6);
   }

@@ -1,10 +1,21 @@
+import {
+  Calendar16Regular as CalendarIcon,
+  Clock16Regular as ClockIcon,
+  Star16Filled as StarIcon,
+} from '@fluentui/react-icons'
 import type { CastMember, MediaItem } from '@xon/shared'
-import { Button } from '@xon/ui'
+import { Badge, Button, Flex } from '@xon/ui'
 import clsx from 'clsx'
 import { css } from 'inline-css-modules'
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { sentenceCase } from 'text-case'
-import { formatBytes, truncateMiddle } from '~/lib/utils'
+import {
+  formatBytes,
+  formatDuration,
+  formatYear,
+  truncateMiddle,
+} from '~/lib/utils'
+import Resolution from './Resolution'
 
 const styles = css`
   /* Metadata table */
@@ -21,7 +32,7 @@ const styles = css`
   }
 
   .metaLabel {
-    padding-block: var(--space-xs);
+    padding-block: var(--space-sm);
     color: var(--color-text-muted);
     white-space: nowrap;
     vertical-align: top;
@@ -29,9 +40,10 @@ const styles = css`
   }
 
   .metaValue {
-    padding-block: var(--space-xs);
+    padding-block: var(--space-sm);
     color: #ccc;
     word-break: break-word;
+    line-height: 1;
   }
 
   .filePath {
@@ -71,37 +83,12 @@ const META_KEYS_TO_HIDE = [
   'genres',
   'crew',
   'actors',
+  'runtime',
+  'year',
+  'resolution',
+  'revision',
+  'language',
 ]
-
-const META_KEYS_TO_COMBINE = [['language', 'languages']] as const
-
-function combineMetaKeys(meta: Record<string, unknown>) {
-  const combinedMeta = { ...meta }
-
-  for (const [combinedKey, ...keys] of META_KEYS_TO_COMBINE) {
-    const values = [combinedKey, ...keys].flatMap((key) => {
-      const value = combinedMeta[key]
-      return Array.isArray(value) ? value : [value]
-    })
-    const uniqueValues = [
-      ...new Set(
-        values.filter(
-          (value) => value !== null && value !== undefined && value !== '',
-        ),
-      ),
-    ]
-
-    for (const key of [combinedKey, ...keys]) {
-      delete combinedMeta[key]
-    }
-
-    if (uniqueValues.length > 0) {
-      combinedMeta[combinedKey] = uniqueValues
-    }
-  }
-
-  return combinedMeta
-}
 
 export default function MetaTable({
   data,
@@ -110,10 +97,10 @@ export default function MetaTable({
   data: MediaItem
   className?: string | undefined
 }) {
-  const parsedMeta = combineMetaKeys({
+  const parsedMeta = {
     ...data.metadata,
     ...data.fileMetadata,
-  })
+  }
 
   const metaEntries = Object.entries(parsedMeta).filter(
     ([k, v]) =>
@@ -129,6 +116,15 @@ export default function MetaTable({
     (entry): entry is [string, unknown[]] =>
       !META_KEYS_TO_HIDE.includes(entry[0]) && Array.isArray(entry[1]),
   )
+
+  const genres = data.metadata.genres ?? []
+  const rottenTomatoes = data.metadata.rottenTomatoesRating
+  const rtFresh = rottenTomatoes >= 60
+  const metascore = data.metadata.metascore
+  const imdbRating = data.metadata.imdbRating
+  const rating = data.metadata.rated
+  const year = formatYear(data)
+  const resolution = data.fileMetadata.resolution
 
   return (
     <div className={clsx(styles.metaTableContainer, className)}>
@@ -178,10 +174,18 @@ export default function MetaTable({
   )
 }
 
-function MetaRow({ label, children }: { label: string; children: ReactNode }) {
+function MetaRow({
+  label,
+  children,
+}: {
+  label: ReactNode
+  children: ReactNode
+}) {
   return (
     <tr className={styles.metaRow}>
-      <td className={styles.metaLabel}>{sentenceCase(label)}</td>
+      <td className={styles.metaLabel}>
+        {typeof label === 'string' ? sentenceCase(label) : label}
+      </td>
       <td className={styles.metaValue}>{children}</td>
     </tr>
   )

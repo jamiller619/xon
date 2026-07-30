@@ -1,4 +1,4 @@
-import { Flex } from '@xon/ui'
+import { Flex, type FlexProps } from '@xon/ui'
 import { css } from 'inline-css-modules'
 
 const styles = css`
@@ -15,9 +15,9 @@ const styles = css`
   }
 `
 
-export default function Page({ children }: { children: React.ReactNode }) {
+export default function Page({ children, ...props }: FlexProps<'div'>) {
   return (
-    <Flex dir="col" gap="4" className={styles.page}>
+    <Flex {...props} dir="col" gap="4" className={styles.page}>
       {children}
     </Flex>
   )

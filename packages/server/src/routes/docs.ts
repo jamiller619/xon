@@ -840,6 +840,17 @@ const OPENAPI_SPEC = {
             in: 'header',
             schema: { type: 'string', example: 'bytes=0-1023' },
           },
+          {
+            name: 'client',
+            in: 'query',
+            description:
+              'Playback client used to select direct-play capabilities. Unknown or omitted values use the web profile.',
+            schema: {
+              type: 'string',
+              enum: ['web', 'ios', 'android', 'apple-tv', 'android-tv'],
+              default: 'web',
+            },
+          },
         ],
         responses: {
           '200': { description: 'Full file content' },
@@ -910,42 +921,12 @@ const OPENAPI_SPEC = {
         },
       },
     },
-    '/media/{id}/progress': {
-      get: {
-        tags: ['Media'],
-        summary: 'Get playback progress',
-        parameters: [
-          {
-            name: 'id',
-            in: 'path',
-            required: true,
-            schema: { type: 'string' },
-          },
-        ],
-        responses: {
-          '200': {
-            description: 'Current playback progress',
-            content: {
-              'application/json': {
-                schema: {
-                  type: 'object',
-                  properties: {
-                    position: {
-                      type: 'number',
-                      description: 'Position in seconds',
-                    },
-                    duration: { type: 'number' },
-                    percent: { type: 'number' },
-                  },
-                },
-              },
-            },
-          },
-        },
-      },
+    '/media/{id}/play-state': {
       put: {
         tags: ['Media'],
-        summary: 'Update playback progress',
+        summary: 'Create or update playback state',
+        description:
+          'Send when playback starts, periodically while it continues, and once more when it stops or completes.',
         parameters: [
           {
             name: 'id',
@@ -966,14 +947,25 @@ const OPENAPI_SPEC = {
                     minimum: 0,
                     description: 'Position in seconds',
                   },
+                  duration: {
+                    type: 'number',
+                    minimum: 0,
+                    description: 'Media duration in seconds',
+                  },
+                  status: {
+                    type: 'string',
+                    enum: ['playing', 'stopped', 'completed'],
+                  },
                 },
-                required: ['position'],
+                required: ['position', 'status'],
               },
             },
           },
         },
         responses: {
-          '200': { description: 'Progress updated' },
+          '200': { description: 'Playback state saved' },
+          '401': { description: 'Unauthorized' },
+          '404': { description: 'Media item not found' },
         },
       },
     },
@@ -1252,6 +1244,49 @@ const OPENAPI_SPEC = {
               },
             },
           },
+        },
+      },
+    },
+    '/users/me/play-states': {
+      get: {
+        tags: ['Users'],
+        summary: 'List resumable playback states',
+        description:
+          'Returns the current user’s playing and stopped items, newest first, including media details for dashboard display.',
+        responses: {
+          '200': {
+            description: 'Resumable playback states',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      mediaItemId: { type: 'string' },
+                      position: { type: 'integer' },
+                      duration: { type: 'integer', nullable: true },
+                      status: {
+                        type: 'string',
+                        enum: ['playing', 'stopped'],
+                      },
+                      startedAt: { type: 'string', format: 'date-time' },
+                      updatedAt: { type: 'string', format: 'date-time' },
+                      stoppedAt: {
+                        type: 'string',
+                        format: 'date-time',
+                        nullable: true,
+                      },
+                      mediaItem: {
+                        $ref: '#/components/schemas/MediaItem',
+                      },
+                    },
+                  },
+                },
+              },
+            },
+          },
+          '401': { description: 'Unauthorized' },
         },
       },
     },

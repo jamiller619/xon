@@ -1,9 +1,5 @@
 import clsx from 'clsx'
-import {
-  type ComponentPropsWithoutRef,
-  createElement,
-  type ElementType,
-} from 'react'
+import { type ComponentProps, createElement, type ElementType } from 'react'
 import styles from './Flex.module.css'
 
 type FlexDirection = 'row' | 'col'
@@ -26,8 +22,8 @@ type FlexOwnProps<C extends ElementType> = {
   wrap?: boolean
 }
 
-type FlexProps<C extends ElementType> = FlexOwnProps<C> &
-  Omit<ComponentPropsWithoutRef<C>, keyof FlexOwnProps<C>>
+export type FlexProps<C extends ElementType> = FlexOwnProps<C> &
+  Omit<ComponentProps<C>, keyof FlexOwnProps<C>>
 
 export default function Flex<C extends ElementType = 'div'>({
   dir,
@@ -39,6 +35,7 @@ export default function Flex<C extends ElementType = 'div'>({
   className,
   children,
   as,
+  ref,
   ...props
 }: FlexProps<C>) {
   const Component = as ?? 'div'
@@ -55,6 +52,7 @@ export default function Flex<C extends ElementType = 'div'>({
         justify,
         wrap === true ? 'wrap' : wrap === false ? 'nowrap' : undefined,
       ),
+      ref,
       ...props,
     },
     children,

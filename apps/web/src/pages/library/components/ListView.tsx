@@ -29,13 +29,15 @@ export default function ListView({
 }: ListViewProps) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const previousResetKey = useRef(resetKey)
-  const { scrollElement, scrollMargin } = useScrollViewport(wrapperRef)
+  const { initialOffset, scrollElement, scrollMargin } =
+    useScrollViewport(wrapperRef)
   const rowCount = items.length + (hasNextPage ? 1 : 0)
   const rowVirtualizer = useVirtualizer({
     count: rowCount,
     getScrollElement: () => scrollElement,
     estimateSize: () => ESTIMATED_ROW_HEIGHT,
     overscan: 5,
+    initialOffset,
     scrollMargin,
     directDomUpdates: true,
     useFlushSync: false,

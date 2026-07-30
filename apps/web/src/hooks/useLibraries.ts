@@ -1,5 +1,4 @@
 import { useQuery } from '@tanstack/react-query'
-import { Library } from '@xon/shared'
 import type { InferRequestType, InferResponseType } from 'hono/client'
 import { librariesAPI } from '../lib/rpc'
 
@@ -20,7 +19,13 @@ const librariesQuery = {
 
     if (!res.ok) throw new Error(res.statusText)
 
-    return res.json()
+    const data = await res.json()
+
+    return data.map((library: LibraryResponse) => ({
+      ...library,
+      createdAt: new Date(library.createdAt),
+      updatedAt: library.updatedAt ? new Date(library.updatedAt) : null,
+    }))
   },
 }
 

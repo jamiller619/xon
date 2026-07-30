@@ -992,6 +992,10 @@ describe('Media API - HLS transcoding endpoints', () => {
     })
 
     it('serves file directly when no transcoding needed', async () => {
+      await db
+        .update(mediaItems)
+        .set({ mimeType: 'video/mp4' })
+        .where(eq(mediaItems.id, videoItemId))
       mockStat.mockResolvedValueOnce({ size: 500000 } as never)
       mockExtractFfprobeMetadata.mockResolvedValueOnce({
         codec: 'h264',
@@ -1032,9 +1036,10 @@ describe('Media API - HLS transcoding endpoints', () => {
     })
 
     it('returns HLS playlist with correct content type', async () => {
-      mockExtractFfprobeMetadata.mockResolvedValueOnce({
-        duration: 12,
-      } as never)
+      await db
+        .update(mediaItems)
+        .set({ fileMetadata: { duration: 12 } })
+        .where(eq(mediaItems.id, videoItemId))
       mockGenerateHlsPlaylist.mockReturnValueOnce(
         '#EXTM3U\n#EXT-X-TARGETDURATION:6\nsegment-0.ts\nsegment-1.ts\n#EXT-X-ENDLIST',
       )
@@ -1098,7 +1103,10 @@ describe('Media API - HLS transcoding endpoints', () => {
           },
         }),
         on: vi.fn(),
+        once: vi.fn(),
         kill: vi.fn(),
+        exitCode: null,
+        killed: false,
       }
       mockSpawnTranscodeSegment.mockReturnValueOnce(mockProc as never)
 

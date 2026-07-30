@@ -53,7 +53,8 @@ export default function GridView({
 }: ViewProps) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
-  const { scrollElement, scrollMargin } = useScrollViewport(containerRef)
+  const { initialOffset, scrollElement, scrollMargin } =
+    useScrollViewport(containerRef)
   const columns = Math.max(
     1,
     Math.floor((width + GRID_GAP) / (MIN_CARD_WIDTH + GRID_GAP)),
@@ -83,6 +84,7 @@ export default function GridView({
     estimateSize: () => estimatedRowHeight,
     gap: GRID_GAP,
     overscan: 2,
+    initialOffset,
     scrollMargin,
     directDomUpdates: true,
     useFlushSync: false,

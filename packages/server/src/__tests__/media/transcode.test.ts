@@ -1,41 +1,166 @@
+import { parsePlaybackClient } from '@xon/shared'
 import { describe, expect, it } from 'vitest'
-import { generateHlsPlaylist, needsTranscoding } from '../../media/transcode.ts'
+import {
+  buildTranscodeSegmentArgs,
+  generateHlsPlaylist,
+  needsTranscoding,
+} from '../../media/transcode.ts'
+
+describe('parsePlaybackClient', () => {
+  it('accepts registered clients and safely defaults unknown clients', () => {
+    expect(parsePlaybackClient('apple-tv')).toBe('apple-tv')
+    expect(parsePlaybackClient('future-client')).toBe('web')
+    expect(parsePlaybackClient(undefined)).toBe('web')
+  })
+})
 
 describe('needsTranscoding', () => {
   it('returns false when both codecs are undefined', () => {
-    expect(needsTranscoding(undefined, undefined)).toBe(false)
+    expect(needsTranscoding({ mediaType: 'video/mp4' }, 'web')).toBe(false)
   })
 
   it('returns false for native H.264 video + AAC audio', () => {
-    expect(needsTranscoding('h264', 'aac')).toBe(false)
+    expect(
+      needsTranscoding(
+        {
+          mediaType: 'video/mp4',
+          videoCodec: 'h264',
+          audioCodec: 'aac',
+        },
+        'web',
+      ),
+    ).toBe(false)
+  })
+
+  it('returns true for browser-compatible codecs in a Matroska container', () => {
+    expect(
+      needsTranscoding(
+        {
+          mediaType: 'video/x-matroska',
+          videoCodec: 'h264',
+          audioCodec: 'aac',
+        },
+        'web',
+      ),
+    ).toBe(true)
+  })
+
+  it('returns false for browser-compatible codecs in an MP4 container', () => {
+    expect(
+      needsTranscoding(
+        {
+          mediaType: 'video/mp4',
+          videoCodec: 'h264',
+          audioCodec: 'aac',
+        },
+        'web',
+      ),
+    ).toBe(false)
   })
 
   it('returns false for VP9 video + opus audio', () => {
-    expect(needsTranscoding('vp9', 'opus')).toBe(false)
+    expect(
+      needsTranscoding(
+        {
+          mediaType: 'video/webm',
+          videoCodec: 'vp9',
+          audioCodec: 'opus',
+        },
+        'web',
+      ),
+    ).toBe(false)
   })
 
   it('returns false for AV1 video + flac audio', () => {
-    expect(needsTranscoding('av1', 'flac')).toBe(false)
+    expect(
+      needsTranscoding(
+        {
+          mediaType: 'video/webm',
+          videoCodec: 'av1',
+          audioCodec: 'flac',
+        },
+        'web',
+      ),
+    ).toBe(false)
   })
 
   it('returns true for HEVC (h265) video', () => {
-    expect(needsTranscoding('hevc', 'aac')).toBe(true)
+    expect(
+      needsTranscoding(
+        {
+          mediaType: 'video/mp4',
+          videoCodec: 'hevc',
+          audioCodec: 'aac',
+        },
+        'web',
+      ),
+    ).toBe(true)
+  })
+
+  it('allows HEVC direct play on Apple clients', () => {
+    const media = {
+      mediaType: 'video/mp4',
+      videoCodec: 'hevc',
+      audioCodec: 'aac',
+    }
+    expect(needsTranscoding(media, 'ios')).toBe(false)
+    expect(needsTranscoding(media, 'apple-tv')).toBe(false)
   })
 
   it('returns true for unknown video codec', () => {
-    expect(needsTranscoding('wmv3', 'mp3')).toBe(true)
+    expect(
+      needsTranscoding(
+        {
+          mediaType: 'video/mp4',
+          videoCodec: 'wmv3',
+          audioCodec: 'mp3',
+        },
+        'web',
+      ),
+    ).toBe(true)
   })
 
   it('returns true for non-native audio codec alone', () => {
-    expect(needsTranscoding('h264', 'ac3')).toBe(true)
+    expect(
+      needsTranscoding(
+        {
+          mediaType: 'video/mp4',
+          videoCodec: 'h264',
+          audioCodec: 'ac3',
+        },
+        'web',
+      ),
+    ).toBe(true)
   })
 
   it('returns false for native video with no audio codec', () => {
-    expect(needsTranscoding('h264', undefined)).toBe(false)
+    expect(
+      needsTranscoding({ mediaType: 'video/mp4', videoCodec: 'h264' }, 'web'),
+    ).toBe(false)
   })
 
   it('returns true when video codec is non-native and audio is native', () => {
-    expect(needsTranscoding('mpeg4', 'aac')).toBe(true)
+    expect(
+      needsTranscoding(
+        {
+          mediaType: 'video/mp4',
+          videoCodec: 'mpeg4',
+          audioCodec: 'aac',
+        },
+        'web',
+      ),
+    ).toBe(true)
+  })
+
+  it('uses the Android profile independently from web', () => {
+    const media = {
+      mediaType: 'video/3gpp',
+      videoCodec: 'h264',
+      audioCodec: 'aac',
+    }
+    expect(needsTranscoding(media, 'android')).toBe(false)
+    expect(needsTranscoding(media, 'android-tv')).toBe(false)
+    expect(needsTranscoding(media, 'web')).toBe(true)
   })
 })
 
@@ -87,5 +212,22 @@ describe('generateHlsPlaylist', () => {
       .split('\n')
       .filter((l) => l.startsWith('segment-'))
     expect(segments).toHaveLength(3) // ceil(10/4)=3
+  })
+
+  it('can version segment URLs to invalidate stale transcoding output', () => {
+    const playlist = generateHlsPlaylist(6, 6, '2')
+    expect(playlist).toContain('segment-0.ts?v=2')
+  })
+})
+
+describe('buildTranscodeSegmentArgs', () => {
+  it('offsets each segment onto the original media timeline', () => {
+    const args = buildTranscodeSegmentArgs('/media/movie.mkv', 2, 6)
+    const valueAfter = (flag: string) => args[args.indexOf(flag) + 1]
+
+    expect(valueAfter('-ss')).toBe('12')
+    expect(valueAfter('-output_ts_offset')).toBe('12')
+    expect(valueAfter('-muxdelay')).toBe('0')
+    expect(valueAfter('-muxpreload')).toBe('0')
   })
 })

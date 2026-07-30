@@ -12,8 +12,8 @@ import {
 import { isIP } from 'node:net'
 import { basename, dirname, extname, join, resolve, sep } from 'node:path'
 import { Readable } from 'node:stream'
-import { posterImages, type SortProps } from '@xon/shared'
-import { eq, inArray } from 'drizzle-orm'
+import { parsePlaybackClient, posterImages, type SortProps } from '@xon/shared'
+import { and, eq, inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { fileTypeFromBuffer } from 'file-type'
 import { Hono } from 'hono'
@@ -22,12 +22,14 @@ import { z } from 'zod'
 import { computeETag } from '../cache.ts'
 import config from '../config.ts'
 import type { MediaItem } from '../db/schema.ts'
-import { groupItems, groups, mediaItems } from '../db/schema.ts'
-import { validate } from '../http/validate.ts'
 import {
-  extractFfprobeMetadata,
-  extractStreamTracks,
-} from '../media/ffprobe.ts'
+  groupItems,
+  groups,
+  mediaItems,
+  mediaPlayStates,
+} from '../db/schema.ts'
+import { validate } from '../http/validate.ts'
+import { extractStreamTracks } from '../media/ffprobe.ts'
 import { convertRawToJpeg, isRawImage } from '../media/raw.ts'
 import {
   generateHlsPlaylist,
@@ -55,6 +57,12 @@ const mediaListQuerySchema = z.object({
   order: z.enum(['asc', 'desc']).optional().default('desc'),
   page: z.coerce.number().int().min(1).optional().default(1),
   limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+})
+
+const playStateSchema = z.object({
+  position: z.number().finite().nonnegative(),
+  duration: z.number().finite().positive().optional(),
+  status: z.enum(['playing', 'stopped', 'completed']),
 })
 
 const ARTWORK_KINDS = ['poster', 'backdrop', 'logo'] as const
@@ -392,6 +400,66 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
 
     return c.json(data)
   })
+
+  // PUT /media/:id/play-state — create or update this user's playback state.
+  router.put(
+    '/:id/play-state',
+    validate('json', playStateSchema),
+    async (c) => {
+      const user = c.get('user')
+      if (!user) return c.json({ error: 'Unauthorized' }, 401)
+
+      const mediaItemId = c.req.param('id')
+      const item = await db
+        .select({ id: mediaItems.id })
+        .from(mediaItems)
+        .where(eq(mediaItems.id, mediaItemId))
+        .limit(1)
+      if (!item[0]) return c.json({ error: 'Not found' }, 404)
+
+      const body = c.req.valid('json')
+      const now = new Date()
+      const values = {
+        userId: user.id,
+        mediaItemId,
+        position: Math.floor(body.position),
+        duration:
+          body.duration === undefined ? null : Math.floor(body.duration),
+        status: body.status,
+        updatedAt: now,
+        stoppedAt: body.status === 'playing' ? null : now,
+      }
+      const durationUpdate =
+        values.duration === null ? {} : { duration: values.duration }
+
+      await db
+        .insert(mediaPlayStates)
+        .values(values)
+        .onConflictDoUpdate({
+          target: [mediaPlayStates.userId, mediaPlayStates.mediaItemId],
+          set: {
+            position: values.position,
+            ...durationUpdate,
+            status: values.status,
+            updatedAt: values.updatedAt,
+            stoppedAt: values.stoppedAt,
+          },
+        })
+
+      const state = await db
+        .select()
+        .from(mediaPlayStates)
+        .where(
+          and(
+            eq(mediaPlayStates.userId, user.id),
+            eq(mediaPlayStates.mediaItemId, mediaItemId),
+          ),
+        )
+        .limit(1)
+
+      return c.json(state[0])
+    },
+  )
 
   // GET /media/:id/related — genre + shared-cast "more like this"
   router.get('/:id/related', async (c) => {
@@ -912,8 +980,17 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     }
 
     // Check if format needs transcoding — if so, redirect to HLS playlist
-    const meta = await extractFfprobeMetadata(item.filePath)
-    if (meta && needsTranscoding(meta.codec, meta.audioCodec)) {
+    const playbackClient = parsePlaybackClient(c.req.query('client'))
+    if (
+      needsTranscoding(
+        {
+          mediaType: item.mediaType,
+          videoCodec: item.fileMetadata.codec,
+          audioCodec: item.fileMetadata.audioCodec,
+        },
+        playbackClient,
+      )
+    ) {
       return c.redirect(`/api/media/${id}/hls/playlist.m3u8`, 307)
     }
 
@@ -954,6 +1031,7 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
   })
 
   const HLS_SEGMENT_DURATION = 6
+  const HLS_SEGMENT_VERSION = '2'
 
   // GET /media/:id/hls/playlist.m3u8 — generate HLS playlist for transcoded playback
   router.get('/:id/hls/playlist.m3u8', async (c) => {
@@ -962,14 +1040,17 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     const item = rows[0]
     if (!item) return c.json({ error: 'Not found' }, 404)
 
-    const duration = item.metadata?.duration
+    const duration = Number(
+      item.fileMetadata?.duration ?? item.metadata?.duration,
+    )
 
-    if (!duration)
+    if (!Number.isFinite(duration) || duration <= 0)
       return c.json({ error: 'Cannot determine media duration' }, 422)
 
     const playlist = generateHlsPlaylist(
-      item.metadata.duration,
+      duration,
       HLS_SEGMENT_DURATION,
+      HLS_SEGMENT_VERSION,
     )
     return c.text(playlist, 200, {
       'Content-Type': 'application/vnd.apple.mpegurl',
@@ -996,17 +1077,27 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       segmentIndex,
       HLS_SEGMENT_DURATION,
     )
+    if (!proc.stdout) {
+      proc.kill()
+      return c.json({ error: 'Transcoder output is unavailable' }, 500)
+    }
 
-    const stream = new ReadableStream({
-      start(controller) {
-        proc.stdout?.on('data', (chunk: Buffer) => controller.enqueue(chunk))
-        proc.stdout?.on('end', () => controller.close())
-        proc.stdout?.on('error', (err: Error) => controller.error(err))
-        proc.on('error', (err: Error) => controller.error(err))
-      },
-      cancel() {
-        proc.kill()
-      },
+    // Node's adapter coordinates cancellation with late stdout events. The
+    // previous manual bridge could enqueue after HLS aborted a request and the
+    // Web Stream controller had already closed.
+    const stream = Readable.toWeb(proc.stdout) as ReadableStream
+    const abortTranscode = () => {
+      if (proc.exitCode === null && !proc.killed) proc.kill()
+    }
+    const failStream = (error: Error) => proc.stdout?.destroy(error)
+    c.req.raw.signal.addEventListener('abort', abortTranscode, { once: true })
+    proc.once('error', failStream)
+    proc.stdout.once('close', () => {
+      if (!proc.stdout?.readableEnded) abortTranscode()
+    })
+    proc.once('close', () => {
+      c.req.raw.signal.removeEventListener('abort', abortTranscode)
+      proc.removeListener('error', failStream)
     })
 
     return c.body(stream, 200, {

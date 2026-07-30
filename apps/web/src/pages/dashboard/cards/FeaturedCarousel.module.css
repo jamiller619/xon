@@ -5,18 +5,19 @@
   /* The slide row is N * 100% wide; keep that intrinsic width from
      propagating to ancestors (same trick as XScroller's inline-size
      container) */
-  contain: inline-size;
+  /* contain: inline-size; */
 }
 
 .container {
   display: flex;
+  height: 100%;
 }
 
 .slide {
   position: relative;
   flex: 0 0 100%;
   min-width: 0;
-  height: clamp(320px, 42vh, 520px);
+  /* height: clamp(320px, 42vh, 520px); */
   display: flex;
   align-items: flex-end;
   color: white;
@@ -25,6 +26,15 @@
   &:hover {
     text-decoration: none;
   }
+}
+
+.subtitle {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-md);
+  font-size: var(--text-sm);
+  align-items: center;
+  margin-right: -300px;
 }
 
 .backdrop {

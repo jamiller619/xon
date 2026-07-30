@@ -27,9 +27,12 @@ const styles = css`
   }
 
   .castRole {
-    display: inline-block;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
     color: var(--color-text-muted);
     line-height: 1.2;
+    overflow: hidden;
   }
 `
 
@@ -59,7 +62,9 @@ export default function Cast({ data }: { data?: CastMember[] | undefined }) {
                   )}
                 </div>
                 <div className={styles.castName}>{c.name}</div>
-                <span className={styles.castRole}>as {c.role}</span>
+                <span className={styles.castRole} title={c.role}>
+                  as {c.role}
+                </span>
               </div>
             ))}
           </XScroller.Viewport>

@@ -8,6 +8,7 @@ const ROUTES = {
   recentMedia: '/api/media?sortBy=createdAt&order=desc&page=1&limit=10',
   featuredMedia: '/api/media/featured',
   setupStatus: '/api/auth/setup-status',
+  continueWatching: '/api/users/me/play-states',
 } as const
 
 export default function useQueryAPIHelper(

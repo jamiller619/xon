@@ -100,57 +100,6 @@ export default function MediaCard({
     )
   }
 
-  const cardContent = (
-    <>
-      <Card.Thumb>
-        {posterSrc ? (
-          <img src={posterSrc} alt={item.title} loading="lazy" />
-        ) : (
-          <div className={styles.thumbPlaceholder}>
-            <span>{isAudio ? '♪' : '▶'}</span>
-          </div>
-        )}
-        {item.drmProtected && <div className={styles.drmBadge}>🔒</div>}
-        {onToggleFavorite && (
-          <button
-            type="button"
-            className={styles.favoriteBtn}
-            onClick={handleToggleFavorite}
-            title={isFavorited ? 'Remove from favorites' : 'Add to favorites'}
-          >
-            {isFavorited ? '♥' : '♡'}
-          </button>
-        )}
-        {isAudio && (
-          <div className={styles.audioOverlay}>
-            <button
-              type="button"
-              className={styles.overlayPlayBtn}
-              onClick={handlePlay}
-              title="Play"
-            >
-              ▶
-            </button>
-            <button
-              type="button"
-              className={styles.overlayQueueBtn}
-              onClick={handleAddToQueue}
-              title="Add to queue"
-            >
-              +
-            </button>
-          </div>
-        )}
-      </Card.Thumb>
-      <Card.Info>
-        <Card.Title>{item.title}</Card.Title>
-        <Card.Meta>
-          <span>{item.metadata.year}</span>
-        </Card.Meta>
-      </Card.Info>
-    </>
-  )
-
   const contextMenuItems: ContextMenuItem[] = [
     {
       label: 'Open',
@@ -201,7 +150,54 @@ export default function MediaCard({
             library,
           }}
         >
-          {cardContent}
+          <Card.Thumb>
+            {posterSrc ? (
+              <img src={posterSrc} alt={item.title} loading="lazy" />
+            ) : (
+              <div className={styles.thumbPlaceholder}>
+                <span>{isAudio ? '♪' : '▶'}</span>
+              </div>
+            )}
+            {item.drmProtected && <div className={styles.drmBadge}>🔒</div>}
+            {onToggleFavorite && (
+              <button
+                type="button"
+                className={styles.favoriteBtn}
+                onClick={handleToggleFavorite}
+                title={
+                  isFavorited ? 'Remove from favorites' : 'Add to favorites'
+                }
+              >
+                {isFavorited ? '♥' : '♡'}
+              </button>
+            )}
+            {isAudio && (
+              <div className={styles.audioOverlay}>
+                <button
+                  type="button"
+                  className={styles.overlayPlayBtn}
+                  onClick={handlePlay}
+                  title="Play"
+                >
+                  ▶
+                </button>
+                <button
+                  type="button"
+                  className={styles.overlayQueueBtn}
+                  onClick={handleAddToQueue}
+                  title="Add to queue"
+                >
+                  +
+                </button>
+              </div>
+            )}
+          </Card.Thumb>
+          <Card.Info>
+            <Card.Title>{item.title}</Card.Title>
+            <Card.Meta>
+              <span>{item.metadata.year}</span>
+            </Card.Meta>
+          </Card.Info>
         </Card>
       </ContextMenu>
       <Dialog

@@ -1,16 +1,25 @@
 import type { MediaItem } from '@xon/shared'
+import clsx from 'clsx'
 import Autoplay from 'embla-carousel-autoplay'
 import Fade from 'embla-carousel-fade'
 import useEmblaCarousel from 'embla-carousel-react'
-import { type CSSProperties, useEffect, useState } from 'react'
+import {
+  type ComponentPropsWithRef,
+  type CSSProperties,
+  type Ref,
+  useCallback,
+  useEffect,
+  useState,
+} from 'react'
 import { Link } from 'react-router-dom'
 import { apiUrl } from '~/lib/apiFetch'
-import MovieSubtitle from '../media/movies/MovieSubtitle'
+import MovieSubtitle from '../../media/movies/MovieSubtitle'
 import styles from './FeaturedCarousel.module.css'
 
 const AUTOPLAY_DELAY_MS = 18000
+// const AUTOPLAY_DELAY_MS = 180000000
 
-interface FeaturedCarouselProps {
+type FeaturedCarouselProps = ComponentPropsWithRef<'section'> & {
   items?: MediaItem[] | undefined
 }
 
@@ -25,7 +34,14 @@ function mediaLink(item: MediaItem): string {
   return `/media/${encodeURIComponent(item.title.toLowerCase().replaceAll(' ', '-'))}/${item.id}`
 }
 
-export default function FeaturedCarousel({ items }: FeaturedCarouselProps) {
+export default function FeaturedCarousel({
+  items,
+  className,
+  ref,
+  style,
+  onMouseLeave,
+  ...props
+}: FeaturedCarouselProps) {
   const [emblaRef, emblaApi] = useEmblaCarousel({ loop: true, duration: 40 }, [
     Autoplay({
       delay: AUTOPLAY_DELAY_MS,
@@ -47,6 +63,13 @@ export default function FeaturedCarousel({ items }: FeaturedCarouselProps) {
   // dashboard load doesn't fetch every featured item's artwork up front.
   const [loadedIndexes, setLoadedIndexes] = useState<Set<number>>(
     () => new Set([0]),
+  )
+  const carouselRef = useCallback(
+    (node: HTMLElement | null) => {
+      emblaRef(node)
+      assignRef(ref, node)
+    },
+    [emblaRef, ref],
   )
 
   useEffect(() => {
@@ -97,13 +120,22 @@ export default function FeaturedCarousel({ items }: FeaturedCarouselProps) {
 
   return (
     <section
-      className={styles.carousel}
-      ref={emblaRef}
+      className={clsx(styles.carousel, className)}
+      ref={carouselRef}
       aria-label="Featured"
-      style={{ '--autoplay-delay': `${AUTOPLAY_DELAY_MS}ms` } as CSSProperties}
+      style={
+        {
+          ...style,
+          '--autoplay-delay': `${AUTOPLAY_DELAY_MS}ms`,
+        } as CSSProperties
+      }
       // Leaving the carousel restarts autoplay's full delay; restart the
       // dot-fill with it
-      onMouseLeave={() => setCycleKey((key) => key + 1)}
+      onMouseLeave={(event) => {
+        onMouseLeave?.(event)
+        setCycleKey((key) => key + 1)
+      }}
+      {...props}
     >
       <div className={styles.container}>
         {items.map((item, index) => {
@@ -129,7 +161,9 @@ export default function FeaturedCarousel({ items }: FeaturedCarouselProps) {
               <div className={styles.info}>
                 <span className={styles.eyebrow}>Featured</span>
                 <h2 className={styles.title}>{item.title}</h2>
-                <MovieSubtitle data={item} />
+                <div className={styles.subtitle}>
+                  <MovieSubtitle data={item} />
+                </div>
                 {(item.description ?? item.metadata.overview) && (
                   <p className={styles.overview}>
                     {item.description ?? item.metadata.overview}
@@ -164,4 +198,12 @@ export default function FeaturedCarousel({ items }: FeaturedCarouselProps) {
       </div>
     </section>
   )
+}
+
+function assignRef<T>(ref: Ref<T> | undefined, value: T | null) {
+  if (typeof ref === 'function') {
+    ref(value)
+  } else if (ref) {
+    ref.current = value
+  }
 }

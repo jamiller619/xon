@@ -147,7 +147,6 @@ export default function TopBar({
         aria-expanded={isSidebarOpen}
         aria-label={isSidebarOpen ? 'Close sidebar' : 'Open sidebar'}
         onClick={onMenuClick}
-        size="small"
       >
         <MenuIcon />
       </Button.Icon>

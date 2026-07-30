@@ -1,21 +1,8 @@
-import { createHash, randomBytes } from 'node:crypto'
-import type { GroupType } from '@xon/shared'
-import { and, desc, eq, isNull, or } from 'drizzle-orm'
+import { createHash } from 'node:crypto'
+import { and, desc, eq, or } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
-import { z } from 'zod'
-import { hashPassword, verifyPassword } from '../auth/password.ts'
-import {
-  // apiTokens,
-  groupItems,
-  groups,
-  // favorites,
-  mediaItems,
-  // mediaProgress,
-  users,
-  // watchlist,
-} from '../db/schema.ts'
-import { validate } from '../http/validate.ts'
+import { mediaItems, mediaPlayStates } from '../db/schema.ts'
 // import { withThumbnailUrls } from './media.ts'
 
 export function hashApiToken(token: string): string {
@@ -200,6 +187,39 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
     //     mediaItem: r.mediaItem,
     //   })),
     // )
+  })
+
+  // GET /users/me/play-states — latest resumable playback state for the dashboard.
+  router.get('/me/play-states', async (c) => {
+    const user = c.get('user')
+    if (!user) return c.json({ error: 'Unauthorized' }, 401)
+
+    const rows = await db
+      .select({
+        mediaItemId: mediaPlayStates.mediaItemId,
+        position: mediaPlayStates.position,
+        duration: mediaPlayStates.duration,
+        status: mediaPlayStates.status,
+        startedAt: mediaPlayStates.startedAt,
+        updatedAt: mediaPlayStates.updatedAt,
+        stoppedAt: mediaPlayStates.stoppedAt,
+        mediaItem: mediaItems,
+      })
+      .from(mediaPlayStates)
+      .innerJoin(mediaItems, eq(mediaPlayStates.mediaItemId, mediaItems.id))
+      .where(
+        and(
+          eq(mediaPlayStates.userId, user.id),
+          or(
+            eq(mediaPlayStates.status, 'playing'),
+            eq(mediaPlayStates.status, 'stopped'),
+          ),
+        ),
+      )
+      .orderBy(desc(mediaPlayStates.updatedAt))
+      .limit(50)
+
+    return c.json(rows)
   })
 
   // GET /users/me/group

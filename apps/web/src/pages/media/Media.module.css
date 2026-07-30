@@ -7,6 +7,124 @@
   );
 }
 
+.playerDialog {
+  width: min(96vw, 88rem);
+  max-width: none;
+  max-height: 96vh;
+  padding: 0;
+  overflow: visible;
+  border: 0;
+  border-radius: var(--border-radius-4);
+  background: transparent;
+  color: inherit;
+  box-shadow: 0 24px 80px rgb(0 0 0 / 65%);
+}
+
+.playerDialog::backdrop {
+  background: rgb(0 0 0 / 82%);
+  backdrop-filter: blur(12px);
+}
+
+.playerShell {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--color-gray-a5);
+  border-radius: inherit;
+  background: #050505;
+}
+
+.playerHeader {
+  display: flex;
+  min-height: 3rem;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+  padding-inline: var(--space-md) var(--space-xs);
+  background: var(--color-gray-2);
+  border-block-end: 1px solid var(--color-gray-a4);
+}
+
+.playerTitle {
+  min-width: 0;
+  margin: 0;
+  overflow: hidden;
+  color: var(--color-gray-12);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.closePlayerButton {
+  display: grid;
+  width: 2.5rem;
+  height: 2.5rem;
+  flex: 0 0 auto;
+  place-items: center;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-gray-11);
+  cursor: pointer;
+  font: inherit;
+  font-size: 1.75rem;
+  line-height: 1;
+}
+
+.closePlayerButton:hover {
+  background: var(--color-gray-a4);
+  color: var(--color-gray-12);
+}
+
+.closePlayerButton:focus-visible {
+  outline: 2px solid var(--accent-9);
+  outline-offset: -2px;
+}
+
+.videoPlayer {
+  width: 100%;
+  max-height: calc(96vh - 3rem);
+  aspect-ratio: 16 / 9;
+  background: #000;
+  --video-border: 0;
+  --video-border-radius: 0;
+}
+
+.playbackError {
+  position: absolute;
+  inset: 3rem 0 0;
+  z-index: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-direction: column;
+  gap: var(--space-xs);
+  padding: var(--space-lg);
+  background: rgb(0 0 0 / 82%);
+  color: var(--color-gray-11);
+  text-align: center;
+  pointer-events: none;
+}
+
+.playbackError strong {
+  color: var(--color-gray-12);
+  font-size: var(--text-lg);
+}
+
+@media (max-width: 768px) {
+  .playerDialog {
+    width: 100vw;
+    max-height: 100dvh;
+    margin: auto 0;
+    border-radius: 0;
+  }
+
+  .videoPlayer {
+    max-height: calc(100dvh - 3rem);
+  }
+}
+
 .logo {
   max-width: 33rem;
 }
@@ -131,6 +249,7 @@
   background: var(--color-gray-a3);
   padding: var(--space-md);
   border-radius: var(--border-radius-4);
+  margin-block-end: var(--space-3xl);
 }
 
 /* Related items */
@@ -141,14 +260,19 @@
   margin: 0 0 12px;
 }
 
-.rating {
-  font-family: serif;
-  font-weight: 700;
-  /* font-size: 1.1em; */
-  outline-offset: -5px !important;
-  outline-width: 2px !important;
-  backdrop-filter: none !important;
-  /* transform: scale(0.9); */
+.resolution {
+  background-color: #e79f00;
+  font-weight: 600;
+  color: #0f0f1a;
+}
+
+.playButton {
+  color: black;
+  background-color: var(--color-accent-9);
+}
+
+.optionsMenu {
+  align-self: end;
 }
 
 .btnEdit {

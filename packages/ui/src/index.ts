@@ -26,6 +26,7 @@ export {
 } from './components/dialog/ConfirmationDialog.jsx'
 export { default as Dialog } from './components/dialog/Dialog.jsx'
 export { default as Field } from './components/Field.js'
+export * from './components/flex/Flex.jsx'
 export { default as Flex } from './components/flex/Flex.jsx'
 export { default as HorizontalRule } from './components/HorizontalRule.js'
 export { default as Checkbox } from './components/input/Checkbox.jsx'

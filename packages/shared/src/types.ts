@@ -239,3 +239,15 @@ export type SortProps<T> = {
   field: keyof T
   order: 'asc' | 'desc'
 }
+
+export type PlayState = {
+  userId: string
+  mediaItemId: string
+  mediaItem?: MediaItem
+  position: number
+  duration?: number
+  status: 'playing' | 'stopped' | 'completed'
+  startedAt: Date
+  updatedAt: Date
+  stoppedAt?: Date
+}

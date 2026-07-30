@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { apiFetch } from '~/lib/apiFetch'
+import { type PlayStatus, savePlayState } from '~/lib/playState'
 import type { QueueItem } from '~/store/audioStore'
 import { useAudioStore } from '~/store/audioStore'
 import styles from './AudioPlayer.module.css'
@@ -67,31 +67,38 @@ export default function AudioPlayer() {
     setDuration(0)
   }, [currentTrack, setPlaying])
 
-  // Report progress every 10 seconds while playing
+  // Create a state row on play, refresh it while listening, and send one final
+  // position when playback stops or the track changes.
   useEffect(() => {
     if (!currentTrack) return
     const audio = audioRef.current
     if (!audio) return
 
     const trackId = currentTrack.id
+    const report = (status: PlayStatus) => {
+      savePlayState(trackId, audio.currentTime, audio.duration, status)
+    }
+    const handlePlayState = () => report('playing')
+    const handlePauseState = () => {
+      if (!audio.ended) report('stopped')
+    }
+    const handleEndedState = () => report('completed')
+
+    audio.addEventListener('play', handlePlayState)
+    audio.addEventListener('pause', handlePauseState)
+    audio.addEventListener('ended', handleEndedState)
+
     const interval = setInterval(() => {
-      if (!audio.paused && audio.duration > 0) {
-        const completed = audio.currentTime >= audio.duration - 1
-        apiFetch(`/api/media/${trackId}/progress`, {
-          method: 'PUT',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            position: Math.floor(audio.currentTime),
-            duration: Math.floor(audio.duration),
-            completed,
-          }),
-        }).catch(() => {
-          // best-effort save
-        })
-      }
+      if (!audio.paused) report('playing')
     }, 10000)
 
-    return () => clearInterval(interval)
+    return () => {
+      clearInterval(interval)
+      audio.removeEventListener('play', handlePlayState)
+      audio.removeEventListener('pause', handlePauseState)
+      audio.removeEventListener('ended', handleEndedState)
+      if (!audio.ended && audio.currentTime > 0) report('stopped')
+    }
   }, [currentTrack])
 
   if (queue.length === 0) return null

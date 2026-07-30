@@ -21,10 +21,32 @@
   }
 }
 
+.metrics {
+  > div {
+    padding: var(--space-md);
+    flex: 1;
+  }
+}
+
 .charts {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  display: flex;
+  /* display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); */
   gap: var(--space-md);
+}
+
+.eyebrow {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  text-transform: uppercase;
+  font-weight: 600;
+  letter-spacing: 0.05em;
+  text-align: center;
+  line-height: 1.2;
+}
+
+.big {
+  font-size: var(--text-2xl);
 }
 
 .chartTile {

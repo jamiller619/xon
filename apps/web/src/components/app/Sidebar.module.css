@@ -82,10 +82,10 @@
     .iconActive {
       display: contents;
     }
-  }
 
-  svg {
-    color: var(--color-accent-11);
+    svg {
+      color: var(--color-accent-11);
+    }
   }
 }
 

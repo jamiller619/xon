@@ -20,20 +20,19 @@ export default function MovieSubtitle({ data }: { data: MediaItem }) {
   const year = formatYear(data)
 
   return (
-    <Flex gap="4" className={styles.subtitle} align="center" justify="between">
+    <>
       {year && (
         <Flex gap="1" align="center">
           <CalendarIcon />
           <span>{year}</span>
         </Flex>
       )}
-      {rating && (
-        <Badge variant="ghost" className={styles.rating}>
-          {rating}
-        </Badge>
+      {rating && <Badge variant="ghost">{rating}</Badge>}
+      {genres && genres.length > 0 && (
+        <span>{genres.slice(0, 3).join(' · ')}</span>
       )}
       {data.fileMetadata.resolution && (
-        <Badge variant="primary">
+        <Badge className={styles.resolution}>
           <Resolution
             height={data.fileMetadata.resolution.height}
             width={data.fileMetadata.resolution.width}
@@ -45,9 +44,6 @@ export default function MovieSubtitle({ data }: { data: MediaItem }) {
         <ClockIcon />
         <span>{formatDuration(data)}</span>
       </Flex>
-      {genres && genres.length > 0 && (
-        <span>{genres.slice(0, 3).join(' · ')}</span>
-      )}
       {data.metadata.voteAverage && (
         <Flex gap="1" align="center">
           <StarIcon className={styles.ratingIcon as string} />
@@ -72,6 +68,6 @@ export default function MovieSubtitle({ data }: { data: MediaItem }) {
           <span className={styles.imdbRating}>{imdbRating}</span>
         </Flex>
       )}
-    </Flex>
+    </>
   )
 }

@@ -1,6 +1,7 @@
 import Hls from 'hls.js'
 import { useEffect, useRef, useState } from 'react'
 import { apiFetch, apiUrl } from '~/lib/apiFetch'
+import { type PlayStatus, savePlayState } from '~/lib/playState'
 import { useAuthStore } from '~/store/authStore'
 import styles from './VideoPlayer.module.css'
 
@@ -39,25 +40,6 @@ function browserCanPlay(mimeType: string): boolean {
   return result === 'probably' || result === 'maybe'
 }
 
-function saveProgress(
-  mediaId: string,
-  position: number,
-  duration: number,
-  completed: boolean,
-) {
-  apiFetch(`/api/media/${mediaId}/progress`, {
-    method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      position: Math.floor(position),
-      duration: Math.floor(duration),
-      completed,
-    }),
-  }).catch(() => {
-    // best-effort save
-  })
-}
-
 export default function VideoPlayer({
   mediaId,
   mimeType,
@@ -89,19 +71,36 @@ export default function VideoPlayer({
       })
   }, [mediaId])
 
-  // Report progress every 10 seconds while playing
+  // Create a state row on play, refresh it while watching, and send one final
+  // position when playback stops or the player closes.
   useEffect(() => {
     const video = videoRef.current
     if (!video) return
 
+    const report = (status: PlayStatus) => {
+      savePlayState(mediaId, video.currentTime, video.duration, status)
+    }
+    const handlePlay = () => report('playing')
+    const handlePause = () => {
+      if (!video.ended) report('stopped')
+    }
+    const handleEnded = () => report('completed')
+
+    video.addEventListener('play', handlePlay)
+    video.addEventListener('pause', handlePause)
+    video.addEventListener('ended', handleEnded)
+
     const interval = setInterval(() => {
-      if (!video.paused && video.duration > 0) {
-        const completed = video.currentTime >= video.duration - 1
-        saveProgress(mediaId, video.currentTime, video.duration, completed)
-      }
+      if (!video.paused) report('playing')
     }, 10000)
 
-    return () => clearInterval(interval)
+    return () => {
+      clearInterval(interval)
+      video.removeEventListener('play', handlePlay)
+      video.removeEventListener('pause', handlePause)
+      video.removeEventListener('ended', handleEnded)
+      if (!video.ended && video.currentTime > 0) report('stopped')
+    }
   }, [mediaId])
 
   // HLS setup via hls.js when native playback is not supported
@@ -234,7 +233,9 @@ export default function VideoPlayer({
       <video
         ref={videoRef}
         className={styles.video ?? ''}
-        {...(useHls ? {} : { src: apiUrl(`/api/media/${mediaId}/stream`) })}
+        {...(useHls
+          ? {}
+          : { src: apiUrl(`/api/media/${mediaId}/stream?client=web`) })}
         controls
         autoPlay
       >

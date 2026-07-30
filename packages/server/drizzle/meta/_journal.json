@@ -15,6 +15,13 @@
       "when": 1784977676883,
       "tag": "0001_mute_devos",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1785149209199,
+      "tag": "0002_vengeful_photon",
+      "breakpoints": true
     }
   ]
 }
