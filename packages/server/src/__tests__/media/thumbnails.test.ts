@@ -5,6 +5,12 @@ vi.mock('node:fs/promises', () => ({
   mkdir: vi.fn(),
 }))
 
+vi.mock('../../config.ts', () => ({
+  default: {
+    get: () => '/data',
+  },
+}))
+
 vi.mock('sharp', () => {
   const mockToFile = vi.fn().mockResolvedValue(undefined)
   const mockJpeg = vi.fn().mockReturnThis()
@@ -45,18 +51,19 @@ describe('generateThumbnails', () => {
       recursive: true,
     })
     expect(result).toEqual({
-      small: join('/data', 'thumbnails', 'item-123_small.jpg'),
-      medium: join('/data', 'thumbnails', 'item-123_medium.jpg'),
-      large: join('/data', 'thumbnails', 'item-123_large.jpg'),
+      small: 'thumbnails/item-123_small.jpg',
+      medium: 'thumbnails/item-123_medium.jpg',
+      large: 'thumbnails/item-123_large.jpg',
     })
   })
 
   it('calls sharp with correct resize options for all three sizes', async () => {
+    const toFile = vi.fn().mockResolvedValue(undefined)
     const sharpInstance = {
       clone: vi.fn().mockReturnValue({
         resize: vi.fn().mockReturnThis(),
         jpeg: vi.fn().mockReturnThis(),
-        toFile: vi.fn().mockResolvedValue(undefined),
+        toFile,
       }),
     }
     vi.mocked(sharp).mockReturnValueOnce(sharpInstance as never)
@@ -65,9 +72,14 @@ describe('generateThumbnails', () => {
 
     expect(sharp).toHaveBeenCalledWith('/images/photo.jpg')
     expect(sharpInstance.clone).toHaveBeenCalledTimes(3)
+    expect(toFile.mock.calls.map(([filePath]) => filePath)).toEqual([
+      '/data/thumbnails/item-abc_small.jpg',
+      '/data/thumbnails/item-abc_medium.jpg',
+      '/data/thumbnails/item-abc_large.jpg',
+    ])
   })
 
-  it('returns null when mkdir fails', async () => {
+  it('returns undefined when mkdir fails', async () => {
     vi.mocked(mkdir).mockRejectedValueOnce(new Error('Permission denied'))
 
     const result = await generateThumbnails(
@@ -76,10 +88,10 @@ describe('generateThumbnails', () => {
       '/data',
     )
 
-    expect(result).toBeNull()
+    expect(result).toBeUndefined()
   })
 
-  it('returns null when sharp processing fails', async () => {
+  it('returns undefined when sharp processing fails', async () => {
     const failingClone = {
       resize: vi.fn().mockReturnThis(),
       jpeg: vi.fn().mockReturnThis(),
@@ -95,7 +107,7 @@ describe('generateThumbnails', () => {
       '/data',
     )
 
-    expect(result).toBeNull()
+    expect(result).toBeUndefined()
   })
 
   it('uses mediaItemId in thumbnail filenames', async () => {
@@ -117,8 +129,8 @@ describe('generateThumbnails', () => {
       '/custom/data',
     )
 
-    expect(result?.small).toMatch(/^\/custom\/data\/thumbnails\//)
-    expect(result?.medium).toMatch(/^\/custom\/data\/thumbnails\//)
-    expect(result?.large).toMatch(/^\/custom\/data\/thumbnails\//)
+    expect(result?.small).toMatch(/^thumbnails\//)
+    expect(result?.medium).toMatch(/^thumbnails\//)
+    expect(result?.large).toMatch(/^thumbnails\//)
   })
 })

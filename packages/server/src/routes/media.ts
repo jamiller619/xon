@@ -29,7 +29,14 @@ import {
   mediaPlayStates,
 } from '../db/schema.ts'
 import { validate } from '../http/validate.ts'
+import {
+  isThumbnailCacheReference,
+  mediaImageCacheReference,
+  resolveCacheReference,
+  resolveLocalArtworkPath,
+} from '../media/cachePaths.ts'
 import { extractStreamTracks } from '../media/ffprobe.ts'
+import { resolveMediaItemFilePath } from '../media/mediaFilePaths.ts'
 import { convertRawToJpeg, isRawImage } from '../media/raw.ts'
 import {
   generateHlsPlaylist,
@@ -128,14 +135,34 @@ function artworkSources(images: ArtworkImages): string[] {
   return [...images.poster.map(imageSource), ...images.backdrop, ...images.logo]
 }
 
+function artworkCacheFiles(images: ArtworkImages): string[] {
+  return [
+    ...artworkSources(images),
+    ...images.poster.flatMap((entry) =>
+      typeof entry === 'string' ? [] : Object.values(entry.thumbnails ?? {}),
+    ),
+  ]
+}
+
 function cachedArtworkDirectory(mediaId: string): string {
   return resolve(join(config.get('appdata.cachePath'), 'media-images', mediaId))
 }
 
 function isCachedArtworkPath(source: string, mediaId: string): boolean {
+  const candidate = resolveLocalArtworkPath(source)
+  if (!candidate) return false
+
   const directory = cachedArtworkDirectory(mediaId)
-  const candidate = resolve(source)
-  return candidate.startsWith(`${directory}${sep}`)
+  if (candidate.startsWith(`${directory}${sep}`)) return true
+
+  if (!isThumbnailCacheReference(source)) return false
+  const thumbnailDirectory = resolve(
+    join(config.get('appdata.cachePath'), 'thumbnails'),
+  )
+  return (
+    candidate.startsWith(`${thumbnailDirectory}${sep}`) &&
+    basename(candidate).startsWith(`${mediaId}_`)
+  )
 }
 
 function normalizedArtworkImages(
@@ -286,8 +313,11 @@ async function readThumbnailSource(source: string): Promise<Buffer | null> {
   // Relative API URLs cannot be resolved safely from the headless server.
   if (source.startsWith('/api/')) return null
 
+  const filePath = resolveLocalArtworkPath(source)
+  if (!filePath) return null
+
   try {
-    return await readFile(source)
+    return await readFile(filePath)
   } catch {
     return null
   }
@@ -507,8 +537,9 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     let contentType = 'image/jpeg'
     const generatedPath = poster.thumbnails?.[size]
     if (generatedPath) {
+      const filePath = resolveLocalArtworkPath(generatedPath)
       try {
-        data = await readFile(generatedPath)
+        if (filePath) data = await readFile(filePath)
       } catch {
         // Fall back to the poster source and repair the display cache.
       }
@@ -554,9 +585,12 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       return c.redirect(source, 302)
     }
 
+    const filePath = resolveLocalArtworkPath(source)
+    if (!filePath) return c.json({ error: 'Image not found' }, 404)
+
     let data: Buffer
     try {
-      data = await readFile(source)
+      data = await readFile(filePath)
     } catch {
       return c.json({ error: 'Image not found' }, 404)
     }
@@ -599,14 +633,15 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
         .set({ metadata, updatedAt: new Date() })
         .where(eq(mediaItems.id, id))
 
-      const retained = new Set(artworkSources(nextImages))
-      const removedCacheFiles = artworkSources(previousImages).filter(
+      const retained = new Set(artworkCacheFiles(nextImages))
+      const removedCacheFiles = artworkCacheFiles(previousImages).filter(
         (source) => isCachedArtworkPath(source, id) && !retained.has(source),
       )
       await Promise.all(
-        removedCacheFiles.map((source) =>
-          unlink(source).catch(() => undefined),
-        ),
+        removedCacheFiles.flatMap((source) => {
+          const filePath = resolveLocalArtworkPath(source)
+          return filePath ? [unlink(filePath).catch(() => undefined)] : []
+        }),
       )
       void rebuildThumbnail(db, item.libraryId)
 
@@ -670,7 +705,8 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       )
     }
 
-    const posters = await generateVideoPosters(item.filePath, id)
+    const sourcePath = await resolveMediaItemFilePath(db, item)
+    const posters = await generateVideoPosters(sourcePath, id)
     if (!posters) {
       return c.json({ error: 'Could not create images from this video' }, 500)
     }
@@ -687,9 +723,10 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     } catch (error) {
       await Promise.all(
         posters.flatMap((poster) =>
-          Object.values(poster.thumbnails ?? {}).map((path) =>
-            unlink(path).catch(() => undefined),
-          ),
+          Object.values(poster.thumbnails ?? {}).flatMap((path) => {
+            const filePath = resolveLocalArtworkPath(path)
+            return filePath ? [unlink(filePath).catch(() => undefined)] : []
+          }),
         ),
       )
       throw error
@@ -713,7 +750,8 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       )
     }
 
-    const backdrops = await generateVideoBackdrops(item.filePath, id)
+    const sourcePath = await resolveMediaItemFilePath(db, item)
+    const backdrops = await generateVideoBackdrops(sourcePath, id)
     if (!backdrops) {
       return c.json({ error: 'Could not create images from this video' }, 500)
     }
@@ -729,7 +767,10 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
         .where(eq(mediaItems.id, id))
     } catch (error) {
       await Promise.all(
-        backdrops.map((path) => unlink(path).catch(() => undefined)),
+        backdrops.flatMap((path) => {
+          const filePath = resolveLocalArtworkPath(path)
+          return filePath ? [unlink(filePath).catch(() => undefined)] : []
+        }),
       )
       throw error
     }
@@ -769,14 +810,17 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       )
     }
 
-    const directory = cachedArtworkDirectory(id)
-    const destination = join(directory, `${randomUUID()}.${detected.ext}`)
-    await mkdir(directory, { recursive: true })
+    const reference = mediaImageCacheReference(
+      id,
+      `${randomUUID()}.${detected.ext}`,
+    )
+    const destination = resolveCacheReference(reference)
+    await mkdir(dirname(destination), { recursive: true })
     await writeFile(destination, data)
 
     const images = normalizedArtworkImages(item.metadata)
-    if (kind === 'poster') images.poster.push(destination)
-    else images[kind].push(destination)
+    if (kind === 'poster') images.poster.push(reference)
+    else images[kind].push(reference)
 
     const metadata = { ...item.metadata, images }
     try {
@@ -963,12 +1007,13 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
     const item = rows[0]
     if (!item) return c.json({ error: 'Not found' }, 404)
+    const sourcePath = await resolveMediaItemFilePath(db, item)
 
     // RAW camera images: convert to JPEG on-the-fly via dcraw
-    if (isRawImage(item.filePath)) {
+    if (isRawImage(sourcePath)) {
       let jpegBuffer: Buffer
       try {
-        jpegBuffer = await convertRawToJpeg(item.filePath)
+        jpegBuffer = await convertRawToJpeg(sourcePath)
       } catch (err) {
         const msg = err instanceof Error ? err.message : 'RAW conversion failed'
         return c.json({ error: msg }, 500)
@@ -1009,7 +1054,7 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       }
 
       const chunkSize = end - start + 1
-      const nodeStream = createReadStream(item.filePath, { start, end })
+      const nodeStream = createReadStream(sourcePath, { start, end })
       const webStream = Readable.toWeb(nodeStream) as ReadableStream
 
       return c.body(webStream, 206, {
@@ -1020,7 +1065,7 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       })
     }
 
-    const nodeStream = createReadStream(item.filePath)
+    const nodeStream = createReadStream(sourcePath)
     const webStream = Readable.toWeb(nodeStream) as ReadableStream
 
     return c.body(webStream, 200, {
@@ -1071,9 +1116,10 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
     const item = rows[0]
     if (!item) return c.json({ error: 'Not found' }, 404)
+    const sourcePath = await resolveMediaItemFilePath(db, item)
 
     const proc = spawnTranscodeSegment(
-      item.filePath,
+      sourcePath,
       segmentIndex,
       HLS_SEGMENT_DURATION,
     )
@@ -1112,8 +1158,9 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
     const item = rows[0]
     if (!item) return c.json({ error: 'Not found' }, 404)
+    const sourcePath = await resolveMediaItemFilePath(db, item)
 
-    const allTracks = await extractStreamTracks(item.filePath)
+    const allTracks = await extractStreamTracks(sourcePath)
     const audioTracks = allTracks
       .filter((t) => t.codecType === 'audio')
       .map((t) => ({
@@ -1133,8 +1180,8 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
         label: t.title ?? t.language ?? `Track ${t.index}`,
       }))
 
-    const dir = dirname(item.filePath)
-    const base = basename(item.filePath, extname(item.filePath))
+    const dir = dirname(sourcePath)
+    const base = basename(sourcePath, extname(sourcePath))
     let externalSubs: {
       type: 'external'
       file: string
@@ -1195,7 +1242,8 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     const item = rows[0]
     if (!item) return c.json({ error: 'Not found' }, 404)
 
-    const subtitlePath = join(dirname(item.filePath), file)
+    const sourcePath = await resolveMediaItemFilePath(db, item)
+    const subtitlePath = join(dirname(sourcePath), file)
     let content: Buffer
     try {
       content = await readFile(subtitlePath)

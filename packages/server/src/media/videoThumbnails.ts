@@ -6,6 +6,11 @@ import type { PosterImage } from '@xon/shared'
 import config from '../config.ts'
 import { createLogger } from '../logger.ts'
 import { ffmpegPath, ffprobePath } from './binaries.ts'
+import {
+  mediaImageCacheReference,
+  resolveCacheReference,
+  resolveLocalArtworkPath,
+} from './cachePaths.ts'
 import { type ThumbnailPaths, writeThumbnailImages } from './thumbnails.ts'
 
 const logger = createLogger('video-thumbnails')
@@ -245,10 +250,10 @@ export async function generateVideoBackdrops(
     return undefined
   }
 
-  const directory = join(
-    config.get('appdata.cachePath'),
-    'media-images',
-    mediaItemId,
+  const directory = dirname(
+    resolveCacheReference(
+      mediaImageCacheReference(mediaItemId, 'backdrop-placeholder.jpg'),
+    ),
   )
   try {
     await mkdir(directory, { recursive: true })
@@ -268,7 +273,11 @@ export async function generateVideoBackdrops(
   for (let index = 0; index < GENERATED_IMAGE_COUNT; index++) {
     const timestamp =
       duration * (RANDOM_FRAME_START + Math.random() * RANDOM_FRAME_RANGE)
-    const outputPath = join(directory, `backdrop_${randomUUID()}.jpg`)
+    const reference = mediaImageCacheReference(
+      mediaItemId,
+      `backdrop_${randomUUID()}.jpg`,
+    )
+    const outputPath = resolveCacheReference(reference)
 
     logger.debug(
       `Extracting backdrop frame ${index + 1} at ${timestamp.toFixed(1)}s: ${filePath}`,
@@ -284,7 +293,7 @@ export async function generateVideoBackdrops(
       await removeGeneratedFiles(backdrops)
       return undefined
     }
-    backdrops.push(outputPath)
+    backdrops.push(reference)
   }
 
   logger.debug(`Generated ${backdrops.length} video backdrops: ${filePath}`)
@@ -294,13 +303,19 @@ export async function generateVideoBackdrops(
 async function removeGeneratedPosters(posters: PosterImage[]): Promise<void> {
   await Promise.all(
     posters.flatMap((poster) =>
-      Object.values(poster.thumbnails ?? {}).map((path) =>
-        unlink(path).catch(() => undefined),
-      ),
+      Object.values(poster.thumbnails ?? {}).flatMap((path) => {
+        const filePath = resolveLocalArtworkPath(path)
+        return filePath ? [unlink(filePath).catch(() => undefined)] : []
+      }),
     ),
   )
 }
 
 async function removeGeneratedFiles(paths: string[]): Promise<void> {
-  await Promise.all(paths.map((path) => unlink(path).catch(() => undefined)))
+  await Promise.all(
+    paths.flatMap((path) => {
+      const filePath = resolveLocalArtworkPath(path)
+      return filePath ? [unlink(filePath).catch(() => undefined)] : []
+    }),
+  )
 }

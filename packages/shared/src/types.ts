@@ -106,6 +106,7 @@ export enum DataSourceType {
 }
 
 export interface DataSource {
+  id: string
   pluginId?: string | null | undefined
   type: DataSourceType
   path: string
@@ -204,6 +205,7 @@ export interface CastMember {
 export interface MediaItem {
   id: string
   libraryId: string
+  dataSourceId: string | null
   createdAt: Date
   updatedAt: Date | null
   filePath: string

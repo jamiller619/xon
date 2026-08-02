@@ -77,6 +77,7 @@ export class LocalDiscoverer implements MediaDiscoverer {
               isNew,
               libraryId,
               libraryType,
+              dataSource.id,
               dataSource.path,
             )
           }),

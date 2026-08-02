@@ -118,6 +118,7 @@ export type MediaJob = {
   libraryType: LibraryType
   mediaTypes: string[]
   dataSourcePath: string
+  dataSourceId: string
 
   // mutable state through pipeline
   data: MediaJobData

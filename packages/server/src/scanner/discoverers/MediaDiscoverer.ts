@@ -29,6 +29,7 @@ export async function createMediaJob(
   isNew: boolean,
   libraryId: string,
   libraryType: LibraryType,
+  dataSourceId: string,
   dataSourcePath: string,
 ): Promise<MediaJob> {
   const job: MediaJob = {
@@ -39,6 +40,7 @@ export async function createMediaJob(
     libraryId,
     libraryType,
     dataSourcePath,
+    dataSourceId,
     mediaTypes: [], // This will be filled in later based on the file extension
     data: {
       id: crypto.randomUUID(),
@@ -51,8 +53,12 @@ export async function createMediaJob(
   }
 
   const data =
-    (await mediaService.getMediaByPathAndLibrary(db, file.path, libraryId)) ??
-    {}
+    (await mediaService.getMediaBySourcePath(
+      db,
+      file.path,
+      dataSourceId,
+      dataSourcePath,
+    )) ?? {}
 
   return {
     ...job,

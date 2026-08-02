@@ -13,6 +13,11 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import sharp from 'sharp'
 import config from '../config.ts'
 import { createLogger } from '../logger.ts'
+import {
+  libraryImageCacheReference,
+  resolveCacheReference,
+  resolveLocalArtworkPath,
+} from '../media/cachePaths.ts'
 import { getMediaByLibraryId } from './libraryService.ts'
 
 const logger = createLogger('library-thumbnails')
@@ -40,7 +45,9 @@ async function fetchPoster(src: string): Promise<Buffer | null> {
       if (!res.ok) return null
       raw = Buffer.from(await res.arrayBuffer())
     } else {
-      raw = await readFile(src)
+      const filePath = resolveLocalArtworkPath(src)
+      if (!filePath) return null
+      raw = await readFile(filePath)
     }
     return await sharp(raw)
       .resize(CELL_W, CELL_H, { fit: 'cover', position: 'centre' })
@@ -131,11 +138,14 @@ export async function storeLibraryPoster(
   data: Buffer,
   extension = 'png',
 ): Promise<string> {
-  const directory = libraryImagesDir(libraryId)
-  const destination = join(directory, `${randomUUID()}.${extension}`)
-  await mkdir(directory, { recursive: true })
+  const reference = libraryImageCacheReference(
+    libraryId,
+    `${randomUUID()}.${extension}`,
+  )
+  const destination = resolveCacheReference(reference)
+  await mkdir(libraryImagesDir(libraryId), { recursive: true })
   await writeFile(destination, data)
-  return destination
+  return reference
 }
 
 export async function generateLibraryPoster(
@@ -152,7 +162,8 @@ export async function removeLibraryPoster(
   source: string,
 ): Promise<void> {
   const directory = libraryImagesDir(libraryId)
-  const candidate = resolve(source)
+  const candidate = resolveLocalArtworkPath(source)
+  if (!candidate) return
   if (!candidate.startsWith(`${directory}${sep}`)) return
   await unlink(candidate).catch(() => undefined)
 }

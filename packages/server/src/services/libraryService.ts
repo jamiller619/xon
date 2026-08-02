@@ -21,6 +21,10 @@ export async function createLibrary(
   await db.insert(libraries).values({
     ...data,
     id: libraryId,
+    dataSources: (data.dataSources ?? []).map((source) => ({
+      ...source,
+      id: source.id || crypto.randomUUID(),
+    })),
   })
 
   return libraryId
@@ -138,6 +142,12 @@ export async function updateLibrary(
   id: string,
   updates: Partial<Library>,
 ): Promise<Library | undefined> {
+  if (updates.dataSources) {
+    updates.dataSources = updates.dataSources.map((source) => ({
+      ...source,
+      id: source.id || crypto.randomUUID(),
+    }))
+  }
   await db.update(libraries).set(updates).where(eq(libraries.id, id))
 
   const results = await db.select().from(libraries).where(eq(libraries.id, id))

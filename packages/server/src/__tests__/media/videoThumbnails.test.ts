@@ -72,9 +72,9 @@ function setupSpawnMock(specs: ProcSpec[]): void {
 
 function thumbnailPaths(name: string) {
   return {
-    small: `/data/cache/thumbnails/${name}_small.jpg`,
-    medium: `/data/cache/thumbnails/${name}_medium.jpg`,
-    large: `/data/cache/thumbnails/${name}_large.jpg`,
+    small: `thumbnails/${name}_small.jpg`,
+    medium: `thumbnails/${name}_medium.jpg`,
+    large: `thumbnails/${name}_large.jpg`,
   }
 }
 
@@ -182,9 +182,7 @@ describe('generateVideoBackdrops', () => {
       )
     }
     for (const backdrop of result ?? []) {
-      expect(backdrop).toMatch(
-        /^\/data\/cache\/media-images\/media-1\/backdrop_.+\.jpg$/,
-      )
+      expect(backdrop).toMatch(/^media-images\/media-1\/backdrop_.+\.jpg$/)
     }
   })
 

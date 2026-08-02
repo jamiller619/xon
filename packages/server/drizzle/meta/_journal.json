@@ -22,6 +22,20 @@
       "when": 1785149209199,
       "tag": "0002_vengeful_photon",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1785686400000,
+      "tag": "0003_relative_thumbnail_paths",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1785772800000,
+      "tag": "0004_media_source_paths",
+      "breakpoints": true
     }
   ]
 }

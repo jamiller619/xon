@@ -192,9 +192,10 @@ function LibraryIcon({ type }: { type?: LibraryType | undefined }) {
     case LibraryType.Movies:
       return <MoviesIcon />
     case LibraryType.TVShows:
-    case LibraryType.Videos:
+    case LibraryType.HomeVideos:
       return <TVIcon />
     case LibraryType.Music:
+    case LibraryType.MusicVideos:
       return <MusicIcon />
     case LibraryType.Photos:
       return <PhotosIcon />

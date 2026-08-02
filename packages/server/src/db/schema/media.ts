@@ -11,6 +11,7 @@ export const mediaItems = sqliteTable(
     libraryId: text('library_id')
       .notNull()
       .references(() => libraries.id),
+    dataSourceId: text('data_source_id'),
     matchId: text('match_id'),
     matchIdSource: text('match_id_source'),
     filePath: text('file_path').notNull(),
@@ -37,6 +38,10 @@ export const mediaItems = sqliteTable(
   (table) => [
     index('media_items_media_type_idx').on(table.mediaType),
     index('media_items_file_path_idx').on(table.filePath),
+    index('media_items_data_source_path_idx').on(
+      table.dataSourceId,
+      table.filePath,
+    ),
     index('media_items_title_idx').on(table.title),
     index('media_items_library_id_idx').on(table.libraryId),
     index('media_items_created_at_idx').on(table.createdAt),

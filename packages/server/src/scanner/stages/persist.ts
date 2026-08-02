@@ -1,5 +1,7 @@
+import { DataSourceType } from '@xon/shared'
 import { and, eq } from 'drizzle-orm'
 import { mediaItems } from '../../db/schema.ts'
+import { relativeMediaFilePath } from '../../media/mediaFilePaths.ts'
 import type { MediaJob, PipelineContext, PipelineStage } from '../pipeline.ts'
 
 export default {
@@ -13,13 +15,18 @@ export default {
 } satisfies PipelineStage
 
 async function saveChangedMediaItem(ctx: PipelineContext, job: MediaJob) {
+  const storedPath = relativeMediaFilePath(job.file.path, {
+    id: job.dataSourceId,
+    type: DataSourceType.local,
+    path: job.dataSourcePath,
+  })
   const [mediaItem] = await ctx.db
     .select()
     .from(mediaItems)
     .where(
       and(
-        eq(mediaItems.filePath, job.file.path),
-        eq(mediaItems.libraryId, job.libraryId),
+        eq(mediaItems.filePath, storedPath),
+        eq(mediaItems.dataSourceId, job.dataSourceId),
       ),
     )
 
@@ -111,9 +118,14 @@ async function saveNewMediaItem(ctx: PipelineContext, job: MediaJob) {
     await tx.insert(mediaItems).values({
       id: job.data.id,
       libraryId: job.libraryId,
+      dataSourceId: job.dataSourceId,
       matchId: job.data.matchId,
       matchIdSource: job.data.matchIdSource,
-      filePath: job.file.path,
+      filePath: relativeMediaFilePath(job.file.path, {
+        id: job.dataSourceId,
+        type: DataSourceType.local,
+        path: job.dataSourcePath,
+      }),
       fileSize: job.file.size,
       fileMetadata: job.data.fileMetadata ?? {},
       mediaType: job.data.mediaType ?? job.file.mediaType,

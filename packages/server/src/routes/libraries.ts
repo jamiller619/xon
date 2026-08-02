@@ -12,6 +12,7 @@ import { z } from 'zod'
 import { requireAuth } from '../auth/middleware.ts'
 import { appCache, computeETag } from '../cache.ts'
 import { validate } from '../http/validate.ts'
+import { resolveLocalArtworkPath } from '../media/cachePaths.ts'
 import type { ScannerHandle } from '../scanner/scannerHandle.ts'
 import * as libraryService from '../services/libraryService.ts'
 import {
@@ -52,6 +53,7 @@ const createLibrarySchema = z.object({
   scanSchedule: z.string().optional(),
   dataSources: z.array(
     z.object({
+      id: z.string().min(1).optional(),
       path: z.string().min(1),
       type: z.enum(DataSourceType),
       pluginId: z.string().optional(),
@@ -67,6 +69,7 @@ const updateLibrarySchema = z.object({
   dataSources: z
     .array(
       z.object({
+        id: z.string().min(1).optional(),
         path: z.string().min(1).optional(),
         type: z.enum(DataSourceType).optional(),
         pluginId: z.string().optional(),
@@ -94,6 +97,10 @@ export function makeLibrariesRouter(
 
         const id = await libraryService.createLibrary(db, {
           ...body,
+          dataSources: body.dataSources.map((source) => ({
+            ...source,
+            id: source.id ?? crypto.randomUUID(),
+          })),
           ownerId: user.id,
         })
 
@@ -161,6 +168,25 @@ export function makeLibrariesRouter(
         }
         if (body.name != null) updates.name = body.name
         if (body.description != null) updates.description = body.description
+        if (body.dataSources != null) {
+          updates.dataSources = body.dataSources.map((source, index) => {
+            const prior = source.id
+              ? existing.dataSources.find((item) => item.id === source.id)
+              : (existing.dataSources.find(
+                  (item) =>
+                    item.type === source.type &&
+                    item.path === source.path &&
+                    item.pluginId === source.pluginId,
+                ) ?? existing.dataSources[index])
+            return {
+              ...prior,
+              ...source,
+              id: source.id ?? prior?.id ?? crypto.randomUUID(),
+              path: source.path ?? prior?.path ?? '',
+              type: source.type ?? prior?.type ?? DataSourceType.local,
+            }
+          })
+        }
 
         const updated = await libraryService.updateLibrary(db, id, updates)
 
@@ -260,7 +286,9 @@ export function makeLibrariesRouter(
       if (!source) return c.json({ error: 'Unknown image' }, 404)
 
       try {
-        const data = await readFile(source)
+        const filePath = resolveLocalArtworkPath(source)
+        if (!filePath) return c.json({ error: 'Image not found' }, 404)
+        const data = await readFile(filePath)
         const detected = await fileTypeFromBuffer(data)
         if (!detected || !SUPPORTED_LIBRARY_IMAGE_TYPES.has(detected.mime)) {
           return c.json({ error: 'Unsupported image' }, 415)

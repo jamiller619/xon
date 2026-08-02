@@ -5,6 +5,10 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import mime from 'mime-types'
 import { mediaItems } from '../db/schema.ts'
 import { createLogger } from '../logger.ts'
+import {
+  findMediaDataSource,
+  resolveMediaFilePath,
+} from '../media/mediaFilePaths.ts'
 import * as libraryService from '../services/libraryService.ts'
 import { LocalDiscoverer } from './discoverers/LocalDiscoverer.ts'
 import type {
@@ -100,7 +104,7 @@ export async function scanLibrary(
     }
 
     onProgress?.({
-      dataSourceId: dataSource.path,
+      dataSourceId: dataSource.id,
       phase: 'discovering',
       discoveredFiles: 0,
       totalFiles: 0,
@@ -123,7 +127,7 @@ export async function scanLibrary(
         `No new or changed files found in data source: ${sourceLabel}`,
       )
       onProgress?.({
-        dataSourceId: dataSource.path,
+        dataSourceId: dataSource.id,
         phase: 'processing',
         discoveredFiles: discovery.totalDiscovered,
         totalFiles: 0,
@@ -141,7 +145,7 @@ export async function scanLibrary(
     }
 
     onProgress?.({
-      dataSourceId: dataSource.path,
+      dataSourceId: dataSource.id,
       phase: 'processing',
       discoveredFiles: discovery.totalDiscovered,
       totalFiles,
@@ -160,7 +164,7 @@ export async function scanLibrary(
     if (onProgress) {
       ctx.onJobComplete = (processed, currentFile) => {
         onProgress({
-          dataSourceId: dataSource.path,
+          dataSourceId: dataSource.id,
           phase: 'processing',
           discoveredFiles: discovery.totalDiscovered,
           totalFiles,
@@ -231,19 +235,19 @@ export async function refreshMetadata(
     throw new Error(`Media item not found: ${mediaItemId}`)
   }
 
-  const localSourcePaths = library.dataSources
-    .filter((ds) => ds.type === DataSourceType.local)
-    .map((ds) => toLocalPath(ds.path))
-
   const jobs: MediaJob[] = items.map((item) => {
+    const source = findMediaDataSource(library.dataSources, item.dataSourceId)
+    const absoluteFilePath = source
+      ? resolveMediaFilePath(item.filePath, source)
+      : item.filePath
     const file: FileEntry = {
-      id: item.filePath,
-      path: item.filePath,
-      name: basename(item.filePath),
+      id: absoluteFilePath,
+      path: absoluteFilePath,
+      name: basename(absoluteFilePath),
       size: item.fileSize,
       createdAt: item.createdAt,
       modifiedAt: item.updatedAt ?? item.createdAt,
-      ext: extname(item.filePath).toLowerCase(),
+      ext: extname(absoluteFilePath).toLowerCase(),
       mediaType: item.mediaType,
     }
 
@@ -260,8 +264,8 @@ export async function refreshMetadata(
       errors: [],
       libraryId,
       libraryType: library.type,
-      dataSourcePath:
-        localSourcePaths.find((p) => item.filePath.startsWith(p)) ?? '',
+      dataSourceId: source?.id ?? '',
+      dataSourcePath: source ? toLocalPath(source.path) : '',
       mediaTypes: [],
       data: {
         id: item.id,

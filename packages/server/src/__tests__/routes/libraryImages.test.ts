@@ -8,6 +8,10 @@ const updateLibrary = vi.hoisted(() => vi.fn())
 const generateLibraryPoster = vi.hoisted(() => vi.fn())
 const removeLibraryPoster = vi.hoisted(() => vi.fn())
 
+vi.mock('../../auth/middleware.ts', () => ({
+  requireAuth: () => async (_c: unknown, next: () => Promise<void>) => next(),
+}))
+
 vi.mock('../../services/libraryService.ts', () => ({
   getLibraryById,
   updateLibrary,
@@ -26,7 +30,7 @@ const library = {
   id: 'library-1',
   name: 'Movies',
   images: {
-    poster: ['/cache/library-images/library-1/first.png'],
+    poster: ['library-images/library-1/first.png'],
   },
 }
 
@@ -51,7 +55,7 @@ describe('Library artwork routes', () => {
 
   it('appends a newly generated poster-grid image', async () => {
     generateLibraryPoster.mockResolvedValue(
-      '/cache/library-images/library-1/generated.png',
+      'library-images/library-1/generated.png',
     )
 
     const response = await app.request(
@@ -63,8 +67,8 @@ describe('Library artwork routes', () => {
     await expect(response.json()).resolves.toEqual({
       images: {
         poster: [
-          '/cache/library-images/library-1/first.png',
-          '/cache/library-images/library-1/generated.png',
+          'library-images/library-1/first.png',
+          'library-images/library-1/generated.png',
         ],
       },
     })
@@ -74,8 +78,8 @@ describe('Library artwork routes', () => {
       expect.objectContaining({
         images: {
           poster: [
-            '/cache/library-images/library-1/first.png',
-            '/cache/library-images/library-1/generated.png',
+            'library-images/library-1/first.png',
+            'library-images/library-1/generated.png',
           ],
         },
       }),
@@ -92,7 +96,7 @@ describe('Library artwork routes', () => {
     expect(response.status).toBe(200)
     expect(removeLibraryPoster).toHaveBeenCalledWith(
       'library-1',
-      '/cache/library-images/library-1/first.png',
+      'library-images/library-1/first.png',
     )
   })
 

@@ -1,4 +1,10 @@
-import type { Library, MediaItem, PageProps, SortProps } from '@xon/shared'
+import {
+  DataSourceType,
+  type Library,
+  type MediaItem,
+  type PageProps,
+  type SortProps,
+} from '@xon/shared'
 import {
   and,
   asc,
@@ -11,6 +17,7 @@ import {
 } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { libraries, mediaItems, people, peopleMedia } from '../db/schema.ts'
+import { relativeMediaFilePath } from '../media/mediaFilePaths.ts'
 import * as libraryService from './libraryService.ts'
 
 export async function getMediaById(
@@ -68,18 +75,24 @@ export async function getMediaByIdWithLibrary(
   }
 }
 
-export async function getMediaByPathAndLibrary(
+export async function getMediaBySourcePath(
   db: LibSQLDatabase,
-  filePath: string,
-  libraryId: string,
+  absoluteFilePath: string,
+  dataSourceId: string,
+  dataSourcePath: string,
 ): Promise<MediaItem | undefined> {
+  const filePath = relativeMediaFilePath(absoluteFilePath, {
+    id: dataSourceId,
+    type: DataSourceType.local,
+    path: dataSourcePath,
+  })
   return db
     .select()
     .from(mediaItems)
     .where(
       and(
         eq(mediaItems.filePath, filePath),
-        eq(mediaItems.libraryId, libraryId),
+        eq(mediaItems.dataSourceId, dataSourceId),
       ),
     )
     .get()
@@ -106,6 +119,7 @@ export async function getMediaByUser(
       createdAt: mediaItems.createdAt,
       updatedAt: mediaItems.updatedAt,
       libraryId: mediaItems.libraryId,
+      dataSourceId: mediaItems.dataSourceId,
       filePath: mediaItems.filePath,
       fileSize: mediaItems.fileSize,
       fileMetadata: mediaItems.fileMetadata,
@@ -152,6 +166,7 @@ export async function getFeaturedMedia(
       createdAt: mediaItems.createdAt,
       updatedAt: mediaItems.updatedAt,
       libraryId: mediaItems.libraryId,
+      dataSourceId: mediaItems.dataSourceId,
       filePath: mediaItems.filePath,
       fileSize: mediaItems.fileSize,
       fileMetadata: mediaItems.fileMetadata,
@@ -203,6 +218,7 @@ export async function getRelatedMedia(
   const source = await db
     .select({
       libraryId: mediaItems.libraryId,
+      dataSourceId: mediaItems.dataSourceId,
       metadata: mediaItems.metadata,
     })
     .from(mediaItems)
@@ -229,6 +245,7 @@ export async function getRelatedMedia(
       createdAt: mediaItems.createdAt,
       updatedAt: mediaItems.updatedAt,
       libraryId: mediaItems.libraryId,
+      dataSourceId: mediaItems.dataSourceId,
       filePath: mediaItems.filePath,
       fileSize: mediaItems.fileSize,
       fileMetadata: mediaItems.fileMetadata,

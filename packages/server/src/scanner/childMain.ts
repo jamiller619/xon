@@ -85,7 +85,7 @@ async function main(): Promise<void> {
       (config.getStore() as unknown as Record<string, unknown>)[key],
   })
 
-  setPluginAppDataPath(config.get('appdata.path'))
+  setPluginAppDataPath(config.get('appdata.cachePath'))
 
   logger.log(`Loading bundled plugins from ${BUNDLED_PLUGINS_DIR}`)
   await discoverAndActivatePlugins(BUNDLED_PLUGINS_DIR)

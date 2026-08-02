@@ -1,8 +1,12 @@
 import { mkdir } from 'node:fs/promises'
-import path, { join } from 'node:path'
+import path from 'node:path'
 import sharp from 'sharp'
 import config from '../config.ts'
 import { createLogger } from '../logger.ts'
+import {
+  resolveThumbnailCacheReference,
+  thumbnailCacheReference,
+} from './cachePaths.ts'
 import { convertRawToJpeg, isRawImage } from './raw.ts'
 
 const logger = createLogger('thumbnails')
@@ -49,9 +53,14 @@ export async function writeThumbnailImages(
   }
 
   const paths: ThumbnailPaths = {
-    small: join(thumbnailDir, `${thumbnailFileName}_small.jpg`),
-    medium: join(thumbnailDir, `${thumbnailFileName}_medium.jpg`),
-    large: join(thumbnailDir, `${thumbnailFileName}_large.jpg`),
+    small: thumbnailCacheReference(`${thumbnailFileName}_small.jpg`),
+    medium: thumbnailCacheReference(`${thumbnailFileName}_medium.jpg`),
+    large: thumbnailCacheReference(`${thumbnailFileName}_large.jpg`),
+  }
+  const outputPaths: ThumbnailPaths = {
+    small: resolveThumbnailCacheReference(paths.small),
+    medium: resolveThumbnailCacheReference(paths.medium),
+    large: resolveThumbnailCacheReference(paths.large),
   }
 
   try {
@@ -73,7 +82,7 @@ export async function writeThumbnailImages(
           withoutEnlargement: true,
         })
         .jpeg({ quality: 80 })
-        .toFile(paths.small),
+        .toFile(outputPaths.small),
       img
         .clone()
         .resize(THUMBNAIL_SIZES.medium, THUMBNAIL_SIZES.medium, {
@@ -81,7 +90,7 @@ export async function writeThumbnailImages(
           withoutEnlargement: true,
         })
         .jpeg({ quality: 80 })
-        .toFile(paths.medium),
+        .toFile(outputPaths.medium),
       img
         .clone()
         .resize(THUMBNAIL_SIZES.large, THUMBNAIL_SIZES.large, {
@@ -89,7 +98,7 @@ export async function writeThumbnailImages(
           withoutEnlargement: true,
         })
         .jpeg({ quality: 80 })
-        .toFile(paths.large),
+        .toFile(outputPaths.large),
     ])
   } catch (err) {
     logger.error('Thumbnail resize failed', {

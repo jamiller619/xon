@@ -1,14 +1,14 @@
 import { mkdir, mkdtemp, rm, writeFile } from 'node:fs/promises'
 import { tmpdir } from 'node:os'
 import { join } from 'node:path'
-import { LibraryType } from '@xon/shared'
+import { DataSourceType, LibraryType } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import type { DiscoveryContext } from '../../scanner/discoverers/MediaDiscoverer.ts'
 import {
   isSampleFile,
   LocalDiscoverer,
 } from '../../scanner/discoverers/LocalDiscoverer.ts'
+import type { DiscoveryContext } from '../../scanner/discoverers/MediaDiscoverer.ts'
 
 describe('isSampleFile', () => {
   it.each([
@@ -49,7 +49,11 @@ describe('LocalDiscoverer sample filtering', () => {
       // file in these tests is new, so a stub is safe
       db: {} as LibSQLDatabase,
       libraryId: crypto.randomUUID(),
-      dataSource: { path: tmpDir } as DiscoveryContext['dataSource'],
+      dataSource: {
+        id: 'source-1',
+        type: DataSourceType.local,
+        path: tmpDir,
+      },
       extSet: new Set(['.mkv', '.mp4', '.mp3']),
       libraryType,
     }
@@ -68,6 +72,7 @@ describe('LocalDiscoverer sample filtering', () => {
 
     expect(discovery.totalDiscovered).toBe(1)
     expect(discovery.jobs.map((j) => j.file.name)).toEqual(['movie.mkv'])
+    expect(discovery.jobs[0]?.dataSourceId).toBe('source-1')
   })
 
   it('does not filter sample-named files in music libraries', async () => {

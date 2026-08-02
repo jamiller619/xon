@@ -1,5 +1,5 @@
 import fsp from 'node:fs/promises'
-import path from 'node:path'
+import { dirname } from 'node:path'
 import {
   LibraryType,
   type Metadata,
@@ -8,8 +8,11 @@ import {
 } from '@xon/shared'
 import { eq } from 'drizzle-orm'
 import mime from 'mime-types'
-import config from '../../config.ts'
 import { mediaItems } from '../../db/schema.ts'
+import {
+  mediaImageCacheReference,
+  resolveCacheReference,
+} from '../../media/cachePaths.ts'
 import { extractAlbumArt } from '../../media/musictags.ts'
 import {
   generateThumbnails,
@@ -124,16 +127,15 @@ async function saveEmbeddedArt(job: MediaJob) {
   if (!art) return
 
   const buffer = Buffer.from(art.data)
-  const imagesDir = path.join(config.get('appdata.path'), 'images')
-
-  await fsp.mkdir(imagesDir, { recursive: true })
-
   const ext = mime.extension(art.format) || 'jpg'
-  const posterPath = path.join(imagesDir, `${job.data.id}_cover.${ext}`)
+  const posterReference = mediaImageCacheReference(job.data.id, `cover.${ext}`)
+  const posterPath = resolveCacheReference(posterReference)
+
+  await fsp.mkdir(dirname(posterPath), { recursive: true })
 
   await fsp.writeFile(posterPath, buffer)
 
   const thumbs = await writeThumbnailImages(job.data.id, buffer)
 
-  return { posterPath, thumbs }
+  return { posterPath: posterReference, thumbs }
 }

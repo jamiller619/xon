@@ -3,6 +3,7 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import sharp from 'sharp'
 import { mediaItems } from '../db/schema.ts'
 import * as libraryService from '../services/libraryService.ts'
+import { resolveMediaItemFilePath } from './mediaFilePaths.ts'
 // import { duplicateCandidates, imageHashes, mediaItems } from '../db/schema.ts'
 // import { isImage } from './exiftool.ts'
 
@@ -175,7 +176,9 @@ export async function scanLibraryForDuplicates(
     []
   for (const item of imageItems) {
     if (!hashMap.has(item.id)) {
-      const hash = await computePerceptualHash(item.filePath)
+      const hash = await computePerceptualHash(
+        await resolveMediaItemFilePath(db, item),
+      )
       if (hash) {
         hashMap.set(item.id, hash)
         newHashRows.push({

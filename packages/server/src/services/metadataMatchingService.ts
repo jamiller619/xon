@@ -7,6 +7,10 @@ import type { MediaType, Metadata, PosterImage } from '@xon/shared'
 import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { libraries, mediaItems } from '../db/schema.ts'
+import {
+  findMediaDataSource,
+  resolveMediaFilePath,
+} from '../media/mediaFilePaths.ts'
 import { mergeMetadata } from '../media/metadataMerge.ts'
 import {
   getPluginsByCategory,
@@ -47,14 +51,18 @@ export async function getMatchContext(
   if (!item) return
 
   const library = await db
-    .select({ type: libraries.type })
+    .select({ type: libraries.type, dataSources: libraries.dataSources })
     .from(libraries)
     .where(eq(libraries.id, item.libraryId))
     .get()
   if (!library) return
 
+  const source = findMediaDataSource(library.dataSources, item.dataSourceId)
+  const resolvedItem = source
+    ? { ...item, filePath: resolveMediaFilePath(item.filePath, source) }
+    : item
   const mediaType = item.mediaType.split('/')[0] as MediaType.MainType
-  return { item, libraryType: library.type, mediaType }
+  return { item: resolvedItem, libraryType: library.type, mediaType }
 }
 
 function applicablePlugins(

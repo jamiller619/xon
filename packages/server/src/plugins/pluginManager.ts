@@ -11,6 +11,7 @@ import type {
 } from '@xon/plugin-sdk'
 import { BasePlugin, pluginSettingKey } from '@xon/plugin-sdk'
 import type { PluginCategory } from '@xon/shared'
+import { cacheReference } from '../media/cachePaths.ts'
 import { discoverPluginManifests } from './pluginLoader.ts'
 import { createSandboxedFetch } from './pluginSandbox.ts'
 
@@ -95,12 +96,12 @@ export function setPluginSettingsSource(source: PluginSettingsSource): void {
 let _appDataPath: string | undefined
 
 /**
- * Set the configured application data directory (config `appdata.path`).
- * Backs the `context.images` API, which saves into `<appdata>/images`.
+ * Set the configured application cache directory (`appdata.cachePath`).
+ * Backs the `context.images` API, which returns portable cache references.
  * Without one, `context.images.save` rejects.
  */
-export function setPluginAppDataPath(appDataPath: string): void {
-  _appDataPath = appDataPath
+export function setPluginAppDataPath(cachePath: string): void {
+  _appDataPath = cachePath
 }
 
 /** Emit a plugin event to all registered hooks. Errors in hooks are logged, not thrown. */
@@ -142,11 +143,16 @@ function buildContext(entry: PluginEntry): PluginContext {
           )
         }
 
-        const imagesDir = join(_appDataPath, 'images')
-        const dest = join(imagesDir, basename(new URL(url).pathname))
+        const reference = cacheReference(
+          'plugin-images',
+          entry.manifest.id,
+          basename(new URL(url).pathname),
+        )
+        const imagesDir = join(_appDataPath, 'plugin-images', entry.manifest.id)
+        const dest = join(_appDataPath, ...reference.split('/'))
 
         const existing = await stat(dest).catch(() => null)
-        if (existing?.isFile()) return dest
+        if (existing?.isFile()) return reference
 
         const res = await sandboxedFetch(url)
         if (!res.ok) {
@@ -156,7 +162,7 @@ function buildContext(entry: PluginEntry): PluginContext {
         await mkdir(imagesDir, { recursive: true })
         await writeFile(dest, Buffer.from(await res.arrayBuffer()))
 
-        return dest
+        return reference
       },
     },
     on<E extends PluginEvent>(

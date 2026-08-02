@@ -146,21 +146,19 @@ describe('Media artwork routes', () => {
     }
     const saved = body.images.poster.at(-1)
     expect(typeof saved).toBe('string')
-    expect(saved).toMatch(
-      new RegExp(
-        `^${cachePath.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')}/media-images/media-1/`,
-      ),
+    expect(saved).toMatch(/^media-images\/media-1\//)
+    await expect(readFile(join(cachePath, saved as string))).resolves.toEqual(
+      png,
     )
-    await expect(readFile(saved as string)).resolves.toEqual(png)
   })
 
   it('appends three posters generated from the video', async () => {
     const posters = [1, 2, 3].map((index) => ({
-      src: `/cache/poster-${index}_large.jpg`,
+      src: `thumbnails/media-1_poster-${index}_large.jpg`,
       thumbnails: {
-        small: `/cache/poster-${index}_small.jpg`,
-        medium: `/cache/poster-${index}_medium.jpg`,
-        large: `/cache/poster-${index}_large.jpg`,
+        small: `thumbnails/media-1_poster-${index}_small.jpg`,
+        medium: `thumbnails/media-1_poster-${index}_medium.jpg`,
+        large: `thumbnails/media-1_poster-${index}_large.jpg`,
       },
     }))
     generateVideoPosters.mockResolvedValueOnce(posters)
@@ -253,7 +251,7 @@ describe('Media artwork routes', () => {
 
   it('appends three backdrops generated from the video', async () => {
     const backdrops = [1, 2, 3].map(
-      (index) => `${cachePath}/media-images/media-1/backdrop-${index}.jpg`,
+      (index) => `media-images/media-1/backdrop-${index}.jpg`,
     )
     generateVideoBackdrops.mockResolvedValueOnce(backdrops)
 
@@ -298,6 +296,29 @@ describe('Media artwork routes', () => {
     )
   })
 
+  it('serves a cache-root-relative generated poster', async () => {
+    const directory = join(cachePath, 'thumbnails')
+    const imagePath = join(directory, 'media-1_poster_large.png')
+    const png = Buffer.from(
+      '89504e470d0a1a0a0000000d4948445200000001000000010806000000',
+      'hex',
+    )
+    await mkdir(directory, { recursive: true })
+    await writeFile(imagePath, png)
+    item.metadata = {
+      images: {
+        poster: [{ src: 'thumbnails/media-1_poster_large.png' }],
+        backdrop: [],
+        logo: [],
+      },
+    }
+
+    const response = await app.request('/media/media-1/images/poster/0')
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Content-Type')).toBe('image/png')
+  })
+
   it('removes an unreferenced uploaded cache file', async () => {
     const directory = join(cachePath, 'media-images', item.id)
     const imagePath = join(directory, 'old.png')
@@ -315,5 +336,43 @@ describe('Media artwork routes', () => {
 
     expect(response.status).toBe(200)
     await expect(access(imagePath)).rejects.toThrow()
+  })
+
+  it('removes every file for an unreferenced generated poster', async () => {
+    const directory = join(cachePath, 'thumbnails')
+    const references = {
+      small: 'thumbnails/media-1_poster_small.jpg',
+      medium: 'thumbnails/media-1_poster_medium.jpg',
+      large: 'thumbnails/media-1_poster_large.jpg',
+    }
+    await mkdir(directory, { recursive: true })
+    await Promise.all(
+      Object.values(references).map((reference) =>
+        writeFile(join(cachePath, reference), 'generated image'),
+      ),
+    )
+    item.metadata = {
+      images: {
+        poster: [
+          {
+            src: references.large,
+            thumbnails: references,
+          },
+        ],
+        backdrop: [],
+        logo: [],
+      },
+    }
+
+    const response = await app.request('/media/media-1/images', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ poster: [], backdrop: [], logo: [] }),
+    })
+
+    expect(response.status).toBe(200)
+    for (const reference of Object.values(references)) {
+      await expect(access(join(cachePath, reference))).rejects.toThrow()
+    }
   })
 })
