@@ -1,20 +1,10 @@
 import { availableParallelism } from 'node:os'
-import type { LibraryType, MediaItem } from '@xon/shared'
+import { LibraryType, type MediaItem } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import pLimit from 'p-limit'
 import type { Logger } from '../logger.ts'
 import type { FileEntry } from './fileEntry.ts'
 import * as stage from './stages.ts'
-
-const stages: PipelineStage[] = [
-  stage.drm,
-  stage.title,
-  stage.fileMetadata,
-  stage.libraryMetadata,
-  stage.persist,
-  stage.person,
-  stage.thumbnail,
-]
 
 /**
  * Stages for a metadata refresh of already-persisted items: re-runs metadata
@@ -30,11 +20,33 @@ export const refreshStages: PipelineStage[] = [
   stage.thumbnail,
 ]
 
-export async function runPipeline(
-  ctx: PipelineContext,
-  jobs: MediaJob[],
-  stageList: PipelineStage[] = stages,
-) {
+const stagesByLibraryType: Record<LibraryType, PipelineStage[]> = {
+  [LibraryType.Movies]: [
+    stage.drm,
+    stage.title,
+    stage.fileMetadata,
+    stage.libraryMetadata,
+    stage.persist,
+    stage.person,
+    stage.thumbnail,
+  ],
+  [LibraryType.Photos]: [stage.fileMetadata, stage.persist, stage.thumbnail],
+  [LibraryType.TVShows]: [
+    stage.drm,
+    stage.title,
+    stage.fileMetadata,
+    stage.libraryMetadata,
+    stage.persist,
+    stage.person,
+    stage.thumbnail,
+  ],
+  [LibraryType.Music]: [stage.fileMetadata, stage.persist],
+  [LibraryType.HomeVideos]: [stage.fileMetadata, stage.persist],
+  [LibraryType.MusicVideos]: [stage.fileMetadata, stage.persist],
+}
+
+export async function runPipeline(ctx: PipelineContext, jobs: MediaJob[]) {
+  const stageList = stagesByLibraryType[ctx.libraryType]
   const limit = pLimit(availableParallelism())
   let processed = 0
 
@@ -74,6 +86,7 @@ export async function runPipeline(
 export type PipelineContext = {
   db: LibSQLDatabase
   libraryId: string
+  libraryType: LibraryType
   logger: Logger
   onJobComplete?: (processed: number, currentFile: string) => void
 }

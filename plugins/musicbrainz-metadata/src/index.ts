@@ -53,21 +53,21 @@ export class MusicBrainzMetadataPlugin extends MetadataSourcePlugin {
     // )
 
     // Route: GET /api/plugins/musicbrainz-metadata/metadata/:mediaId
-    context.registerRoute({
-      method: 'GET',
-      path: '/metadata/:mediaId',
-      handler: async (c) => {
-        const mediaId = c.req.param('mediaId') as string
-        const metadata = await this.getStoredMetadata(mediaId)
-        if (!metadata) {
-          return c.json({ error: 'No metadata found' }, 404)
-        }
-        return c.json(metadata)
-      },
-    })
+    // context.registerRoute({
+    //   method: 'GET',
+    //   path: '/metadata/:mediaId',
+    //   handler: async (c) => {
+    //     const mediaId = c.req.param('mediaId') as string
+    //     const metadata = await this.getStoredMetadata(mediaId)
+    //     if (!metadata) {
+    //       return c.json({ error: 'No metadata found' }, 404)
+    //     }
+    //     return c.json(metadata)
+    //   },
+    // })
   }
 
-  async enrich(filePath: string): Promise<Metadata | undefined | null> {
+  async enrich(filePath: string): Promise<Metadata | undefined> {
     if (!this.client || !this.ctx) return
 
     const parsed = parseMusicPath(filePath)

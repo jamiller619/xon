@@ -8,12 +8,14 @@
  * --menu-* tokens in theme/variables.css, shared with ContextMenu.
  */
 .select {
+  --height: var(--form-control-height);
   position: relative;
   display: flex;
   align-items: center;
   gap: var(--space-xs);
-  padding: var(--space-md);
-  max-height: 48px;
+  /* padding: var(--space-md); */
+  /* max-height: 48px; */
+  height: var(--height);
   border-radius: var(--border-radius-3);
   corner-shape: var(--corner-shape);
   border: none;
@@ -24,7 +26,7 @@
   backdrop-filter: blur(16px) saturate(150%);
 
   color: var(--color-text);
-  font-size: var(--text-md);
+  font-size: var(--text-sm);
   font-weight: 400;
   font-family: inherit;
   letter-spacing: 0.03em;
@@ -55,6 +57,7 @@
   }
 
   &.small {
+    --height: var(--form-control-height-small);
     padding: var(--space-xs);
     padding-right: calc(var(--space-xs) + 1.25em);
     font-size: var(--text-sm);
@@ -62,6 +65,7 @@
   }
 
   &.large {
+    --height: var(--form-control-height-large);
     padding: var(--space-lg);
     padding-right: calc(var(--space-lg) + 1.25em);
     font-size: var(--text-lg);

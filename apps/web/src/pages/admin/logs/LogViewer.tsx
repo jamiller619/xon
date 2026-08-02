@@ -1,7 +1,9 @@
-import { Select } from '@xon/ui'
-import { useEffect, useMemo, useState } from 'react'
+import { useQuery } from '@tanstack/react-query'
+import { Select, Surface } from '@xon/ui'
+import { useMemo, useState } from 'react'
 import { apiFetch } from '~/lib/apiFetch'
 import type { LogEntry } from '~/lib/events'
+import Page from '~/pages/Page'
 import styles from './LogViewer.module.css'
 
 const FETCH_LINES = 5000
@@ -13,6 +15,8 @@ interface LogFile {
 }
 
 const LEVELS = ['debug', 'info', 'warn', 'error'] as const
+const EMPTY_FILES: LogFile[] = []
+const EMPTY_ENTRIES: LogEntry[] = []
 
 function formatBytes(bytes: number): string {
   if (bytes === 0) return '0 B'
@@ -29,11 +33,7 @@ function formatTime(ts?: string): string {
 }
 
 export default function LogViewer() {
-  const [files, setFiles] = useState<LogFile[]>([])
-  const [selectedFile, setSelectedFile] = useState('')
-  const [entries, setEntries] = useState<LogEntry[]>([])
-  const [loading, setLoading] = useState(true)
-  const [error, setError] = useState('')
+  const [selectedFileName, setSelectedFileName] = useState('')
 
   const [level, setLevel] = useState('')
   const [component, setComponent] = useState('')
@@ -42,64 +42,40 @@ export default function LogViewer() {
   // load, so identity survives filtering.
   const [expanded, setExpanded] = useState<LogEntry | null>(null)
 
-  // Load the file list once; select the newest file by default.
-  useEffect(() => {
-    let active = true
+  const filesQuery = useQuery({
+    queryKey: ['admin', 'logs', 'files'] as const,
+    queryFn: async () => {
+      const response = await apiFetch('/api/admin/logs/files')
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      return response.json() as Promise<{ files: LogFile[] }>
+    },
+  })
 
-    apiFetch('/api/admin/logs/files')
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`)
-        return r.json() as Promise<{ files: LogFile[] }>
-      })
-      .then((data) => {
-        if (!active) return
-        setFiles(data.files)
-        const first = data.files[0]
-        if (first) setSelectedFile(first.name)
-        else setLoading(false)
-      })
-      .catch(() => {
-        if (active) {
-          setError('Failed to load log files')
-          setLoading(false)
-        }
-      })
+  const files = filesQuery.data?.files ?? EMPTY_FILES
+  const selectedFile = selectedFileName || files[0]?.name || ''
 
-    return () => {
-      active = false
-    }
-  }, [])
+  const entriesQuery = useQuery({
+    queryKey: ['admin', 'logs', 'files', selectedFile, FETCH_LINES] as const,
+    queryFn: async () => {
+      const response = await apiFetch(
+        `/api/admin/logs/files/${encodeURIComponent(selectedFile)}?lines=${FETCH_LINES}`,
+      )
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const data = (await response.json()) as { lines: LogEntry[] }
+      // Newest entries first for browsing.
+      return data.lines.toReversed()
+    },
+    enabled: Boolean(selectedFile),
+  })
 
-  // Load entries whenever the selected file changes.
-  useEffect(() => {
-    if (!selectedFile) return
-
-    let active = true
-    setLoading(true)
-    setExpanded(null)
-
-    apiFetch(`/api/admin/logs/files/${selectedFile}?lines=${FETCH_LINES}`)
-      .then((r) => {
-        if (!r.ok) throw new Error(`HTTP ${r.status}`)
-        return r.json() as Promise<{ lines: LogEntry[] }>
-      })
-      .then((data) => {
-        if (!active) return
-        // Newest entries first for browsing.
-        setEntries(data.lines.toReversed())
-        setError('')
-      })
-      .catch(() => {
-        if (active) setError('Failed to load log entries')
-      })
-      .finally(() => {
-        if (active) setLoading(false)
-      })
-
-    return () => {
-      active = false
-    }
-  }, [selectedFile])
+  const entries = entriesQuery.data ?? EMPTY_ENTRIES
+  const loading =
+    filesQuery.isPending || (Boolean(selectedFile) && entriesQuery.isPending)
+  const error = filesQuery.isError
+    ? 'Failed to load log files'
+    : entriesQuery.isError
+      ? 'Failed to load log entries'
+      : ''
 
   const components = useMemo(() => {
     const set = new Set<string>()
@@ -124,9 +100,9 @@ export default function LogViewer() {
   const selectedFileInfo = files.find((f) => f.name === selectedFile)
 
   return (
-    <div className={styles.page ?? ''}>
+    <Page>
+      <Page.Title>Log Viewer</Page.Title>
       <div className={styles.header ?? ''}>
-        <h1 className={styles.heading ?? ''}>Log Viewer</h1>
         {selectedFileInfo && (
           <span className={styles.fileInfo ?? ''}>
             {formatBytes(selectedFileInfo.size)} —{' '}
@@ -135,11 +111,14 @@ export default function LogViewer() {
         )}
       </div>
 
-      <div className={styles.toolbar ?? ''}>
+      <Surface borderRadius="small">
         <Select
           size="small"
           value={selectedFile}
-          onChange={(e) => setSelectedFile(e.target.value)}
+          onChange={(e) => {
+            setSelectedFileName(e.target.value)
+            setExpanded(null)
+          }}
           aria-label="Log file"
         >
           {files.map((file) => (
@@ -189,7 +168,7 @@ export default function LogViewer() {
           {filtered.length.toLocaleString()} of{' '}
           {entries.length.toLocaleString()} entries
         </span>
-      </div>
+      </Surface>
 
       {error && <p className={styles.error ?? ''}>{error}</p>}
 
@@ -242,6 +221,6 @@ export default function LogViewer() {
           })
         )}
       </div>
-    </div>
+    </Page>
   )
 }

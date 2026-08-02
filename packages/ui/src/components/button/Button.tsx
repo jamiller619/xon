@@ -51,7 +51,7 @@ export default function Button({
         {
           [styles.large as string]: size === 'large',
           [styles.small as string]: size === 'small',
-          [styles.mini as string]: size === 'xsmall',
+          [styles.xsmall as string]: size === 'xsmall',
           [styles.block as string]: block,
           [styles.loading as string]: isLoading,
           [styles.borderRadiusSmall as string]: borderRadius === 'small',

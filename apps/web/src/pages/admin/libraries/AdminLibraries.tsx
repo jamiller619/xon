@@ -1,35 +1,30 @@
 import { FolderAdd20Regular as AddLibraryIcon } from '@fluentui/react-icons'
-import { Button, Dialog, Flex } from '@xon/ui'
-import { useState } from 'react'
-import CreateLibraryForm from '~/components/create-library-form/CreateLibraryForm'
+import { Button, Flex } from '@xon/ui'
+import { css } from 'inline-css-modules'
+import CreateLibraryButton from '~/components/CreateLibraryButton'
 import LibraryCard from '~/components/LibraryCard'
 import useLibraries from '~/hooks/useLibraries'
 import Page from '~/pages/Page'
 
+const styles = css`
+  header {
+    display: flex;
+    gap: var(--space-md);
+  }
+`
+
 export default function AdminLibraries() {
   const { data: libraries, refetch } = useLibraries()
-  const [createDialogOpen, setCreateDialogOpen] = useState(false)
 
   return (
     <Page>
       <Page.Title>Manage Libraries</Page.Title>
-      <header>
-        <Button onClick={() => setCreateDialogOpen(true)}>
+      <header className={styles.header}>
+        <CreateLibraryButton onSuccess={() => void refetch()} />
+        <Button onClick={() => void console.log('test')}>
           <AddLibraryIcon />
-          Add Library
+          Scan Libraries
         </Button>
-        <Dialog
-          open={createDialogOpen}
-          onOpenChange={setCreateDialogOpen}
-          title="Create Library"
-        >
-          <CreateLibraryForm
-            onSuccess={() => {
-              setCreateDialogOpen(false)
-              void refetch()
-            }}
-          />
-        </Dialog>
       </header>
       <Flex gap="3">
         {libraries?.map((library) => (

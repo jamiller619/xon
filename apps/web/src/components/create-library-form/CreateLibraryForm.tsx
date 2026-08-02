@@ -23,6 +23,11 @@ const LIBRARY_TYPES = [
     value: LibraryType.Music,
   },
   {
+    label: 'Music Videos',
+    icon: '🎵',
+    value: LibraryType.MusicVideos,
+  },
+  {
     label: 'Photos',
     icon: '🖼️',
     value: LibraryType.Photos,
@@ -34,7 +39,7 @@ const LIBRARY_TYPES = [
   },
 ]
 
-interface CreateLibraryFormProps {
+export type CreateLibraryFormProps = {
   onSuccess: (libraryId: string) => void
   submitLabel?: string
   formClassName?: string | undefined
@@ -43,6 +48,7 @@ interface CreateLibraryFormProps {
 export default function CreateLibraryForm({
   onSuccess,
   formClassName,
+  submitLabel = 'Finish Setup',
 }: CreateLibraryFormProps) {
   const [name, setName] = useState<string>('')
   const [description, setDescription] = useState<string>('')
@@ -121,7 +127,7 @@ export default function CreateLibraryForm({
         </Dialog>
       </Field>
       <Button type="submit" variant="primary" disabled={!canFormSubmit}>
-        Finish Setup
+        {submitLabel}
       </Button>
     </Flex>
   )

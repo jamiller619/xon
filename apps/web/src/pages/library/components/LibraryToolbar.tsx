@@ -64,7 +64,6 @@ export default function LibraryToolbar({
         <Label size="small">
           Type
           <Select
-            size="small"
             className={styles.filterSelect}
             value={mediaType}
             onChange={(event) => onMediaTypeChange(event.target.value)}
@@ -81,7 +80,6 @@ export default function LibraryToolbar({
         <Label size="small">
           Sort
           <Select
-            size="small"
             className={styles.filterSelect}
             value={currentSortKey}
             onChange={(event) => onSortOptionChange(event.target.value)}
@@ -104,7 +102,7 @@ export default function LibraryToolbar({
           onChange={onUnmatchedOnlyChange}
         />
 
-        {mediaType && (
+        {/* {mediaType && (
           <span className={styles.filterChip}>
             Type: {mediaType}
             <button
@@ -115,7 +113,7 @@ export default function LibraryToolbar({
               ×
             </button>
           </span>
-        )}
+        )} */}
       </div>
 
       <div className={styles.toolbarActions}>

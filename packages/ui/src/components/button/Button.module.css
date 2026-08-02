@@ -1,5 +1,5 @@
 .button {
-  --height: 2.5rem;
+  --height: var(--form-control-height);
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -50,19 +50,19 @@
     }
   }
 
-  &.mini {
-    height: 1.5rem;
+  &.xsmall {
+    --height: var(--form-control-height-xsmall);
     font-size: var(--text-sm);
     padding-inline: var(--space-xs);
   }
 
   &.small {
-    --height: 2rem;
+    --height: var(--form-control-height-small);
     font-size: var(--text-sm);
   }
 
   &.large {
-    --height: 4rem;
+    --height: var(--form-control-height-large);
     padding-inline: var(--space-lg);
     font-size: var(--text-lg);
   }

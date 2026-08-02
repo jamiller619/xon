@@ -21,7 +21,7 @@
 // Icons = 'Icons',
 // }
 
-import { LibraryType } from './types.js'
+// import { LibraryType } from './types.js'
 
 // export namespace MediaType {
 //   export enum Type {
@@ -70,11 +70,11 @@ export type MediaType = `${MediaType.MainType}/${MediaType.SubType}`
 // type MediaTypeSub = string
 
 // export type MediaType = `${MediaTypeMain}/${MediaTypeSub}`
-type Extension = string
+// type Extension = string
 
-export type MediaCategoryInfo = {
-  [key: Extension]: MediaType
-}
+// export type MediaCategoryInfo = {
+//   [key: Extension]: MediaType
+// }
 
 // export function getExtensionsForCategory(category: MediaCategory): Extension[] {
 //   return Object.keys(CATEGORY_DEFINITIONS[category]) as Extension[]
@@ -109,81 +109,81 @@ export type MediaCategoryInfo = {
 //     }
 //   }
 // }
-export const MEDIA_TYPE_DEFINITIONS: Record<
-  MediaType.MainType,
-  MediaCategoryInfo
-> = {
-  [MediaType.MainType.Video]: {
-    '.mp4': 'video/mp4',
-    '.mkv': 'video/x-matroska',
-    '.avi': 'video/x-msvideo',
-    '.mov': 'video/quicktime',
-    '.wmv': 'video/x-ms-wmv',
-    '.m4v': 'video/x-m4v',
-    '.flv': 'video/x-flv',
-    '.webm': 'video/webm',
-    '.mpg': 'video/mpeg',
-    '.mpeg': 'video/mpeg',
-    '.ts': 'video/mp2t',
-    '.3gp': 'video/3gpp',
-    '.ogv': 'video/ogg',
-  },
-  [MediaType.MainType.Audio]: {
-    '.mp3': 'audio/mpeg',
-    '.flac': 'audio/flac',
-    '.wav': 'audio/wav',
-    '.aac': 'audio/aac',
-    '.ogg': 'audio/ogg',
-    '.m4a': 'audio/mp4',
-    '.wma': 'audio/x-ms-wma',
-    '.opus': 'audio/opus',
-    '.aiff': 'audio/aiff',
-    '.aif': 'audio/aiff',
-  },
-  [MediaType.MainType.Image]: {
-    '.jpg': 'image/jpeg',
-    '.jpeg': 'image/jpeg',
-    '.png': 'image/png',
-    '.gif': 'image/gif',
-    '.bmp': 'image/bmp',
-    '.tiff': 'image/tiff',
-    '.tif': 'image/tiff',
-    '.webp': 'image/webp',
-    '.heic': 'image/heic',
-    '.heif': 'image/heif',
-    '.avif': 'image/avif',
-    '.cr2': 'image/x-canon-cr2',
-    '.cr3': 'image/x-canon-cr3',
-    '.nef': 'image/x-nikon-nef',
-    '.arw': 'image/x-sony-arw',
-    '.dng': 'image/x-adobe-dng',
-    '.orf': 'image/x-olympus-orf',
-    '.raf': 'image/x-fujifilm-raf',
-  },
-  [MediaType.MainType.Application]: {},
-  [MediaType.MainType.Text]: {},
-  [MediaType.MainType.Font]: {
-    '.ttf': 'font/ttf',
-    '.otf': 'font/otf',
-    '.woff': 'font/woff',
-    '.woff2': 'font/woff2',
-    '.eot': 'application/vnd.ms-fontobject',
-    '.svg': 'image/svg+xml',
-  },
-  [MediaType.MainType.Model]: {},
-  [MediaType.MainType.Message]: {},
-  [MediaType.MainType.Multipart]: {},
-}
+// export const MEDIA_TYPE_DEFINITIONS: Record<
+//   MediaType.MainType,
+//   MediaCategoryInfo
+// > = {
+//   [MediaType.MainType.Video]: {
+//     '.mp4': 'video/mp4',
+//     '.mkv': 'video/x-matroska',
+//     '.avi': 'video/x-msvideo',
+//     '.mov': 'video/quicktime',
+//     '.wmv': 'video/x-ms-wmv',
+//     '.m4v': 'video/x-m4v',
+//     '.flv': 'video/x-flv',
+//     '.webm': 'video/webm',
+//     '.mpg': 'video/mpeg',
+//     '.mpeg': 'video/mpeg',
+//     '.ts': 'video/mp2t',
+//     '.3gp': 'video/3gpp',
+//     '.ogv': 'video/ogg',
+//   },
+//   [MediaType.MainType.Audio]: {
+//     '.mp3': 'audio/mpeg',
+//     '.flac': 'audio/flac',
+//     '.wav': 'audio/wav',
+//     '.aac': 'audio/aac',
+//     '.ogg': 'audio/ogg',
+//     '.m4a': 'audio/mp4',
+//     '.wma': 'audio/x-ms-wma',
+//     '.opus': 'audio/opus',
+//     '.aiff': 'audio/aiff',
+//     '.aif': 'audio/aiff',
+//   },
+//   [MediaType.MainType.Image]: {
+//     '.jpg': 'image/jpeg',
+//     '.jpeg': 'image/jpeg',
+//     '.png': 'image/png',
+//     '.gif': 'image/gif',
+//     '.bmp': 'image/bmp',
+//     '.tiff': 'image/tiff',
+//     '.tif': 'image/tiff',
+//     '.webp': 'image/webp',
+//     '.heic': 'image/heic',
+//     '.heif': 'image/heif',
+//     '.avif': 'image/avif',
+//     '.cr2': 'image/x-canon-cr2',
+//     '.cr3': 'image/x-canon-cr3',
+//     '.nef': 'image/x-nikon-nef',
+//     '.arw': 'image/x-sony-arw',
+//     '.dng': 'image/x-adobe-dng',
+//     '.orf': 'image/x-olympus-orf',
+//     '.raf': 'image/x-fujifilm-raf',
+//   },
+//   [MediaType.MainType.Application]: {},
+//   [MediaType.MainType.Text]: {},
+//   [MediaType.MainType.Font]: {
+//     '.ttf': 'font/ttf',
+//     '.otf': 'font/otf',
+//     '.woff': 'font/woff',
+//     '.woff2': 'font/woff2',
+//     '.eot': 'application/vnd.ms-fontobject',
+//     '.svg': 'image/svg+xml',
+//   },
+//   [MediaType.MainType.Model]: {},
+//   [MediaType.MainType.Message]: {},
+//   [MediaType.MainType.Multipart]: {},
+// }
 
-export const LIBRARY_TYPE_DEFINITIONS: Record<LibraryType, MediaCategoryInfo> =
-  {
-    [LibraryType.Movies]: MEDIA_TYPE_DEFINITIONS[MediaType.MainType.Video],
-    [LibraryType.TVShows]: MEDIA_TYPE_DEFINITIONS[MediaType.MainType.Video],
-    [LibraryType.Music]: MEDIA_TYPE_DEFINITIONS[MediaType.MainType.Audio],
-    [LibraryType.Photos]: MEDIA_TYPE_DEFINITIONS[MediaType.MainType.Image],
-    [LibraryType.HomeVideos]: MEDIA_TYPE_DEFINITIONS[MediaType.MainType.Video],
-    [LibraryType.VideoClips]: MEDIA_TYPE_DEFINITIONS[MediaType.MainType.Video],
-  }
+// export const LIBRARY_TYPE_DEFINITIONS: Record<LibraryType, MediaCategoryInfo> =
+//   {
+//     [LibraryType.Movies]: MEDIA_TYPE_DEFINITIONS[MediaType.MainType.Video],
+//     [LibraryType.TVShows]: MEDIA_TYPE_DEFINITIONS[MediaType.MainType.Video],
+//     [LibraryType.Music]: MEDIA_TYPE_DEFINITIONS[MediaType.MainType.Audio],
+//     [LibraryType.Photos]: MEDIA_TYPE_DEFINITIONS[MediaType.MainType.Image],
+//     [LibraryType.HomeVideos]: MEDIA_TYPE_DEFINITIONS[MediaType.MainType.Video],
+//     [LibraryType.MusicVideos]: MEDIA_TYPE_DEFINITIONS[MediaType.MainType.Video],
+//   }
 
 // export const CATEGORY_DEFINITIONS: Record<MediaCategory, MediaCategoryInfo> = {
 //   [MediaCategory.Movies]: {

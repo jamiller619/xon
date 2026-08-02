@@ -4,7 +4,7 @@ import sharp from 'sharp'
 import { mediaItems } from '../db/schema.ts'
 import * as libraryService from '../services/libraryService.ts'
 // import { duplicateCandidates, imageHashes, mediaItems } from '../db/schema.ts'
-import { isImage } from './exiftool.ts'
+// import { isImage } from './exiftool.ts'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -150,7 +150,9 @@ export async function scanLibraryForDuplicates(
   // Load all image media items for this library
   const items = await libraryService.getMediaByLibraryId(db, libraryId)
 
-  const imageItems = items.data.filter((item) => isImage(item.mediaType))
+  const imageItems = items.data.filter((item) =>
+    item.mediaType.startsWith('image/'),
+  )
   if (imageItems.length === 0) return 0
 
   const itemIds = imageItems.map((i) => i.id)

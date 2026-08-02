@@ -77,7 +77,7 @@ export enum LibraryType {
   Music = 'music',
   Photos = 'photos',
   HomeVideos = 'home_videos',
-  VideoClips = 'video_clips',
+  MusicVideos = 'music_videos',
 }
 
 export interface Library {
@@ -116,7 +116,6 @@ export const MPARatings = ['G', 'PG', 'PG-13', 'R', 'NC-17', 'NR'] as const
 
 export type MPARating = (typeof MPARatings)[number]
 
-// biome-ignore lint/suspicious/noExplicitAny: We want <any>
 // export type Metadata<T = Record<string, any>> = T & {
 //   images?: {
 //     backdrop?: string[] | string

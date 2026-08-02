@@ -98,6 +98,57 @@
   color: var(--color-gray-11);
 }
 
+.navigation {
+  position: absolute;
+  inset: 50% var(--space-md) auto;
+  z-index: 1;
+  display: flex;
+  justify-content: space-between;
+  pointer-events: none;
+  transform: translateY(-50%);
+}
+
+.navigationButton {
+  pointer-events: auto;
+}
+
+/* .navigationButton {
+  display: grid;
+  width: 40px;
+  height: 40px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: 50%;
+  color: white;
+  background: rgb(0 0 0 / 45%);
+  backdrop-filter: blur(8px);
+  cursor: pointer;
+  pointer-events: auto;
+  transition:
+    background 150ms ease,
+    transform 150ms ease;
+
+  &:hover {
+    background: rgb(0 0 0 / 70%);
+    transform: scale(1.05);
+  }
+
+  &:focus-visible {
+    outline: 2px solid white;
+    outline-offset: 2px;
+  }
+
+  > svg {
+    width: 24px;
+    height: 24px;
+  }
+} */
+
+.previousButton > svg {
+  transform: rotate(180deg);
+}
+
 .dots {
   position: absolute;
   bottom: var(--space-md);

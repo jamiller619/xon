@@ -1,7 +1,8 @@
 import { basename, extname } from 'node:path'
-import { DataSourceType, LIBRARY_TYPE_DEFINITIONS } from '@xon/shared'
+import { DataSourceType } from '@xon/shared'
 import { and, eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
+import mime from 'mime-types'
 import { mediaItems } from '../db/schema.ts'
 import { createLogger } from '../logger.ts'
 import * as libraryService from '../services/libraryService.ts'
@@ -68,7 +69,7 @@ export async function scanLibrary(
     throw new Error(`No data sources found for library: ${libraryId}`)
   }
 
-  const extSet = new Set(Object.keys(LIBRARY_TYPE_DEFINITIONS[library.type]))
+  const extSet = getExtensionsForLibraryType(library.type)
 
   let totalNew = 0
   let totalUpdated = 0
@@ -149,7 +150,12 @@ export async function scanLibrary(
       message: `Found ${discovery.totalDiscovered} files, ${totalFiles} to process in ${sourceLabel}`,
     })
 
-    const ctx: PipelineContext = { db, libraryId, logger }
+    const ctx: PipelineContext = {
+      db,
+      libraryId,
+      libraryType: library.type,
+      logger,
+    }
 
     if (onProgress) {
       ctx.onJobComplete = (processed, currentFile) => {
@@ -280,7 +286,12 @@ export async function refreshMetadata(
     message: `Refreshing metadata for ${totalFiles} item${totalFiles === 1 ? '' : 's'} in ${library.name}`,
   })
 
-  const ctx: PipelineContext = { db, libraryId, logger }
+  const ctx: PipelineContext = {
+    db,
+    libraryId,
+    libraryType: library.type,
+    logger,
+  }
 
   if (onProgress) {
     ctx.onJobComplete = (processed, currentFile) => {
@@ -296,7 +307,7 @@ export async function refreshMetadata(
     }
   }
 
-  await runPipeline(ctx, jobs, refreshStages)
+  await runPipeline(ctx, jobs)
 
   const summary: ScanSummary = {
     libraryId,
@@ -312,4 +323,12 @@ export async function refreshMetadata(
   })
 
   return summary
+}
+
+function getExtensionsForLibraryType(libraryType: string): Set<string> {
+  return new Set(
+    Object.entries(mime.extensions)
+      .filter(([mimeType]) => mimeType.startsWith(`${libraryType}/`))
+      .flatMap(([, fileExtensions]) => fileExtensions.map((ext) => `.${ext}`)),
+  )
 }

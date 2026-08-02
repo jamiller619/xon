@@ -1,14 +1,7 @@
-import { MEDIA_TYPE_DEFINITIONS, MediaType } from '@xon/shared'
 import { createLogger } from '../logger.ts'
 import { exifTool } from './binaries.ts'
 
 const logger = createLogger('exiftool')
-
-// const IMAGE_CATEGORIES = new Set<string>([
-//   MediaCategory.Pictures,
-//   // MediaCategory.Images,
-//   // MediaCategory.DesignFiles,
-// ])
 
 export type ExiftoolMetadata = {
   width?: number
@@ -20,22 +13,6 @@ export type ExiftoolMetadata = {
   dateTaken?: string
   orientation?: string
 }
-
-const IMAGE_MIME_TYPES = Object.values(
-  MEDIA_TYPE_DEFINITIONS[MediaType.MainType.Image],
-) as string[]
-
-export function isImage(mimeType: string | null): boolean {
-  if (!mimeType) return false
-
-  return IMAGE_MIME_TYPES.includes(mimeType)
-}
-
-// export function isImageCategory(...categories: string[]): boolean {
-//   if (!categories.length) return false
-
-//   return categories.some((c) => IMAGE_CATEGORIES.has(c))
-// }
 
 export async function extractExiftoolMetadata(
   filePath: string,

@@ -92,4 +92,9 @@
   --menu-item-font-size: var(--text-sm);
   --menu-item-highlight: var(--color-gray-5);
   --menu-transition: 0.15s ease;
+
+  --form-control-height: 2.5rem;
+  --form-control-height-small: 2rem;
+  --form-control-height-xsmall: 1.5rem;
+  --form-control-height-large: 4rem;
 }

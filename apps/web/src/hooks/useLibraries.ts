@@ -12,23 +12,6 @@ export type CreateLibraryInput = InferRequestType<
   typeof librariesAPI.index.$post
 >['json']
 
-const librariesQuery = {
-  queryKey: ['libraries'] as const,
-  queryFn: async () => {
-    const res = await librariesAPI.index.$get()
-
-    if (!res.ok) throw new Error(res.statusText)
-
-    const data = await res.json()
-
-    return data.map((library: LibraryResponse) => ({
-      ...library,
-      createdAt: new Date(library.createdAt),
-      updatedAt: library.updatedAt ? new Date(library.updatedAt) : null,
-    }))
-  },
-}
-
 export const createLibraryMutation = {
   mutationFn: async (data: CreateLibraryInput) => {
     const res = await librariesAPI.index.$post({ json: data })
@@ -40,5 +23,20 @@ export const createLibraryMutation = {
 }
 
 export default function useLibraries() {
-  return useQuery(librariesQuery)
+  return useQuery({
+    queryKey: ['libraries'] as const,
+    queryFn: async () => {
+      const res = await librariesAPI.index.$get()
+
+      if (!res.ok) throw new Error(res.statusText)
+
+      const data = await res.json()
+
+      return data.map((library: LibraryResponse) => ({
+        ...library,
+        createdAt: new Date(library.createdAt),
+        updatedAt: library.updatedAt ? new Date(library.updatedAt) : null,
+      }))
+    },
+  })
 }

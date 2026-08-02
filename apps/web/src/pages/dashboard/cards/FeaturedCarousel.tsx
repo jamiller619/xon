@@ -1,4 +1,6 @@
+import { IosChevronRightRegular } from '@fluentui/react-icons'
 import type { MediaItem } from '@xon/shared'
+import { Button } from '@xon/ui'
 import clsx from 'clsx'
 import Autoplay from 'embla-carousel-autoplay'
 import Fade from 'embla-carousel-fade'
@@ -174,6 +176,24 @@ export default function FeaturedCarousel({
           )
         })}
       </div>
+      {items.length > 1 && (
+        <div className={styles.navigation}>
+          <Button.Icon
+            aria-label="Show previous featured item"
+            className={clsx(styles.navigationButton, styles.previousButton)}
+            onClick={() => emblaApi?.scrollPrev()}
+          >
+            <IosChevronRightRegular aria-hidden="true" />
+          </Button.Icon>
+          <Button.Icon
+            aria-label="Show next featured item"
+            className={styles.navigationButton}
+            onClick={() => emblaApi?.scrollNext()}
+          >
+            <IosChevronRightRegular aria-hidden="true" />
+          </Button.Icon>
+        </div>
+      )}
       <div className={styles.dots}>
         {items.map((item, index) => (
           <button

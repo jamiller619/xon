@@ -27,6 +27,7 @@ import Logo from '~/components/logo/Logo'
 import PluginSlot from '~/components/PluginSlot'
 import useLibraries from '~/hooks/useLibraries'
 import useQueryAPIHelper from '~/hooks/useQueryAPIHelper'
+import CreateLibraryButton from '../CreateLibraryButton'
 import styles from './Sidebar.module.css'
 
 interface SidebarProps {
@@ -35,7 +36,7 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ className, isOpen }: SidebarProps) {
-  const { data: libraries } = useLibraries()
+  const { data: libraries, refetch } = useLibraries()
 
   const { data: groups } = useQuery<Group[]>(useQueryAPIHelper('groups'))
 
@@ -76,10 +77,23 @@ export default function Sidebar({ className, isOpen }: SidebarProps) {
               <span>{lib.name}</span>
             </NavLink>
           ))}
-        <NavLink to="" className={styles.navLink ?? ''}>
-          <AddLibraryIcon />
-          <span>Add Library</span>
-        </NavLink>
+        <CreateLibraryButton
+          onSuccess={() => console.log('test')}
+          button={(onClick) => (
+            <NavLink
+              to=""
+              className={styles.navLink ?? ''}
+              onClick={(e) => {
+                e.preventDefault()
+                onClick()
+                void refetch()
+              }}
+            >
+              <AddLibraryIcon />
+              <span>Add Library</span>
+            </NavLink>
+          )}
+        />
       </Section>
 
       <Section>
@@ -178,7 +192,7 @@ function LibraryIcon({ type }: { type?: LibraryType | undefined }) {
     case LibraryType.Movies:
       return <MoviesIcon />
     case LibraryType.TVShows:
-    case LibraryType.HomeVideos:
+    case LibraryType.Videos:
       return <TVIcon />
     case LibraryType.Music:
       return <MusicIcon />

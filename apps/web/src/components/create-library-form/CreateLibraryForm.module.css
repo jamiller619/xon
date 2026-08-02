@@ -39,7 +39,6 @@
   flex-direction: column;
   gap: 2px;
   max-height: 280px;
-  overflow-y: auto;
   background: var(--color-gray-2);
   border-radius: var(--border-radius-3);
   padding: var(--space-2xs);
