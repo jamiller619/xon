@@ -27,7 +27,8 @@
     transform 0.1s ease,
     background 0.2s ease;
 
-  background: var(--color-gray-a2);
+  /* background: var(--color-gray-a2); */
+  background: var(--color-gray-3);
 
   &.link {
     padding: 0;
@@ -78,7 +79,18 @@
   }
 
   &.danger {
-    background: red;
+    color: var(--color-red-10);
+    background: var(--color-red-3);
+
+    &:hover:not([data-disabled]) {
+      background: var(--color-red-9);
+    }
+    /* color: #fe4e54;
+    background: #5d383a;
+
+    &:hover:not([data-disabled]) {
+      background: #fe4e54;
+    } */
   }
 
   &.borderRadiusSmall {
@@ -95,10 +107,14 @@
     height: var(--height);
     border-radius: 50%;
     corner-shape: round;
-    background: transparent;
 
-    &[data-popup-open] {
-      background: var(--color-gray-8);
+    &.ghost {
+      background: transparent;
+      outline: none;
+
+      &[data-popup-open] {
+        background: var(--color-gray-8);
+      }
     }
   }
 }

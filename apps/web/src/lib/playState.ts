@@ -1,4 +1,6 @@
+import type { MediaPlayProgress } from '@xon/shared'
 import { apiFetch } from './apiFetch'
+import { PLAY_PROGRESS_QUERY_KEY, queryClient } from './queryClient'
 
 export type PlayStatus = 'playing' | 'stopped' | 'completed'
 
@@ -27,7 +29,26 @@ export function savePlayState(
     body: JSON.stringify(body),
     // Give the final update a chance to finish while the page is closing.
     keepalive: true,
-  }).catch(() => {
-    // Playback reporting is best-effort and must never interrupt the player.
   })
+    .then(async (response) => {
+      if (!response.ok) return
+
+      const saved = (await response.json()) as MediaPlayProgress
+      queryClient.setQueryData<MediaPlayProgress[]>(
+        PLAY_PROGRESS_QUERY_KEY,
+        (current) => {
+          if (!current) return current
+
+          return [
+            saved,
+            ...current.filter(
+              (playState) => playState.mediaItemId !== saved.mediaItemId,
+            ),
+          ]
+        },
+      )
+    })
+    .catch(() => {
+      // Playback reporting is best-effort and must never interrupt the player.
+    })
 }

@@ -75,6 +75,21 @@
   pointer-events: none;
 }
 
+.progressTrack {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: 4px;
+  background: rgba(0, 0, 0, 0.55);
+  z-index: 3;
+  pointer-events: none;
+}
+
+.progressFill {
+  height: 100%;
+  background: var(--color-accent-9);
+}
+
 /* DRM lock badge on list view thumbnail */
 .listThumbDrm {
   position: relative;
@@ -224,6 +239,7 @@
 }
 
 .listThumbLink {
+  position: relative;
   display: block;
   width: 48px;
   height: 32px;

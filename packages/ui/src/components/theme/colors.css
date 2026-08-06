@@ -35,9 +35,21 @@
   --color-accent-11: var(--violet-11);
   --color-accent-12: var(--violet-12);
 
+  --color-red-1: var(--red-1);
+  --color-red-2: var(--red-2);
+  --color-red-3: var(--red-3);
+  --color-red-4: var(--red-4);
+  --color-red-5: var(--red-5);
+  --color-red-6: var(--red-6);
+  --color-red-7: var(--red-7);
+  --color-red-8: var(--red-8);
+  --color-red-9: var(--red-9);
+  --color-red-10: var(--red-10);
+  --color-red-11: var(--red-11);
+  --color-red-12: var(--red-12);
+
   --color-gray-a1: oklch(from var(--color-gray-2) l c h / 0.9);
   --color-gray-a2: oklch(from var(--color-gray-11) l c h / 0.15);
-  /* --color-gray-a2: oklch(from var(--color-gray-2) l c h / 0.7); */
   --color-gray-a3: oklch(from var(--color-gray-2) l c h / 0.5);
   --color-gray-a4: oklch(from var(--color-gray-2) l c h / 0.2);
 
@@ -45,6 +57,11 @@
   --color-accent-a2: oklch(from var(--color-accent-9) l c h / 0.6);
   --color-accent-a3: oklch(from var(--color-accent-9) l c h / 0.4);
   --color-accent-a4: oklch(from var(--color-accent-9) l c h / 0.2);
+
+  --color-red-a1: oklch(from var(--color-red-2) l c h / 0.9);
+  --color-red-a2: oklch(from var(--color-red-11) l c h / 0.15);
+  --color-red-a3: oklch(from var(--color-red-2) l c h / 0.5);
+  --color-red-a4: oklch(from var(--color-red-2) l c h / 0.2);
 
   --color-surface: var(--color-gray-a1);
 

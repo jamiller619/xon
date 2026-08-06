@@ -5,11 +5,14 @@ import { Link } from 'react-router-dom'
 import { thumbnailUrl } from '~/lib/apiFetch'
 import { formatBytes, formatDuration, formatYear, mediaPath } from '~/lib/utils'
 import styles from './MediaCard.module.css'
+import ProgressBar from './ProgressBar'
 
 type ListViewProps = {
   item: MediaItem
   handlePlay: (e: React.MouseEvent) => void
   handleAddToQueue: (e: React.MouseEvent) => void
+  onOpen?: ((item: MediaItem) => void) | undefined
+  progress?: number | undefined
   rowProps?: ComponentPropsWithRef<'tr'> & { 'data-index'?: number }
 }
 
@@ -17,17 +20,26 @@ export default function ListView({
   item,
   handlePlay,
   handleAddToQueue,
+  onOpen,
+  progress,
   rowProps,
 }: ListViewProps) {
   const isAudio = item.mediaType?.startsWith('audio/') ?? false
   const posterSrc = thumbnailUrl(item, 'small')
   const link = mediaPath(item)
 
+  function handleOpen(e: React.MouseEvent) {
+    if (!onOpen) return
+    e.preventDefault()
+    onOpen(item)
+  }
+
   return (
     <tr {...rowProps}>
       <td className={styles.listThumbCell}>
         <Link
           to={link}
+          onClick={handleOpen}
           className={`${styles.listThumbLink} ${item.drmProtected ? styles.listThumbDrm : ''}`}
         >
           {posterSrc ? (
@@ -43,10 +55,13 @@ export default function ListView({
             </div>
           )}
           {item.drmProtected && <span className={styles.listDrmBadge}>🔒</span>}
+          {progress !== undefined && (
+            <ProgressBar title={item.title} value={progress} />
+          )}
         </Link>
       </td>
       <td className={styles.listTitleCell}>
-        <Link to={link} className={styles.listTitle}>
+        <Link to={link} className={styles.listTitle} onClick={handleOpen}>
           {item.title}
         </Link>
         {item.mediaType && (

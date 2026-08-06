@@ -3,41 +3,45 @@ import type { MediaItem } from '@xon/shared'
 import { useEffect } from 'react'
 import { apiFetch } from '~/lib/apiFetch'
 import { subscribeToEvents } from '~/lib/eventStream'
-import type { SortColumn, SortDir } from '../components/libraryControls'
+import type { SortDirection } from '../../shared/types/collectionView'
+import type { MovieSortKey } from './movieControls'
 
 const SCAN_REFRESH_THROTTLE_MS = 3000
 const PAGE_SIZE = 40
 
-type LibraryMediaOptions = {
-  libraryId: string | undefined
-  sortCol: SortColumn
-  sortDir: SortDir
+type MovieLibraryMediaOptions = {
+  libraryId: string
+  sortKey: MovieSortKey
+  sortDirection: SortDirection
   mediaType: string
   unmatchedOnly: boolean
 }
 
-type LibraryMediaResult = {
+type MovieLibraryMediaResult = {
   items: MediaItem[]
   total: number
 }
 
-export function useLibraryMedia(options: LibraryMediaOptions) {
-  const { libraryId, sortCol, sortDir, mediaType, unmatchedOnly } = options
+export function useMovieLibraryMedia(options: MovieLibraryMediaOptions) {
+  const { libraryId, sortKey, sortDirection, mediaType, unmatchedOnly } =
+    options
   const queryClient = useQueryClient()
   const queryKey = [
     'library-media',
     libraryId,
-    { sortCol, sortDir, mediaType, unmatchedOnly },
+    { sortKey, sortDirection, mediaType, unmatchedOnly },
   ] as const
 
   const query = useInfiniteQuery({
     queryKey,
-    enabled: !!libraryId,
     initialPageParam: 1,
-    queryFn: async ({ pageParam, signal }): Promise<LibraryMediaResult> => {
+    queryFn: async ({
+      pageParam,
+      signal,
+    }): Promise<MovieLibraryMediaResult> => {
       const params = new URLSearchParams({
-        order: sortDir,
-        sortBy: sortCol,
+        order: sortDirection,
+        sortBy: sortKey,
         limit: String(PAGE_SIZE),
         page: String(pageParam),
       })
@@ -67,7 +71,6 @@ export function useLibraryMedia(options: LibraryMediaOptions) {
   })
 
   useEffect(() => {
-    if (!libraryId) return
     let lastRefresh = 0
 
     return subscribeToEvents((event) => {

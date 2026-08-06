@@ -8,8 +8,8 @@ import { Card, ContextMenu, Dialog } from '@xon/ui'
 import { css } from 'inline-css-modules'
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import useLibraryThumbnail from '~/hooks/useLibraryThumbnail'
 import { apiPost } from '~/lib/apiFetch'
-import { useScanStore } from '~/store/scanStore'
 import { useRefreshMetadataConfirmation } from './confirmation/ConfirmationProvider'
 import EditImages from './EditImages'
 
@@ -18,18 +18,12 @@ const styles = css`
     min-width: 250px;
   }
 
-  /* The 3D-tilted backdrop needs its perspective on the thumb (its parent) */
-  .libraryThumb {
-    perspective: 1000px;
-  }
-
   .libraryThumbnailBackdrop {
     display: block;
     position: relative;
     width: 100%;
     height: 100%;
     overflow: hidden;
-    transform: rotateX(20deg) rotateY(-10deg) scale(1.5);
 
     &::before {
       content: "";
@@ -62,16 +56,15 @@ type LibraryCardProps = {
 
 export default function LibraryCard({ data, withLink }: LibraryCardProps) {
   const confirmRefresh = useRefreshMetadataConfirmation()
-  const scanCompletedAt = useScanStore((s) => s.completedAt)
   const [editImagesOpen, setEditImagesOpen] = useState(false)
-  const thumbnailRevision =
-    scanCompletedAt[data.id] ?? data.updatedAt ?? data.createdAt
+  const thumbnailURL = useLibraryThumbnail(data)
+
   const cardContent = (
     <>
-      <Card.Thumb aspectRatio="4 / 3" className={styles.libraryThumb}>
+      <Card.Thumb aspectRatio="4 / 3">
         <span className={styles.libraryThumbnailBackdrop}>
           <img
-            src={`/api/libraries/${data.id}/thumbnail?v=${encodeURIComponent(String(thumbnailRevision))}`}
+            src={thumbnailURL}
             alt=""
             loading="lazy"
             decoding="async"

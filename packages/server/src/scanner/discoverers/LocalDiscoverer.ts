@@ -1,10 +1,13 @@
 import { createHash } from 'node:crypto'
 import path from 'node:path'
 import { LibraryType } from '@xon/shared'
+import { and, eq } from 'drizzle-orm'
 import { fdir } from 'fdir'
 import fileEntryCache from 'file-entry-cache'
 import pLimit from 'p-limit'
 import config from '../../config.ts'
+import { mediaItems } from '../../db/schema.ts'
+import { relativeMediaFilePath } from '../../media/mediaFilePaths.ts'
 import { createFileEntry } from '../fileEntry.ts'
 import type { MediaJob } from '../pipeline.ts'
 import { toLocalPath } from '../scanner.ts'
@@ -57,19 +60,38 @@ export class LocalDiscoverer implements MediaDiscoverer {
       },
     )
 
-    const previouslySeen = new Set(cache.cache.keys())
     const analyzed = cache.analyzeFiles(filePaths)
+
+    // The filesystem cache is only an optimization. A prior pipeline failure
+    // can leave a file cached even though it was never persisted, so always
+    // cross-check discovered paths against the database and retry missing rows.
+    const existingRows = await ctx.db
+      .select({ filePath: mediaItems.filePath })
+      .from(mediaItems)
+      .where(
+        and(
+          eq(mediaItems.libraryId, libraryId),
+          eq(mediaItems.dataSourceId, dataSource.id),
+        ),
+      )
+    const existingPaths = new Set(existingRows.map((row) => row.filePath))
+    const changedPaths = new Set(analyzed.changedFiles)
+    const jobPaths = filePaths.filter((filePath) => {
+      const storedPath = relativeMediaFilePath(filePath, dataSource)
+      return changedPaths.has(filePath) || !existingPaths.has(storedPath)
+    })
 
     const limit = pLimit(FILE_ENTRY_CONCURRENCY)
     const jobs = (
       await Promise.all(
-        analyzed.changedFiles.map((filePath) =>
+        jobPaths.map((filePath) =>
           limit(async (): Promise<MediaJob | null> => {
             const file = await createFileEntry(filePath)
 
             if (!file) return null
 
-            const isNew = !previouslySeen.has(filePath)
+            const storedPath = relativeMediaFilePath(filePath, dataSource)
+            const isNew = !existingPaths.has(storedPath)
 
             return createMediaJob(
               ctx.db,

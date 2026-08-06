@@ -1,32 +1,39 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
-import { useEffect, useRef } from 'react'
-import MediaCard from '~/components/media-card/MediaCard'
+import { Fragment, useEffect, useRef } from 'react'
+import styles from '../../Library.module.css'
 import { useScrollViewport } from '../hooks/useScrollViewport'
-import styles from '../Library.module.css'
-import type { SortColumn, SortDir } from './libraryControls'
-import type { ViewProps } from './types'
+import type {
+  CollectionViewProps,
+  ListColumn,
+  ListRowProps,
+  SortDirection,
+} from '../types/collectionView'
 
-const COLUMN_COUNT = 7
 const ESTIMATED_ROW_HEIGHT = 64
 
-type ListViewProps = ViewProps & {
-  sortCol: SortColumn
-  sortDir: SortDir
-  onSort: (column: SortColumn) => void
+type ListViewProps<Item, SortKey extends string> = CollectionViewProps<Item> & {
+  columns: readonly ListColumn<SortKey>[]
+  sortKey: SortKey
+  sortDirection: SortDirection
+  onSort: (key: SortKey) => void
+  renderRow: (item: Item, rowProps: ListRowProps) => React.ReactNode
 }
 
-export default function ListView({
+export default function ListView<Item, SortKey extends string>({
   isLoading,
   items,
-  library,
   hasNextPage,
   isFetchingNextPage,
   onLoadMore,
   resetKey,
-  sortCol,
-  sortDir,
+  getItemKey,
+  emptyContent = 'No items in this library yet.',
+  columns,
+  sortKey,
+  sortDirection,
   onSort,
-}: ListViewProps) {
+  renderRow,
+}: ListViewProps<Item, SortKey>) {
   const wrapperRef = useRef<HTMLDivElement>(null)
   const previousResetKey = useRef(resetKey)
   const { initialOffset, scrollElement, scrollMargin } =
@@ -75,22 +82,15 @@ export default function ListView({
       <table className={styles.table}>
         <thead>
           <tr>
-            <th className={styles.thThumb} />
-            <SortableHeader column="title" {...{ sortCol, sortDir, onSort }}>
-              Title
-            </SortableHeader>
-            <th>Duration</th>
-            <SortableHeader column="fileSize" {...{ sortCol, sortDir, onSort }}>
-              File Size
-            </SortableHeader>
-            <th>Release Date</th>
-            <SortableHeader
-              column="createdAt"
-              {...{ sortCol, sortDir, onSort }}
-            >
-              Date Added
-            </SortableHeader>
-            <th className={styles.thActions}>Actions</th>
+            {columns.map((column) => (
+              <ListHeader
+                key={column.key}
+                column={column}
+                sortKey={sortKey}
+                sortDirection={sortDirection}
+                onSort={onSort}
+              />
+            ))}
           </tr>
         </thead>
         <tbody
@@ -99,13 +99,13 @@ export default function ListView({
         >
           {isLoading ? (
             Array.from({ length: 10 }).map((_, index) => (
-              // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders
-              <SkeletonRow key={index} />
+              // biome-ignore lint/suspicious/noArrayIndexKey: stable loading placeholders
+              <SkeletonRow key={index} columnCount={columns.length} />
             ))
           ) : items.length === 0 ? (
             <tr>
-              <td colSpan={COLUMN_COUNT} className={styles.emptyCell}>
-                No media in this library yet.
+              <td colSpan={columns.length} className={styles.emptyCell}>
+                {emptyContent}
               </td>
             </tr>
           ) : (
@@ -127,7 +127,7 @@ export default function ListView({
                     data-index={virtualRow.index}
                     style={rowStyle}
                   >
-                    <td colSpan={COLUMN_COUNT} className={styles.loadingMore}>
+                    <td colSpan={columns.length} className={styles.loadingMore}>
                       {isFetchingNextPage ? 'Loading more…' : 'Load more'}
                     </td>
                   </tr>
@@ -138,17 +138,13 @@ export default function ListView({
               if (!item) return null
 
               return (
-                <MediaCard
-                  key={item.id}
-                  item={item}
-                  listView
-                  library={library}
-                  listRowProps={{
+                <Fragment key={getItemKey(item)}>
+                  {renderRow(item, {
                     ref: rowVirtualizer.measureElement,
                     'data-index': virtualRow.index,
                     style: rowStyle,
-                  }}
-                />
+                  })}
+                </Fragment>
               )
             })
           )}
@@ -158,48 +154,55 @@ export default function ListView({
   )
 }
 
-function SkeletonRow() {
+function SkeletonRow({ columnCount }: { columnCount: number }) {
   return (
     <tr className={styles.skeletonRow ?? ''}>
-      <td colSpan={COLUMN_COUNT}>
+      <td colSpan={columnCount}>
         <div className={styles.skeletonLine ?? ''} />
       </td>
     </tr>
   )
 }
 
-type SortableHeaderProps = {
-  column: SortColumn
-  sortCol: SortColumn
-  sortDir: SortDir
-  onSort: (column: SortColumn) => void
-  children: React.ReactNode
+type ListHeaderProps<SortKey extends string> = {
+  column: ListColumn<SortKey>
+  sortKey: SortKey
+  sortDirection: SortDirection
+  onSort: (key: SortKey) => void
 }
 
-function SortableHeader({
+function ListHeader<SortKey extends string>({
   column,
-  sortCol,
-  sortDir,
+  sortKey,
+  sortDirection,
   onSort,
-  children,
-}: SortableHeaderProps) {
-  const isActive = column === sortCol
+}: ListHeaderProps<SortKey>) {
+  const isActive = column.sortKey === sortKey
+
+  if (!column.sortKey) {
+    return <th style={{ width: column.width }}>{column.label}</th>
+  }
 
   return (
     <th
+      style={{ width: column.width }}
       aria-sort={
-        isActive ? (sortDir === 'asc' ? 'ascending' : 'descending') : 'none'
+        isActive
+          ? sortDirection === 'asc'
+            ? 'ascending'
+            : 'descending'
+          : 'none'
       }
     >
       <button
         type="button"
         className={styles.sortButton}
-        onClick={() => onSort(column)}
+        onClick={() => onSort(column.sortKey as SortKey)}
       >
-        {children}
+        {column.label}
         {isActive && (
           <span className={styles.sortArrow} aria-hidden="true">
-            {sortDir === 'asc' ? ' ▲' : ' ▼'}
+            {sortDirection === 'asc' ? ' ▲' : ' ▼'}
           </span>
         )}
       </button>

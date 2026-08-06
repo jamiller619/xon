@@ -7,6 +7,14 @@ const getLibraryById = vi.hoisted(() => vi.fn())
 const updateLibrary = vi.hoisted(() => vi.fn())
 const generateLibraryPoster = vi.hoisted(() => vi.fn())
 const removeLibraryPoster = vi.hoisted(() => vi.fn())
+const storeUploadedLibraryPoster = vi.hoisted(() => vi.fn())
+const getOrBuildThumbnail = vi.hoisted(() => vi.fn())
+const readFile = vi.hoisted(() => vi.fn())
+
+vi.mock('node:fs/promises', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('node:fs/promises')>()),
+  readFile,
+}))
 
 vi.mock('../../auth/middleware.ts', () => ({
   requireAuth: () => async (_c: unknown, next: () => Promise<void>) => next(),
@@ -19,9 +27,9 @@ vi.mock('../../services/libraryService.ts', () => ({
 
 vi.mock('../../services/libraryThumbnailService.ts', () => ({
   generateLibraryPoster,
-  getOrBuildThumbnail: vi.fn(),
+  getOrBuildThumbnail,
   removeLibraryPoster,
-  storeLibraryPoster: vi.fn(),
+  storeUploadedLibraryPoster,
 }))
 
 const { makeLibrariesRouter } = await import('../../routes/libraries.ts')
@@ -33,6 +41,11 @@ const library = {
     poster: ['library-images/library-1/first.png'],
   },
 }
+
+const png = Buffer.from(
+  'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAusB9Wl2nksAAAAASUVORK5CYII=',
+  'base64',
+)
 
 const scannerHandle = {
   startScan: vi.fn(),
@@ -84,6 +97,41 @@ describe('Library artwork routes', () => {
         },
       }),
     )
+  })
+
+  it('stores uploaded artwork without passing it through generation', async () => {
+    storeUploadedLibraryPoster.mockResolvedValue(
+      'library-images/library-1/uploaded-art.png',
+    )
+    const form = new FormData()
+    form.set('file', new File([png], 'art.png', { type: 'image/png' }))
+
+    const response = await app.request('/libraries/library-1/images/poster', {
+      method: 'POST',
+      body: form,
+    })
+
+    expect(response.status).toBe(201)
+    expect(storeUploadedLibraryPoster).toHaveBeenCalledWith(
+      'library-1',
+      png,
+      'png',
+    )
+    expect(generateLibraryPoster).not.toHaveBeenCalled()
+  })
+
+  it('serves selected cache-relative artwork instead of the generated fallback', async () => {
+    readFile.mockResolvedValue(png)
+
+    const response = await app.request('/libraries/library-1/thumbnail')
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Content-Type')).toBe('image/png')
+    expect(readFile).toHaveBeenCalledOnce()
+    expect(String(readFile.mock.calls[0]?.[0])).toMatch(
+      /\/library-images\/library-1\/first\.png$/,
+    )
+    expect(getOrBuildThumbnail).not.toHaveBeenCalled()
   })
 
   it('persists poster order and removes discarded cached images', async () => {

@@ -165,6 +165,33 @@ describe('media play state routes', () => {
     expect(await response.json()).toEqual([])
   })
 
+  it('returns compact progress for every current-user play-state row', async () => {
+    await updatePlayState(USER_ID, {
+      position: 3600,
+      duration: 3600,
+      status: 'completed',
+    })
+    await updatePlayState(OTHER_USER_ID, {
+      position: 500,
+      duration: 3600,
+      status: 'playing',
+    })
+
+    const response = await app.request('/api/users/me/play-states/progress', {
+      headers: { 'x-test-user': USER_ID },
+    })
+
+    expect(response.status).toBe(200)
+    expect(await response.json()).toEqual([
+      {
+        mediaItemId: MEDIA_ID,
+        position: 3600,
+        duration: 3600,
+        status: 'completed',
+      },
+    ])
+  })
+
   it('requires authentication and rejects unknown media', async () => {
     const unauthenticated = await app.request(
       `/api/media/${MEDIA_ID}/play-state`,

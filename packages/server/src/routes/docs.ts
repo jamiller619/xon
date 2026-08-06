@@ -1290,6 +1290,40 @@ const OPENAPI_SPEC = {
         },
       },
     },
+    '/users/me/play-states/progress': {
+      get: {
+        tags: ['Users'],
+        summary: 'List playback progress for media cards',
+        description:
+          'Returns compact playback progress for every media item with a state belonging to the current user.',
+        responses: {
+          '200': {
+            description: 'Current user playback progress',
+            content: {
+              'application/json': {
+                schema: {
+                  type: 'array',
+                  items: {
+                    type: 'object',
+                    properties: {
+                      mediaItemId: { type: 'string' },
+                      position: { type: 'integer' },
+                      duration: { type: 'integer', nullable: true },
+                      status: {
+                        type: 'string',
+                        enum: ['playing', 'stopped', 'completed'],
+                      },
+                    },
+                    required: ['mediaItemId', 'position', 'duration', 'status'],
+                  },
+                },
+              },
+            },
+          },
+          '401': { description: 'Unauthorized' },
+        },
+      },
+    },
     '/users/me/api-tokens': {
       get: {
         tags: ['Users'],

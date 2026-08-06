@@ -222,6 +222,24 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
     return c.json(rows)
   })
 
+  // GET /users/me/play-states/progress — compact lookup data for media cards.
+  router.get('/me/play-states/progress', async (c) => {
+    const user = c.get('user')
+    if (!user) return c.json({ error: 'Unauthorized' }, 401)
+
+    const rows = await db
+      .select({
+        mediaItemId: mediaPlayStates.mediaItemId,
+        position: mediaPlayStates.position,
+        duration: mediaPlayStates.duration,
+        status: mediaPlayStates.status,
+      })
+      .from(mediaPlayStates)
+      .where(eq(mediaPlayStates.userId, user.id))
+
+    return c.json(rows)
+  })
+
   // GET /users/me/group
   router.get('/me/groups', async (c) => {
     const user = c.get('user')

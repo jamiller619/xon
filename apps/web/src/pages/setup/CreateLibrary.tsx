@@ -39,7 +39,10 @@ export default function CreateLibrary() {
           alt=""
         />
       </div>
-      <CreateLibraryForm onSuccess={() => navigate('/')} />
+      <CreateLibraryForm
+        onSuccess={() => navigate('/')}
+        submitLabel="Finish Setup"
+      />
     </Flex>
   )
 }

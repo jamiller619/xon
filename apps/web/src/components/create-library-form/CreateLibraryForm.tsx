@@ -48,7 +48,7 @@ export type CreateLibraryFormProps = {
 export default function CreateLibraryForm({
   onSuccess,
   formClassName,
-  submitLabel = 'Finish Setup',
+  submitLabel = 'Create library',
 }: CreateLibraryFormProps) {
   const [name, setName] = useState<string>('')
   const [description, setDescription] = useState<string>('')

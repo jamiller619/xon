@@ -1027,6 +1027,8 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
     // Check if format needs transcoding — if so, redirect to HLS playlist
     const playbackClient = parsePlaybackClient(c.req.query('client'))
     if (
+      (item.mediaType.startsWith('audio/') ||
+        item.mediaType.startsWith('video/')) &&
       needsTranscoding(
         {
           mediaType: item.mediaType,

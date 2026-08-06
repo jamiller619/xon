@@ -1,52 +1,15 @@
 import { availableParallelism } from 'node:os'
-import { LibraryType, type MediaItem } from '@xon/shared'
+import type { LibraryType, MediaItem } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import pLimit from 'p-limit'
 import type { Logger } from '../logger.ts'
 import type { FileEntry } from './fileEntry.ts'
-import * as stage from './stages.ts'
 
-/**
- * Stages for a metadata refresh of already-persisted items: re-runs metadata
- * plugins against existing rows (title and fileMetadata are seeded from the
- * stored row, so no drm/title/fileMetadata probing). The thumbnail stage runs
- * too, so a refresh backfills artwork for items a plugin didn't match — it
- * no-ops for movies/shows that already have plugin images.
- */
-export const refreshStages: PipelineStage[] = [
-  stage.libraryMetadata,
-  stage.persist,
-  stage.person,
-  stage.thumbnail,
-]
-
-const stagesByLibraryType: Record<LibraryType, PipelineStage[]> = {
-  [LibraryType.Movies]: [
-    stage.drm,
-    stage.title,
-    stage.fileMetadata,
-    stage.libraryMetadata,
-    stage.persist,
-    stage.person,
-    stage.thumbnail,
-  ],
-  [LibraryType.Photos]: [stage.fileMetadata, stage.persist, stage.thumbnail],
-  [LibraryType.TVShows]: [
-    stage.drm,
-    stage.title,
-    stage.fileMetadata,
-    stage.libraryMetadata,
-    stage.persist,
-    stage.person,
-    stage.thumbnail,
-  ],
-  [LibraryType.Music]: [stage.fileMetadata, stage.persist],
-  [LibraryType.HomeVideos]: [stage.fileMetadata, stage.persist],
-  [LibraryType.MusicVideos]: [stage.fileMetadata, stage.persist],
-}
-
-export async function runPipeline(ctx: PipelineContext, jobs: MediaJob[]) {
-  const stageList = stagesByLibraryType[ctx.libraryType]
+export async function runPipeline(
+  ctx: PipelineContext,
+  jobs: MediaJob[],
+  stageList: PipelineStage[],
+) {
   const limit = pLimit(availableParallelism())
   let processed = 0
 
@@ -122,14 +85,6 @@ export type MediaJob = {
 
   // mutable state through pipeline
   data: MediaJobData
-
-  // mutable state through pipeline
-  // libraryId?: string
-  // mediaCategory?: MediaCategory
-  // mimeType?: string
-  // mediaItemId?: string
-  // metadata?: Metadata
-  // drmProtected?: boolean
 
   errors: Error[]
 }

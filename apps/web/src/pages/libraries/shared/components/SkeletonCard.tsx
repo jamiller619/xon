@@ -2,7 +2,6 @@ import { css } from 'inline-css-modules'
 
 const styles = css`
   .card {
-    aspect-ratio: 2 / 3;
     background: linear-gradient(90deg, #1a1a2e 25%, #222240 50%, #1a1a2e 75%);
     background-size: 200% 100%;
     animation: shimmer 1.5s infinite;
@@ -19,6 +18,12 @@ const styles = css`
   }
 `
 
-export default function SkeletonCard() {
-  return <div className={styles.card} />
+type SkeletonCardProps = {
+  aspectRatio?: string
+}
+
+export default function SkeletonCard({
+  aspectRatio = '2 / 3',
+}: SkeletonCardProps) {
+  return <div className={styles.card} style={{ aspectRatio }} />
 }

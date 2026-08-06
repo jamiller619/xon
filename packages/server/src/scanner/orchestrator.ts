@@ -1,5 +1,5 @@
 import { basename, extname } from 'node:path'
-import { DataSourceType } from '@xon/shared'
+import { DataSourceType, LibraryType } from '@xon/shared'
 import { and, eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import mime from 'mime-types'
@@ -20,10 +20,11 @@ import type { FileEntry } from './fileEntry.ts'
 import {
   type MediaJob,
   type PipelineContext,
-  refreshStages,
+  type PipelineStage,
   runPipeline,
 } from './pipeline.ts'
 import { toLocalPath } from './scanner.ts'
+import * as stage from './stages.ts'
 
 const logger = createLogger('orchestrator')
 
@@ -53,6 +54,58 @@ export type ScanSummary = {
 const discoverers: Partial<Record<DataSourceType, MediaDiscoverer>> = {
   [DataSourceType.local]: new LocalDiscoverer(),
   [DataSourceType.plugin]: new PluginDiscoverer(),
+}
+
+const stages: Record<LibraryType, PipelineStage[]> = {
+  [LibraryType.Movies]: [
+    stage.drm,
+    stage.title,
+    stage.fileMetadata,
+    stage.libraryMetadata,
+    stage.persist,
+    stage.person,
+    stage.thumbnail,
+  ],
+  [LibraryType.Photos]: [
+    stage.drm,
+    stage.title,
+    stage.fileMetadata,
+    stage.persist,
+    stage.thumbnail,
+  ],
+  [LibraryType.TVShows]: [
+    stage.drm,
+    stage.title,
+    stage.fileMetadata,
+    stage.libraryMetadata,
+    stage.persist,
+    stage.person,
+    stage.thumbnail,
+  ],
+  [LibraryType.Music]: [
+    stage.drm,
+    stage.title,
+    stage.fileMetadata,
+    stage.libraryMetadata,
+    stage.persist,
+    stage.thumbnail,
+  ],
+  [LibraryType.HomeVideos]: [
+    stage.drm,
+    stage.title,
+    stage.fileMetadata,
+    stage.libraryMetadata,
+    stage.persist,
+    stage.thumbnail,
+  ],
+  [LibraryType.MusicVideos]: [
+    stage.drm,
+    stage.title,
+    stage.fileMetadata,
+    stage.libraryMetadata,
+    stage.persist,
+    stage.thumbnail,
+  ],
 }
 
 export async function scanLibrary(
@@ -179,7 +232,7 @@ export async function scanLibrary(
       `Beginning pipeline stage for ${library.name} / ${sourceLabel}`,
     )
 
-    await runPipeline(ctx, discovery.jobs)
+    await runPipeline(ctx, discovery.jobs, stages[library.type])
 
     discovery.reconcile()
   }
@@ -200,6 +253,34 @@ export async function scanLibrary(
   return summary
 }
 
+const sharedRefreshStages: PipelineStage[] = [
+  stage.libraryMetadata,
+  stage.persist,
+  stage.person,
+  stage.thumbnail,
+]
+
+/**
+ * Stages for a metadata refresh of already-persisted items: re-runs metadata
+ * plugins against existing rows (title and fileMetadata are seeded from the
+ * stored row, so no drm/title/fileMetadata probing). The thumbnail stage runs
+ * too, so a refresh backfills artwork for items a plugin didn't match — it
+ * no-ops for movies/shows that already have plugin images.
+ */
+const refreshStages: Record<
+  Exclude<LibraryType, 'home_videos' | 'photos'>,
+  PipelineStage[]
+> = {
+  [LibraryType.Movies]: sharedRefreshStages,
+  [LibraryType.TVShows]: sharedRefreshStages,
+  [LibraryType.Music]: [stage.libraryMetadata, stage.persist, stage.thumbnail],
+  [LibraryType.MusicVideos]: [
+    stage.libraryMetadata,
+    stage.persist,
+    stage.thumbnail,
+  ],
+}
+
 /**
  * Re-run metadata plugins against already-persisted media items — the whole
  * library, or a single item when mediaItemId is given. Unlike a scan, this
@@ -217,6 +298,15 @@ export async function refreshMetadata(
 
   if (!library) {
     throw new Error(`Library not found: ${libraryId}`)
+  }
+
+  if (
+    library.type === LibraryType.Photos ||
+    library.type === LibraryType.HomeVideos
+  ) {
+    throw new Error(
+      `Metadata refresh is not supported for library type: ${library.type}`,
+    )
   }
 
   const items = await db
@@ -311,7 +401,7 @@ export async function refreshMetadata(
     }
   }
 
-  await runPipeline(ctx, jobs)
+  await runPipeline(ctx, jobs, refreshStages[library.type])
 
   const summary: ScanSummary = {
     libraryId,
@@ -329,10 +419,23 @@ export async function refreshMetadata(
   return summary
 }
 
-function getExtensionsForLibraryType(libraryType: string): Set<string> {
+export function getExtensionsForLibraryType(
+  libraryType: LibraryType,
+): Set<string> {
+  const mimePrefix: Record<LibraryType, string> = {
+    [LibraryType.Movies]: 'video',
+    [LibraryType.TVShows]: 'video',
+    [LibraryType.Music]: 'audio',
+    [LibraryType.Photos]: 'image',
+    [LibraryType.HomeVideos]: 'video',
+    [LibraryType.MusicVideos]: 'video',
+  }
+
   return new Set(
     Object.entries(mime.extensions)
-      .filter(([mimeType]) => mimeType.startsWith(`${libraryType}/`))
+      .filter(([mimeType]) =>
+        mimeType.startsWith(`${mimePrefix[libraryType]}/`),
+      )
       .flatMap(([, fileExtensions]) => fileExtensions.map((ext) => `.${ext}`)),
   )
 }

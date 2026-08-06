@@ -1,5 +1,6 @@
 import { Readable } from 'node:stream'
 import type { Client } from '@libsql/client'
+import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp } from '../../app.ts'
@@ -1212,10 +1213,12 @@ describe('Media API - RAW image stream endpoint', () => {
   })
 
   it('skips RAW path for non-RAW files and serves directly', async () => {
+    await db
+      .update(mediaItems)
+      .set({ filePath: '/media/photo.jpg', mimeType: 'image/jpeg' })
+      .where(eq(mediaItems.id, rawItemId))
     mockStat.mockResolvedValueOnce({ size: 10000 } as never)
     mockIsRawImage.mockReturnValueOnce(false)
-    mockExtractFfprobeMetadata.mockResolvedValueOnce(null)
-    mockNeedsTranscoding.mockReturnValue(false)
     const fakeStream = Readable.from(['jpeg data'])
     mockCreateReadStream.mockReturnValueOnce(fakeStream as never)
 
@@ -1223,6 +1226,8 @@ describe('Media API - RAW image stream endpoint', () => {
       headers: { Authorization: AUTH },
     })
     expect(res.status).toBe(200)
+    expect(res.headers.get('Content-Type')).toBe('image/jpeg')
+    expect(mockNeedsTranscoding).not.toHaveBeenCalled()
     expect(mockConvertRawToJpeg).not.toHaveBeenCalled()
   })
 })

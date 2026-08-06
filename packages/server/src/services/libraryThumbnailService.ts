@@ -29,6 +29,13 @@ const ROWS = 4
 const GAP = 6
 const GRID_W = COLS * CELL_W + (COLS - 1) * GAP
 const GRID_H = ROWS * CELL_H + (ROWS - 1) * GAP
+const THUMBNAIL_W = 800
+const THUMBNAIL_H = 600
+const PERSPECTIVE = 3200
+const ROTATE_X = (20 * Math.PI) / 180
+const ROTATE_Y = (-10 * Math.PI) / 180
+const SCALE = 1.5
+const THUMBNAIL_VERSION = 2
 const POSTER_FETCH_TIMEOUT_MS = 4000
 
 function extractPosterUrl(metadata: Metadata): string | null {
@@ -58,6 +65,101 @@ async function fetchPoster(src: string): Promise<Buffer | null> {
   }
 }
 
+/**
+ * Projects a 4:3 image onto the same plane previously rendered by
+ * LibraryCard's CSS transform. Keeping the projection in the asset makes the
+ * generated image portable and leaves uploaded library artwork untouched.
+ */
+export async function applyLibraryThumbnailPerspective(
+  input: Buffer,
+): Promise<Buffer> {
+  const { data, info } = await sharp(input)
+    .resize(THUMBNAIL_W, THUMBNAIL_H, { fit: 'cover', position: 'centre' })
+    .removeAlpha()
+    .raw()
+    .toBuffer({ resolveWithObject: true })
+
+  const output = Buffer.alloc(THUMBNAIL_W * THUMBNAIL_H * info.channels)
+  const cosX = Math.cos(ROTATE_X)
+  const sinX = Math.sin(ROTATE_X)
+  const cosY = Math.cos(ROTATE_Y)
+  const sinY = Math.sin(ROTATE_Y)
+
+  // Coefficients for scale(), rotateY(), then rotateX(), matching CSS's
+  // right-to-left transform application order.
+  const projectedXFromX = SCALE * cosY
+  const projectedYFromX = SCALE * sinX * sinY
+  const projectedYFromY = SCALE * cosX
+  const depthFromX = -SCALE * cosX * sinY
+  const depthFromY = SCALE * sinX
+  const centerX = THUMBNAIL_W / 2
+  const centerY = THUMBNAIL_H / 2
+
+  for (let outputY = 0; outputY < THUMBNAIL_H; outputY++) {
+    const screenY = outputY + 0.5 - centerY
+
+    for (let outputX = 0; outputX < THUMBNAIL_W; outputX++) {
+      const screenX = outputX + 0.5 - centerX
+
+      // Invert the perspective projection to find this output pixel's point
+      // on the original, untransformed image plane.
+      const a = PERSPECTIVE * projectedXFromX + screenX * depthFromX
+      const b = screenX * depthFromY
+      const c = PERSPECTIVE * projectedYFromX + screenY * depthFromX
+      const d = PERSPECTIVE * projectedYFromY + screenY * depthFromY
+      const determinant = a * d - b * c
+      if (Math.abs(determinant) < Number.EPSILON) continue
+
+      const planeX =
+        (screenX * PERSPECTIVE * d - b * screenY * PERSPECTIVE) / determinant
+      const planeY =
+        (a * screenY * PERSPECTIVE - screenX * PERSPECTIVE * c) / determinant
+      const sourceX = planeX + centerX - 0.5
+      const sourceY = planeY + centerY - 0.5
+      if (
+        sourceX < 0 ||
+        sourceX >= THUMBNAIL_W - 1 ||
+        sourceY < 0 ||
+        sourceY >= THUMBNAIL_H - 1
+      ) {
+        continue
+      }
+
+      const x0 = Math.floor(sourceX)
+      const y0 = Math.floor(sourceY)
+      const xWeight = sourceX - x0
+      const yWeight = sourceY - y0
+      const topLeft = (y0 * THUMBNAIL_W + x0) * info.channels
+      const topRight = topLeft + info.channels
+      const bottomLeft = topLeft + THUMBNAIL_W * info.channels
+      const bottomRight = bottomLeft + info.channels
+      const destination = (outputY * THUMBNAIL_W + outputX) * info.channels
+
+      for (let channel = 0; channel < info.channels; channel++) {
+        const top =
+          data.readUInt8(topLeft + channel) * (1 - xWeight) +
+          data.readUInt8(topRight + channel) * xWeight
+        const bottom =
+          data.readUInt8(bottomLeft + channel) * (1 - xWeight) +
+          data.readUInt8(bottomRight + channel) * xWeight
+        output[destination + channel] = Math.round(
+          top * (1 - yWeight) + bottom * yWeight,
+        )
+      }
+    }
+  }
+
+  return sharp(output, {
+    raw: {
+      width: THUMBNAIL_W,
+      height: THUMBNAIL_H,
+      channels: info.channels,
+    },
+  })
+    .png()
+    .toBuffer()
+}
+
 async function buildGrid(posters: Buffer[]): Promise<Buffer> {
   const total = COLS * ROWS
   const composites: sharp.OverlayOptions[] = []
@@ -72,7 +174,7 @@ async function buildGrid(posters: Buffer[]): Promise<Buffer> {
     })
   }
 
-  return sharp({
+  const grid = await sharp({
     create: {
       width: GRID_W,
       height: GRID_H,
@@ -83,6 +185,8 @@ async function buildGrid(posters: Buffer[]): Promise<Buffer> {
     .composite(composites)
     .png()
     .toBuffer()
+
+  return applyLibraryThumbnailPerspective(grid)
 }
 
 function thumbnailDir(): string {
@@ -90,7 +194,7 @@ function thumbnailDir(): string {
 }
 
 function thumbnailPath(libraryId: string): string {
-  return join(thumbnailDir(), `${libraryId}.png`)
+  return join(thumbnailDir(), `${libraryId}-v${THUMBNAIL_VERSION}.png`)
 }
 
 function libraryImagesDir(libraryId: string): string {
@@ -133,19 +237,29 @@ async function buildThumbnail(
   return buildGrid(loaded)
 }
 
-export async function storeLibraryPoster(
+async function storeLibraryPoster(
   libraryId: string,
   data: Buffer,
+  origin: 'generated' | 'uploaded',
   extension = 'png',
 ): Promise<string> {
   const reference = libraryImageCacheReference(
     libraryId,
-    `${randomUUID()}.${extension}`,
+    `${origin}-${randomUUID()}.${extension}`,
   )
   const destination = resolveCacheReference(reference)
   await mkdir(libraryImagesDir(libraryId), { recursive: true })
   await writeFile(destination, data)
   return reference
+}
+
+/** Stores user artwork byte-for-byte; uploaded images never receive a transform. */
+export function storeUploadedLibraryPoster(
+  libraryId: string,
+  data: Buffer,
+  extension: string,
+): Promise<string> {
+  return storeLibraryPoster(libraryId, data, 'uploaded', extension)
 }
 
 export async function generateLibraryPoster(
@@ -154,7 +268,7 @@ export async function generateLibraryPoster(
 ): Promise<string | null> {
   const buffer = await buildThumbnail(db, libraryId)
   if (!buffer) return null
-  return storeLibraryPoster(libraryId, buffer)
+  return storeLibraryPoster(libraryId, buffer, 'generated')
 }
 
 export async function removeLibraryPoster(

@@ -78,6 +78,7 @@ export enum LibraryType {
   Photos = 'photos',
   HomeVideos = 'home_videos',
   MusicVideos = 'music_videos',
+  MixedPhotosAndVideos = 'mixed_photos_and_videos',
 }
 
 export interface Library {
@@ -251,4 +252,11 @@ export type PlayState = {
   startedAt: Date
   updatedAt: Date
   stoppedAt?: Date
+}
+
+export type MediaPlayProgress = Pick<
+  PlayState,
+  'mediaItemId' | 'position' | 'status'
+> & {
+  duration: number | null
 }

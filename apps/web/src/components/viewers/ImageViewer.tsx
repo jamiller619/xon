@@ -1,9 +1,11 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { apiUrl } from '~/lib/apiFetch'
 import styles from './ImageViewer.module.css'
 
 export interface ImageSibling {
   id: string
   title: string
+  thumbnailSrc: string | undefined
 }
 
 interface ImageViewerProps {
@@ -11,6 +13,7 @@ interface ImageViewerProps {
   title: string
   onClose: () => void
   siblings?: ImageSibling[]
+  onCurrentIndexChange?: ((index: number) => void) | undefined
 }
 
 const MIN_SCALE = 1
@@ -26,6 +29,7 @@ export default function ImageViewer({
   title,
   onClose,
   siblings,
+  onCurrentIndexChange,
 }: ImageViewerProps) {
   // Find starting index in siblings list
   const startIndex = siblings
@@ -51,8 +55,9 @@ export default function ImageViewer({
   const [dragging, setDragging] = useState(false)
   const [slideshowActive, setSlideshowActive] = useState(false)
   const [loaded, setLoaded] = useState(false)
+  const [loadError, setLoadError] = useState(false)
 
-  const containerRef = useRef<HTMLDivElement>(null)
+  const containerRef = useRef<HTMLElement>(null)
   const dragStart = useRef<{
     x: number
     y: number
@@ -60,8 +65,11 @@ export default function ImageViewer({
     ty: number
   } | null>(null)
   const pinchRef = useRef<{ dist: number; scale: number } | null>(null)
+  const thumbnailRefs = useRef<Array<HTMLButtonElement | null>>([])
 
   const hasSiblings = siblings && siblings.length > 1
+  const canGoPrev = hasSiblings && currentIndex > 0
+  const canGoNext = hasSiblings && currentIndex < (siblings?.length ?? 1) - 1
 
   const resetTransform = useCallback(() => {
     setScale(1)
@@ -69,21 +77,34 @@ export default function ImageViewer({
     setTranslateY(0)
   }, [])
 
+  const selectImage = useCallback(
+    (index: number) => {
+      setCurrentIndex(index)
+      resetTransform()
+      setLoaded(false)
+      setLoadError(false)
+    },
+    [resetTransform],
+  )
+
   const goNext = useCallback(() => {
-    if (!hasSiblings) return
-    setCurrentIndex((i) => (i + 1) % (siblings?.length ?? 1))
-    resetTransform()
-    setLoaded(false)
-  }, [hasSiblings, siblings?.length, resetTransform])
+    if (!canGoNext) return
+    selectImage(currentIndex + 1)
+  }, [canGoNext, currentIndex, selectImage])
 
   const goPrev = useCallback(() => {
-    if (!hasSiblings) return
-    setCurrentIndex(
-      (i) => (i - 1 + (siblings?.length ?? 1)) % (siblings?.length ?? 1),
-    )
-    resetTransform()
-    setLoaded(false)
-  }, [hasSiblings, siblings?.length, resetTransform])
+    if (!canGoPrev) return
+    selectImage(currentIndex - 1)
+  }, [canGoPrev, currentIndex, selectImage])
+
+  useEffect(() => {
+    thumbnailRefs.current[currentIndex]?.scrollIntoView({
+      behavior: 'smooth',
+      block: 'nearest',
+      inline: 'center',
+    })
+    onCurrentIndexChange?.(currentIndex)
+  }, [currentIndex, onCurrentIndexChange])
 
   // Keyboard navigation
   useEffect(() => {
@@ -250,8 +271,9 @@ export default function ImageViewer({
       </div>
 
       {/* Image area */}
-      <div
+      <section
         ref={containerRef}
+        aria-label="Zoomable image"
         className={`${styles.imageContainer ?? ''} ${dragging ? (styles.dragging ?? '') : ''}`}
         onWheel={handleWheel}
         onMouseDown={handleMouseDown}
@@ -262,10 +284,13 @@ export default function ImageViewer({
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
       >
-        {!loaded && <div className={styles.spinner ?? ''} />}
+        {!loaded && !loadError && <div className={styles.spinner ?? ''} />}
+        {loadError && (
+          <p className={styles.loadError ?? ''}>Unable to load this photo.</p>
+        )}
         <img
           key={currentId}
-          src={`/api/media/${currentId}/stream`}
+          src={apiUrl(`/api/media/${currentId}/stream`)}
           alt={currentTitle}
           className={styles.image ?? ''}
           style={{
@@ -275,8 +300,9 @@ export default function ImageViewer({
           }}
           draggable={false}
           onLoad={() => setLoaded(true)}
+          onError={() => setLoadError(true)}
         />
-      </div>
+      </section>
 
       {/* Navigation buttons */}
       {hasSiblings && (
@@ -285,6 +311,8 @@ export default function ImageViewer({
             type="button"
             className={`${styles.navBtn ?? ''} ${styles.navPrev ?? ''}`}
             onClick={goPrev}
+            disabled={!canGoPrev}
+            aria-label="Previous image"
             title="Previous image (←)"
           >
             ‹
@@ -293,13 +321,37 @@ export default function ImageViewer({
             type="button"
             className={`${styles.navBtn ?? ''} ${styles.navNext ?? ''}`}
             onClick={goNext}
+            disabled={!canGoNext}
+            aria-label="Next image"
             title="Next image (→)"
           >
             ›
           </button>
-          <div className={styles.counter ?? ''}>
-            {currentIndex + 1} / {siblings?.length ?? 1}
-          </div>
+          <nav className={styles.filmstrip ?? ''} aria-label="Photo thumbnails">
+            {siblings?.map((sibling, index) => (
+              <button
+                key={sibling.id}
+                ref={(element) => {
+                  thumbnailRefs.current[index] = element
+                }}
+                type="button"
+                className={`${styles.thumbnail ?? ''} ${index === currentIndex ? (styles.thumbnailActive ?? '') : ''}`}
+                onClick={() => selectImage(index)}
+                aria-label={`View ${sibling.title}`}
+                aria-current={index === currentIndex ? 'true' : undefined}
+                title={sibling.title}
+              >
+                {sibling.thumbnailSrc ? (
+                  <img src={sibling.thumbnailSrc} alt="" loading="lazy" />
+                ) : (
+                  <span aria-hidden="true" />
+                )}
+              </button>
+            ))}
+            <div className={styles.counter ?? ''}>
+              {currentIndex + 1} / {siblings?.length ?? 1}
+            </div>
+          </nav>
         </>
       )}
     </dialog>

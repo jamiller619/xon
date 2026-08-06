@@ -9,6 +9,7 @@ const ROUTES = {
   featuredMedia: '/api/media/featured',
   setupStatus: '/api/auth/setup-status',
   continueWatching: '/api/users/me/play-states',
+  playProgress: '/api/users/me/play-states/progress',
 } as const
 
 export default function useQueryAPIHelper(

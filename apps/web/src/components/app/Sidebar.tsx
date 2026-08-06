@@ -8,18 +8,14 @@ import {
   DocumentText20Filled as LogViewerOnIcon,
   Library20Regular as ManageLibrariesIcon,
   Library20Filled as ManageLibrariesOnIcon,
-  MoviesAndTv20Regular as MoviesIcon,
-  MusicNote220Regular as MusicIcon,
-  Image20Regular as PhotosIcon,
   TextBulletList20Regular as PlaylistIcon,
   WindowConsole20Regular as ServerOutputIcon,
   WindowConsole20Filled as ServerOutputOnIcon,
   Settings20Regular as SettingsIcon,
   Settings20Filled as SettingsOnIcon,
-  Tv20Regular as TVIcon,
 } from '@fluentui/react-icons'
 import { useQuery } from '@tanstack/react-query'
-import { type Group, GroupType, LibraryType } from '@xon/shared'
+import { type Group, GroupType } from '@xon/shared'
 import { Flex, Surface } from '@xon/ui'
 import clsx from 'clsx'
 import { NavLink } from 'react-router-dom'
@@ -28,6 +24,7 @@ import PluginSlot from '~/components/PluginSlot'
 import useLibraries from '~/hooks/useLibraries'
 import useQueryAPIHelper from '~/hooks/useQueryAPIHelper'
 import CreateLibraryButton from '../CreateLibraryButton'
+import LibraryIcon from '../icons/LibraryIcon'
 import styles from './Sidebar.module.css'
 
 interface SidebarProps {
@@ -185,19 +182,4 @@ function CollectionIcon({ type }: { type?: GroupType | undefined }) {
   }
 
   return <PlaylistIcon />
-}
-
-function LibraryIcon({ type }: { type?: LibraryType | undefined }) {
-  switch (type) {
-    case LibraryType.Movies:
-      return <MoviesIcon />
-    case LibraryType.TVShows:
-    case LibraryType.HomeVideos:
-      return <TVIcon />
-    case LibraryType.Music:
-    case LibraryType.MusicVideos:
-      return <MusicIcon />
-    case LibraryType.Photos:
-      return <PhotosIcon />
-  }
 }

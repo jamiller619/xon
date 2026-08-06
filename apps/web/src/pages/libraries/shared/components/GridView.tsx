@@ -1,19 +1,18 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { css } from 'inline-css-modules'
-import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import MediaCard from '~/components/media-card/MediaCard'
+import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
+import styles from '../../Library.module.css'
 import { useScrollViewport } from '../hooks/useScrollViewport'
-import libraryStyles from '../Library.module.css'
+import type { CollectionViewProps } from '../types/collectionView'
 import SkeletonCard from './SkeletonCard'
-import type { ViewProps } from './types'
 
-const MIN_CARD_WIDTH = 160
-const GRID_GAP = 12
-const CARD_HEIGHT_RATIO = 7 / 5
-const CARD_INFO_HEIGHT = 64
-const INITIAL_ITEM_COUNT = 40
+const DEFAULT_MIN_CARD_WIDTH = 160
+const DEFAULT_GAP = 12
+const DEFAULT_CARD_HEIGHT_RATIO = 7 / 5
+const DEFAULT_CARD_INFO_HEIGHT = 64
+const DEFAULT_SKELETON_COUNT = 40
 
-const styles = css`
+const gridStyles = css`
   .grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
@@ -42,28 +41,43 @@ const styles = css`
   }
 `
 
-export default function GridView({
+type GridViewProps<Item> = CollectionViewProps<Item> & {
+  renderItem: (item: Item) => React.ReactNode
+  renderSkeleton?: (index: number) => React.ReactNode
+  minCardWidth?: number
+  gap?: number
+  cardHeightRatio?: number
+  cardInfoHeight?: number
+  skeletonCount?: number
+}
+
+export default function GridView<Item>({
   isLoading,
   items,
-  library,
   hasNextPage,
   isFetchingNextPage,
   onLoadMore,
   resetKey,
-}: ViewProps) {
+  getItemKey,
+  emptyContent = 'No items in this library yet.',
+  renderItem,
+  renderSkeleton = () => <SkeletonCard />,
+  minCardWidth = DEFAULT_MIN_CARD_WIDTH,
+  gap = DEFAULT_GAP,
+  cardHeightRatio = DEFAULT_CARD_HEIGHT_RATIO,
+  cardInfoHeight = DEFAULT_CARD_INFO_HEIGHT,
+  skeletonCount = DEFAULT_SKELETON_COUNT,
+}: GridViewProps<Item>) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [width, setWidth] = useState(0)
   const { initialOffset, scrollElement, scrollMargin } =
     useScrollViewport(containerRef)
-  const columns = Math.max(
-    1,
-    Math.floor((width + GRID_GAP) / (MIN_CARD_WIDTH + GRID_GAP)),
-  )
-  const mediaRowCount = Math.ceil(items.length / columns)
-  const rowCount = mediaRowCount + (hasNextPage ? 1 : 0)
-  const cardWidth = (width - GRID_GAP * (columns - 1)) / columns
+  const columns = Math.max(1, Math.floor((width + gap) / (minCardWidth + gap)))
+  const itemRowCount = Math.ceil(items.length / columns)
+  const rowCount = itemRowCount + (hasNextPage ? 1 : 0)
+  const cardWidth = (width - gap * (columns - 1)) / columns
   const estimatedRowHeight =
-    Math.max(MIN_CARD_WIDTH, cardWidth) * CARD_HEIGHT_RATIO + CARD_INFO_HEIGHT
+    Math.max(minCardWidth, cardWidth) * cardHeightRatio + cardInfoHeight
 
   useLayoutEffect(() => {
     const container = containerRef.current
@@ -77,12 +91,11 @@ export default function GridView({
   }, [])
 
   const previousResetKey = useRef(resetKey)
-
   const rowVirtualizer = useVirtualizer({
     count: rowCount,
     getScrollElement: () => scrollElement,
     estimateSize: () => estimatedRowHeight,
-    gap: GRID_GAP,
+    gap,
     overscan: 2,
     initialOffset,
     scrollMargin,
@@ -102,7 +115,7 @@ export default function GridView({
   useEffect(() => {
     if (
       lastVirtualRowIndex !== undefined &&
-      lastVirtualRowIndex >= mediaRowCount - 1 &&
+      lastVirtualRowIndex >= itemRowCount - 1 &&
       hasNextPage &&
       !isFetchingNextPage
     ) {
@@ -111,18 +124,24 @@ export default function GridView({
   }, [
     hasNextPage,
     isFetchingNextPage,
+    itemRowCount,
     lastVirtualRowIndex,
-    mediaRowCount,
     onLoadMore,
   ])
 
   if (isLoading) {
     return (
-      <div ref={containerRef} className={styles.virtualGrid}>
-        <div className={styles.grid}>
-          {Array.from({ length: INITIAL_ITEM_COUNT }).map((_, index) => (
-            // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders
-            <SkeletonCard key={index} />
+      <div ref={containerRef} className={gridStyles.virtualGrid}>
+        <div
+          className={gridStyles.grid}
+          style={{
+            gridTemplateColumns: `repeat(auto-fill, minmax(${minCardWidth}px, 1fr))`,
+            gap,
+          }}
+        >
+          {Array.from({ length: skeletonCount }).map((_, index) => (
+            // biome-ignore lint/suspicious/noArrayIndexKey: stable loading placeholders
+            <Fragment key={index}>{renderSkeleton(index)}</Fragment>
           ))}
         </div>
       </div>
@@ -131,14 +150,14 @@ export default function GridView({
 
   if (items.length === 0) {
     return (
-      <div ref={containerRef} className={styles.virtualGrid}>
-        <p className={libraryStyles.empty}>No media in this library yet.</p>
+      <div ref={containerRef} className={gridStyles.virtualGrid}>
+        <p className={styles.empty}>{emptyContent}</p>
       </div>
     )
   }
 
   return (
-    <div ref={containerRef} className={styles.virtualGrid}>
+    <div ref={containerRef} className={gridStyles.virtualGrid}>
       <div ref={rowVirtualizer.containerRef}>
         {virtualRows.map((virtualRow) => {
           const startIndex = virtualRow.index * columns
@@ -149,17 +168,18 @@ export default function GridView({
               key={virtualRow.key}
               ref={rowVirtualizer.measureElement}
               data-index={virtualRow.index}
-              className={styles.virtualRow}
+              className={gridStyles.virtualRow}
               style={{
                 gridTemplateColumns: `repeat(${columns}, minmax(0, 1fr))`,
+                gap,
               }}
             >
               {rowItems.map((item) => (
-                <MediaCard key={item.id} item={item} library={library} />
+                <Fragment key={getItemKey(item)}>{renderItem(item)}</Fragment>
               ))}
-              {virtualRow.index === mediaRowCount && (
+              {virtualRow.index === itemRowCount && (
                 <div
-                  className={styles.loader}
+                  className={gridStyles.loader}
                   style={{ gridColumn: `1 / ${columns + 1}` }}
                 >
                   {isFetchingNextPage ? 'Loading more…' : 'Load more'}

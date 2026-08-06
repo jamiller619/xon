@@ -1,4 +1,5 @@
-import clsx from 'clsx'
+import { DocumentEdit16Regular as EditIcon } from '@fluentui/react-icons'
+import { Button, Flex } from '@xon/ui'
 import { css } from 'inline-css-modules'
 import Page from '~/pages/Page'
 
@@ -17,10 +18,10 @@ const styles = css`
   }
 
   .titleContainer {
-    display: flex;
-    align-items: baseline;
-    gap: var(--space-md);
-    min-width: 0;
+    /* display: flex; */
+    /* align-items: baseline; */
+    /* gap: var(--space-md); */
+    /* min-width: 0; */
   }
 
   .stats {
@@ -38,17 +39,17 @@ const styles = css`
       /* flex: 1 1 auto; */
       text-overflow: ellipsis;
 
-      & + span::before {
+      &:not(:first-child)::before {
         margin-right: var(--space-sm);
         color: var(--color-gray-8);
-        content: "·";
+        content: '·';
       }
     }
   }
 
   .toolbar {
     display: flex;
-    align-items: flex-end;
+    align-items: end;
     justify-content: space-between;
     gap: var(--space-md);
   }
@@ -69,44 +70,34 @@ export default function FilterHeader({
     <header className={styles.header}>
       <div className={styles.titleContainer}>
         <Page.Title>{title}</Page.Title>
+        {/* <Button.Icon title="Edit library">
+          <EditIcon />
+        </Button.Icon> */}
         <div className={styles.stats}>
-          {stats?.length &&
+          {stats?.length ? (
             stats.map((stat) => (
               <span key={stat} title={stat}>
                 {stat}
               </span>
-            ))}
+            ))
+          ) : (
+            <i>Failed to load stats</i>
+          )}
         </div>
       </div>
       <div className={styles.toolbar}>{children}</div>
-      {/* <LibraryToolbar
-        viewMode={viewMode}
-        currentSortKey={controls.currentSortKey}
-        mediaType={controls.mediaType}
-        unmatchedOnly={controls.unmatchedOnly}
-        isRefreshingMetadata={metadataRefresh.isRefreshing}
-        onViewModeChange={setViewMode}
-        onSortOptionChange={controls.handleSortOption}
-        onMediaTypeChange={controls.setMediaType}
-        onUnmatchedOnlyChange={controls.setUnmatchedOnly}
-        onRefreshMetadata={metadataRefresh.refresh}
-      /> */}
     </header>
   )
 }
 
-type ToolbarControlProps = {
-  dir?: 'start' | 'end'
-  children: React.ReactNode
-}
-
-FilterHeader.ToolbarControl = ({
+FilterHeader.ToolbarControls = ({
   children,
-  dir = 'start',
-}: ToolbarControlProps) => {
+}: {
+  children: React.ReactNode
+}) => {
   return (
-    <div className={clsx(styles.toolbar, { [styles[dir] as string]: dir })}>
+    <Flex gap="4" align="end">
       {children}
-    </div>
+    </Flex>
   )
 }

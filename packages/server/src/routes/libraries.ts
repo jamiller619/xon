@@ -19,7 +19,7 @@ import {
   generateLibraryPoster,
   getOrBuildThumbnail,
   removeLibraryPoster,
-  storeLibraryPoster,
+  storeUploadedLibraryPoster,
 } from '../services/libraryThumbnailService.ts'
 import { makeScanRouter, triggerLibraryScan } from './scan.ts'
 
@@ -349,7 +349,7 @@ export function makeLibrariesRouter(
         )
       }
 
-      const source = await storeLibraryPoster(id, data, detected.ext)
+      const source = await storeUploadedLibraryPoster(id, data, detected.ext)
       const images = {
         poster: [...library.images.poster, source],
       }
@@ -404,7 +404,10 @@ export function makeLibrariesRouter(
       const selectedPoster = library.images.poster[0]
       if (selectedPoster) {
         try {
-          const buffer = await readFile(selectedPoster)
+          const selectedPosterPath = resolveLocalArtworkPath(selectedPoster)
+          if (!selectedPosterPath)
+            throw new Error('Invalid library artwork path')
+          const buffer = await readFile(selectedPosterPath)
           const detected = await fileTypeFromBuffer(buffer)
           if (detected && SUPPORTED_LIBRARY_IMAGE_TYPES.has(detected.mime)) {
             return c.body(new Uint8Array(buffer), 200, {

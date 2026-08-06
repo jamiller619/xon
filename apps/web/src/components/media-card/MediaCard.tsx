@@ -19,6 +19,7 @@ import {
 import { type ComponentPropsWithRef, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { useRefreshMetadataConfirmation } from '~/components/confirmation/ConfirmationProvider'
+import usePlayState from '~/hooks/usePlayState'
 import { apiFetch, thumbnailUrl } from '~/lib/apiFetch'
 import { mediaPath } from '~/lib/utils'
 import { useAudioStore } from '~/store/audioStore'
@@ -26,11 +27,15 @@ import EditImages from '../EditImages'
 import FixMatchDialog from '../fix-match/FixMatchDialog'
 import ListView from './ListView'
 import styles from './MediaCard.module.css'
+import ProgressBar, { getProgress } from './ProgressBar'
 
 interface MediaCardProps {
   item: MediaItem
   library?: Library | undefined
   listView?: boolean
+  imageOnly?: boolean
+  thumbAspectRatio?: string
+  onOpen?: (item: MediaItem) => void
   isFavorited?: boolean
   onToggleFavorite?: (id: string, currentlyFavorited: boolean) => void
   listRowProps?: ComponentPropsWithRef<'tr'> & { 'data-index'?: number }
@@ -40,6 +45,9 @@ export default function MediaCard({
   item,
   library,
   listView,
+  imageOnly = false,
+  thumbAspectRatio,
+  onOpen,
   isFavorited,
   onToggleFavorite,
   listRowProps,
@@ -49,9 +57,17 @@ export default function MediaCard({
   const addToQueue = useAudioStore((s) => s.addToQueue)
   const [editImagesOpen, setEditImagesOpen] = useState(false)
   const [fixMatchOpen, setFixMatchOpen] = useState(false)
+  const playState = usePlayState(item.id)
   const isAudio = item.mediaType?.startsWith('audio/') ?? false
   const posterSrc = thumbnailUrl(item, 'medium')
   const link = mediaPath(item)
+  const progress = getProgress(playState?.position, playState?.duration)
+
+  function handleOpen(e: React.MouseEvent) {
+    if (!onOpen) return
+    e.preventDefault()
+    onOpen(item)
+  }
 
   function handlePlay(e: React.MouseEvent) {
     e.preventDefault()
@@ -95,6 +111,8 @@ export default function MediaCard({
         item={item}
         handleAddToQueue={handleAddToQueue}
         handlePlay={handlePlay}
+        onOpen={onOpen}
+        progress={playState ? progress : undefined}
         {...(listRowProps ? { rowProps: listRowProps } : {})}
       />
     )
@@ -145,20 +163,22 @@ export default function MediaCard({
           as={Link}
           to={link}
           className={styles.card}
+          onClick={handleOpen}
           state={{
             ...item,
             library,
           }}
         >
-          <Card.Thumb>
+          <Card.Thumb aspectRatio={thumbAspectRatio}>
             {posterSrc ? (
               <img src={posterSrc} alt={item.title} loading="lazy" />
             ) : (
               <div className={styles.thumbPlaceholder}>
-                <span>{isAudio ? '♪' : '▶'}</span>
+                {!imageOnly && <span>{isAudio ? '♪' : '▶'}</span>}
               </div>
             )}
             {item.drmProtected && <div className={styles.drmBadge}>🔒</div>}
+            {playState && <ProgressBar title={item.title} value={progress} />}
             {onToggleFavorite && (
               <button
                 type="button"
@@ -192,12 +212,14 @@ export default function MediaCard({
               </div>
             )}
           </Card.Thumb>
-          <Card.Info>
-            <Card.Title>{item.title}</Card.Title>
-            <Card.Meta>
-              <span>{item.metadata.year}</span>
-            </Card.Meta>
-          </Card.Info>
+          {!imageOnly && (
+            <Card.Info>
+              <Card.Title>{item.title}</Card.Title>
+              <Card.Meta>
+                <span>{item.metadata.year}</span>
+              </Card.Meta>
+            </Card.Info>
+          )}
         </Card>
       </ContextMenu>
       <Dialog
