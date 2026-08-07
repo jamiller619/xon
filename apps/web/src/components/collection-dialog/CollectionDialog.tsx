@@ -1,16 +1,16 @@
 import { useEffect, useRef, useState } from 'react'
 import { apiFetch } from '~/lib/apiFetch'
-import styles from './GroupDialog.module.css'
+import styles from './CollectionDialog.module.css'
 
-export type ManualGroupType =
+export type ManualCollectionType =
   | 'collection'
   | 'playlist'
   | 'album'
   | 'shelf'
   | 'folder'
 
-/** Map a media category to the preferred manual group type */
-function inferGroupType(mediaCategories: string[]): ManualGroupType {
+/** Map a media category to the preferred manual collection type */
+function inferCollectionType(mediaCategories: string[]): ManualCollectionType {
   const VIDEO_CATS = ['Movies', 'TV Shows', 'Clips', 'Home Videos']
   const MUSIC_CATS = ['Music', 'Audiobooks', 'Audio Clips', 'Podcasts']
   const PHOTO_CATS = ['Pictures', 'Images']
@@ -30,7 +30,7 @@ function inferGroupType(mediaCategories: string[]): ManualGroupType {
   return 'shelf'
 }
 
-const TYPE_LABELS: Record<ManualGroupType, string> = {
+const TYPE_LABELS: Record<ManualCollectionType, string> = {
   collection: 'Collection',
   playlist: 'Playlist',
   album: 'Album',
@@ -38,7 +38,7 @@ const TYPE_LABELS: Record<ManualGroupType, string> = {
   shelf: 'Shelf',
 }
 
-const ALL_TYPES: ManualGroupType[] = [
+const ALL_TYPES: ManualCollectionType[] = [
   'collection',
   'playlist',
   'album',
@@ -46,22 +46,23 @@ const ALL_TYPES: ManualGroupType[] = [
   'shelf',
 ]
 
-interface GroupDialogProps {
+interface CollectionDialogProps {
   libraryId: string
-  /** Hint for which group type to suggest */
+  /** Hint for which collection type to suggest */
   mediaCategories?: string[]
-  onCreated: (group: { id: string; title: string; type: string }) => void
+  onCreated: (collection: { id: string; title: string; type: string }) => void
   onClose: () => void
 }
 
-export default function GroupDialog({
+export default function CollectionDialog({
   libraryId,
   mediaCategories = [],
   onCreated,
   onClose,
-}: GroupDialogProps) {
-  const suggestedType = inferGroupType(mediaCategories)
-  const [groupType, setGroupType] = useState<ManualGroupType>(suggestedType)
+}: CollectionDialogProps) {
+  const suggestedType = inferCollectionType(mediaCategories)
+  const [collectionType, setCollectionType] =
+    useState<ManualCollectionType>(suggestedType)
   const [title, setTitle] = useState('')
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -86,26 +87,26 @@ export default function GroupDialog({
     setSubmitting(true)
     setError(null)
     try {
-      const res = await apiFetch('/api/groups', {
+      const res = await apiFetch('/api/collections', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           libraryId,
-          type: groupType,
+          type: collectionType,
           title: title.trim(),
         }),
       })
       if (!res.ok) {
         const data = (await res.json()) as { error?: string }
-        setError(data.error ?? 'Failed to create group')
+        setError(data.error ?? 'Failed to create collection')
         return
       }
-      const group = (await res.json()) as {
+      const collection = (await res.json()) as {
         id: string
         title: string
         type: string
       }
-      onCreated(group)
+      onCreated(collection)
     } catch {
       setError('Network error')
     } finally {
@@ -124,17 +125,21 @@ export default function GroupDialog({
         onClick={(e) => e.stopPropagation()}
         onKeyDown={(e) => e.stopPropagation()}
       >
-        <h2 className={styles.heading ?? ''}>New {TYPE_LABELS[groupType]}</h2>
+        <h2 className={styles.heading ?? ''}>
+          New {TYPE_LABELS[collectionType]}
+        </h2>
         <form onSubmit={handleSubmit}>
           <div className={styles.field ?? ''}>
-            <label htmlFor="group-type" className={styles.label ?? ''}>
+            <label htmlFor="collection-type" className={styles.label ?? ''}>
               Type
             </label>
             <select
-              id="group-type"
+              id="collection-type"
               className={styles.select ?? ''}
-              value={groupType}
-              onChange={(e) => setGroupType(e.target.value as ManualGroupType)}
+              value={collectionType}
+              onChange={(e) =>
+                setCollectionType(e.target.value as ManualCollectionType)
+              }
             >
               {ALL_TYPES.map((t) => (
                 <option key={t} value={t}>
@@ -144,15 +149,15 @@ export default function GroupDialog({
             </select>
           </div>
           <div className={styles.field ?? ''}>
-            <label htmlFor="group-title" className={styles.label ?? ''}>
+            <label htmlFor="collection-title" className={styles.label ?? ''}>
               Name
             </label>
             <input
               ref={inputRef}
-              id="group-title"
+              id="collection-title"
               type="text"
               className={styles.input ?? ''}
-              placeholder={`${TYPE_LABELS[groupType]} name`}
+              placeholder={`${TYPE_LABELS[collectionType]} name`}
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               disabled={submitting}
@@ -172,7 +177,9 @@ export default function GroupDialog({
               className={styles.createBtn ?? ''}
               disabled={submitting || !title.trim()}
             >
-              {submitting ? 'Creating…' : `Create ${TYPE_LABELS[groupType]}`}
+              {submitting
+                ? 'Creating…'
+                : `Create ${TYPE_LABELS[collectionType]}`}
             </button>
           </div>
         </form>

@@ -1,19 +1,19 @@
 // import { randomUUID } from 'node:crypto'
 // import { basename, dirname } from 'node:path'
-// import type { GroupType } from '@xon/shared'
+// import type { CollectionType } from '@xon/shared'
 // import { and, eq, inArray } from 'drizzle-orm'
 // import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 // import {
-//   groupItems,
-//   groups,
+//   collectionItems,
+//   collections,
 //   libraries,
 //   mediaItems,
-//   // suggestedGroups,
+//   // suggestedCollections,
 // } from '../db/schema.ts'
 
 // // ─── Types ────────────────────────────────────────────────────────────────────
 
-// export interface SmartGroupCandidate {
+// export interface SmartCollectionCandidate {
 //   title: string
 //   type: 'album' | 'book-series' | 'collection'
 //   reason: string
@@ -54,13 +54,13 @@
 // /**
 //  * Detects multi-disc albums among music items.
 //  *
-//  * Groups music tracks by normalised album title. When tracks in the same album
+//  * Organizes music tracks by normalised album title. When tracks in the same album
 //  * reside in different directories AND those directories contain a disc/CD/volume
 //  * indicator, they are flagged as a multi-disc album candidate.
 //  */
 // export function detectMultiDiscAlbums(
 //   items: Array<typeof mediaItems.$inferSelect>,
-// ): SmartGroupCandidate[] {
+// ): SmartCollectionCandidate[] {
 //   // const MUSIC_CATEGORIES: string[] = [
 //   //   MediaCategory.Music,
 //   //   // MediaCategory.Audiobooks,
@@ -69,7 +69,7 @@
 
 //   const musicItems = items.filter((i) => i.mediaType.startsWith('audio/'))
 
-//   // Group by album title → collect parent directories
+//   // Bucket by album title → collect parent directories
 //   const albumDirs = new Map<string, { dirs: Set<string>; ids: string[] }>()
 
 //   for (const item of musicItems) {
@@ -86,7 +86,7 @@
 //     }
 //   }
 
-//   const candidates: SmartGroupCandidate[] = []
+//   const candidates: SmartCollectionCandidate[] = []
 
 //   for (const [albumTitle, { dirs, ids }] of albumDirs) {
 //     if (dirs.size < 2) continue // All tracks in same folder → not multi-disc
@@ -137,7 +137,7 @@
 //  */
 // // export function detectBookSeries(
 // //   items: Array<typeof mediaItems.$inferSelect>,
-// // ): SmartGroupCandidate[] {
+// // ): SmartCollectionCandidate[] {
 // //   const BOOK_CATEGORIES: string[] = [
 // //     MediaCategory.Documents,
 // //     MediaCategory.Audiobooks,
@@ -148,8 +148,8 @@
 // //       i.mediaCategory !== null && BOOK_CATEGORIES.includes(i.mediaCategory),
 // //   )
 
-// //   // Group by normalised title base
-// //   const titleGroups = new Map<string, { ids: string[]; titles: string[] }>()
+// //   // Bucket by normalised title base
+// //   const titleCollections = new Map<string, { ids: string[]; titles: string[] }>()
 
 // //   for (const item of bookItems) {
 // //     const rawTitle = item.title ?? item.fileName
@@ -160,18 +160,18 @@
 // //     const normalised = normaliseTitleForSeries(rawTitle)
 // //     if (normalised.length < 3) continue
 
-// //     const existing = titleGroups.get(normalised)
+// //     const existing = titleCollections.get(normalised)
 // //     if (existing) {
 // //       existing.ids.push(item.id)
 // //       existing.titles.push(rawTitle)
 // //     } else {
-// //       titleGroups.set(normalised, { ids: [item.id], titles: [rawTitle] })
+// //       titleCollections.set(normalised, { ids: [item.id], titles: [rawTitle] })
 // //     }
 // //   }
 
-// //   const candidates: SmartGroupCandidate[] = []
+// //   const candidates: SmartCollectionCandidate[] = []
 
-// //   for (const [normalised, { ids, titles }] of titleGroups) {
+// //   for (const [normalised, { ids, titles }] of titleCollections) {
 // //     if (ids.length < 2) continue
 
 // //     const seriesTitle = (() => {
@@ -227,7 +227,7 @@
 //  */
 // // export function detectSupplementaryMaterials(
 // //   items: Array<typeof mediaItems.$inferSelect>,
-// // ): SmartGroupCandidate[] {
+// // ): SmartCollectionCandidate[] {
 // //   const SUPPLEMENTARY_CATEGORIES: string[] = [
 // //     MediaCategory.Documents,
 // //     MediaCategory.Music,
@@ -243,8 +243,8 @@
 // //       SUPPLEMENTARY_CATEGORIES.includes(i.mediaCategory),
 // //   )
 
-// //   // Group by normalised base name key
-// //   const baseGroups = new Map<
+// //   // Bucket by normalised base name key
+// //   const baseCollections = new Map<
 // //     string,
 // //     { ids: string[]; categories: Set<string>; dirs: Set<string> }
 // //   >()
@@ -253,13 +253,13 @@
 // //     const key = baseNameKey(item.fileName)
 // //     if (key.length < 3) continue
 
-// //     const existing = baseGroups.get(key)
+// //     const existing = baseCollections.get(key)
 // //     if (existing) {
 // //       existing.ids.push(item.id)
 // //       if (item.mediaCategory) existing.categories.add(item.mediaCategory)
 // //       existing.dirs.add(dirname(item.filePath))
 // //     } else {
-// //       baseGroups.set(key, {
+// //       baseCollections.set(key, {
 // //         ids: [item.id],
 // //         categories: new Set(item.mediaCategory ? [item.mediaCategory] : []),
 // //         dirs: new Set([dirname(item.filePath)]),
@@ -267,9 +267,9 @@
 // //     }
 // //   }
 
-// //   const candidates: SmartGroupCandidate[] = []
+// //   const candidates: SmartCollectionCandidate[] = []
 
-// //   for (const [key, { ids, categories, dirs }] of baseGroups) {
+// //   for (const [key, { ids, categories, dirs }] of baseCollections) {
 // //     // Require: multiple categories OR files in different directories
 // //     if (ids.length < 2) continue
 // //     if (categories.size < 2 && dirs.size < 2) continue
@@ -293,9 +293,9 @@
 //  * keep the higher-confidence one.
 //  */
 // function deduplicateCandidates(
-//   candidates: SmartGroupCandidate[],
-// ): SmartGroupCandidate[] {
-//   const result: SmartGroupCandidate[] = []
+//   candidates: SmartCollectionCandidate[],
+// ): SmartCollectionCandidate[] {
+//   const result: SmartCollectionCandidate[] = []
 //   const used = new Set<number>()
 
 //   // Sort by confidence descending so higher-confidence wins
@@ -328,12 +328,12 @@
 
 // /**
 //  * Scans a library for scattered files that may belong to the same logical unit.
-//  * Inserts new `suggested_groups` records (skips already-existing ones for the same
+//  * Inserts new `suggested_collections` records (skips already-existing ones for the same
 //  * title+type combination).
 //  *
 //  * Returns the number of new suggestions inserted.
 //  */
-// export async function scanLibraryForSmartGroups(
+// export async function scanLibraryForSmartCollections(
 //   db: LibSQLDatabase,
 //   libraryId: string,
 // ): Promise<number> {
@@ -353,7 +353,7 @@
 //   if (items.length === 0) return 0
 
 //   // Run all detectors
-//   const raw: SmartGroupCandidate[] = [
+//   const raw: SmartCollectionCandidate[] = [
 //     ...detectMultiDiscAlbums(items),
 //     // ...detectBookSeries(items),
 //     // ...detectSupplementaryMaterials(items),
@@ -366,14 +366,14 @@
 //   // Load existing pending/accepted suggestions for this library to avoid duplicates
 //   const existing = await db
 //     .select({
-//       title: suggestedGroups.suggestedTitle,
-//       type: suggestedGroups.suggestedType,
+//       title: suggestedCollections.suggestedTitle,
+//       type: suggestedCollections.suggestedType,
 //     })
-//     .from(suggestedGroups)
+//     .from(suggestedCollections)
 //     .where(
 //       and(
-//         eq(suggestedGroups.libraryId, libraryId),
-//         inArray(suggestedGroups.status, ['pending', 'accepted']),
+//         eq(suggestedCollections.libraryId, libraryId),
+//         inArray(suggestedCollections.status, ['pending', 'accepted']),
 //       ),
 //     )
 
@@ -388,7 +388,7 @@
 //   if (toInsert.length === 0) return 0
 
 //   const now = new Date()
-//   await db.insert(suggestedGroups).values(
+//   await db.insert(suggestedCollections).values(
 //     toInsert.map((c) => ({
 //       id: randomUUID(),
 //       libraryId,
@@ -407,18 +407,18 @@
 // }
 
 // /**
-//  * Accepts a suggested group: creates a real group + group members, then marks
+//  * Accepts a suggested collection: creates a real collection + collection members, then marks
 //  * the suggestion as accepted.
 //  */
-// export async function acceptSuggestedGroup(
+// export async function acceptSuggestedCollection(
 //   db: LibSQLDatabase,
 //   suggestionId: string,
 //   userId: string,
-// ): Promise<{ groupId: string } | null> {
+// ): Promise<{ collectionId: string } | null> {
 //   const rows = await db
 //     .select()
-//     .from(suggestedGroups)
-//     .where(eq(suggestedGroups.id, suggestionId))
+//     .from(suggestedCollections)
+//     .where(eq(suggestedCollections.id, suggestionId))
 
 //   if (rows.length === 0) return null
 //   const suggestion = rows[0]
@@ -433,43 +433,43 @@
 //     }
 //   })()
 
-//   const groupId = `grp:smart:${suggestion.libraryId}:${suggestion.suggestedTitle}`
+//   const collectionId = `col:smart:${suggestion.libraryId}:${suggestion.suggestedTitle}`
 //   const now = new Date()
 
-//   // Upsert the group
+//   // Upsert the collection
 //   await db
-//     .insert(groups)
+//     .insert(collections)
 //     .values({
-//       id: groupId,
-//       type: suggestion.suggestedType as GroupType,
+//       id: collectionId,
+//       type: suggestion.suggestedType as CollectionType,
 //       title: suggestion.suggestedTitle,
 //       metadata: JSON.stringify({
-//         source: 'smart-grouping',
+//         source: 'smart-collections',
 //         reason: suggestion.reason,
 //       }),
 //       createdAt: now,
 //       userId,
 //     })
 //     .onConflictDoUpdate({
-//       target: groups.id,
+//       target: collections.id,
 //       set: { title: suggestion.suggestedTitle },
 //     })
 
-//   // Insert group members (skip duplicates)
+//   // Insert collection members (skip duplicates)
 //   if (itemIds.length > 0) {
 //     for (const mediaItemId of itemIds) {
 //       await db
-//         .insert(groupItems)
-//         .values({ groupId, mediaItemId, sortOrder: 0 })
+//         .insert(collectionItems)
+//         .values({ collectionId, mediaItemId, sortOrder: 0 })
 //         .onConflictDoNothing()
 //     }
 //   }
 
 //   // Mark suggestion as accepted
 //   await db
-//     .update(suggestedGroups)
+//     .update(suggestedCollections)
 //     .set({ status: 'accepted', updatedAt: now })
-//     .where(eq(suggestedGroups.id, suggestionId))
+//     .where(eq(suggestedCollections.id, suggestionId))
 
-//   return { groupId }
+//   return { collectionId }
 // }

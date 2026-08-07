@@ -1,6 +1,6 @@
 const ROUTES = {
   libraries: '/api/libraries',
-  groups: '/api/groups',
+  collections: '/api/collections',
   mediaById: '/api/media/:id',
   mediaByIdWithLibrary: '/api/media/:id?withLibrary=true',
   relatedMedia: '/api/media/:id/related',

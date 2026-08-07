@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { Link, useNavigate, useParams } from 'react-router-dom'
 import { apiFetch, apiUrl } from '~/lib/apiFetch'
-import styles from './GroupDetail.module.css'
+import styles from './CollectionDetail.module.css'
 
-interface GroupMemberItem {
+interface CollectionMemberItem {
   mediaItemId: string
   sortOrder: number
   title: string
@@ -14,12 +14,12 @@ interface GroupMemberItem {
   thumbnailUrls: { small: string; medium: string; large: string } | null
 }
 
-interface GroupDetail {
+interface CollectionDetail {
   id: string
   libraryId: string
   type: string
   title: string
-  members: GroupMemberItem[]
+  members: CollectionMemberItem[]
 }
 
 interface LibraryMediaItem {
@@ -38,11 +38,11 @@ function formatBytes(bytes: number | null): string {
   return `${(bytes / (1024 * 1024 * 1024)).toFixed(2)} GB`
 }
 
-export default function GroupDetail() {
+export default function CollectionDetail() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
-  const [group, setGroup] = useState<GroupDetail | null>(null)
-  const [members, setMembers] = useState<GroupMemberItem[]>([])
+  const [collection, setCollection] = useState<CollectionDetail | null>(null)
+  const [members, setMembers] = useState<CollectionMemberItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
 
@@ -56,33 +56,33 @@ export default function GroupDetail() {
   // Drag-and-drop state
   const dragIndexRef = useRef<number | null>(null)
 
-  const loadGroup = useCallback(async () => {
+  const loadCollection = useCallback(async () => {
     if (!id) return
     setLoading(true)
     setError(null)
     try {
-      const res = await apiFetch(`/api/groups/${id}`)
+      const res = await apiFetch(`/api/collections/${id}`)
       if (!res.ok) {
-        setError('Group not found')
+        setError('Collection not found')
         return
       }
-      const data = (await res.json()) as GroupDetail
-      setGroup(data)
+      const data = (await res.json()) as CollectionDetail
+      setCollection(data)
       setMembers(data.members)
     } catch {
-      setError('Failed to load group')
+      setError('Failed to load collection')
     } finally {
       setLoading(false)
     }
   }, [id])
 
   useEffect(() => {
-    loadGroup()
-  }, [loadGroup])
+    loadCollection()
+  }, [loadCollection])
 
   async function handleRemoveItem(mediaItemId: string) {
     if (!id) return
-    await apiFetch(`/api/groups/${id}/items/${mediaItemId}`, {
+    await apiFetch(`/api/collections/${id}/items/${mediaItemId}`, {
       method: 'DELETE',
     })
     setMembers((prev) => prev.filter((m) => m.mediaItemId !== mediaItemId))
@@ -116,7 +116,7 @@ export default function GroupDetail() {
       sortOrder: i,
     }))
     try {
-      await apiFetch(`/api/groups/${id}/items`, {
+      await apiFetch(`/api/collections/${id}/items`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ items: payload }),
@@ -127,22 +127,22 @@ export default function GroupDetail() {
     }
   }
 
-  async function handleDeleteGroup() {
-    if (!id || !group) return
+  async function handleDeleteCollection() {
+    if (!id || !collection) return
     if (
       !confirm(
-        `Delete "${group.title}"? This will remove the group and all its items.`,
+        `Delete "${collection.title}"? This will remove the collection and all its items.`,
       )
     )
       return
-    const res = await apiFetch(`/api/groups/${id}`, { method: 'DELETE' })
+    const res = await apiFetch(`/api/collections/${id}`, { method: 'DELETE' })
     if (res.ok) {
-      navigate(`/libraries/${group.libraryId}`)
+      navigate(`/libraries/${collection.libraryId}`)
     }
   }
 
   async function openAddModal() {
-    if (!group) return
+    if (!collection) return
     setAddError(null)
     setSelectedIds(new Set())
     setShowAddModal(true)
@@ -150,11 +150,11 @@ export default function GroupDetail() {
     try {
       setAddLoading(true)
       const res = await apiFetch(
-        `/api/libraries/${group.libraryId}/media?limit=100&page=1`,
+        `/api/libraries/${collection.libraryId}/media?limit=100&page=1`,
       )
       if (res.ok) {
         const data = (await res.json()) as LibraryMediaItem[]
-        // Filter out items already in the group
+        // Filter out items already in the collection
         const existingIds = new Set(members.map((m) => m.mediaItemId))
         setLibraryItems(data.filter((item) => !existingIds.has(item.id)))
       }
@@ -183,14 +183,14 @@ export default function GroupDetail() {
     setAddError(null)
     try {
       for (const mediaItemId of selectedIds) {
-        await apiFetch(`/api/groups/${id}/items`, {
+        await apiFetch(`/api/collections/${id}/items`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ mediaItemId }),
         })
       }
       setShowAddModal(false)
-      await loadGroup()
+      await loadCollection()
     } catch {
       setAddError('Failed to add items')
     } finally {
@@ -206,7 +206,7 @@ export default function GroupDetail() {
     )
   }
 
-  if (error || !group) {
+  if (error || !collection) {
     return (
       <div className={styles.page ?? ''}>
         <div className={styles.errorMsg ?? ''}>{error ?? 'Not found'}</div>
@@ -214,13 +214,14 @@ export default function GroupDetail() {
     )
   }
 
-  const typeLabel = group.type.charAt(0).toUpperCase() + group.type.slice(1)
+  const typeLabel =
+    collection.type.charAt(0).toUpperCase() + collection.type.slice(1)
 
   return (
     <div className={styles.page ?? ''}>
       <div className={styles.header ?? ''}>
         <Link
-          to={`/libraries/${group.libraryId}`}
+          to={`/libraries/${collection.libraryId}`}
           className={styles.backLink ?? ''}
         >
           ← Library
@@ -228,7 +229,7 @@ export default function GroupDetail() {
         <div className={styles.titleRow ?? ''}>
           <div>
             <span className={styles.typeBadge ?? ''}>{typeLabel}</span>
-            <h1 className={styles.title ?? ''}>{group.title}</h1>
+            <h1 className={styles.title ?? ''}>{collection.title}</h1>
           </div>
           <div className={styles.headerActions ?? ''}>
             <button
@@ -241,7 +242,7 @@ export default function GroupDetail() {
             <button
               type="button"
               className={styles.deleteBtn ?? ''}
-              onClick={handleDeleteGroup}
+              onClick={handleDeleteCollection}
             >
               Delete
             </button>
@@ -306,7 +307,7 @@ export default function GroupDetail() {
                 type="button"
                 className={styles.removeBtn ?? ''}
                 onClick={() => handleRemoveItem(member.mediaItemId)}
-                title="Remove from group"
+                title="Remove from collection"
               >
                 ✕
               </button>

@@ -13,7 +13,7 @@
 
 // const scopeSchema = z.object({
 //   libraryIds: z.array(z.string()).optional(),
-//   groupIds: z.array(z.string()).optional(),
+//   collectionIds: z.array(z.string()).optional(),
 //   itemIds: z.array(z.string()).optional(),
 //   mediaTypes: z.array(z.string()).optional(),
 // })

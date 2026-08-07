@@ -1,5 +1,5 @@
 export * from './schema/auth.ts'
-export * from './schema/groups.ts'
+export * from './schema/collections.ts'
 export * from './schema/libraries.ts'
 export * from './schema/media.ts'
 export * from './schema/people.ts'

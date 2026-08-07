@@ -23,8 +23,8 @@ import { computeETag } from '../cache.ts'
 import config from '../config.ts'
 import type { MediaItem } from '../db/schema.ts'
 import {
-  groupItems,
-  groups,
+  collectionItems,
+  collections,
   mediaItems,
   mediaPlayStates,
 } from '../db/schema.ts'
@@ -611,7 +611,7 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
   })
 
   // PUT /media/:id/images — persist the explicit display order for all
-  // artwork groups and remove uploaded cache files no longer referenced.
+  // artwork sets and remove uploaded cache files no longer referenced.
   router.put(
     '/:id/images',
     validate('json', artworkImagesSchema),
@@ -780,7 +780,7 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
   })
 
   // POST /media/:id/images/:kind — copy an uploaded image into the configured
-  // cache directory and append it to the requested artwork group.
+  // cache directory and append it to the requested artwork set.
   router.post('/:id/images/:kind', async (c) => {
     const id = c.req.param('id')
     const kind = c.req.param('kind')
@@ -917,7 +917,7 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
   })
 
   const bulkSchema = z.object({
-    action: z.enum(['update', 'delete', 'move-to-group']),
+    action: z.enum(['update', 'delete', 'move-to-collection']),
     ids: z.array(z.string().min(1)).min(1).max(100),
     updates: z
       .object({
@@ -926,7 +926,7 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
         contentRating: z.enum(['G', 'PG', 'PG-13', 'R', 'unrated']).optional(),
       })
       .optional(),
-    groupId: z.string().optional(),
+    collectionId: z.string().optional(),
   })
 
   // POST /media/bulk — bulk update, delete, or move media items
@@ -981,20 +981,28 @@ export function makeMediaRouter(db: LibSQLDatabase): Hono {
       return c.json({ updated: foundIds.length })
     }
 
-    // action === "move-to-group"
-    if (!body.groupId)
-      return c.json({ error: 'groupId required for move-to-group' }, 400)
+    // action === "move-to-collection"
+    if (!body.collectionId)
+      return c.json(
+        { error: 'collectionId required for move-to-collection' },
+        400,
+      )
 
-    const groupRows = await db
-      .select({ id: groups.id })
-      .from(groups)
-      .where(eq(groups.id, body.groupId))
-    if (!groupRows[0]) return c.json({ error: 'Group not found' }, 404)
+    const collectionRows = await db
+      .select({ id: collections.id })
+      .from(collections)
+      .where(eq(collections.id, body.collectionId))
+    if (!collectionRows[0])
+      return c.json({ error: 'Collection not found' }, 404)
 
     for (const id of foundIds) {
       await db
-        .insert(groupItems)
-        .values({ groupId: body.groupId, mediaItemId: id, sortOrder: 0 })
+        .insert(collectionItems)
+        .values({
+          collectionId: body.collectionId,
+          mediaItemId: id,
+          sortOrder: 0,
+        })
         .onConflictDoNothing()
     }
 

@@ -116,17 +116,19 @@ const OPENAPI_SPEC = {
         },
         required: ['id', 'libraryId', 'title', 'filePath', 'mediaCategory'],
       },
-      Group: {
+      Collection: {
         type: 'object',
         properties: {
-          id: { type: 'string', format: 'uuid' },
-          libraryId: { type: 'string', format: 'uuid' },
-          name: { type: 'string' },
-          groupType: { type: 'string' },
-          metadata: { type: 'object', nullable: true },
+          id: { type: 'string' },
+          userId: { type: 'string' },
+          type: { type: 'string' },
+          title: { type: 'string' },
+          parentCollectionId: { type: 'string', nullable: true },
+          metadata: { type: 'string' },
           createdAt: { type: 'string', format: 'date-time' },
+          updatedAt: { type: 'string', format: 'date-time', nullable: true },
         },
-        required: ['id', 'libraryId', 'name', 'groupType'],
+        required: ['id', 'userId', 'type', 'title', 'metadata', 'createdAt'],
       },
       Pagination: {
         type: 'object',
@@ -1022,38 +1024,18 @@ const OPENAPI_SPEC = {
         },
       },
     },
-    '/groups': {
+    '/collections': {
       get: {
-        tags: ['Groups'],
-        summary: 'List groups',
-        parameters: [
-          { name: 'libraryId', in: 'query', schema: { type: 'string' } },
-          { name: 'groupType', in: 'query', schema: { type: 'string' } },
-          {
-            name: 'page',
-            in: 'query',
-            schema: { type: 'integer', minimum: 1, default: 1 },
-          },
-          {
-            name: 'limit',
-            in: 'query',
-            schema: { type: 'integer', minimum: 1, maximum: 100, default: 20 },
-          },
-        ],
+        tags: ['Collections'],
+        summary: 'List collections',
         responses: {
           '200': {
-            description: 'Paginated list of groups',
+            description: 'Collections owned by the current user',
             content: {
               'application/json': {
                 schema: {
-                  type: 'object',
-                  properties: {
-                    data: {
-                      type: 'array',
-                      items: { $ref: '#/components/schemas/Group' },
-                    },
-                    pagination: { $ref: '#/components/schemas/Pagination' },
-                  },
+                  type: 'array',
+                  items: { $ref: '#/components/schemas/Collection' },
                 },
               },
             },
@@ -1061,8 +1043,8 @@ const OPENAPI_SPEC = {
         },
       },
       post: {
-        tags: ['Groups'],
-        summary: 'Create group',
+        tags: ['Collections'],
+        summary: 'Create collection',
         requestBody: {
           required: true,
           content: {
@@ -1070,32 +1052,30 @@ const OPENAPI_SPEC = {
               schema: {
                 type: 'object',
                 properties: {
-                  libraryId: { type: 'string' },
-                  name: { type: 'string', minLength: 1 },
-                  groupType: { type: 'string', minLength: 1 },
-                  metadata: { type: 'object' },
+                  type: { type: 'string', minLength: 1 },
+                  title: { type: 'string', minLength: 1 },
                 },
-                required: ['libraryId', 'name', 'groupType'],
+                required: ['type', 'title'],
               },
             },
           },
         },
         responses: {
           '201': {
-            description: 'Group created',
+            description: 'Collection created',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Group' },
+                schema: { $ref: '#/components/schemas/Collection' },
               },
             },
           },
         },
       },
     },
-    '/groups/{id}': {
+    '/collections/{id}': {
       get: {
-        tags: ['Groups'],
-        summary: 'Get group',
+        tags: ['Collections'],
+        summary: 'Get collection',
         parameters: [
           {
             name: 'id',
@@ -1106,12 +1086,12 @@ const OPENAPI_SPEC = {
         ],
         responses: {
           '200': {
-            description: 'Group with members',
+            description: 'Collection with members',
             content: {
               'application/json': {
                 schema: {
                   allOf: [
-                    { $ref: '#/components/schemas/Group' },
+                    { $ref: '#/components/schemas/Collection' },
                     {
                       type: 'object',
                       properties: {
@@ -1137,8 +1117,8 @@ const OPENAPI_SPEC = {
         },
       },
       put: {
-        tags: ['Groups'],
-        summary: 'Update group',
+        tags: ['Collections'],
+        summary: 'Update collection',
         parameters: [
           {
             name: 'id',
@@ -1154,8 +1134,8 @@ const OPENAPI_SPEC = {
               schema: {
                 type: 'object',
                 properties: {
-                  name: { type: 'string' },
-                  metadata: { type: 'object' },
+                  title: { type: 'string', minLength: 1 },
+                  type: { type: 'string' },
                 },
               },
             },
@@ -1163,18 +1143,18 @@ const OPENAPI_SPEC = {
         },
         responses: {
           '200': {
-            description: 'Group updated',
+            description: 'Collection updated',
             content: {
               'application/json': {
-                schema: { $ref: '#/components/schemas/Group' },
+                schema: { $ref: '#/components/schemas/Collection' },
               },
             },
           },
         },
       },
       delete: {
-        tags: ['Groups'],
-        summary: 'Delete group',
+        tags: ['Collections'],
+        summary: 'Delete collection',
         parameters: [
           {
             name: 'id',
@@ -1827,8 +1807,8 @@ const OPENAPI_SPEC = {
     { name: 'Media', description: 'Media item access and streaming' },
     { name: 'Search', description: 'Full-text search across libraries' },
     {
-      name: 'Groups',
-      description: 'Media grouping (albums, series, collections)',
+      name: 'Collections',
+      description: 'Media collections, including albums, series, and playlists',
     },
     { name: 'Users', description: 'User profile and API token management' },
     { name: 'Sync', description: 'Sync profiles for offline/external copies' },

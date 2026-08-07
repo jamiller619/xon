@@ -5,24 +5,24 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { openDatabase } from '../../db/db.ts'
 import { migrateDatabase } from '../../db/migrate.ts'
 import {
+  collectionItems,
+  collections,
   dataSources,
-  groupMembers,
-  groups,
   libraries,
   mediaItems,
 } from '../../db/schema.ts'
 import {
   clusterCoordinate,
-  groupAudiobooks,
-  groupMusicTracks,
-  groupPhotos,
-  groupTvEpisodes,
+  createAudiobookCollections,
+  createMusicCollections,
+  createPhotoCollections,
+  createTvCollections,
   parseExifDate,
   parseExifTimestamp,
   parseTvEpisode,
   resolveAudiobookInfo,
   resolveSeriesName,
-} from '../../media/grouping.ts'
+} from '../../media/collections.ts'
 
 describe('parseTvEpisode', () => {
   it('parses standard SxxExx with series name', () => {
@@ -100,7 +100,7 @@ describe('resolveSeriesName', () => {
   })
 })
 
-describe('groupTvEpisodes', () => {
+describe('createTvCollections', () => {
   let client: Client
   let db: LibSQLDatabase
 
@@ -123,7 +123,7 @@ describe('groupTvEpisodes', () => {
     client.close()
   })
 
-  it('creates series and season groups for TV episodes', async () => {
+  it('creates series and season collections for TV episodes', async () => {
     await db.insert(mediaItems).values([
       {
         id: 'ep-1',
@@ -154,21 +154,21 @@ describe('groupTvEpisodes', () => {
       },
     ])
 
-    await groupTvEpisodes(db, 'lib-1')
+    await createTvCollections(db, 'lib-1')
 
-    const allGroups = await db.select().from(groups).where()
-    const seriesGroups = allGroups.filter((g) => g.type === 'series')
-    const seasonGroups = allGroups.filter((g) => g.type === 'season')
+    const allCollections = await db.select().from(collections).where()
+    const seriesCollections = allCollections.filter((g) => g.type === 'series')
+    const seasonCollections = allCollections.filter((g) => g.type === 'season')
 
-    expect(seriesGroups).toHaveLength(1)
-    expect(seriesGroups[0]?.title).toBe('Breaking Bad')
+    expect(seriesCollections).toHaveLength(1)
+    expect(seriesCollections[0]?.title).toBe('Breaking Bad')
 
-    expect(seasonGroups).toHaveLength(2)
-    const seasonTitles = seasonGroups.map((g) => g.title).sort()
+    expect(seasonCollections).toHaveLength(2)
+    const seasonTitles = seasonCollections.map((g) => g.title).sort()
     expect(seasonTitles).toEqual(['Season 1', 'Season 2'])
   })
 
-  it('assigns episodes to season groups with correct sort order', async () => {
+  it('assigns episodes to season collections with correct sort order', async () => {
     await db.insert(mediaItems).values([
       {
         id: 'ep-1',
@@ -190,9 +190,9 @@ describe('groupTvEpisodes', () => {
       },
     ])
 
-    await groupTvEpisodes(db, 'lib-1')
+    await createTvCollections(db, 'lib-1')
 
-    const members = await db.select().from(groupMembers)
+    const members = await db.select().from(collectionItems)
     expect(members).toHaveLength(2)
 
     const ep1 = members.find((m) => m.mediaItemId === 'ep-1')
@@ -201,7 +201,7 @@ describe('groupTvEpisodes', () => {
     expect(ep5?.sortOrder).toBe(5)
   })
 
-  it('does not duplicate groups or members on repeated calls', async () => {
+  it('does not duplicate collections or members on repeated calls', async () => {
     await db.insert(mediaItems).values({
       id: 'ep-1',
       libraryId: 'lib-1',
@@ -212,14 +212,14 @@ describe('groupTvEpisodes', () => {
       metadata: '{}',
     })
 
-    await groupTvEpisodes(db, 'lib-1')
-    await groupTvEpisodes(db, 'lib-1')
+    await createTvCollections(db, 'lib-1')
+    await createTvCollections(db, 'lib-1')
 
-    const allGroups = await db.select().from(groups)
-    const members = await db.select().from(groupMembers)
+    const allCollections = await db.select().from(collections)
+    const members = await db.select().from(collectionItems)
 
-    // Should still have exactly 1 series + 1 season = 2 groups
-    expect(allGroups).toHaveLength(2)
+    // Should still have exactly 1 series + 1 season = 2 collections
+    expect(allCollections).toHaveLength(2)
     expect(members).toHaveLength(1)
   })
 
@@ -234,10 +234,10 @@ describe('groupTvEpisodes', () => {
       metadata: '{}',
     })
 
-    await groupTvEpisodes(db, 'lib-1')
+    await createTvCollections(db, 'lib-1')
 
-    const allGroups = await db.select().from(groups)
-    expect(allGroups).toHaveLength(0)
+    const allCollections = await db.select().from(collections)
+    expect(allCollections).toHaveLength(0)
   })
 
   it('creates separate series for different shows', async () => {
@@ -262,10 +262,10 @@ describe('groupTvEpisodes', () => {
       },
     ])
 
-    await groupTvEpisodes(db, 'lib-1')
+    await createTvCollections(db, 'lib-1')
 
-    const seriesGroups = await db.select().from(groups)
-    const series = seriesGroups.filter((g) => g.type === 'series')
+    const seriesCollections = await db.select().from(collections)
+    const series = seriesCollections.filter((g) => g.type === 'series')
     expect(series).toHaveLength(2)
     const titles = series.map((g) => g.title).sort()
     expect(titles).toEqual(['Breaking Bad', 'Lost'])
@@ -282,16 +282,16 @@ describe('groupTvEpisodes', () => {
       metadata: '{}',
     })
 
-    await groupTvEpisodes(db, 'lib-1')
+    await createTvCollections(db, 'lib-1')
 
-    const seriesGroups = await db.select().from(groups)
-    const series = seriesGroups.filter((g) => g.type === 'series')
+    const seriesCollections = await db.select().from(collections)
+    const series = seriesCollections.filter((g) => g.type === 'series')
     expect(series).toHaveLength(1)
     expect(series[0]?.title).toBe('Sopranos')
   })
 })
 
-describe('groupMusicTracks', () => {
+describe('createMusicCollections', () => {
   let client: Client
   let db: LibSQLDatabase
 
@@ -314,7 +314,7 @@ describe('groupMusicTracks', () => {
     client.close()
   })
 
-  it('creates artist and album groups for music tracks', async () => {
+  it('creates artist and album collections for music tracks', async () => {
     await db.insert(mediaItems).values([
       {
         id: 'track-1',
@@ -348,21 +348,23 @@ describe('groupMusicTracks', () => {
       },
     ])
 
-    await groupMusicTracks(db, 'lib-1')
+    await createMusicCollections(db, 'lib-1')
 
-    const allGroups = await db.select().from(groups)
-    const artistGroups = allGroups.filter((g) => g.type === 'artist')
-    const albumGroups = allGroups.filter((g) => g.type === 'album')
+    const allCollections = await db.select().from(collections)
+    const artistCollections = allCollections.filter((g) => g.type === 'artist')
+    const albumCollections = allCollections.filter((g) => g.type === 'album')
 
-    expect(artistGroups).toHaveLength(1)
-    expect(artistGroups[0]?.title).toBe('Artist A')
+    expect(artistCollections).toHaveLength(1)
+    expect(artistCollections[0]?.title).toBe('Artist A')
 
-    expect(albumGroups).toHaveLength(1)
-    expect(albumGroups[0]?.title).toBe('Album X')
-    expect(albumGroups[0]?.parentGroupId).toBe(artistGroups[0]?.id)
+    expect(albumCollections).toHaveLength(1)
+    expect(albumCollections[0]?.title).toBe('Album X')
+    expect(albumCollections[0]?.parentCollectionId).toBe(
+      artistCollections[0]?.id,
+    )
   })
 
-  it('assigns tracks to album groups with disc*1000+track sort order', async () => {
+  it('assigns tracks to album collections with disc*1000+track sort order', async () => {
     await db.insert(mediaItems).values([
       {
         id: 'track-1',
@@ -396,9 +398,9 @@ describe('groupMusicTracks', () => {
       },
     ])
 
-    await groupMusicTracks(db, 'lib-1')
+    await createMusicCollections(db, 'lib-1')
 
-    const members = await db.select().from(groupMembers)
+    const members = await db.select().from(collectionItems)
     expect(members).toHaveLength(2)
 
     const m1 = members.find((m) => m.mediaItemId === 'track-1')
@@ -407,7 +409,7 @@ describe('groupMusicTracks', () => {
     expect(m2?.sortOrder).toBe(2 * 1000 + 1) // disc 2 track 1 = 2001
   })
 
-  it('groups compilation albums under Various Artists', async () => {
+  it('collections compilation albums under Various Artists', async () => {
     await db.insert(mediaItems).values([
       {
         id: 'track-1',
@@ -441,19 +443,19 @@ describe('groupMusicTracks', () => {
       },
     ])
 
-    await groupMusicTracks(db, 'lib-1')
+    await createMusicCollections(db, 'lib-1')
 
-    const allGroups = await db.select().from(groups)
-    const artistGroups = allGroups.filter((g) => g.type === 'artist')
-    const albumGroups = allGroups.filter((g) => g.type === 'album')
+    const allCollections = await db.select().from(collections)
+    const artistCollections = allCollections.filter((g) => g.type === 'artist')
+    const albumCollections = allCollections.filter((g) => g.type === 'album')
 
-    expect(artistGroups).toHaveLength(1)
-    expect(artistGroups[0]?.title).toBe('Various Artists')
-    expect(albumGroups).toHaveLength(1)
-    expect(albumGroups[0]?.title).toBe('Best Of 2024')
+    expect(artistCollections).toHaveLength(1)
+    expect(artistCollections[0]?.title).toBe('Various Artists')
+    expect(albumCollections).toHaveLength(1)
+    expect(albumCollections[0]?.title).toBe('Best Of 2024')
   })
 
-  it('does not duplicate groups or members on repeated calls', async () => {
+  it('does not duplicate collections or members on repeated calls', async () => {
     await db.insert(mediaItems).values({
       id: 'track-1',
       libraryId: 'lib-1',
@@ -470,14 +472,14 @@ describe('groupMusicTracks', () => {
       }),
     })
 
-    await groupMusicTracks(db, 'lib-1')
-    await groupMusicTracks(db, 'lib-1')
+    await createMusicCollections(db, 'lib-1')
+    await createMusicCollections(db, 'lib-1')
 
-    const allGroups = await db.select().from(groups)
-    const members = await db.select().from(groupMembers)
+    const allCollections = await db.select().from(collections)
+    const members = await db.select().from(collectionItems)
 
-    // 1 artist group + 1 album group = 2 total
-    expect(allGroups).toHaveLength(2)
+    // 1 artist collection + 1 album collection = 2 total
+    expect(allCollections).toHaveLength(2)
     expect(members).toHaveLength(1)
   })
 
@@ -493,13 +495,13 @@ describe('groupMusicTracks', () => {
       metadata: JSON.stringify({ artist: 'Artist A', trackNumber: 1 }),
     })
 
-    await groupMusicTracks(db, 'lib-1')
+    await createMusicCollections(db, 'lib-1')
 
-    const allGroups = await db.select().from(groups)
-    expect(allGroups).toHaveLength(0)
+    const allCollections = await db.select().from(collections)
+    expect(allCollections).toHaveLength(0)
   })
 
-  it('creates separate album groups for different artists with the same album name', async () => {
+  it('creates separate album collections for different artists with the same album name', async () => {
     await db.insert(mediaItems).values([
       {
         id: 'track-1',
@@ -533,16 +535,16 @@ describe('groupMusicTracks', () => {
       },
     ])
 
-    await groupMusicTracks(db, 'lib-1')
+    await createMusicCollections(db, 'lib-1')
 
-    const allGroups = await db.select().from(groups)
-    const artistGroups = allGroups.filter((g) => g.type === 'artist')
-    const albumGroups = allGroups.filter((g) => g.type === 'album')
+    const allCollections = await db.select().from(collections)
+    const artistCollections = allCollections.filter((g) => g.type === 'artist')
+    const albumCollections = allCollections.filter((g) => g.type === 'album')
 
     // "Greatest Hits" by two different artists = compilation → 1 "Various Artists" + 1 album
-    expect(artistGroups).toHaveLength(1)
-    expect(artistGroups[0]?.title).toBe('Various Artists')
-    expect(albumGroups).toHaveLength(1)
+    expect(artistCollections).toHaveLength(1)
+    expect(artistCollections[0]?.title).toBe('Various Artists')
+    expect(albumCollections).toHaveLength(1)
   })
 
   it('only processes Music category items, not other categories', async () => {
@@ -579,13 +581,13 @@ describe('groupMusicTracks', () => {
       },
     ])
 
-    await groupMusicTracks(db, 'lib-1')
+    await createMusicCollections(db, 'lib-1')
 
-    const allGroups = await db.select().from(groups)
-    const members = await db.select().from(groupMembers)
+    const allCollections = await db.select().from(collections)
+    const members = await db.select().from(collectionItems)
 
-    // Only the Music track should be grouped
-    expect(allGroups).toHaveLength(2) // 1 artist + 1 album
+    // Only the Music track should be organized
+    expect(allCollections).toHaveLength(2) // 1 artist + 1 album
     expect(members).toHaveLength(1)
     expect(members[0]?.mediaItemId).toBe('track-1')
   })
@@ -642,7 +644,7 @@ describe('resolveAudiobookInfo', () => {
   })
 })
 
-describe('groupAudiobooks', () => {
+describe('createAudiobookCollections', () => {
   let client: Client
   let db: LibSQLDatabase
 
@@ -665,7 +667,7 @@ describe('groupAudiobooks', () => {
     client.close()
   })
 
-  it('creates book groups for audiobook chapters', async () => {
+  it('creates book collections for audiobook chapters', async () => {
     await db.insert(mediaItems).values([
       {
         id: 'ch-1',
@@ -697,16 +699,16 @@ describe('groupAudiobooks', () => {
       },
     ])
 
-    await groupAudiobooks(db, 'lib-1')
+    await createAudiobookCollections(db, 'lib-1')
 
-    const allGroups = await db.select().from(groups)
-    const bookGroups = allGroups.filter((g) => g.type === 'book')
+    const allCollections = await db.select().from(collections)
+    const bookCollections = allCollections.filter((g) => g.type === 'book')
 
-    expect(bookGroups).toHaveLength(1)
-    expect(bookGroups[0]?.title).toBe('Dune')
+    expect(bookCollections).toHaveLength(1)
+    expect(bookCollections[0]?.title).toBe('Dune')
   })
 
-  it('stores narrator in book group metadata', async () => {
+  it('stores narrator in book collection metadata', async () => {
     await db.insert(mediaItems).values({
       id: 'ch-1',
       libraryId: 'lib-1',
@@ -722,11 +724,11 @@ describe('groupAudiobooks', () => {
       }),
     })
 
-    await groupAudiobooks(db, 'lib-1')
+    await createAudiobookCollections(db, 'lib-1')
 
-    const bookGroups = await db.select().from(groups).where()
-    expect(bookGroups).toHaveLength(1)
-    const meta = JSON.parse(bookGroups[0]?.metadata ?? '{}')
+    const bookCollections = await db.select().from(collections).where()
+    expect(bookCollections).toHaveLength(1)
+    const meta = JSON.parse(bookCollections[0]?.metadata ?? '{}')
     expect(meta.narrator).toBe('Simon Vance')
   })
 
@@ -754,16 +756,16 @@ describe('groupAudiobooks', () => {
       },
     ])
 
-    await groupAudiobooks(db, 'lib-1')
+    await createAudiobookCollections(db, 'lib-1')
 
-    const members = await db.select().from(groupMembers)
+    const members = await db.select().from(collectionItems)
     const ch1 = members.find((m) => m.mediaItemId === 'ch-1')
     const ch3 = members.find((m) => m.mediaItemId === 'ch-3')
     expect(ch1?.sortOrder).toBe(1)
     expect(ch3?.sortOrder).toBe(3)
   })
 
-  it('creates series groups when series metadata is present', async () => {
+  it('creates series collections when series metadata is present', async () => {
     await db.insert(mediaItems).values({
       id: 'ch-1',
       libraryId: 'lib-1',
@@ -780,16 +782,20 @@ describe('groupAudiobooks', () => {
       }),
     })
 
-    await groupAudiobooks(db, 'lib-1')
+    await createAudiobookCollections(db, 'lib-1')
 
-    const allGroups = await db.select().from(groups)
-    const seriesGroups = allGroups.filter((g) => g.type === 'audiobook-series')
-    const bookGroups = allGroups.filter((g) => g.type === 'book')
+    const allCollections = await db.select().from(collections)
+    const seriesCollections = allCollections.filter(
+      (g) => g.type === 'audiobook-series',
+    )
+    const bookCollections = allCollections.filter((g) => g.type === 'book')
 
-    expect(seriesGroups).toHaveLength(1)
-    expect(seriesGroups[0]?.title).toBe('Dune Chronicles')
-    expect(bookGroups).toHaveLength(1)
-    expect(bookGroups[0]?.parentGroupId).toBe(seriesGroups[0]?.id)
+    expect(seriesCollections).toHaveLength(1)
+    expect(seriesCollections[0]?.title).toBe('Dune Chronicles')
+    expect(bookCollections).toHaveLength(1)
+    expect(bookCollections[0]?.parentCollectionId).toBe(
+      seriesCollections[0]?.id,
+    )
   })
 
   it('detects series from folder structure when no series tag', async () => {
@@ -804,19 +810,23 @@ describe('groupAudiobooks', () => {
       metadata: JSON.stringify({ trackNumber: 1 }),
     })
 
-    await groupAudiobooks(db, 'lib-1')
+    await createAudiobookCollections(db, 'lib-1')
 
-    const allGroups = await db.select().from(groups)
-    const seriesGroups = allGroups.filter((g) => g.type === 'audiobook-series')
-    const bookGroups = allGroups.filter((g) => g.type === 'book')
+    const allCollections = await db.select().from(collections)
+    const seriesCollections = allCollections.filter(
+      (g) => g.type === 'audiobook-series',
+    )
+    const bookCollections = allCollections.filter((g) => g.type === 'book')
 
-    expect(seriesGroups).toHaveLength(1)
-    expect(seriesGroups[0]?.title).toBe('Dune Chronicles')
-    expect(bookGroups[0]?.title).toBe('Dune')
-    expect(bookGroups[0]?.parentGroupId).toBe(seriesGroups[0]?.id)
+    expect(seriesCollections).toHaveLength(1)
+    expect(seriesCollections[0]?.title).toBe('Dune Chronicles')
+    expect(bookCollections[0]?.title).toBe('Dune')
+    expect(bookCollections[0]?.parentCollectionId).toBe(
+      seriesCollections[0]?.id,
+    )
   })
 
-  it('does not duplicate groups or members on repeated calls', async () => {
+  it('does not duplicate collections or members on repeated calls', async () => {
     await db.insert(mediaItems).values({
       id: 'ch-1',
       libraryId: 'lib-1',
@@ -828,17 +838,17 @@ describe('groupAudiobooks', () => {
       metadata: JSON.stringify({ album: 'Dune', trackNumber: 1 }),
     })
 
-    await groupAudiobooks(db, 'lib-1')
-    await groupAudiobooks(db, 'lib-1')
+    await createAudiobookCollections(db, 'lib-1')
+    await createAudiobookCollections(db, 'lib-1')
 
-    const allGroups = await db.select().from(groups)
-    const members = await db.select().from(groupMembers)
+    const allCollections = await db.select().from(collections)
+    const members = await db.select().from(collectionItems)
 
-    expect(allGroups).toHaveLength(1) // 1 book group (no series)
+    expect(allCollections).toHaveLength(1) // 1 book collection (no series)
     expect(members).toHaveLength(1)
   })
 
-  it('creates separate book groups for different books', async () => {
+  it('creates separate book collections for different books', async () => {
     await db.insert(mediaItems).values([
       {
         id: 'ch-1',
@@ -862,11 +872,11 @@ describe('groupAudiobooks', () => {
       },
     ])
 
-    await groupAudiobooks(db, 'lib-1')
+    await createAudiobookCollections(db, 'lib-1')
 
-    const bookGroups = await db.select().from(groups)
-    expect(bookGroups).toHaveLength(2)
-    const titles = bookGroups.map((g) => g.title).sort()
+    const bookCollections = await db.select().from(collections)
+    expect(bookCollections).toHaveLength(2)
+    const titles = bookCollections.map((g) => g.title).sort()
     expect(titles).toEqual(['Dune', 'Foundation'])
   })
 
@@ -898,13 +908,13 @@ describe('groupAudiobooks', () => {
       },
     ])
 
-    await groupAudiobooks(db, 'lib-1')
+    await createAudiobookCollections(db, 'lib-1')
 
-    const allGroups = await db.select().from(groups)
-    const members = await db.select().from(groupMembers)
+    const allCollections = await db.select().from(collections)
+    const members = await db.select().from(collectionItems)
 
-    // Only the audiobook chapter should be grouped
-    expect(allGroups).toHaveLength(1)
+    // Only the audiobook chapter should be organized
+    expect(allCollections).toHaveLength(1)
     expect(members).toHaveLength(1)
     expect(members[0]?.mediaItemId).toBe('ch-1')
   })
@@ -959,7 +969,7 @@ describe('clusterCoordinate', () => {
   })
 })
 
-describe('groupPhotos', () => {
+describe('createPhotoCollections', () => {
   let client: Client
   let db: LibSQLDatabase
 
@@ -982,7 +992,7 @@ describe('groupPhotos', () => {
     client.close()
   })
 
-  it('creates date groups for photos with EXIF dateTaken', async () => {
+  it('creates date collections for photos with EXIF dateTaken', async () => {
     await db.insert(mediaItems).values([
       {
         id: 'photo-1',
@@ -1016,17 +1026,19 @@ describe('groupPhotos', () => {
       },
     ])
 
-    await groupPhotos(db, 'lib-1')
+    await createPhotoCollections(db, 'lib-1')
 
-    const allGroups = await db.select().from(groups)
-    const dateGroups = allGroups.filter((g) => g.type === 'photo-date')
+    const allCollections = await db.select().from(collections)
+    const dateCollections = allCollections.filter(
+      (g) => g.type === 'photo-date',
+    )
 
-    expect(dateGroups).toHaveLength(2)
-    const titles = dateGroups.map((g) => g.title).sort()
+    expect(dateCollections).toHaveLength(2)
+    const titles = dateCollections.map((g) => g.title).sort()
     expect(titles).toEqual(['2023-10-05', '2023-10-06'])
   })
 
-  it('assigns photos to date groups with timestamp sort order', async () => {
+  it('assigns photos to date collections with timestamp sort order', async () => {
     await db.insert(mediaItems).values([
       {
         id: 'photo-1',
@@ -1050,16 +1062,16 @@ describe('groupPhotos', () => {
       },
     ])
 
-    await groupPhotos(db, 'lib-1')
+    await createPhotoCollections(db, 'lib-1')
 
-    const members = await db.select().from(groupMembers)
+    const members = await db.select().from(collectionItems)
     expect(members).toHaveLength(2)
     const sorted = [...members].sort((a, b) => a.sortOrder - b.sortOrder)
     expect(sorted[0]?.mediaItemId).toBe('photo-1')
     expect(sorted[1]?.mediaItemId).toBe('photo-2')
   })
 
-  it('creates location groups for photos with GPS data', async () => {
+  it('creates location collections for photos with GPS data', async () => {
     await db.insert(mediaItems).values([
       {
         id: 'photo-1',
@@ -1099,16 +1111,18 @@ describe('groupPhotos', () => {
       },
     ])
 
-    await groupPhotos(db, 'lib-1')
+    await createPhotoCollections(db, 'lib-1')
 
-    const allGroups = await db.select().from(groups)
-    const locGroups = allGroups.filter((g) => g.type === 'photo-location')
+    const allCollections = await db.select().from(collections)
+    const locCollections = allCollections.filter(
+      (g) => g.type === 'photo-location',
+    )
 
     // photo-1 and photo-2 are within same ~11km grid cell; photo-3 is far away
-    expect(locGroups).toHaveLength(2)
+    expect(locCollections).toHaveLength(2)
   })
 
-  it('groups both Pictures and Images categories', async () => {
+  it('collections both Pictures and Images categories', async () => {
     await db.insert(mediaItems).values([
       {
         id: 'pic-1',
@@ -1132,13 +1146,13 @@ describe('groupPhotos', () => {
       },
     ])
 
-    await groupPhotos(db, 'lib-1')
+    await createPhotoCollections(db, 'lib-1')
 
-    const members = await db.select().from(groupMembers)
+    const members = await db.select().from(collectionItems)
     expect(members).toHaveLength(2)
   })
 
-  it('skips photos without dateTaken (no date group created)', async () => {
+  it('skips photos without dateTaken (no date collection created)', async () => {
     await db.insert(mediaItems).values([
       {
         id: 'photo-1',
@@ -1152,10 +1166,10 @@ describe('groupPhotos', () => {
       },
     ])
 
-    await groupPhotos(db, 'lib-1')
+    await createPhotoCollections(db, 'lib-1')
 
-    const allGroups = await db.select().from(groups)
-    expect(allGroups).toHaveLength(0)
+    const allCollections = await db.select().from(collections)
+    expect(allCollections).toHaveLength(0)
   })
 
   it('is idempotent on repeated calls', async () => {
@@ -1176,17 +1190,17 @@ describe('groupPhotos', () => {
       },
     ])
 
-    await groupPhotos(db, 'lib-1')
-    await groupPhotos(db, 'lib-1')
+    await createPhotoCollections(db, 'lib-1')
+    await createPhotoCollections(db, 'lib-1')
 
-    const allGroups = await db.select().from(groups)
-    const members = await db.select().from(groupMembers)
+    const allCollections = await db.select().from(collections)
+    const members = await db.select().from(collectionItems)
 
-    expect(allGroups).toHaveLength(2) // 1 date + 1 location
-    expect(members).toHaveLength(2) // 1 in date group + 1 in location group
+    expect(allCollections).toHaveLength(2) // 1 date + 1 location
+    expect(members).toHaveLength(2) // 1 in date collection + 1 in location collection
   })
 
-  it('does not group non-photo categories', async () => {
+  it('does not collection non-photo categories', async () => {
     await db.insert(mediaItems).values([
       {
         id: 'movie-1',
@@ -1200,9 +1214,9 @@ describe('groupPhotos', () => {
       },
     ])
 
-    await groupPhotos(db, 'lib-1')
+    await createPhotoCollections(db, 'lib-1')
 
-    const allGroups = await db.select().from(groups)
-    expect(allGroups).toHaveLength(0)
+    const allCollections = await db.select().from(collections)
+    expect(allCollections).toHaveLength(0)
   })
 })

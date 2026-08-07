@@ -1,11 +1,5 @@
 import { sql } from 'drizzle-orm'
-import {
-  index,
-  integer,
-  sqliteTable,
-  text,
-  uniqueIndex,
-} from 'drizzle-orm/sqlite-core'
+import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import { libraries } from './libraries.ts'
 import { mediaItems } from './media.ts'
 
@@ -86,8 +80,8 @@ export const matchingQueue = sqliteTable(
   ],
 )
 
-export const suggestedGroups = sqliteTable(
-  'suggested_groups',
+export const suggestedCollections = sqliteTable(
+  'suggested_collections',
   {
     id: text('id').primaryKey(),
     libraryId: text('library_id')
@@ -109,8 +103,8 @@ export const suggestedGroups = sqliteTable(
       .default(sql`(unixepoch())`),
   },
   (table) => [
-    index('suggested_groups_library_id_idx').on(table.libraryId),
-    index('suggested_groups_status_idx').on(table.status),
+    index('suggested_collections_library_id_idx').on(table.libraryId),
+    index('suggested_collections_status_idx').on(table.status),
   ],
 )
 
@@ -140,7 +134,9 @@ export const aiSettings = sqliteTable('ai_settings', {
   featureSimilarity: integer('feature_similarity', { mode: 'boolean' })
     .notNull()
     .default(true),
-  featureSmartGrouping: integer('feature_smart_grouping', { mode: 'boolean' })
+  featureSmartCollections: integer('feature_smart_collections', {
+    mode: 'boolean',
+  })
     .notNull()
     .default(true),
   updatedAt: integer('updated_at', { mode: 'timestamp' })
@@ -154,7 +150,7 @@ export type DuplicateCandidate = typeof duplicateCandidates.$inferSelect
 export type NewDuplicateCandidate = typeof duplicateCandidates.$inferInsert
 export type MatchingQueueItem = typeof matchingQueue.$inferSelect
 export type NewMatchingQueueItem = typeof matchingQueue.$inferInsert
-export type SuggestedGroup = typeof suggestedGroups.$inferSelect
-export type NewSuggestedGroup = typeof suggestedGroups.$inferInsert
+export type SuggestedCollection = typeof suggestedCollections.$inferSelect
+export type NewSuggestedCollection = typeof suggestedCollections.$inferInsert
 export type AiSettingsRow = typeof aiSettings.$inferSelect
 export type NewAiSettings = typeof aiSettings.$inferInsert

@@ -1,8 +1,8 @@
 import { useEffect, useState } from 'react'
 import { apiFetch } from '~/lib/apiFetch'
-import styles from './GroupDialog.module.css'
+import styles from './CollectionDialog.module.css'
 
-interface Group {
+interface Collection {
   id: string
   type: string
   title: string
@@ -26,15 +26,15 @@ export default function BulkEditDialog({
   const [genre, setGenre] = useState('')
   const [tags, setTags] = useState('')
   const [contentRating, setContentRating] = useState('')
-  const [groupId, setGroupId] = useState('')
-  const [groups, setGroups] = useState<Group[]>([])
+  const [collectionId, setCollectionId] = useState('')
+  const [collections, setCollections] = useState<Collection[]>([])
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState<string | null>(null)
 
   useEffect(() => {
-    apiFetch(`/api/groups?libraryId=${libraryId}`)
+    apiFetch(`/api/collections?libraryId=${libraryId}`)
       .then((r) => r.json())
-      .then((data) => setGroups(data as Group[]))
+      .then((data) => setCollections(data as Collection[]))
       .catch(() => {
         /* ignore */
       })
@@ -85,9 +85,9 @@ export default function BulkEditDialog({
     }
   }
 
-  async function handleMoveToGroup() {
-    if (!groupId) {
-      setError('Select a group')
+  async function handleMoveToCollection() {
+    if (!collectionId) {
+      setError('Select a collection')
       return
     }
     setSubmitting(true)
@@ -97,9 +97,9 @@ export default function BulkEditDialog({
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          action: 'move-to-group',
+          action: 'move-to-collection',
           ids: selectedIds,
-          groupId,
+          collectionId,
         }),
       })
       if (!res.ok) {
@@ -241,34 +241,34 @@ export default function BulkEditDialog({
         />
 
         <div className={styles.field ?? ''}>
-          <label htmlFor="bulk-group" className={styles.label ?? ''}>
-            Move to Group
+          <label htmlFor="bulk-collection" className={styles.label ?? ''}>
+            Move to Collection
           </label>
           <div style={{ display: 'flex', gap: '8px' }}>
             <select
-              id="bulk-group"
+              id="bulk-collection"
               className={styles.select ?? ''}
-              value={groupId}
-              onChange={(e) => setGroupId(e.target.value)}
-              disabled={submitting || groups.length === 0}
+              value={collectionId}
+              onChange={(e) => setCollectionId(e.target.value)}
+              disabled={submitting || collections.length === 0}
               style={{ flex: 1 }}
             >
               <option value="">
-                {groups.length === 0
-                  ? 'No groups available'
-                  : 'Select a group…'}
+                {collections.length === 0
+                  ? 'No collections available'
+                  : 'Select a collection…'}
               </option>
-              {groups.map((g) => (
-                <option key={g.id} value={g.id}>
-                  {g.title} ({g.type})
+              {collections.map((collection) => (
+                <option key={collection.id} value={collection.id}>
+                  {collection.title} ({collection.type})
                 </option>
               ))}
             </select>
             <button
               type="button"
               className={styles.createBtn ?? ''}
-              onClick={handleMoveToGroup}
-              disabled={submitting || !groupId}
+              onClick={handleMoveToCollection}
+              disabled={submitting || !collectionId}
             >
               Move
             </button>

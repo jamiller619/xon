@@ -7,14 +7,14 @@
 //   libraries,
 //   // libraryAccess,
 //   mediaItems,
-//   suggestedGroups,
+//   suggestedCollections,
 // } from '../db/schema.ts'
 // import { validate } from '../http/validate.ts'
 // import { scanLibraryForDuplicates } from '../media/perceptualHash.ts'
 // import {
-//   acceptSuggestedGroup,
-//   scanLibraryForSmartGroups,
-// } from '../media/smartGrouping.ts'
+//   acceptSuggestedCollection,
+//   scanLibraryForSmartCollections,
+// } from '../media/smartCollections.ts'
 // // import { withThumbnailUrls } from './media.ts'
 
 // // const PRIVILEGED_ROLES = ['admin', 'manager'] as const
@@ -230,14 +230,14 @@
 //     return c.json(updated[0])
 //   })
 
-//   // ─── Suggested Groups ─────────────────────────────────────────────────────
+//   // ─── Suggested Collections ─────────────────────────────────────────────────────
 
 //   /**
-//    * GET /ai/suggested-groups
-//    * Returns suggested groups (scattered files that belong together).
+//    * GET /ai/suggested-collections
+//    * Returns suggested collections (scattered files that belong together).
 //    * Supports ?libraryId, ?status (default "pending"), ?limit, ?offset.
 //    */
-//   router.get('/suggested-groups', async (c) => {
+//   router.get('/suggested-collections', async (c) => {
 //     const user = c.get('user')
 //     const limitNum = Math.min(
 //       Math.max(1, Number(c.req.query('limit') || 20)),
@@ -256,25 +256,25 @@
 //       statusFilter === 'accepted' ||
 //       statusFilter === 'rejected'
 //     ) {
-//       conditions.push(eq(suggestedGroups.status, statusFilter))
+//       conditions.push(eq(suggestedCollections.status, statusFilter))
 //     }
 
 //     // if (accessibleIds !== null) {
-//     //   conditions.push(inArray(suggestedGroups.libraryId, accessibleIds))
+//     //   conditions.push(inArray(suggestedCollections.libraryId, accessibleIds))
 //     // }
 
 //     if (libraryIdFilter) {
 //       // if (accessibleIds !== null && !accessibleIds.includes(libraryIdFilter)) {
 //       //   return c.json({ items: [], limit: limitNum, offset: offsetNum })
 //       // }
-//       conditions.push(eq(suggestedGroups.libraryId, libraryIdFilter))
+//       conditions.push(eq(suggestedCollections.libraryId, libraryIdFilter))
 //     }
 
 //     const rows = await db
 //       .select()
-//       .from(suggestedGroups)
+//       .from(suggestedCollections)
 //       .where(conditions.length > 0 ? and(...conditions) : undefined)
-//       .orderBy(desc(suggestedGroups.confidence))
+//       .orderBy(desc(suggestedCollections.confidence))
 //       .limit(limitNum)
 //       .offset(offsetNum)
 
@@ -282,13 +282,13 @@
 //   })
 
 //   /**
-//    * POST /ai/suggested-groups/scan
-//    * Trigger smart grouping scan for a library. Admin/manager only.
+//    * POST /ai/suggested-collections/scan
+//    * Trigger smart collection discovery for a library. Admin/manager only.
 //    */
 //   const smartScanSchema = z.object({ libraryId: z.string().min(1) })
 
 //   router.post(
-//     '/suggested-groups/scan',
+//     '/suggested-collections/scan',
 //     validate('json', smartScanSchema),
 //     async (c) => {
 //       const user = c.get('user')
@@ -315,23 +315,23 @@
 //         return c.json({ error: 'Library not found' }, 404)
 //       }
 
-//       const found = await scanLibraryForSmartGroups(db, libraryId)
+//       const found = await scanLibraryForSmartCollections(db, libraryId)
 //       return c.json({ found })
 //     },
 //   )
 
 //   /**
-//    * POST /ai/suggested-groups/:id/accept
-//    * Accept a suggestion: creates a real group and marks suggestion accepted.
+//    * POST /ai/suggested-collections/:id/accept
+//    * Accept a suggestion: creates a real collection and marks suggestion accepted.
 //    */
-//   router.post('/suggested-groups/:id/accept', async (c) => {
+//   router.post('/suggested-collections/:id/accept', async (c) => {
 //     const { id } = c.req.param()
 //     const user = c.get('user')
 
 //     const rows = await db
 //       .select()
-//       .from(suggestedGroups)
-//       .where(eq(suggestedGroups.id, id))
+//       .from(suggestedCollections)
+//       .where(eq(suggestedCollections.id, id))
 //     if (rows.length === 0) {
 //       return c.json({ error: 'Not found' }, 404)
 //     }
@@ -351,26 +351,26 @@
 //     //   return c.json({ error: 'Forbidden' }, 403)
 //     // }
 
-//     // const result = await acceptSuggestedGroup(db, id)
+//     // const result = await acceptSuggestedCollection(db, id)
 //     // if (!result) {
 //     //   return c.json({ error: 'Could not accept suggestion' }, 409)
 //     // }
 
-//     // return c.json({ groupId: result.groupId })
+//     // return c.json({ collectionId: result.collectionId })
 //   })
 
 //   /**
-//    * POST /ai/suggested-groups/:id/reject
-//    * Reject a suggestion: marks it as rejected without creating a group.
+//    * POST /ai/suggested-collections/:id/reject
+//    * Reject a suggestion: marks it as rejected without creating a collection.
 //    */
-//   router.post('/suggested-groups/:id/reject', async (c) => {
+//   router.post('/suggested-collections/:id/reject', async (c) => {
 //     const { id } = c.req.param()
 //     const user = c.get('user')
 
 //     const rows = await db
 //       .select()
-//       .from(suggestedGroups)
-//       .where(eq(suggestedGroups.id, id))
+//       .from(suggestedCollections)
+//       .where(eq(suggestedCollections.id, id))
 //     if (rows.length === 0) {
 //       return c.json({ error: 'Not found' }, 404)
 //     }
@@ -391,9 +391,9 @@
 //     // }
 
 //     const updated = await db
-//       .update(suggestedGroups)
+//       .update(suggestedCollections)
 //       .set({ status: 'rejected', updatedAt: new Date() })
-//       .where(eq(suggestedGroups.id, id))
+//       .where(eq(suggestedCollections.id, id))
 //       .returning()
 
 //     return c.json(updated[0])

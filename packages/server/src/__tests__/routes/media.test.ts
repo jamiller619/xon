@@ -6,7 +6,12 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createApp } from '../../app.ts'
 import { openDatabase } from '../../db/db.ts'
 import { migrateDatabase } from '../../db/migrate.ts'
-import { dataSources, groups, libraries, mediaItems } from '../../db/schema.ts'
+import {
+  collections,
+  dataSources,
+  libraries,
+  mediaItems,
+} from '../../db/schema.ts'
 import { signAccessToken } from '../../routes/auth.ts'
 
 const AUTH = `Bearer ${await signAccessToken('test-id', 'testuser', 'admin')}`
@@ -1352,11 +1357,11 @@ describe('Media API - POST /api/media/bulk', () => {
     expect(item2?.cr).toBeNull()
   })
 
-  it('bulk moves items to a group', async () => {
-    const groupId = crypto.randomUUID()
+  it('bulk moves items to a collection', async () => {
+    const collectionId = crypto.randomUUID()
     const now = new Date()
-    await db.insert(groups).values({
-      id: groupId,
+    await db.insert(collections).values({
+      id: collectionId,
       libraryId: libId,
       type: 'collection',
       title: 'My Collection',
@@ -1367,9 +1372,9 @@ describe('Media API - POST /api/media/bulk', () => {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: AUTH },
       body: JSON.stringify({
-        action: 'move-to-group',
+        action: 'move-to-collection',
         ids: [itemId1, itemId2],
-        groupId,
+        collectionId,
       }),
     })
     expect(res.status).toBe(200)
@@ -1395,11 +1400,11 @@ describe('Media API - POST /api/media/bulk', () => {
     expect(res.status).toBe(400)
   })
 
-  it('returns 400 for move-to-group without groupId', async () => {
+  it('returns 400 for move-to-collection without collectionId', async () => {
     const res = await app.request('/api/media/bulk', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', Authorization: AUTH },
-      body: JSON.stringify({ action: 'move-to-group', ids: [itemId1] }),
+      body: JSON.stringify({ action: 'move-to-collection', ids: [itemId1] }),
     })
     expect(res.status).toBe(400)
   })

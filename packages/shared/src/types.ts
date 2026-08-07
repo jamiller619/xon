@@ -43,7 +43,7 @@ export type PluginCategory = (typeof pluginCategories)[number]
 
 export const PLUGIN_CATEGORIES = new Set(pluginCategories)
 
-export enum GroupType {
+export enum CollectionType {
   Series = 'series',
   Season = 'season',
   Album = 'album',
@@ -59,13 +59,13 @@ export enum GroupType {
   PhotoDate = 'photo_date',
 }
 
-export type Group = {
+export type Collection = {
   id: string
   createdAt: Date
   updatedAt: Date | null
-  type: GroupType
+  type: CollectionType
   title: string
-  parentGroupID?: string | null
+  parentCollectionId?: string | null
   // biome-ignore lint/suspicious/noExplicitAny: valid
   metadata: Record<string, any>
   mediaItems?: MediaItem[]

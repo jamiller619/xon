@@ -240,8 +240,8 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
     return c.json(rows)
   })
 
-  // GET /users/me/group
-  router.get('/me/groups', async (c) => {
+  // GET /users/me/collection
+  router.get('/me/collections', async (c) => {
     const user = c.get('user')
 
     if (!user) return c.json({ error: 'Not authenticated' }, 401)
@@ -260,7 +260,7 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
   //   .orderBy(desc(favorites.createdAt))
   // return c.json(rows.map((r) =>
   // withThumbnailUrls(r.mediaItem)))
-  // const rows = await db.select().from(groups).innerJoin(mediaItems, eq(groups.))
+  // const rows = await db.select().from(collections).innerJoin(mediaItems, eq(collections.))
   //   return c.json(rows)
   // })
 
@@ -280,17 +280,17 @@ export function makeUsersRouter(db: LibSQLDatabase): Hono {
   //   return c.json(rows)
   // })
 
-  // router.get('/me/group/:type', async (c) => {
+  // router.get('/me/collection/:type', async (c) => {
   //   const user = c.get('user')
-  //   const type = c.req.param('type') as GroupType
+  //   const type = c.req.param('type') as CollectionType
 
   //   const rows = await db
   //     .select({ mediaItem: mediaItems })
-  //     .from(groups)
-  //     .innerJoin(groupItems, eq(groups.id, groupItems.groupId))
-  //     .innerJoin(mediaItems, eq(groupItems.mediaItemId, mediaItems.id))
-  //     .where(and(eq(groups.userId, user.id), eq(groups.type, type)))
-  //     .orderBy(desc(groups.createdAt))
+  //     .from(collections)
+  //     .innerJoin(collectionItems, eq(collections.id, collectionItems.collectionId))
+  //     .innerJoin(mediaItems, eq(collectionItems.mediaItemId, mediaItems.id))
+  //     .where(and(eq(collections.userId, user.id), eq(collections.type, type)))
+  //     .orderBy(desc(collections.createdAt))
 
   //   return c.json(rows.map((r) => withThumbnailUrls(r.mediaItem)))
   // })

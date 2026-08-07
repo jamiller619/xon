@@ -1,28 +1,28 @@
-import { GroupType, MediaType } from '@xon/shared'
-import { and, asc, eq, inArray } from 'drizzle-orm'
+import { CollectionType } from '@xon/shared'
+import { and, asc, eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { requireAuth } from '../auth/middleware.ts'
-import { groupItems, groups, mediaItems } from '../db/schema.ts'
+import { collectionItems, collections, mediaItems } from '../db/schema.ts'
 import { validate } from '../http/validate.ts'
 
-const MANUAL_GROUP_TYPES = [
-  GroupType.Collection,
-  GroupType.Playlist,
-  GroupType.Album,
-  GroupType.Shelf,
-  GroupType.Folder,
+const MANUAL_COLLECTION_TYPES = [
+  CollectionType.Collection,
+  CollectionType.Playlist,
+  CollectionType.Album,
+  CollectionType.Shelf,
+  CollectionType.Folder,
 ] as const
 
-const createGroupSchema = z.object({
-  type: z.enum(MANUAL_GROUP_TYPES),
+const createCollectionSchema = z.object({
+  type: z.enum(MANUAL_COLLECTION_TYPES),
   title: z.string().min(1),
 })
 
-const updateGroupSchema = z.object({
+const updateCollectionSchema = z.object({
   title: z.string().min(1).optional(),
-  type: z.enum(MANUAL_GROUP_TYPES).optional(),
+  type: z.enum(MANUAL_COLLECTION_TYPES).optional(),
 })
 
 const addItemSchema = z.object({
@@ -39,14 +39,14 @@ const reorderItemsSchema = z.object({
   ),
 })
 
-export function makeGroupsRouter(db: LibSQLDatabase): Hono {
+export function makeCollectionsRouter(db: LibSQLDatabase): Hono {
   const router = new Hono()
 
-  // POST /groups — create a manual group (user+)
+  // POST /collections — create a manual collection (user+)
   router.post(
     '/',
     requireAuth(),
-    validate('json', createGroupSchema),
+    validate('json', createCollectionSchema),
     async (c) => {
       const body = c.req.valid('json')
       const userId = c.get('user')?.id
@@ -57,22 +57,25 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
 
       const id = crypto.randomUUID()
 
-      await db.insert(groups).values({
+      await db.insert(collections).values({
         id,
         userId,
-        type: body.type as GroupType,
+        type: body.type as CollectionType,
         title: body.title,
         metadata: '{}',
         createdAt: new Date(),
       })
 
-      const rows = await db.select().from(groups).where(eq(groups.id, id))
+      const rows = await db
+        .select()
+        .from(collections)
+        .where(eq(collections.id, id))
 
       return c.json(rows[0], 201)
     },
   )
 
-  // GET /groups?libraryId=xxx — list manual groups for a library (access-checked)
+  // GET /collections?libraryId=xxx — list manual collections for a library (access-checked)
   router.get('/', async (c) => {
     const user = c.get('user')
     // const libraryId = c.req.query('libraryId')
@@ -89,33 +92,36 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
 
     const rows = await db
       .select()
-      .from(groups)
-      .where(eq(groups.userId, user.id))
-      .orderBy(asc(groups.createdAt))
+      .from(collections)
+      .where(eq(collections.userId, user.id))
+      .orderBy(asc(collections.createdAt))
 
     return c.json(rows)
   })
 
-  // GET /groups/:id — get group with members (access-checked)
+  // GET /collections/:id — get collection with members (access-checked)
   router.get('/:id', async (c) => {
     const id = c.req.param('id')
     // const user = c.get('user')
 
-    const groupRows = await db.select().from(groups).where(eq(groups.id, id))
-    if (groupRows.length === 0) return c.json({ error: 'Not found' }, 404)
-    const group = groupRows[0]
-    if (!group) return c.json({ error: 'Not found' }, 404)
+    const collectionRows = await db
+      .select()
+      .from(collections)
+      .where(eq(collections.id, id))
+    if (collectionRows.length === 0) return c.json({ error: 'Not found' }, 404)
+    const collection = collectionRows[0]
+    if (!collection) return c.json({ error: 'Not found' }, 404)
 
     // const accessibleIds = await getAccessibleLibraryIds(db, user.id)
-    // if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
+    // if (accessibleIds !== null && !accessibleIds.includes(collection.libraryId)) {
     //   return c.json({ error: 'Not found' }, 404)
     // }
 
     // Fetch members with media item details
     const members = await db
       .select({
-        mediaItemId: groupItems.mediaItemId,
-        sortOrder: groupItems.sortOrder,
+        mediaItemId: collectionItems.mediaItemId,
+        sortOrder: collectionItems.sortOrder,
         title: mediaItems.title,
         // mediaCategory: mediaItems.mediaCategory,
         // mimeType: mediaItems.mimeType,
@@ -124,10 +130,10 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
         createdAt: mediaItems.createdAt,
         // thumbnailPaths: mediaItems.thumbnailPaths,
       })
-      .from(groupItems)
-      .innerJoin(mediaItems, eq(groupItems.mediaItemId, mediaItems.id))
-      .where(eq(groupItems.groupId, id))
-      .orderBy(asc(groupItems.sortOrder))
+      .from(collectionItems)
+      .innerJoin(mediaItems, eq(collectionItems.mediaItemId, mediaItems.id))
+      .where(eq(collectionItems.collectionId, id))
+      .orderBy(asc(collectionItems.sortOrder))
 
     const membersWithThumbs = members.map((m) => {
       const thumbnailUrls: {
@@ -156,97 +162,114 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
       return { ...m, thumbnailUrls, thumbnailPaths: undefined }
     })
 
-    return c.json({ ...group, members: membersWithThumbs })
+    return c.json({ ...collection, members: membersWithThumbs })
   })
 
-  // PUT /groups/:id — update group title/type (manager+)
+  // PUT /collections/:id — update collection title/type (manager+)
   router.put(
     '/:id',
     requireAuth(),
-    validate('json', updateGroupSchema),
+    validate('json', updateCollectionSchema),
     async (c) => {
       const id = c.req.param('id')
       const body = c.req.valid('json')
       // const user = c.get('user')
 
-      const groupRows = await db.select().from(groups).where(eq(groups.id, id))
-      if (groupRows.length === 0) return c.json({ error: 'Not found' }, 404)
-      const group = groupRows[0]
-      if (!group) return c.json({ error: 'Not found' }, 404)
+      const collectionRows = await db
+        .select()
+        .from(collections)
+        .where(eq(collections.id, id))
+      if (collectionRows.length === 0)
+        return c.json({ error: 'Not found' }, 404)
+      const collection = collectionRows[0]
+      if (!collection) return c.json({ error: 'Not found' }, 404)
 
       // const accessibleIds = await getAccessibleLibraryIds(
       //   db,
       //   user.id,
       // )
-      // if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
+      // if (accessibleIds !== null && !accessibleIds.includes(collection.libraryId)) {
       //   return c.json({ error: 'Not found' }, 404)
       // }
 
-      // Only allow updating manual group types
-      if (!(MANUAL_GROUP_TYPES as readonly string[]).includes(group.type)) {
-        return c.json({ error: 'Cannot update auto-generated group' }, 403)
+      // Only allow updating manual collection types
+      if (
+        !(MANUAL_COLLECTION_TYPES as readonly string[]).includes(
+          collection.type,
+        )
+      ) {
+        return c.json({ error: 'Cannot update auto-generated collection' }, 403)
       }
 
-      const updates: Partial<typeof groups.$inferInsert> = {}
+      const updates: Partial<typeof collections.$inferInsert> = {}
       if (body.title !== undefined) updates.title = body.title
       if (body.type !== undefined) updates.type = body.type
 
       if (Object.keys(updates).length > 0) {
-        await db.update(groups).set(updates).where(eq(groups.id, id))
+        await db.update(collections).set(updates).where(eq(collections.id, id))
       }
 
-      const updated = await db.select().from(groups).where(eq(groups.id, id))
+      const updated = await db
+        .select()
+        .from(collections)
+        .where(eq(collections.id, id))
       return c.json(updated[0])
     },
   )
 
-  // DELETE /groups/:id — delete group (manager+)
+  // DELETE /collections/:id — delete collection (manager+)
   router.delete('/:id', requireAuth(), async (c) => {
     const id = c.req.param('id')
     // const user = c.get('user')
 
-    const groupRows = await db.select().from(groups).where(eq(groups.id, id))
-    if (groupRows.length === 0) return c.json({ error: 'Not found' }, 404)
-    const group = groupRows[0]
-    if (!group) return c.json({ error: 'Not found' }, 404)
+    const collectionRows = await db
+      .select()
+      .from(collections)
+      .where(eq(collections.id, id))
+    if (collectionRows.length === 0) return c.json({ error: 'Not found' }, 404)
+    const collection = collectionRows[0]
+    if (!collection) return c.json({ error: 'Not found' }, 404)
 
     // const accessibleIds = await getAccessibleLibraryIds(db, user.id)
-    // if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
+    // if (accessibleIds !== null && !accessibleIds.includes(collection.libraryId)) {
     //   return c.json({ error: 'Not found' }, 404)
     // }
 
-    // Only allow deleting manual group types
-    if (!(MANUAL_GROUP_TYPES as readonly string[]).includes(group.type)) {
-      return c.json({ error: 'Cannot delete auto-generated group' }, 403)
+    // Only allow deleting manual collection types
+    if (
+      !(MANUAL_COLLECTION_TYPES as readonly string[]).includes(collection.type)
+    ) {
+      return c.json({ error: 'Cannot delete auto-generated collection' }, 403)
     }
 
-    await db.delete(groups).where(eq(groups.id, id))
+    await db.delete(collections).where(eq(collections.id, id))
     return c.json({ success: true })
   })
 
-  // POST /groups/:id/items — add item to group (upsert with sortOrder)
+  // POST /collections/:id/items — add item to collection (upsert with sortOrder)
   router.post(
     '/:id/items',
     requireAuth(),
     validate('json', addItemSchema),
     async (c) => {
-      const groupId = c.req.param('id')
+      const collectionId = c.req.param('id')
       const body = c.req.valid('json')
       // const user = c.get('user')
 
-      const groupRows = await db
+      const collectionRows = await db
         .select()
-        .from(groups)
-        .where(eq(groups.id, groupId))
-      if (groupRows.length === 0) return c.json({ error: 'Not found' }, 404)
-      const group = groupRows[0]
-      if (!group) return c.json({ error: 'Not found' }, 404)
+        .from(collections)
+        .where(eq(collections.id, collectionId))
+      if (collectionRows.length === 0)
+        return c.json({ error: 'Not found' }, 404)
+      const collection = collectionRows[0]
+      if (!collection) return c.json({ error: 'Not found' }, 404)
 
       // const accessibleIds = await getAccessibleLibraryIds(
       //   db,
       //   user.id,
       // )
-      // if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
+      // if (accessibleIds !== null && !accessibleIds.includes(collection.libraryId)) {
       //   return c.json({ error: 'Not found' }, 404)
       // }
 
@@ -257,7 +280,7 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
         .where(
           and(
             eq(mediaItems.id, body.mediaItemId),
-            // eq(mediaItems.libraryId, group.libraryId),
+            // eq(mediaItems.libraryId, collection.libraryId),
           ),
         )
       if (itemRows.length === 0)
@@ -267,60 +290,64 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
       let sortOrder = body.sortOrder
       if (sortOrder === undefined) {
         const existing = await db
-          .select({ sortOrder: groupItems.sortOrder })
-          .from(groupItems)
-          .where(eq(groupItems.groupId, groupId))
-          .orderBy(asc(groupItems.sortOrder))
+          .select({ sortOrder: collectionItems.sortOrder })
+          .from(collectionItems)
+          .where(eq(collectionItems.collectionId, collectionId))
+          .orderBy(asc(collectionItems.sortOrder))
         const last = existing[existing.length - 1]
         sortOrder = last ? last.sortOrder + 1 : 0
       }
 
       await db
-        .insert(groupItems)
-        .values({ groupId, mediaItemId: body.mediaItemId, sortOrder })
+        .insert(collectionItems)
+        .values({ collectionId, mediaItemId: body.mediaItemId, sortOrder })
         .onConflictDoUpdate({
-          target: [groupItems.groupId, groupItems.mediaItemId],
+          target: [collectionItems.collectionId, collectionItems.mediaItemId],
           set: { sortOrder },
         })
 
-      return c.json({ groupId, mediaItemId: body.mediaItemId, sortOrder }, 201)
+      return c.json(
+        { collectionId, mediaItemId: body.mediaItemId, sortOrder },
+        201,
+      )
     },
   )
 
-  // PUT /groups/:id/items — reorder items (batch update sortOrder)
+  // PUT /collections/:id/items — reorder items (batch update sortOrder)
   router.put(
     '/:id/items',
     requireAuth(),
     validate('json', reorderItemsSchema),
     async (c) => {
-      const groupId = c.req.param('id')
+      const collectionId = c.req.param('id')
       const body = c.req.valid('json')
       // const user = c.get('user')
 
-      const groupRows = await db
+      const collectionRows = await db
         .select()
-        .from(groups)
-        .where(eq(groups.id, groupId))
-      if (groupRows.length === 0) return c.json({ error: 'Not found' }, 404)
-      const group = groupRows[0]
-      if (!group) return c.json({ error: 'Not found' }, 404)
+        .from(collections)
+        .where(eq(collections.id, collectionId))
+      if (collectionRows.length === 0)
+        return c.json({ error: 'Not found' }, 404)
+      const collection = collectionRows[0]
+      if (!collection) return c.json({ error: 'Not found' }, 404)
 
       // const accessibleIds = await getAccessibleLibraryIds(
       //   db,
       //   user.id,
       // )
-      // if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
+      // if (accessibleIds !== null && !accessibleIds.includes(collection.libraryId)) {
       //   return c.json({ error: 'Not found' }, 404)
       // }
 
       for (const item of body.items) {
         await db
-          .update(groupItems)
+          .update(collectionItems)
           .set({ sortOrder: item.sortOrder })
           .where(
             and(
-              eq(groupItems.groupId, groupId),
-              eq(groupItems.mediaItemId, item.mediaItemId),
+              eq(collectionItems.collectionId, collectionId),
+              eq(collectionItems.mediaItemId, item.mediaItemId),
             ),
           )
       }
@@ -329,34 +356,34 @@ export function makeGroupsRouter(db: LibSQLDatabase): Hono {
     },
   )
 
-  // DELETE /groups/:id/items/:mediaItemId — remove item from group (manager+)
+  // DELETE /collections/:id/items/:mediaItemId — remove item from collection (manager+)
   router.delete('/:id/items/:mediaItemId', requireAuth(), async (c) => {
-    const groupId = c.req.param('id')
+    const collectionId = c.req.param('id')
     const mediaItemId = c.req.param('mediaItemId')
     // const user = c.get('user')
 
-    const groupRows = await db
+    const collectionRows = await db
       .select()
-      .from(groups)
-      .where(eq(groups.id, groupId))
-    if (groupRows.length === 0) return c.json({ error: 'Not found' }, 404)
-    const group = groupRows[0]
-    if (!group) return c.json({ error: 'Not found' }, 404)
+      .from(collections)
+      .where(eq(collections.id, collectionId))
+    if (collectionRows.length === 0) return c.json({ error: 'Not found' }, 404)
+    const collection = collectionRows[0]
+    if (!collection) return c.json({ error: 'Not found' }, 404)
 
     // const accessibleIds = await getAccessibleLibraryIds(
     //   db,
     //   user.id,
     // )
-    // if (accessibleIds !== null && !accessibleIds.includes(group.libraryId)) {
+    // if (accessibleIds !== null && !accessibleIds.includes(collection.libraryId)) {
     //   return c.json({ error: 'Not found' }, 404)
     // }
 
     await db
-      .delete(groupItems)
+      .delete(collectionItems)
       .where(
         and(
-          eq(groupItems.groupId, groupId),
-          eq(groupItems.mediaItemId, mediaItemId),
+          eq(collectionItems.collectionId, collectionId),
+          eq(collectionItems.mediaItemId, mediaItemId),
         ),
       )
 

@@ -19,7 +19,7 @@
 //   featureMatching: z.boolean().optional(),
 //   featureTagging: z.boolean().optional(),
 //   featureSimilarity: z.boolean().optional(),
-//   featureSmartGrouping: z.boolean().optional(),
+//   featureSmartCollections: z.boolean().optional(),
 // })
 
 // /** Load or initialise the singleton settings row */
@@ -53,7 +53,7 @@
 //     featureMatching: row.featureMatching,
 //     featureTagging: row.featureTagging,
 //     featureSimilarity: row.featureSimilarity,
-//     featureSmartGrouping: row.featureSmartGrouping,
+//     featureSmartCollections: row.featureSmartCollections,
 //     updatedAt: row.updatedAt,
 //   }
 // }
@@ -94,8 +94,8 @@
 //       update.featureTagging = body.featureTagging
 //     if (body.featureSimilarity !== undefined)
 //       update.featureSimilarity = body.featureSimilarity
-//     if (body.featureSmartGrouping !== undefined)
-//       update.featureSmartGrouping = body.featureSmartGrouping
+//     if (body.featureSmartCollections !== undefined)
+//       update.featureSmartCollections = body.featureSmartCollections
 //     if (body.cloudApiUrl !== undefined) update.cloudApiUrl = body.cloudApiUrl
 
 //     // Cloud API key: only update when explicitly provided and not the masked placeholder

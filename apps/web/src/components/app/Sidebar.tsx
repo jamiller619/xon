@@ -15,7 +15,7 @@ import {
   Settings20Filled as SettingsOnIcon,
 } from '@fluentui/react-icons'
 import { useQuery } from '@tanstack/react-query'
-import { type Group, GroupType } from '@xon/shared'
+import { type Collection, CollectionType } from '@xon/shared'
 import { Flex, Surface } from '@xon/ui'
 import clsx from 'clsx'
 import { NavLink } from 'react-router-dom'
@@ -35,7 +35,9 @@ interface SidebarProps {
 export default function Sidebar({ className, isOpen }: SidebarProps) {
   const { data: libraries, refetch } = useLibraries()
 
-  const { data: groups } = useQuery<Group[]>(useQueryAPIHelper('groups'))
+  const { data: collections } = useQuery<Collection[]>(
+    useQueryAPIHelper('collections'),
+  )
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
     `${styles.navLink}${isActive ? ` ${styles.active}` : ''}`
@@ -95,8 +97,8 @@ export default function Sidebar({ className, isOpen }: SidebarProps) {
 
       <Section>
         <div className={styles.sectionTitle}>Collections</div>
-        {Array.isArray(groups) &&
-          groups.map((collection) => (
+        {Array.isArray(collections) &&
+          collections.map((collection) => (
             <NavLink
               key={collection.id}
               to={`/collections/${collection.id}`}
@@ -174,10 +176,10 @@ function Section({ children }: { children: React.ReactNode }) {
   )
 }
 
-function CollectionIcon({ type }: { type?: GroupType | undefined }) {
-  if (type === GroupType.Playlist) {
+function CollectionIcon({ type }: { type?: CollectionType | undefined }) {
+  if (type === CollectionType.Playlist) {
     return <FolderIcon />
-  } else if (type === GroupType.Favorites) {
+  } else if (type === CollectionType.Favorites) {
     return <FavoritesIcon />
   }
 

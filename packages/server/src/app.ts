@@ -27,9 +27,9 @@ import { makeAdminSettingsRouter } from './routes/adminSettings.ts'
 import { makeAdminUsersRouter } from './routes/adminUsers.ts'
 // import { makeAiRouter } from './routes/ai.ts'
 import { makeAuthRouter } from './routes/auth.ts'
+import { makeCollectionsRouter } from './routes/collections.ts'
 import { makeDocsRouter } from './routes/docs.ts'
 import { makeFsRouter } from './routes/fs.ts'
-import { makeGroupsRouter } from './routes/groups.ts'
 import { makeLibrariesRouter } from './routes/libraries.ts'
 // import { makeMatchingRouter } from './routes/matching.ts'
 import { makeMediaRouter } from './routes/media.ts'
@@ -110,7 +110,7 @@ export function createApp(
     if (options?.scannerHandle) {
       app.route('/libraries', makeLibrariesRouter(db, options.scannerHandle))
     }
-    app.route('/groups', makeGroupsRouter(db))
+    app.route('/collections', makeCollectionsRouter(db))
     // app.route('/ai', makeAiRouter(db))
     // app.route('/matching', makeMatchingRouter(db))
     app.route('/media', makeMediaRouter(db))

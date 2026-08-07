@@ -12,7 +12,7 @@ interface AiSettingsData {
   featureMatching: boolean
   featureTagging: boolean
   featureSimilarity: boolean
-  featureSmartGrouping: boolean
+  featureSmartCollections: boolean
 }
 
 const DEFAULT_SETTINGS: AiSettingsData = {
@@ -23,7 +23,7 @@ const DEFAULT_SETTINGS: AiSettingsData = {
   featureMatching: true,
   featureTagging: true,
   featureSimilarity: true,
-  featureSmartGrouping: true,
+  featureSmartCollections: true,
 }
 
 export default function AdminAiSettings() {
@@ -41,7 +41,7 @@ export default function AdminAiSettings() {
   const [featureMatching, setFeatureMatching] = useState(true)
   const [featureTagging, setFeatureTagging] = useState(true)
   const [featureSimilarity, setFeatureSimilarity] = useState(true)
-  const [featureSmartGrouping, setFeatureSmartGrouping] = useState(true)
+  const [featureSmartCollections, setFeatureSmartCollections] = useState(true)
 
   useEffect(() => {
     setLoading(true)
@@ -55,7 +55,7 @@ export default function AdminAiSettings() {
         setFeatureMatching(data.featureMatching)
         setFeatureTagging(data.featureTagging)
         setFeatureSimilarity(data.featureSimilarity)
-        setFeatureSmartGrouping(data.featureSmartGrouping)
+        setFeatureSmartCollections(data.featureSmartCollections)
       })
       .catch(() => setError('Failed to load AI settings'))
       .finally(() => setLoading(false))
@@ -74,7 +74,7 @@ export default function AdminAiSettings() {
       featureMatching,
       featureTagging,
       featureSimilarity,
-      featureSmartGrouping,
+      featureSmartCollections,
     }
 
     // Only send the API key if the user typed something new
@@ -222,10 +222,10 @@ export default function AdminAiSettings() {
             <label className={styles.toggle ?? ''}>
               <input
                 type="checkbox"
-                checked={featureSmartGrouping}
-                onChange={(e) => setFeatureSmartGrouping(e.target.checked)}
+                checked={featureSmartCollections}
+                onChange={(e) => setFeatureSmartCollections(e.target.checked)}
               />
-              <span>Smart grouping of scattered files</span>
+              <span>Smart collection suggestions for scattered files</span>
             </label>
           </div>
         </section>
