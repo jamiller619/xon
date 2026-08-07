@@ -1,6 +1,7 @@
 import {
   FolderSearch16Regular as ScanIcon,
-  CheckmarkCircleHint16Regular as SelectIcon,
+  CheckmarkSquare20Regular as SelectIcon,
+  CheckmarkSquare20Filled as SelectIconFilled,
 } from '@fluentui/react-icons'
 import { useMutation } from '@tanstack/react-query'
 import { Button, Label, Select, ToggleButton, ToggleButtonGroup } from '@xon/ui'
@@ -133,7 +134,11 @@ export default function LibraryViewControls<
           onPressedChange={handleSelectModeToggle}
           aria-label="Select items"
         >
-          <SelectIcon aria-hidden="true" />
+          {isSelectMode ? (
+            <SelectIconFilled aria-hidden="true" />
+          ) : (
+            <SelectIcon aria-hidden="true" />
+          )}
         </ToggleButton>
       </FilterHeader.ToolbarControls>
     </>
