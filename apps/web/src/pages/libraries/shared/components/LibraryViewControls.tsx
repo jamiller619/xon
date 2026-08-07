@@ -1,11 +1,12 @@
 import {
   FolderSearch16Regular as ScanIcon,
-  CopySelectRegular as SelectIcon,
+  CheckmarkCircleHint16Regular as SelectIcon,
 } from '@fluentui/react-icons'
 import { useMutation } from '@tanstack/react-query'
 import { Button, Label, Select, ToggleButton, ToggleButtonGroup } from '@xon/ui'
 import FilterHeader from '~/components/FilterHeader'
 import { apiFetch, getAPIError } from '~/lib/apiFetch'
+import { useAppStore } from '~/store/appStore'
 import { useScanStore } from '~/store/scanStore'
 import styles from '../../Library.module.css'
 import { makeSortKey } from '../hooks/useLibrarySort'
@@ -40,6 +41,11 @@ export default function LibraryViewControls<
   onViewModeChange,
   onSortOptionChange,
 }: LibraryViewControlsProps<Mode, SortKey>) {
+  const isSelectMode = useAppStore(({ isSelectMode }) => isSelectMode)
+  const setSelectMode = useAppStore(({ setSelectMode }) => setSelectMode)
+  const setSelectedItems = useAppStore(
+    ({ setSelectedItems }) => setSelectedItems,
+  )
   const activeMode = modes.find((mode) => mode.id === viewMode) ?? modes[0]
   const showToolbarSort = activeMode?.sortPresentation === 'toolbar'
   const scanRunning = useScanStore(
@@ -66,6 +72,11 @@ export default function LibraryViewControls<
     onError: () => removeScan(libraryId),
   })
   const scanning = scan.isPending || scanRunning
+
+  const handleSelectModeToggle = (pressed: boolean) => {
+    setSelectMode(pressed)
+    setSelectedItems([])
+  }
 
   return (
     <>
@@ -116,7 +127,12 @@ export default function LibraryViewControls<
             </ToggleButton>
           ))}
         </ToggleButtonGroup>
-        <ToggleButton>
+        <ToggleButton
+          pressed={isSelectMode}
+          variant="primary"
+          onPressedChange={handleSelectModeToggle}
+          aria-label="Select items"
+        >
           <SelectIcon aria-hidden="true" />
         </ToggleButton>
       </FilterHeader.ToolbarControls>

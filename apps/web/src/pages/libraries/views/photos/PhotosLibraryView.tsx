@@ -14,7 +14,9 @@ import LibraryViewControls from '../../shared/components/LibraryViewControls'
 import LibraryViewLayout from '../../shared/components/LibraryViewLayout'
 import ListView from '../../shared/components/ListView'
 import MasonryView from '../../shared/components/MasonryView'
+import ThumbnailSizeControl from '../../shared/components/ThumbnailSizeControl'
 import { useLibrarySort } from '../../shared/hooks/useLibrarySort'
+import { useLibraryThumbnailSize } from '../../shared/hooks/useLibraryThumbnailSize'
 import { useLibraryViewMode } from '../../shared/hooks/useLibraryViewMode'
 import type { LibraryViewModeDefinition } from '../../shared/types/collectionView'
 import { MOVIE_LIST_COLUMNS } from '../movies/MovieListColumns'
@@ -24,6 +26,7 @@ import {
   type MovieSortKey,
 } from '../movies/movieControls'
 import { useMovieLibraryMedia } from '../movies/useMovieLibraryMedia'
+import SelectWrapper from '../SelectWrapper'
 
 type PhotoViewMode = 'masonry' | 'list'
 
@@ -58,6 +61,10 @@ function photoAspectRatio(item: MediaItem): number | undefined {
 
 export default function PhotosLibraryView({ library }: LibraryTypeViewProps) {
   const [openPhotoId, setOpenPhotoId] = useState<string | null>(null)
+  const { thumbnailSize, setThumbnailSize } = useLibraryThumbnailSize(
+    library.id,
+    180,
+  )
   const { viewMode, setViewMode } = useLibraryViewMode(
     library.id,
     PHOTO_VIEW_MODES,
@@ -144,6 +151,14 @@ export default function PhotosLibraryView({ library }: LibraryTypeViewProps) {
       title={library.name}
       stats={stats}
       error={mediaQuery.error ? 'Failed to load photos' : undefined}
+      footer={
+        viewMode === 'masonry' ? (
+          <ThumbnailSizeControl
+            value={thumbnailSize}
+            onChange={setThumbnailSize}
+          />
+        ) : undefined
+      }
       controls={
         <LibraryViewControls
           libraryId={library.id}
@@ -159,17 +174,31 @@ export default function PhotosLibraryView({ library }: LibraryTypeViewProps) {
       {viewMode === 'masonry' ? (
         <MasonryView
           {...collectionProps}
+          minItemWidth={thumbnailSize}
           getItemAspectRatio={photoAspectRatio}
           renderItem={(item) => {
             const aspectRatio = photoAspectRatio(item)
             return (
-              <MediaCard
-                item={item}
-                library={library}
-                imageOnly
-                thumbAspectRatio={aspectRatio ? String(aspectRatio) : '4 / 3'}
-                onOpen={(photo) => setOpenPhotoId(photo.id)}
-              />
+              <SelectWrapper id={item.id}>
+                {(onOpen) => (
+                  <MediaCard
+                    item={item}
+                    library={library}
+                    imageOnly
+                    thumbAspectRatio={
+                      aspectRatio ? String(aspectRatio) : '4 / 3'
+                    }
+                    {...(onOpen
+                      ? {
+                          onOpen: () => {
+                            onOpen(item)
+                            setOpenPhotoId(item.id)
+                          },
+                        }
+                      : {})}
+                  />
+                )}
+              </SelectWrapper>
             )
           }}
         />

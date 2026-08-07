@@ -1,4 +1,5 @@
 import { Flex, type FlexProps } from '@xon/ui'
+import clsx from 'clsx'
 import { css } from 'inline-css-modules'
 
 const styles = css`
@@ -15,9 +16,13 @@ const styles = css`
   }
 `
 
-export default function Page({ children, ...props }: FlexProps<'div'>) {
+export default function Page({
+  children,
+  className,
+  ...props
+}: FlexProps<'div'>) {
   return (
-    <Flex {...props} dir="col" gap="4" className={styles.page}>
+    <Flex {...props} dir="col" gap="4" className={clsx(styles.page, className)}>
       {children}
     </Flex>
   )

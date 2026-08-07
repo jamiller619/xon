@@ -35,7 +35,7 @@ interface MediaCardProps {
   listView?: boolean
   imageOnly?: boolean
   thumbAspectRatio?: string
-  onOpen?: (item: MediaItem) => void
+  onOpen?: (item: MediaItem, e?: React.MouseEvent | undefined) => void
   isFavorited?: boolean
   onToggleFavorite?: (id: string, currentlyFavorited: boolean) => void
   listRowProps?: ComponentPropsWithRef<'tr'> & { 'data-index'?: number }
@@ -66,7 +66,7 @@ export default function MediaCard({
   function handleOpen(e: React.MouseEvent) {
     if (!onOpen) return
     e.preventDefault()
-    onOpen(item)
+    onOpen(item, e)
   }
 
   function handlePlay(e: React.MouseEvent) {

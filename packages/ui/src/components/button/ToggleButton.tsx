@@ -2,23 +2,27 @@ import { Toggle } from '@base-ui/react/toggle'
 import { ToggleGroup } from '@base-ui/react/toggle-group'
 import clsx from 'clsx'
 import { css } from 'inline-css-modules'
+import type { Variant } from '../types.js'
 import Button from './Button.jsx'
 
 const styles = css`
   .button {
-    background: var(--color-gray-a2);
+    background: var(--color-gray-5);
   }
 
   .pressed {
-    background: var(--color-gray-6);
+    background: var(--color-gray-3);
     color: var(--color-text);
   }
 `
 
-export type ToggleButtonProps = Toggle.Props
+export type ToggleButtonProps = Toggle.Props & {
+  variant?: Variant
+}
 
 export default function ToggleButton({
   children,
+  variant,
   ...props
 }: ToggleButtonProps) {
   return (
@@ -28,6 +32,7 @@ export default function ToggleButton({
         return (
           <Button
             {...props}
+            variant={state.pressed ? variant : undefined}
             className={clsx(styles.button, state.pressed && styles.pressed)}
           >
             {children}
@@ -52,6 +57,10 @@ const groupStyles = css`
 
     button:not(:last-of-type):not(:first-of-type) {
       border-radius: 0;
+    }
+
+    button[data-pressed] {
+      pointer-events: none;
     }
   }
 `

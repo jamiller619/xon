@@ -16,8 +16,11 @@ import GridView from '../../shared/components/GridView'
 import LibraryViewControls from '../../shared/components/LibraryViewControls'
 import LibraryViewLayout from '../../shared/components/LibraryViewLayout'
 import ListView from '../../shared/components/ListView'
+import ThumbnailSizeControl from '../../shared/components/ThumbnailSizeControl'
+import { useLibraryThumbnailSize } from '../../shared/hooks/useLibraryThumbnailSize'
 import { useLibraryViewMode } from '../../shared/hooks/useLibraryViewMode'
 import type { LibraryViewModeDefinition } from '../../shared/types/collectionView'
+import SelectWrapper from '../SelectWrapper'
 import { MOVIE_LIST_COLUMNS } from './MovieListColumns'
 import {
   DEFAULT_MOVIE_SORT,
@@ -53,6 +56,10 @@ const MOVIE_VIEW_MODES = [
 >[]
 
 export default function MoviesLibraryView({ library }: LibraryTypeViewProps) {
+  const { thumbnailSize, setThumbnailSize } = useLibraryThumbnailSize(
+    library.id,
+    160,
+  )
   const { viewMode, setViewMode } = useLibraryViewMode(
     library.id,
     MOVIE_VIEW_MODES,
@@ -119,6 +126,14 @@ export default function MoviesLibraryView({ library }: LibraryTypeViewProps) {
       title={library.name}
       stats={stats}
       error={error}
+      footer={
+        viewMode === 'grid' ? (
+          <ThumbnailSizeControl
+            value={thumbnailSize}
+            onChange={setThumbnailSize}
+          />
+        ) : undefined
+      }
       controls={
         <LibraryViewControls
           libraryId={library.id}
@@ -154,7 +169,18 @@ export default function MoviesLibraryView({ library }: LibraryTypeViewProps) {
       {viewMode === 'grid' ? (
         <GridView
           {...collectionProps}
-          renderItem={(item) => <MediaCard item={item} library={library} />}
+          minCardWidth={thumbnailSize}
+          renderItem={(item) => (
+            <SelectWrapper id={item.id}>
+              {(onOpen) => (
+                <MediaCard
+                  item={item}
+                  library={library}
+                  {...(onOpen ? { onOpen } : {})}
+                />
+              )}
+            </SelectWrapper>
+          )}
         />
       ) : (
         <ListView

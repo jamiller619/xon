@@ -1,7 +1,8 @@
-import { DocumentEdit16Regular as EditIcon } from '@fluentui/react-icons'
-import { Button, Flex } from '@xon/ui'
+import { Delete16Regular as DeleteIcon } from '@fluentui/react-icons'
+import { Badge, Button, Flex } from '@xon/ui'
 import { css } from 'inline-css-modules'
 import Page from '~/pages/Page'
+import { useAppStore } from '~/store/appStore'
 
 const styles = css`
   .header {
@@ -17,11 +18,13 @@ const styles = css`
     margin-bottom: calc(-1 * var(--space-md));
   }
 
-  .titleContainer {
-    /* display: flex; */
-    /* align-items: baseline; */
-    /* gap: var(--space-md); */
-    /* min-width: 0; */
+  .dataContainer {
+    font-size: var(--text-sm);
+    color: var(--color-text);
+
+    span {
+      color: var(--color-text-muted);
+    }
   }
 
   .stats {
@@ -66,25 +69,47 @@ export default function FilterHeader({
   stats,
   children,
 }: FilterHeaderProps) {
+  const isSelectMode = useAppStore(({ isSelectMode }) => isSelectMode)
+  const selectedItemCount = useAppStore(
+    ({ selectedItems }) => selectedItems.length,
+  )
+
   return (
     <header className={styles.header}>
-      <div className={styles.titleContainer}>
-        <Page.Title>{title}</Page.Title>
-        {/* <Button.Icon title="Edit library">
+      <Flex justify="between">
+        <div className={styles.titleContainer}>
+          <Page.Title>{title}</Page.Title>
+          {/* <Button.Icon title="Edit library">
           <EditIcon />
         </Button.Icon> */}
-        <div className={styles.stats}>
-          {stats?.length ? (
-            stats.map((stat) => (
-              <span key={stat} title={stat}>
-                {stat}
-              </span>
-            ))
-          ) : (
-            <i>Failed to load stats</i>
-          )}
+          <div className={styles.stats}>
+            {stats?.length ? (
+              stats.map((stat) => (
+                <span key={stat} title={stat}>
+                  {stat}
+                </span>
+              ))
+            ) : (
+              <i>Failed to load stats</i>
+            )}
+          </div>
         </div>
-      </div>
+        <Flex align="end" className={styles.dataContainer}>
+          {isSelectMode && (
+            <Flex align="center" gap="4">
+              <Flex align="center" gap="2">
+                <span>Selected:</span>
+                <Badge size="small" variant="primary">
+                  {selectedItemCount}
+                </Badge>
+              </Flex>
+              <Button.Icon>
+                <DeleteIcon />
+              </Button.Icon>
+            </Flex>
+          )}
+        </Flex>
+      </Flex>
       <div className={styles.toolbar}>{children}</div>
     </header>
   )

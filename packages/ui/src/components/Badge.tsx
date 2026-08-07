@@ -5,7 +5,7 @@ import type { Size, Variant } from './types.js'
 
 const styles = css`
   .badge {
-    display: inline-block;
+    line-height: 1;
     padding: var(--space-2xs) var(--space-xs);
     border-radius: var(--border-radius-2);
     corner-shape: var(--corner-shape);
