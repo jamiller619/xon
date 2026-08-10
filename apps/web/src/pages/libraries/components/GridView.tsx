@@ -1,8 +1,8 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { css } from 'inline-css-modules'
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
-import styles from '../../Library.module.css'
 import { useScrollViewport } from '../hooks/useScrollViewport'
+import styles from '../Library.module.css'
 import type { CollectionViewProps } from '../types/collectionView'
 import SkeletonCard from './SkeletonCard'
 

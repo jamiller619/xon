@@ -1,10 +1,5 @@
-import {
-  // MediaCategory,
-  // type Metadata,
-  MetadataSourcePlugin,
-  type PluginContext,
-} from '@xon/plugin-sdk'
-import { LibraryType, MediaType, type Metadata } from '@xon/shared'
+import { MetadataSourcePlugin, type PluginContext } from '@xon/plugin-sdk'
+import { MediaType, type Metadata } from '@xon/shared'
 import { MusicBrainzClient } from './musicBrainzClient.js'
 import { parseMusicPath } from './musicParser.js'
 
@@ -141,24 +136,6 @@ export class MusicBrainzMetadataPlugin extends MetadataSourcePlugin {
       //   `MusicBrainz: enrichment failed for ${mediaId}: ${err instanceof Error ? err.message : String(err)}`,
       // )
     }
-  }
-
-  private async getStoredMetadata(mediaId: string): Promise<unknown> {
-    if (!this.ctx) return null
-
-    // const rows = await this.ctx.db.query(
-    //   'SELECT * FROM plugin_musicbrainz_metadata_tracks WHERE media_id = ?',
-    //   [mediaId],
-    // )
-    // if (rows.length === 0) return null
-
-    // const row = rows[0] as Record<string, unknown>
-    // return {
-    //   ...row,
-    //   artists: JSON.parse((row.artists as string | null) ?? '[]'),
-    //   genres: JSON.parse((row.genres as string | null) ?? '[]'),
-    //   isCompilation: row.is_compilation === 1,
-    // }
   }
 
   override async deactivate(): Promise<void> {

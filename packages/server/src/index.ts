@@ -190,6 +190,7 @@ export {
   setPluginDatabase,
   uninstallPlugin,
 } from './plugins/pluginManager.ts'
+export type { CollectionsRoutes } from './routes/collections.ts'
 // export { runMediaBackupJob } from './routes/adminBackupMedia.ts'
 // export {
 //   copyFilesToDestination,

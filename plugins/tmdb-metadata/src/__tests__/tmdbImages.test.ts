@@ -1,5 +1,5 @@
 import type { PluginContext } from '@xon/plugin-sdk'
-import { LibraryType, MediaType } from '@xon/shared'
+import { MediaType } from '@xon/shared'
 import { describe, expect, it, vi } from 'vitest'
 import TmdbMetadataPlugin from '../index.js'
 import { TmdbClient } from '../tmdbClient.js'
@@ -144,7 +144,7 @@ describe('TMDb artwork metadata', () => {
     const plugin = new TmdbMetadataPlugin()
     await plugin.init(context)
 
-    const result = await plugin.enrich('The Matrix.mkv', LibraryType.Movies, {
+    const result = await plugin.enrich('The Matrix.mkv', 'video/movie', {
       title: 'The Matrix',
     })
 
@@ -207,7 +207,7 @@ describe('TMDb artwork metadata', () => {
 
     const posters = await plugin.findPosters('603', {
       title: 'The Matrix',
-      libraryType: LibraryType.Movies,
+      contentType: 'video/movie',
       mediaType: MediaType.MainType.Video,
       limit: 10,
     })

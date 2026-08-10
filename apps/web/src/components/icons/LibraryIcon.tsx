@@ -9,10 +9,10 @@ import {
   TvRegular as TVIcon,
   Tv24Regular as TVIconLarge,
 } from '@fluentui/react-icons'
-import { LibraryType } from '@xon/shared'
+import type { ContentType } from '@xon/shared'
 
 type LibraryIconProps = FluentIconsProps & {
-  type?: LibraryType | undefined
+  type?: ContentType | undefined
   size?: 'small' | 'large'
 }
 
@@ -22,27 +22,26 @@ export default function LibraryIcon({
   ...props
 }: LibraryIconProps) {
   switch (type) {
-    case LibraryType.Movies:
+    case 'video/movie':
       return size === 'large' ? (
         <MoviesIconLarge {...props} />
       ) : (
         <MoviesIcon {...props} />
       )
-    case LibraryType.TVShows:
-    case LibraryType.HomeVideos:
+    case 'video/tvshow':
+    case 'video':
       return size === 'large' ? (
         <TVIconLarge {...props} />
       ) : (
         <TVIcon {...props} />
       )
-    case LibraryType.Music:
-    case LibraryType.MusicVideos:
+    case 'audio':
       return size === 'large' ? (
         <MusicIconLarge {...props} />
       ) : (
         <MusicIcon {...props} />
       )
-    case LibraryType.Photos:
+    case 'image':
       return size === 'large' ? (
         <PhotosIconLarge {...props} />
       ) : (

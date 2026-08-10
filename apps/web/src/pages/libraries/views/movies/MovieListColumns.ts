@@ -1,4 +1,4 @@
-import type { ListColumn } from '../../shared/types/collectionView'
+import type { ListColumn } from '../../types/collectionView'
 import type { MovieSortKey } from './movieControls'
 
 export const MOVIE_LIST_COLUMNS = [

@@ -1,8 +1,8 @@
 import { readFile } from 'node:fs/promises'
 import {
+  type ContentType,
   DataSourceType,
   type Library,
-  LibraryType,
   MediaType,
 } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
@@ -49,7 +49,7 @@ const libraryMediaQuerySchema = z.object({
 const createLibrarySchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  type: z.enum(LibraryType),
+  type: z.string<ContentType>(),
   scanSchedule: z.string().optional(),
   dataSources: z.array(
     z.object({

@@ -3,13 +3,21 @@ import {
   Play24Filled as PlayIcon,
 } from '@fluentui/react-icons'
 import { useQuery } from '@tanstack/react-query'
-import { type Library, LibraryType, type MediaItem } from '@xon/shared'
-import { Button, Flex, Menu, Surface } from '@xon/ui'
+import type { Library, MediaItem } from '@xon/shared'
+import {
+  Button,
+  Flex,
+  Menu,
+  type MenuItem,
+  type MenuItems,
+  Surface,
+} from '@xon/ui'
 import clsx from 'clsx'
 import { useLayoutEffect, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { BackgroundSlideshow } from '~/components/background-slideshow/BackgroundSlideshow'
 import PluginSlot from '~/components/PluginSlot'
+import useCollections from '~/hooks/useCollections'
 import useQueryAPIHelper from '~/hooks/useQueryAPIHelper'
 import { artworkUrl, thumbnailUrl } from '~/lib/apiFetch'
 import basename from '~/lib/basename'
@@ -22,6 +30,23 @@ import Cast from './movies/Cast'
 import MovieSubtitle from './movies/MovieSubtitle'
 import Related from './movies/Related'
 
+function buildMoreMenu(addToChildren?: MenuItem[] | undefined): MenuItems {
+  return [
+    { label: 'Add to ...', icon: icons['Add to'], children: addToChildren },
+    { label: 'Edit metadata', icon: icons.Edit },
+    { label: 'Refresh metadata', icon: icons['Refresh metadata'] },
+    { label: 'Edit images', icon: icons['Edit images'] },
+    { label: 'Download', icon: icons.Download },
+    // {
+    //   label: 'Sort by',
+    //   children: [{ label: 'Name' }],
+    // },
+    // 'separator',
+    { label: 'Fix match', icon: icons['Fix match'] },
+    { label: 'Delete', icon: icons.Delete },
+  ]
+}
+
 export default function Media() {
   const { id } = useParams<{ id: string }>()
   const pageRef = useRef<HTMLDivElement>(null)
@@ -29,6 +54,7 @@ export default function Media() {
   const placeholderData = useLocation().state as MediaItem & {
     library?: Library
   }
+  const [collections, addMediaToCollection] = useCollections()
 
   const { data, error } = useQuery<MediaItem & { library?: Library }>({
     ...useQueryAPIHelper('mediaByIdWithLibrary', { id }),
@@ -158,23 +184,22 @@ export default function Media() {
           align="center"
           className={styles.subtitle}
         >
-          {data.library?.type === LibraryType.Movies && (
+          {data.library?.type === 'video/movie' && (
             <MovieSubtitle data={data} />
           )}
           <Menu
             className={styles.optionsMenu}
-            items={[
-              { label: 'Edit', icon: icons.Edit },
-              { label: 'Refresh metadata', icon: icons['Refresh metadata'] },
-              { label: 'Edit images', icon: icons['Edit images'] },
-              { label: 'Download', icon: icons.Download },
-              // {
-              //   label: 'Sort by',
-              //   children: [{ label: 'Name' }],
-              // },
-              // 'separator',
-              { label: 'Delete', icon: icons.Delete },
-            ]}
+            items={buildMoreMenu(
+              collections?.map((c) => ({
+                label: c.title,
+                onClick: () => {
+                  addMediaToCollection.mutate({
+                    mediaItemId: data.id,
+                    collectionId: c.id,
+                  })
+                },
+              })),
+            )}
           >
             <Button.Icon>
               <MoreVerticalIcon />

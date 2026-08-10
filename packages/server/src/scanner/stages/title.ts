@@ -1,4 +1,3 @@
-import { LibraryType } from '@xon/shared'
 import { parseFilename } from '../../media/filenameParser.ts'
 import type { PipelineStage } from '../pipeline.js'
 
@@ -10,7 +9,7 @@ export default {
 
     const { title, metadata } = parseFilename(
       job.file.path,
-      job.libraryType === LibraryType.TVShows,
+      job.contentType === 'video/tvshow',
     )
 
     return {

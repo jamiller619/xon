@@ -17,6 +17,10 @@ type TmdbCastMember = {
   order: number
 }
 
+/**
+ * Stage for taking cast metadata and calling the TMDB api
+ * to fetch images and saving them to the database
+ */
 export default {
   name: 'person',
   retry: 1,
@@ -46,6 +50,7 @@ export default {
     // A person may appear multiple times in the cast (different characters).
     // Group by tmdb id so each person is saved once, with a credit per character.
     const castByPerson = new Map<number, TmdbCastMember[]>()
+
     for (const castMember of cast) {
       const group = castByPerson.get(castMember.id) ?? []
       group.push(castMember)
@@ -63,8 +68,8 @@ export default {
       for (const [tmdbId, group] of castByPerson) {
         const primary = group[0]
         if (!primary) continue
-        const avatarUrl = peopleImages.find((i) => i.personId === tmdbId)?.url
 
+        const avatarUrl = peopleImages.find((i) => i.personId === tmdbId)?.url
         const [person] = await tx
           .insert(people)
           .values({

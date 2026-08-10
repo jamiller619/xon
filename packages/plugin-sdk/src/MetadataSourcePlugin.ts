@@ -1,4 +1,4 @@
-import type { LibraryType, MediaType, Metadata, PosterImage } from '@xon/shared'
+import type { ContentType, MediaType, Metadata, PosterImage } from '@xon/shared'
 import { BasePlugin } from './BasePlugin.js'
 
 export interface EnrichOptions {
@@ -22,7 +22,7 @@ export interface EnrichOptions {
 export interface MetadataSearchQuery {
   title: string
   year?: number | undefined
-  libraryType: LibraryType
+  contentType: ContentType
   mediaType: MediaType.MainType
   limit: number
   /** File-derived values such as season and episode numbers. */
@@ -48,7 +48,7 @@ export interface MetadataSearchAvailability {
  * Abstract base class for plugins that match media titles against an external source.
  * Implement this to integrate with services like TMDB, MusicBrainz, etc.
  */
-export abstract class MetadataSourcePlugin extends BasePlugin {
+export default abstract class MetadataSourcePlugin extends BasePlugin {
   abstract readonly mediaTypes: MediaType.MainType[]
 
   /**
@@ -91,7 +91,7 @@ export abstract class MetadataSourcePlugin extends BasePlugin {
    */
   abstract enrich(
     filePath: string,
-    libraryType: LibraryType,
+    contentType: ContentType,
     options?: EnrichOptions,
   ): Promise<Metadata | undefined | null>
 }

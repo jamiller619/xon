@@ -71,15 +71,40 @@ export type Collection = {
   mediaItems?: MediaItem[]
 }
 
-export enum LibraryType {
-  Movies = 'movies',
-  TVShows = 'tv_shows',
-  Music = 'music',
-  Photos = 'photos',
-  HomeVideos = 'home_videos',
-  MusicVideos = 'music_videos',
-  MixedPhotosAndVideos = 'mixed_photos_and_videos',
-}
+// export enum LibraryType {
+//   // These coorespond to the top-level name in a mime type,
+//   // or content type.
+//   Audio = 'audio',
+//   Application = 'application',
+//   Font = 'font',
+//   Image = 'image',
+//   Video = 'video',
+//   Text = 'text',
+//   Model = 'model',
+
+//   // Specialized types always inherit from a base type and
+//   // are pluggable. These are the types we ship by default.
+//   Movies = 'video/movies',
+//   TVShows = 'video/tv_shows',
+// }
+export const ContentTypeMain = {
+  // These coorespond to the top-level name in a mime type,
+  // or content type.
+  Audio: 'audio',
+  Application: 'application',
+  Font: 'font',
+  Image: 'image',
+  Video: 'video',
+  Text: 'text',
+  Model: 'model',
+} as const
+
+export type ContentTypeMain =
+  (typeof ContentTypeMain)[keyof typeof ContentTypeMain]
+
+export type SpecializedContentType = `${ContentTypeMain}/${string}`
+
+export type ContentType = ContentTypeMain | SpecializedContentType
 
 export interface Library {
   id: string
@@ -88,7 +113,7 @@ export interface Library {
   ownerId: string
   name: string
   description: string | null
-  type: LibraryType
+  type: ContentType
   scanSchedule: string | null
   dataSources: DataSource[]
   images: {

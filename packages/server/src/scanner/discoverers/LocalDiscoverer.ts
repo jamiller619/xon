@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto'
 import path from 'node:path'
-import { LibraryType } from '@xon/shared'
+import type { ContentType } from '@xon/shared'
 import { and, eq } from 'drizzle-orm'
 import { fdir } from 'fdir'
 import fileEntryCache from 'file-entry-cache'
@@ -22,10 +22,10 @@ const FILE_ENTRY_CONCURRENCY = 32
 
 export class LocalDiscoverer implements MediaDiscoverer {
   async discover(ctx: DiscoveryContext): Promise<Discovery> {
-    const { libraryId, libraryType, dataSource, extSet } = ctx
+    const { libraryId, contentType, dataSource, extSet } = ctx
     const sourcePath = toLocalPath(dataSource.path)
 
-    const filterSamples = SAMPLE_FILTERED_LIBRARY_TYPES.has(libraryType)
+    const filterSamples = SAMPLE_FILTERED_LIBRARY_TYPES.has(contentType)
 
     const filePaths = await new fdir()
       .withFullPaths()
@@ -98,7 +98,7 @@ export class LocalDiscoverer implements MediaDiscoverer {
               file,
               isNew,
               libraryId,
-              libraryType,
+              contentType,
               dataSource.id,
               dataSource.path,
             )
@@ -118,9 +118,9 @@ export class LocalDiscoverer implements MediaDiscoverer {
 
 // "sample" is only a release-scene convention for movies/TV — the same
 // word is legitimate in music (sample packs) and other library types
-const SAMPLE_FILTERED_LIBRARY_TYPES = new Set<LibraryType>([
-  LibraryType.Movies,
-  LibraryType.TVShows,
+const SAMPLE_FILTERED_LIBRARY_TYPES = new Set<ContentType>([
+  'video/movie',
+  'video/tvshow',
 ])
 
 const SAMPLE_TOKEN_PATTERN = /(^|[\s._-])sample([\s._-]|$)/i

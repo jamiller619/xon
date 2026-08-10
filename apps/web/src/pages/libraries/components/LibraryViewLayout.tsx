@@ -3,7 +3,7 @@ import { css } from 'inline-css-modules'
 import FilterHeader from '~/components/FilterHeader'
 import Page from '~/pages/Page'
 import { useAppStore } from '~/store/appStore'
-import libraryStyles from '../../Library.module.css'
+import libraryStyles from '../Library.module.css'
 
 type LibraryViewLayoutProps = {
   title: string

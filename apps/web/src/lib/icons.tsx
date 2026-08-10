@@ -1,4 +1,5 @@
 import {
+  DrawerAddRegular as AddToIcon,
   DeleteDismissRegular as DeleteIcon,
   ArrowDownload16Regular as DownloadIcon,
   DocumentEdit16Regular as EditIcon,
@@ -14,4 +15,5 @@ export default {
   Delete: <DeleteIcon />,
   'Fix match': <FixMatchIcon />,
   Edit: <EditIcon />,
+  'Add to': <AddToIcon />,
 }

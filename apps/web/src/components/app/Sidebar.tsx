@@ -14,15 +14,14 @@ import {
   Settings20Regular as SettingsIcon,
   Settings20Filled as SettingsOnIcon,
 } from '@fluentui/react-icons'
-import { useQuery } from '@tanstack/react-query'
-import { type Collection, CollectionType } from '@xon/shared'
+import { CollectionType } from '@xon/shared'
 import { Flex, Surface } from '@xon/ui'
 import clsx from 'clsx'
 import { NavLink } from 'react-router-dom'
 import Logo from '~/components/logo/Logo'
 import PluginSlot from '~/components/PluginSlot'
+import useCollections from '~/hooks/useCollections'
 import useLibraries from '~/hooks/useLibraries'
-import useQueryAPIHelper from '~/hooks/useQueryAPIHelper'
 import CreateLibraryButton from '../CreateLibraryButton'
 import LibraryIcon from '../icons/LibraryIcon'
 import styles from './Sidebar.module.css'
@@ -35,9 +34,7 @@ interface SidebarProps {
 export default function Sidebar({ className, isOpen }: SidebarProps) {
   const { data: libraries, refetch } = useLibraries()
 
-  const { data: collections } = useQuery<Collection[]>(
-    useQueryAPIHelper('collections'),
-  )
+  const [collections] = useCollections()
 
   const navClass = ({ isActive }: { isActive: boolean }) =>
     `${styles.navLink}${isActive ? ` ${styles.active}` : ''}`

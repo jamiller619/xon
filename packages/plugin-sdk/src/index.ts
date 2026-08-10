@@ -2,6 +2,7 @@ export { BackupTargetPlugin } from './BackupTargetPlugin.js'
 export { BasePlugin } from './BasePlugin.js'
 export { MediaProviderPlugin } from './MediaProviderPlugin.js'
 export * from './MetadataSourcePlugin.js'
+export { default as MetadataSourcePlugin } from './MetadataSourcePlugin.js'
 export { pluginSettingKey } from './settings.js'
 export type {
   BackupTargetConfigField,

@@ -35,7 +35,6 @@ const styles = css`
     background-color: var(--color-gray-a2);
     border: none;
     font: inherit;
-    font-size: var(--text-sm);
     border-radius: var(--border-radius-3);
     corner-shape: var(--corner-shape);
     padding: var(--padding);

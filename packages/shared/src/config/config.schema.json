@@ -146,7 +146,7 @@
       "title": "Allow Anonymous Logins",
       "type": "boolean",
       "default": true,
-      "description": "By default, Xon does not require an account to login. This makes Xon very easy to use, especially for people that don't need the additional security features. If, however, you want to require accounts, simply turn this off."
+      "description": "While Xon does not require users login with an account, that is what's happening behind the scenes we just handle it for you automatically. These are called \"anonymous\" accounts, and there is exactly one created and shared for everyone that connects to the server. Turning this off can improve security."
     }
   }
 }

@@ -6,7 +6,7 @@ import {
   type PluginContext,
 } from '@xon/plugin-sdk'
 import {
-  LibraryType,
+  type ContentType,
   MediaType,
   type Metadata,
   type PosterImage,
@@ -62,7 +62,7 @@ export default class TmdbMetadataPlugin extends MetadataSourcePlugin {
   ): Promise<MetadataSearchResult[]> {
     if (!this.#client) return []
 
-    if (query.libraryType === LibraryType.TVShows) {
+    if (query.contentType === 'video/tvshow') {
       const results = await this.#client.searchTv(query.title)
       return (results ?? []).slice(0, query.limit).map((result) => ({
         id: String(result.tmdbId),
@@ -102,7 +102,7 @@ export default class TmdbMetadataPlugin extends MetadataSourcePlugin {
     if (!Number.isInteger(numericId) || numericId <= 0) return
 
     const metadata =
-      query.libraryType === LibraryType.TVShows
+      query.contentType === 'video/tvshow'
         ? await this.#client.fetchTvMetadataById(
             numericId,
             query.fileMetadata?.seasons?.[0],
@@ -128,7 +128,7 @@ export default class TmdbMetadataPlugin extends MetadataSourcePlugin {
     if (!Number.isInteger(numericId) || numericId <= 0) return []
 
     const posters = await this.#client.fetchPostersById(
-      query.libraryType === LibraryType.TVShows ? 'tv' : 'movie',
+      query.contentType === 'video/tvshow' ? 'tv' : 'movie',
       numericId,
       this.#ctx?.settings.get<string>('language') || 'en',
     )
@@ -149,7 +149,7 @@ export default class TmdbMetadataPlugin extends MetadataSourcePlugin {
 
   override async enrich(
     filePath: string,
-    libraryType: LibraryType,
+    contentType: ContentType,
     options?: EnrichOptions,
   ): Promise<Metadata | undefined> {
     this.#ctx?.logger.info(`TMDb: enriching ${filePath}`)
@@ -179,7 +179,7 @@ export default class TmdbMetadataPlugin extends MetadataSourcePlugin {
                 this.#ctx?.settings.get<string>('language') ||
                 'en',
             )
-        : libraryType === LibraryType.TVShows
+        : contentType === 'video/tvshow'
           ? await this.#client?.fetchTvMetadata(
               title,
               fileMetadata?.seasons?.[0],

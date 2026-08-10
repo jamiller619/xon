@@ -1,7 +1,7 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { Fragment, useEffect, useRef } from 'react'
-import styles from '../../Library.module.css'
 import { useScrollViewport } from '../hooks/useScrollViewport'
+import styles from '../Library.module.css'
 import type {
   CollectionViewProps,
   ListColumn,

@@ -1,5 +1,5 @@
 import { useMutation } from '@tanstack/react-query'
-import { DataSourceType, LibraryType } from '@xon/shared'
+import { type ContentType, DataSourceType } from '@xon/shared'
 import { Button, Dialog, Field, Flex, RadioGroup, Textbox } from '@xon/ui'
 import { useEffect, useState } from 'react'
 import { createLibraryMutation } from '~/hooks/useLibraries'
@@ -10,32 +10,27 @@ const LIBRARY_TYPES = [
   {
     label: 'Movies',
     icon: '🍿',
-    value: LibraryType.Movies,
+    value: 'video/movie',
   },
   {
     label: 'TV Shows',
     icon: '📺',
-    value: LibraryType.TVShows,
+    value: 'video/tvshow',
   },
   {
     label: 'Music',
     icon: '🎶',
-    value: LibraryType.Music,
-  },
-  {
-    label: 'Music Videos',
-    icon: '🎵',
-    value: LibraryType.MusicVideos,
+    value: 'audio',
   },
   {
     label: 'Photos',
     icon: '🖼️',
-    value: LibraryType.Photos,
+    value: 'image',
   },
   {
-    label: 'Home Videos',
+    label: 'Videos',
     icon: '📹',
-    value: LibraryType.HomeVideos,
+    value: 'video',
   },
 ]
 
@@ -53,12 +48,12 @@ export default function CreateLibraryForm({
   const [name, setName] = useState<string>('')
   const [description, setDescription] = useState<string>('')
   const [sourcePath, setSourcePath] = useState('')
-  const [libraryType, setLibraryType] = useState<LibraryType | undefined>()
+  const [contentType, setContentType] = useState<ContentType>()
   const mutation = useMutation(createLibraryMutation)
 
   const canFormSubmit =
     name.trim() !== '' &&
-    (libraryType?.length || 0) > 0 &&
+    (contentType?.length || 0) > 0 &&
     sourcePath.trim() !== ''
 
   useEffect(() => {
@@ -70,12 +65,12 @@ export default function CreateLibraryForm({
   // A React 19 form action: useFormStatus tracks the returned promise, so the
   // submit button drives its own spinner while this is in flight.
   async function handleSubmit() {
-    if (!libraryType) return
+    if (!contentType) return
 
     await mutation.mutateAsync({
       name,
       description,
-      type: libraryType,
+      type: contentType,
       dataSources: [{ type: DataSourceType.local, path: sourcePath }],
     })
   }
@@ -103,11 +98,11 @@ export default function CreateLibraryForm({
           block
         />
       </Field>
-      <Field label="Media Type">
+      <Field label="Media Type(s)">
         <RadioGroup
           items={LIBRARY_TYPES}
-          value={libraryType ?? ''}
-          onChange={(value) => setLibraryType(value as LibraryType)}
+          value={contentType ?? ''}
+          onChange={(value) => setContentType(value as ContentType)}
         />
       </Field>
       <Field label="Location">

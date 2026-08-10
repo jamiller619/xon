@@ -135,7 +135,7 @@ export default function AdminLibraries() {
       const data = (await res.json()) as Library
       setEditingLibrary(data)
       setFormName(data.name)
-      setFormDescription(data.description ?? '')
+      setFormDescription(data.ContentTypesBuiltIn ?? '')
       setFormMediaTypes(data.mediaCategories)
       // setScheduleValue(data.scanSchedule)
       // setWatchEnabled(data.watchEnabled)

@@ -22,7 +22,7 @@ export abstract class MediaProviderPlugin extends BasePlugin {
   abstract readonly configSchema: MediaProviderConfigSchema
 
   /**
-   * List all media files under the given path in the remote storage.
+   * List all files under the given path in the remote storage.
    * @param path Virtual path within the remote storage to enumerate
    * @returns Array of file entries with id, name, path, size, and optional metadata
    */

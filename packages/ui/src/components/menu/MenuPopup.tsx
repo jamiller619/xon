@@ -57,7 +57,8 @@ const styles = css<
     display: flex;
     align-items: center;
     gap: var(--menu-item-gap);
-    padding: var(--menu-item-padding);
+    padding-block: calc(var(--menu-item-padding-block) / 2);
+    padding-inline-start: calc(var(--menu-item-padding-inline) + 16px);
     border-radius: var(--menu-item-border-radius);
     corner-shape: var(--corner-shape);
     font-size: var(--menu-item-font-size);
@@ -140,6 +141,7 @@ export function MenuPopup({
                   className={styles.item}
                   disabled={item.disabled ?? false}
                 >
+                  {/* <span className={styles.icon}>{item.icon}</span> */}
                   {item.label}
                   <ChevronRightRegular className={styles.submenuChevron} />
                 </UIMenu.SubmenuTrigger>

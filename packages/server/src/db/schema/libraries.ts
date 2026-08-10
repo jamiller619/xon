@@ -1,4 +1,4 @@
-import type { DataSource, LibraryType } from '@xon/shared'
+import type { ContentType, DataSource } from '@xon/shared'
 import { sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import { keys, timestamps } from './shared.ts'
 import { users } from './users.ts'
@@ -11,7 +11,7 @@ export const libraries = sqliteTable('libraries', {
     .references(() => users.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),
   description: text('description'),
-  type: text('type').$type<LibraryType>().notNull(),
+  type: text('content_type').$type<ContentType>().notNull(),
   scanSchedule: text('scan_schedule'),
   dataSources: text('data_sources', { mode: 'json' })
     .$type<DataSource[]>()

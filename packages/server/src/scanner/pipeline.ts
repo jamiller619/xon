@@ -1,5 +1,5 @@
 import { availableParallelism } from 'node:os'
-import type { LibraryType, MediaItem } from '@xon/shared'
+import type { ContentType, MediaItem } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import pLimit from 'p-limit'
 import type { Logger } from '../logger.ts'
@@ -49,7 +49,7 @@ export async function runPipeline(
 export type PipelineContext = {
   db: LibSQLDatabase
   libraryId: string
-  libraryType: LibraryType
+  contentType: ContentType
   logger: Logger
   onJobComplete?: (processed: number, currentFile: string) => void
 }
@@ -78,7 +78,7 @@ export type MediaJob = {
   type: 'new' | 'changed' | 'refresh'
   file: FileEntry
   libraryId: string
-  libraryType: LibraryType
+  contentType: ContentType
   mediaTypes: string[]
   dataSourcePath: string
   dataSourceId: string

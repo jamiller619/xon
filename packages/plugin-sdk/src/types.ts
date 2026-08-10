@@ -1,4 +1,4 @@
-import type { LibraryType, MediaType, PluginCategory } from '@xon/shared'
+import type { ContentType, MediaType, PluginCategory } from '@xon/shared'
 
 /**
  * JSON-schema-style definition of a single plugin setting. Declared in the
@@ -25,7 +25,7 @@ export interface PluginManifest {
   author: string
   category: PluginCategory
   /** Library types this plugin handles */
-  libraryTypes: (LibraryType | string)[]
+  libraryTypes: (ContentType | string)[]
   /** Media types this plugin handles */
   mediaTypes?: (MediaType | string)[]
   /** Minimum Xon server version required */

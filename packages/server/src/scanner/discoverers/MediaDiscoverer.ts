@@ -1,4 +1,4 @@
-import type { DataSource, LibraryType } from '@xon/shared'
+import type { ContentType, DataSource } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import * as mediaService from '../../services/mediaService.ts'
 import type { FileEntry } from '../fileEntry.ts'
@@ -16,7 +16,7 @@ export type DiscoveryContext = {
   libraryId: string
   dataSource: DataSource
   extSet: Set<string>
-  libraryType: LibraryType
+  contentType: ContentType
 }
 
 export interface MediaDiscoverer {
@@ -28,7 +28,7 @@ export async function createMediaJob(
   file: FileEntry,
   isNew: boolean,
   libraryId: string,
-  libraryType: LibraryType,
+  contentType: ContentType,
   dataSourceId: string,
   dataSourcePath: string,
 ): Promise<MediaJob> {
@@ -38,7 +38,7 @@ export async function createMediaJob(
     file,
     errors: [],
     libraryId,
-    libraryType,
+    contentType,
     dataSourcePath,
     dataSourceId,
     mediaTypes: [], // This will be filled in later based on the file extension

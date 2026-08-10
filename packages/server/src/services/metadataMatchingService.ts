@@ -35,7 +35,7 @@ export interface MatchProviderResults extends MatchProviderDescriptor {
 
 type MatchContext = {
   item: typeof mediaItems.$inferSelect
-  libraryType: typeof libraries.$inferSelect.type
+  contentType: typeof libraries.$inferSelect.type
   mediaType: MediaType.MainType
 }
 
@@ -62,7 +62,7 @@ export async function getMatchContext(
     ? { ...item, filePath: resolveMediaFilePath(item.filePath, source) }
     : item
   const mediaType = item.mediaType.split('/')[0] as MediaType.MainType
-  return { item: resolvedItem, libraryType: library.type, mediaType }
+  return { item: resolvedItem, contentType: library.type, mediaType }
 }
 
 function applicablePlugins(
@@ -71,7 +71,7 @@ function applicablePlugins(
   return getPluginsByCategory<MetadataSourcePlugin>('MetadataSource')
     .filter((plugin) => plugin.status === 'active')
     .filter((plugin) =>
-      plugin.manifest.libraryTypes.includes(context.libraryType),
+      plugin.manifest.libraryTypes.includes(context.contentType),
     )
     .filter((plugin) => plugin.instance.mediaTypes.includes(context.mediaType))
 }
@@ -99,7 +99,7 @@ function searchQuery(
   return {
     title,
     ...(Number.isFinite(year) && year > 0 ? { year } : {}),
-    libraryType: context.libraryType,
+    contentType: context.contentType,
     mediaType: context.mediaType,
     limit: 10,
     fileMetadata: context.item.fileMetadata,
@@ -196,7 +196,7 @@ export async function applyMatch(
     try {
       const enriched = await plugin.instance.enrich(
         context.item.filePath,
-        context.libraryType,
+        context.contentType,
         {
           title:
             typeof metadata.title === 'string'

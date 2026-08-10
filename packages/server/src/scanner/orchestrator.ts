@@ -1,5 +1,5 @@
 import { basename, extname } from 'node:path'
-import { DataSourceType, LibraryType } from '@xon/shared'
+import { type ContentType, DataSourceType } from '@xon/shared'
 import { and, eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import mime from 'mime-types'
@@ -56,8 +56,16 @@ const discoverers: Partial<Record<DataSourceType, MediaDiscoverer>> = {
   [DataSourceType.plugin]: new PluginDiscoverer(),
 }
 
-const stages: Record<LibraryType, PipelineStage[]> = {
-  [LibraryType.Movies]: [
+const defaultStages: PipelineStage[] = [
+  stage.drm,
+  stage.title,
+  stage.fileMetadata,
+  stage.persist,
+  stage.thumbnail,
+]
+
+const stages: Partial<Record<ContentType, PipelineStage[]>> = {
+  'video/movie': [
     stage.drm,
     stage.title,
     stage.fileMetadata,
@@ -66,14 +74,7 @@ const stages: Record<LibraryType, PipelineStage[]> = {
     stage.person,
     stage.thumbnail,
   ],
-  [LibraryType.Photos]: [
-    stage.drm,
-    stage.title,
-    stage.fileMetadata,
-    stage.persist,
-    stage.thumbnail,
-  ],
-  [LibraryType.TVShows]: [
+  'video/tvshow': [
     stage.drm,
     stage.title,
     stage.fileMetadata,
@@ -82,7 +83,7 @@ const stages: Record<LibraryType, PipelineStage[]> = {
     stage.person,
     stage.thumbnail,
   ],
-  [LibraryType.Music]: [
+  audio: [
     stage.drm,
     stage.title,
     stage.fileMetadata,
@@ -90,15 +91,7 @@ const stages: Record<LibraryType, PipelineStage[]> = {
     stage.persist,
     stage.thumbnail,
   ],
-  [LibraryType.HomeVideos]: [
-    stage.drm,
-    stage.title,
-    stage.fileMetadata,
-    stage.libraryMetadata,
-    stage.persist,
-    stage.thumbnail,
-  ],
-  [LibraryType.MusicVideos]: [
+  video: [
     stage.drm,
     stage.title,
     stage.fileMetadata,
@@ -153,7 +146,7 @@ export async function scanLibrary(
       libraryId,
       dataSource,
       extSet,
-      libraryType: library.type,
+      contentType: library.type,
     }
 
     onProgress?.({
@@ -210,7 +203,7 @@ export async function scanLibrary(
     const ctx: PipelineContext = {
       db,
       libraryId,
-      libraryType: library.type,
+      contentType: library.type,
       logger,
     }
 
@@ -232,7 +225,11 @@ export async function scanLibrary(
       `Beginning pipeline stage for ${library.name} / ${sourceLabel}`,
     )
 
-    await runPipeline(ctx, discovery.jobs, stages[library.type])
+    await runPipeline(
+      ctx,
+      discovery.jobs,
+      stages[library.type] ?? defaultStages,
+    )
 
     discovery.reconcile()
   }
@@ -253,7 +250,7 @@ export async function scanLibrary(
   return summary
 }
 
-const sharedRefreshStages: PipelineStage[] = [
+const refreshStagesDefault: PipelineStage[] = [
   stage.libraryMetadata,
   stage.persist,
   stage.person,
@@ -267,18 +264,8 @@ const sharedRefreshStages: PipelineStage[] = [
  * too, so a refresh backfills artwork for items a plugin didn't match — it
  * no-ops for movies/shows that already have plugin images.
  */
-const refreshStages: Record<
-  Exclude<LibraryType, 'home_videos' | 'photos'>,
-  PipelineStage[]
-> = {
-  [LibraryType.Movies]: sharedRefreshStages,
-  [LibraryType.TVShows]: sharedRefreshStages,
-  [LibraryType.Music]: [stage.libraryMetadata, stage.persist, stage.thumbnail],
-  [LibraryType.MusicVideos]: [
-    stage.libraryMetadata,
-    stage.persist,
-    stage.thumbnail,
-  ],
+const refreshStages: Partial<Record<ContentType, PipelineStage[]>> = {
+  audio: [stage.libraryMetadata, stage.persist, stage.thumbnail],
 }
 
 /**
@@ -300,10 +287,7 @@ export async function refreshMetadata(
     throw new Error(`Library not found: ${libraryId}`)
   }
 
-  if (
-    library.type === LibraryType.Photos ||
-    library.type === LibraryType.HomeVideos
-  ) {
+  if (library.type.startsWith('video')) {
     throw new Error(
       `Metadata refresh is not supported for library type: ${library.type}`,
     )
@@ -353,7 +337,7 @@ export async function refreshMetadata(
       file,
       errors: [],
       libraryId,
-      libraryType: library.type,
+      contentType: library.type,
       dataSourceId: source?.id ?? '',
       dataSourcePath: source ? toLocalPath(source.path) : '',
       mediaTypes: [],
@@ -383,7 +367,7 @@ export async function refreshMetadata(
   const ctx: PipelineContext = {
     db,
     libraryId,
-    libraryType: library.type,
+    contentType: library.type,
     logger,
   }
 
@@ -401,7 +385,13 @@ export async function refreshMetadata(
     }
   }
 
-  await runPipeline(ctx, jobs, refreshStages[library.type])
+  const stages = refreshStages[library.type]
+
+  await runPipeline(
+    ctx,
+    jobs,
+    refreshStages[library.type] ?? refreshStagesDefault,
+  )
 
   const summary: ScanSummary = {
     libraryId,
@@ -419,22 +409,19 @@ export async function refreshMetadata(
   return summary
 }
 
-export function getExtensionsForLibraryType(
-  libraryType: LibraryType,
-): Set<string> {
-  const mimePrefix: Record<LibraryType, string> = {
-    [LibraryType.Movies]: 'video',
-    [LibraryType.TVShows]: 'video',
-    [LibraryType.Music]: 'audio',
-    [LibraryType.Photos]: 'image',
-    [LibraryType.HomeVideos]: 'video',
-    [LibraryType.MusicVideos]: 'video',
-  }
+function getMimePrefix(contentType: ContentType): string {
+  return contentType.includes('/')
+    ? (contentType.split('/')[0] as string)
+    : contentType.toLowerCase()
+}
 
+export function getExtensionsForLibraryType(
+  contentType: ContentType,
+): Set<string> {
   return new Set(
     Object.entries(mime.extensions)
       .filter(([mimeType]) =>
-        mimeType.startsWith(`${mimePrefix[libraryType]}/`),
+        mimeType.startsWith(`${getMimePrefix(contentType)}/`),
       )
       .flatMap(([, fileExtensions]) => fileExtensions.map((ext) => `.${ext}`)),
   )

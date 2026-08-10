@@ -1,4 +1,4 @@
-import type { LibrariesRoutes } from '@xon/server'
+import type { CollectionsRoutes, LibrariesRoutes } from '@xon/server'
 import { hc } from 'hono/client'
 import { useAuthStore } from '~/store/authStore'
 
@@ -17,5 +17,10 @@ function authHeaders(): Record<string, string> {
  * and response types are inferred from the server's LibrariesRoutes schema.
  */
 export const librariesAPI = hc<LibrariesRoutes>('/api/libraries', {
+  headers: authHeaders,
+})
+
+/** Typed RPC client for /api/collections. */
+export const collectionsAPI = hc<CollectionsRoutes>('/api/collections', {
   headers: authHeaders,
 })

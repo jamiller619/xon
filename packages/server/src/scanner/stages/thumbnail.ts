@@ -1,11 +1,6 @@
 import fsp from 'node:fs/promises'
 import { dirname } from 'node:path'
-import {
-  LibraryType,
-  type Metadata,
-  type PosterImage,
-  posterImages,
-} from '@xon/shared'
+import { type Metadata, type PosterImage, posterImages } from '@xon/shared'
 import { eq } from 'drizzle-orm'
 import mime from 'mime-types'
 import { mediaItems } from '../../db/schema.ts'
@@ -39,8 +34,7 @@ export default {
     // Movies and TV shows get artwork from metadata plugins; only
     // generate our own when nothing was found.
     const isMovieOrShow =
-      job.libraryType === LibraryType.Movies ||
-      job.libraryType === LibraryType.TVShows
+      job.contentType === 'video/movie' || job.contentType === 'video/tvshow'
 
     if (isMovieOrShow && hasImages(job.data.metadata)) return
 

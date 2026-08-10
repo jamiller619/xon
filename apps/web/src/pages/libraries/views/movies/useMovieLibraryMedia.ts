@@ -3,7 +3,7 @@ import type { MediaItem } from '@xon/shared'
 import { useEffect } from 'react'
 import { apiFetch } from '~/lib/apiFetch'
 import { subscribeToEvents } from '~/lib/eventStream'
-import type { SortDirection } from '../../shared/types/collectionView'
+import type { SortDirection } from '../../types/collectionView'
 import type { MovieSortKey } from './movieControls'
 
 const SCAN_REFRESH_THROTTLE_MS = 3000

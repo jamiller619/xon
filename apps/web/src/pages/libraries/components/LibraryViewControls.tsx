@@ -9,8 +9,8 @@ import FilterHeader from '~/components/FilterHeader'
 import { apiFetch, getAPIError } from '~/lib/apiFetch'
 import { useAppStore } from '~/store/appStore'
 import { useScanStore } from '~/store/scanStore'
-import styles from '../../Library.module.css'
 import { makeSortKey } from '../hooks/useLibrarySort'
+import styles from '../Library.module.css'
 import type {
   LibraryViewModeDefinition,
   SortDirection,

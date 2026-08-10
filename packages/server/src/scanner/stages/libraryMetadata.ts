@@ -1,6 +1,6 @@
 import path from 'node:path'
 import type { MetadataSearchQuery, MetadataSourcePlugin } from '@xon/plugin-sdk'
-import { LibraryType, type MediaType } from '@xon/shared'
+import type { MediaType } from '@xon/shared'
 import { normalizeMediaTitle } from '../../media/filenameParser.ts'
 import { mergeMetadata } from '../../media/metadataMerge.ts'
 import {
@@ -37,11 +37,7 @@ export default {
     const storedMetadata = data.metadata
     let refreshedMetadata = {}
 
-    if (
-      typeof data.title === 'string' &&
-      (job.libraryType === LibraryType.Movies ||
-        job.libraryType === LibraryType.TVShows)
-    ) {
+    if (typeof data.title === 'string' && job.contentType.startsWith('video')) {
       const normalizedTitle = normalizeMediaTitle(
         data.title,
         path.extname(job.file.path),
@@ -59,7 +55,7 @@ export default {
                 data.matchId,
                 makeSearchQuery(job, data),
               )
-            : await plugin.instance.enrich(relativePath, job.libraryType, {
+            : await plugin.instance.enrich(relativePath, job.contentType, {
                 title: data.title,
                 fileMetadata: data.fileMetadata,
                 metadata: data.metadata,
@@ -117,7 +113,7 @@ function getMetadataPlugins(
 ): MetadataPluginSelection {
   const plugins = getPluginsByCategory<MetadataSourcePlugin>(
     'MetadataSource',
-  ).filter((plugin) => plugin.manifest.libraryTypes.includes(job.libraryType))
+  ).filter((plugin) => plugin.manifest.libraryTypes.includes(job.contentType))
 
   const storedMatchSource =
     job.data.matchIdSource ??
@@ -149,7 +145,7 @@ function makeSearchQuery(
   return {
     title: data.title ?? '',
     ...(Number.isFinite(year) && year > 0 ? { year } : {}),
-    libraryType: job.libraryType,
+    contentType: job.contentType,
     mediaType: job.file.mediaType.split('/')[0] as MediaType.MainType,
     limit: 10,
     fileMetadata: data.fileMetadata,

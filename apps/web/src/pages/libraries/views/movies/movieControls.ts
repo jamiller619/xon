@@ -1,7 +1,7 @@
 import { MediaType } from '@xon/shared'
 import { useSearchParams } from 'react-router-dom'
-import { useLibrarySort } from '../../shared/hooks/useLibrarySort'
-import type { SortOption, SortValue } from '../../shared/types/collectionView'
+import { useLibrarySort } from '../../hooks/useLibrarySort'
+import type { SortOption, SortValue } from '../../types/collectionView'
 
 export type MovieSortKey = 'title' | 'fileSize' | 'createdAt'
 

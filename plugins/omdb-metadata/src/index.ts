@@ -5,7 +5,7 @@ import {
   MetadataSourcePlugin,
   type PluginContext,
 } from '@xon/plugin-sdk'
-import { LibraryType, MediaType, type Metadata } from '@xon/shared'
+import { type ContentType, MediaType, type Metadata } from '@xon/shared'
 import { OmdbClient } from './omdbClient.js'
 
 export type { OmdbRating, OmdbResult } from './omdbClient.js'
@@ -42,7 +42,7 @@ export default class OmdbMetadataPlugin extends MetadataSourcePlugin {
     query: MetadataSearchQuery,
   ): Promise<MetadataSearchResult[]> {
     if (!this.#client) return []
-    const type = query.libraryType === LibraryType.TVShows ? 'series' : 'movie'
+    const type = query.contentType === 'video/tvshow' ? 'series' : 'movie'
     const results = await this.#client.searchTitles(query.title, type)
 
     return results.slice(0, query.limit).map((result) => ({
@@ -66,7 +66,7 @@ export default class OmdbMetadataPlugin extends MetadataSourcePlugin {
 
   override async enrich(
     filePath: string,
-    libraryType: LibraryType,
+    contentType: ContentType,
     options?: EnrichOptions,
   ): Promise<Metadata | undefined> {
     if (!this.#client) return
@@ -89,7 +89,7 @@ export default class OmdbMetadataPlugin extends MetadataSourcePlugin {
       const fileMetadata = options?.fileMetadata
       const year = Number(fileMetadata?.year) || undefined
 
-      if (libraryType === LibraryType.TVShows) {
+      if (contentType === 'video/tvshow') {
         const season = fileMetadata?.seasons?.[0]
         const episode = fileMetadata?.episodeNumbers?.[0]
 
