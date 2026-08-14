@@ -61,8 +61,7 @@ export async function deleteLibraryById(db: LibSQLDatabase, id: string) {
     return true
   } catch (error) {
     logger.error('Failed to delete library', { id, error })
-
-    return false
+    throw error
   }
 }
 
@@ -142,13 +141,16 @@ export async function updateLibrary(
   id: string,
   updates: Partial<Library>,
 ): Promise<Library | undefined> {
-  if (updates.dataSources) {
-    updates.dataSources = updates.dataSources.map((source) => ({
-      ...source,
-      id: source.id || crypto.randomUUID(),
-    }))
-  }
-  await db.update(libraries).set(updates).where(eq(libraries.id, id))
+  const normalizedUpdates = updates.dataSources
+    ? {
+        ...updates,
+        dataSources: updates.dataSources.map((source) => ({
+          ...source,
+          id: source.id || crypto.randomUUID(),
+        })),
+      }
+    : { ...updates }
+  await db.update(libraries).set(normalizedUpdates).where(eq(libraries.id, id))
 
   const results = await db.select().from(libraries).where(eq(libraries.id, id))
 

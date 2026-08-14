@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { apiFetch } from '~/lib/apiFetch'
+import { apiFetch, getAPIError } from '~/lib/apiFetch'
 import styles from './AdminUsers.module.css'
 
 interface Library {
@@ -72,10 +72,7 @@ export default function AdminLibraryAccess() {
         },
       )
       if (!res.ok) {
-        const body = await res.json()
-        setGrantError(
-          (body as { error?: string }).error ?? 'Failed to grant access',
-        )
+        setGrantError(await getAPIError(res, 'Failed to grant access'))
         return
       }
       setGrantUserId('')

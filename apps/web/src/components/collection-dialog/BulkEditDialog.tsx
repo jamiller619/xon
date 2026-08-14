@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { apiFetch } from '~/lib/apiFetch'
+import { apiFetch, getAPIError } from '~/lib/apiFetch'
 import styles from './CollectionDialog.module.css'
 
 interface Collection {
@@ -73,8 +73,7 @@ export default function BulkEditDialog({
         body: JSON.stringify({ action: 'update', ids: selectedIds, updates }),
       })
       if (!res.ok) {
-        const data = (await res.json()) as { error?: string }
-        setError(data.error ?? 'Failed to update items')
+        setError(await getAPIError(res, 'Failed to update items'))
         return
       }
       onDone()
@@ -103,8 +102,7 @@ export default function BulkEditDialog({
         }),
       })
       if (!res.ok) {
-        const data = (await res.json()) as { error?: string }
-        setError(data.error ?? 'Failed to move items')
+        setError(await getAPIError(res, 'Failed to move items'))
         return
       }
       onDone()
@@ -132,8 +130,7 @@ export default function BulkEditDialog({
         body: JSON.stringify({ action: 'delete', ids: selectedIds }),
       })
       if (!res.ok) {
-        const data = (await res.json()) as { error?: string }
-        setError(data.error ?? 'Failed to delete items')
+        setError(await getAPIError(res, 'Failed to delete items'))
         return
       }
       onDone()

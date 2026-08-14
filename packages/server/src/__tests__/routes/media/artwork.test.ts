@@ -17,32 +17,32 @@ const generateVideoBackdrops = vi.hoisted(() => vi.fn())
 const generateVideoPosters = vi.hoisted(() => vi.fn())
 const findMatchedPosters = vi.hoisted(() => vi.fn())
 
-vi.mock('../../config.ts', () => ({
+vi.mock('../../../config.ts', () => ({
   default: {
     get: () => testConfig.cachePath,
   },
 }))
 
-vi.mock('../../services/libraryThumbnailService.ts', () => ({
+vi.mock('../../../services/libraryThumbnailService.ts', () => ({
   rebuildThumbnail: vi.fn(),
 }))
 
-vi.mock('../../media/videoThumbnails.ts', () => ({
+vi.mock('../../../media/videoThumbnails.ts', () => ({
   generateVideoBackdrops,
   generateVideoPosters,
 }))
 
 vi.mock(
-  '../../services/metadataMatchingService.ts',
+  '../../../services/metadataMatchingService.ts',
   async (importOriginal) => ({
     ...(await importOriginal<
-      typeof import('../../services/metadataMatchingService.ts')
+      typeof import('../../../services/metadataMatchingService.ts')
     >()),
     findMatchedPosters,
   }),
 )
 
-const { makeMediaRouter } = await import('../../routes/media.ts')
+const { makeMediaRouter } = await import('../../../routes/media.ts')
 
 type TestMediaItem = {
   id: string
@@ -272,6 +272,34 @@ describe('Media artwork routes', () => {
     expect(
       (item.metadata.images as { backdrop: string[] }).backdrop.slice(-3),
     ).toEqual(backdrops)
+  })
+
+  it('serves the requested generated thumbnail with cache headers', async () => {
+    const directory = join(cachePath, 'thumbnails')
+    const references = {
+      small: 'thumbnails/media-1_poster_small.jpg',
+      medium: 'thumbnails/media-1_poster_medium.jpg',
+      large: 'thumbnails/media-1_poster_large.jpg',
+    }
+    await mkdir(directory, { recursive: true })
+    await writeFile(join(cachePath, references.medium), 'thumbnail')
+    item.metadata = {
+      images: {
+        poster: [{ src: references.large, thumbnails: references }],
+        backdrop: [],
+        logo: [],
+      },
+    }
+
+    const response = await app.request('/media/media-1/thumbnail?size=medium')
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('Content-Type')).toBe('image/jpeg')
+    expect(response.headers.get('Cache-Control')).toBe(
+      'public, max-age=86400, immutable',
+    )
+    expect(response.headers.get('ETag')).not.toBeNull()
+    await expect(response.text()).resolves.toBe('thumbnail')
   })
 
   it('serves a cached artwork entry with its detected content type', async () => {

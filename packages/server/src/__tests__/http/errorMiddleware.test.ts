@@ -2,12 +2,9 @@ import { Hono } from 'hono'
 import { describe, expect, it } from 'vitest'
 import { createApp } from '../../app.ts'
 import { onError, onNotFound } from '../../http/errorMiddleware.ts'
-import { signAccessToken } from '../../routes/auth.ts'
-
-const AUTH = `Bearer ${await signAccessToken('admin-id', 'admin', 'admin')}`
 
 describe('errorMiddleware', () => {
-  it('onError returns 500 JSON with error field', async () => {
+  it('onError returns the shared 500 envelope without leaking details', async () => {
     const app = new Hono()
     app.onError(onError)
     app.get('/boom', () => {
@@ -16,9 +13,12 @@ describe('errorMiddleware', () => {
 
     const res = await app.request('/boom')
     expect(res.status).toBe(500)
-    const body = (await res.json()) as { error: string; message: string }
-    expect(body.error).toBe('Internal server error')
-    expect(body.message).toBe('something went wrong')
+    expect(await res.json()).toEqual({
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'An unexpected error occurred',
+      },
+    })
   })
 
   it('onNotFound returns 404 JSON with error and path fields', async () => {
@@ -27,23 +27,21 @@ describe('errorMiddleware', () => {
 
     const res = await app.request('/no-such-route')
     expect(res.status).toBe(404)
-    const body = (await res.json()) as { error: string; path: string }
-    expect(body.error).toBe('Not found')
-    expect(body.path).toBe('/no-such-route')
+    expect(await res.json()).toEqual({
+      error: { code: 'NOT_FOUND', message: 'Route not found' },
+    })
   })
 
   it('createApp returns 404 JSON for unknown route', async () => {
     const app = createApp()
-    const res = await app.request('/api/unknown-endpoint', {
-      headers: { Authorization: AUTH },
-    })
+    const res = await app.request('/api/unknown-endpoint')
     expect(res.status).toBe(404)
-    const body = (await res.json()) as { error: string }
-    expect(body.error).toBe('Not found')
+    expect(await res.json()).toEqual({
+      error: { code: 'NOT_FOUND', message: 'Route not found' },
+    })
   })
 
   it('createApp returns 500 JSON for route that throws', async () => {
-    const app = createApp()
     // Inject a throwing route directly on the Hono instance is not possible after
     // createApp, so test onError directly via a standalone Hono app.
     const mini = new Hono()
@@ -54,8 +52,11 @@ describe('errorMiddleware', () => {
 
     const res = await mini.request('/throw')
     expect(res.status).toBe(500)
-    const body = (await res.json()) as { error: string; message: string }
-    expect(body.error).toBe('Internal server error')
-    expect(body.message).toBe('type error')
+    expect(await res.json()).toEqual({
+      error: {
+        code: 'INTERNAL_ERROR',
+        message: 'An unexpected error occurred',
+      },
+    })
   })
 })

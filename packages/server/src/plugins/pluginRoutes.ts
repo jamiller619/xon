@@ -1,5 +1,6 @@
 import type { PluginRouteContext, PluginRouteResponse } from '@xon/plugin-sdk'
 import type { Context } from 'hono'
+import { notFound } from '../http/responses.ts'
 import { registry } from './pluginManager.ts'
 
 /**
@@ -38,12 +39,12 @@ function matchPath(
 export async function pluginRouteDispatcher(c: Context): Promise<Response> {
   const pluginId = c.req.param('pluginId') as string | undefined
   if (!pluginId) {
-    return c.json({ error: 'Plugin not found or not active' }, 404) as Response
+    return notFound(c, 'Plugin not found or not active') as Response
   }
   const entry = registry.get(pluginId)
 
   if (!entry || entry.status !== 'active') {
-    return c.json({ error: 'Plugin not found or not active' }, 404) as Response
+    return notFound(c, 'Plugin not found or not active') as Response
   }
 
   // Extract plugin-relative path by stripping the /plugins/:pluginId prefix
@@ -83,5 +84,5 @@ export async function pluginRouteDispatcher(c: Context): Promise<Response> {
     return result as unknown as Response
   }
 
-  return c.json({ error: 'Route not found' }, 404) as Response
+  return notFound(c, 'Plugin route not found') as Response
 }

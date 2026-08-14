@@ -33,9 +33,12 @@ describe('validate', () => {
     })
     expect(res.status).toBe(400)
     const body = await res.json()
-    expect(body.error).toBe('Validation failed')
-    expect(Array.isArray(body.details)).toBe(true)
-    expect(body.details.length).toBeGreaterThan(0)
+    expect(body.error).toMatchObject({
+      code: 'VALIDATION_ERROR',
+      message: 'Request validation failed',
+    })
+    expect(Array.isArray(body.error.details)).toBe(true)
+    expect(body.error.details.length).toBeGreaterThan(0)
   })
 
   it('returns 400 for missing required fields', async () => {
@@ -51,8 +54,8 @@ describe('validate', () => {
     })
     expect(res.status).toBe(400)
     const body = await res.json()
-    expect(body.error).toBe('Validation failed')
-    expect(body.details).toEqual(
+    expect(body.error.code).toBe('VALIDATION_ERROR')
+    expect(body.error.details).toEqual(
       expect.arrayContaining([expect.objectContaining({ path: ['id'] })]),
     )
   })
@@ -68,8 +71,8 @@ describe('validate', () => {
     const res = await app.request('/search')
     expect(res.status).toBe(400)
     const body = await res.json()
-    expect(body.error).toBe('Validation failed')
-    expect(Array.isArray(body.details)).toBe(true)
+    expect(body.error.code).toBe('VALIDATION_ERROR')
+    expect(Array.isArray(body.error.details)).toBe(true)
   })
 
   it('passes valid query params to handler', async () => {
@@ -100,8 +103,9 @@ describe('validate', () => {
     })
     expect(res.status).toBe(400)
     const body = await res.json()
-    const issue = body.details[0]
+    const issue = body.error.details[0]
     expect(issue).toHaveProperty('path')
     expect(issue).toHaveProperty('message')
+    expect(issue).toHaveProperty('code')
   })
 })

@@ -2,7 +2,6 @@ import { type Client, createClient } from '@libsql/client'
 import { drizzle, type LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { migrateDatabase } from '../../db/migrate.ts'
 import {
   libraries,
   mediaItems,
@@ -24,7 +23,60 @@ describe('media play state routes', () => {
   beforeEach(async () => {
     client = createClient({ url: ':memory:' })
     db = drizzle(client)
-    await migrateDatabase(db)
+    await client.batch([
+      `CREATE TABLE users (
+        id text PRIMARY KEY NOT NULL,
+        name text NOT NULL,
+        email text NOT NULL UNIQUE,
+        email_verified integer DEFAULT false NOT NULL,
+        image text,
+        created_at integer NOT NULL,
+        updated_at integer NOT NULL,
+        is_anonymous integer DEFAULT false
+      )`,
+      `CREATE TABLE libraries (
+        id text PRIMARY KEY NOT NULL,
+        created_at integer NOT NULL,
+        updated_at integer,
+        owner_id text NOT NULL,
+        name text NOT NULL,
+        description text,
+        content_type text NOT NULL,
+        scan_schedule text,
+        data_sources text NOT NULL,
+        images text DEFAULT '{"poster":[]}' NOT NULL
+      )`,
+      `CREATE TABLE media_items (
+        id text PRIMARY KEY NOT NULL,
+        created_at integer NOT NULL,
+        updated_at integer,
+        library_id text NOT NULL,
+        data_source_id text,
+        match_id text,
+        match_id_source text,
+        file_path text NOT NULL,
+        file_size integer NOT NULL,
+        file_metadata text NOT NULL,
+        media_type text DEFAULT 'application/octet-stream' NOT NULL,
+        title text NOT NULL,
+        description text,
+        metadata text DEFAULT '{}' NOT NULL,
+        drm_protected integer DEFAULT false NOT NULL,
+        scanned_at integer NOT NULL,
+        tags text DEFAULT '[]' NOT NULL
+      )`,
+      `CREATE TABLE media_play_states (
+        user_id text NOT NULL,
+        media_item_id text NOT NULL,
+        position integer DEFAULT 0 NOT NULL,
+        duration integer,
+        status text DEFAULT 'playing' NOT NULL,
+        started_at integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL,
+        updated_at integer DEFAULT (cast(unixepoch('subsecond') * 1000 as integer)) NOT NULL,
+        stopped_at integer,
+        PRIMARY KEY (user_id, media_item_id)
+      )`,
+    ])
 
     const now = new Date()
     await db.insert(users).values([
@@ -84,7 +136,7 @@ describe('media play state routes', () => {
             } as never)
           : null,
       )
-      c.set('session', null)
+      c.set('session', userId ? ({ id: 'test-session' } as never) : null)
       await next()
     })
     app.route('/media', makeMediaRouter(db))

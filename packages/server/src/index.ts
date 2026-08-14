@@ -18,6 +18,13 @@ export {
 } from './db/schema.ts'
 export { emitEvent, eventBus, type XonEvent } from './events.ts'
 export {
+  type ErrorCode,
+  type ErrorEnvelope,
+  errorCodes,
+  type PaginationMetadata,
+  type ValidationErrorDetail,
+} from './http/responses.ts'
+export {
   clusterCoordinate,
   createMusicCollections,
   createPhotoCollections,

@@ -104,6 +104,33 @@ export async function getMediaByUser(
   pageProps?: PageProps,
   sortProps?: SortProps<MediaItem>,
 ) {
+  return getMediaRowsByUser(db, userId, pageProps, sortProps)
+}
+
+export async function getMediaPageByUser(
+  db: LibSQLDatabase,
+  userId: string,
+  pageProps?: PageProps,
+  sortProps?: SortProps<MediaItem>,
+) {
+  const [data, totalRows] = await Promise.all([
+    getMediaRowsByUser(db, userId, pageProps, sortProps),
+    db
+      .select({ count: sql<number>`count(*)` })
+      .from(mediaItems)
+      .innerJoin(libraries, eq(mediaItems.libraryId, libraries.id))
+      .where(eq(libraries.ownerId, userId)),
+  ])
+
+  return { data, total: Number(totalRows[0]?.count ?? 0) }
+}
+
+function getMediaRowsByUser(
+  db: LibSQLDatabase,
+  userId: string,
+  pageProps?: PageProps,
+  sortProps?: SortProps<MediaItem>,
+) {
   const pageNum = Math.max(1, Number(pageProps?.pageNumber) || 1)
   const limitNum = Math.min(Math.max(1, Number(pageProps?.pageSize) || 20), 100)
   const offset = (pageNum - 1) * limitNum
@@ -134,7 +161,7 @@ export async function getMediaByUser(
     .from(mediaItems)
     .innerJoin(libraries, eq(mediaItems.libraryId, libraries.id))
     .where(eq(libraries.ownerId, userId))
-    .orderBy(orderExpr)
+    .orderBy(orderExpr, asc(mediaItems.id))
     .limit(limitNum)
     .offset(offset)
 }

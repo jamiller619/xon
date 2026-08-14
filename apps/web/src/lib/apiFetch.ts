@@ -1,3 +1,4 @@
+import type { ErrorEnvelope } from '@xon/server'
 import { type PosterInput, posterImages } from '@xon/shared'
 import { useAuthStore } from '~/store/authStore'
 
@@ -6,8 +7,10 @@ export async function getAPIError(
   fallbackMessage: string,
 ): Promise<string> {
   try {
-    const body = (await res.json()) as { error?: string }
-    return body.error ?? fallbackMessage
+    const body = (await res.json()) as ErrorEnvelope | { error?: string }
+    return typeof body.error === 'string'
+      ? body.error
+      : (body.error?.message ?? fallbackMessage)
   } catch {
     return fallbackMessage
   }

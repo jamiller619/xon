@@ -1,7 +1,7 @@
 import { Dialog as BaseDialog } from '@base-ui/react'
 import { Button, Flex, ScrollArea, Textbox } from '@xon/ui'
 import { useEffect, useState } from 'react'
-import { apiFetch } from '~/lib/apiFetch'
+import { apiFetch, getAPIError } from '~/lib/apiFetch'
 import styles from './CreateLibraryForm.module.css'
 
 interface BrowseResult {
@@ -23,15 +23,16 @@ export default function MediaFolderBrowser({
     setLoading(true)
     setError(null)
     apiFetch(`/api/fs/browse?path=${encodeURIComponent(currentPath)}`)
-      .then((r) => r.json())
-      .then((data: BrowseResult | { error: string }) => {
-        if ('error' in data) {
-          setError(data.error)
+      .then(async (response) => {
+        if (!response.ok) {
+          setError(await getAPIError(response, 'Cannot read directory'))
           setEntries([])
-        } else {
-          setCurrentPath(data.path)
-          setEntries(data.entries)
+          return
         }
+
+        const data = (await response.json()) as BrowseResult
+        setCurrentPath(data.path)
+        setEntries(data.entries)
       })
       .catch(() => setError('Network error — please try again'))
       .finally(() => setLoading(false))

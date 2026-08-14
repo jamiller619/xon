@@ -1,16 +1,25 @@
 import { readFile } from 'node:fs/promises'
-import {
-  type ContentType,
-  DataSourceType,
-  type Library,
-  MediaType,
-} from '@xon/shared'
+import { type ContentType, DataSourceType, type Library } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { fileTypeFromBuffer } from 'file-type'
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { appCache, computeETag } from '../cache.ts'
+import { appCache } from '../cache.ts'
 import { requireAuth } from '../http/authMiddleware.js'
+import {
+  cachedJson,
+  errorCodes,
+  errorResponse,
+  noContent,
+  notFound,
+  setConditionalCacheHeaders,
+  setPaginationHeaders,
+} from '../http/responses.ts'
+import {
+  listQuerySchema,
+  mediaFilterQuerySchema,
+  resourceIdParamsSchema,
+} from '../http/schemas.ts'
 import { validate } from '../http/validate.ts'
 import { resolveLocalArtworkPath } from '../media/cachePaths.ts'
 import type { ScannerHandle } from '../scanner/scannerHandle.ts'
@@ -37,13 +46,11 @@ const libraryImagesSchema = z.object({
   poster: z.array(z.string().trim().min(1).max(8192)).max(100),
 })
 
-const libraryMediaQuerySchema = z.object({
-  mediaType: z.enum(MediaType.MainType).optional(),
-  unmatched: z.stringbool().optional().default(false),
-  sortBy: z.enum(['title', 'fileSize', 'createdAt']).default('createdAt'),
-  order: z.enum(['asc', 'desc']).default('desc'),
-  page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+const libraryMediaQuerySchema = listQuerySchema(
+  ['title', 'fileSize', 'createdAt'] as const,
+  { sortBy: 'createdAt', order: 'desc' },
+).extend({
+  ...mediaFilterQuerySchema.shape,
 })
 
 const createLibrarySchema = z.object({
@@ -86,6 +93,8 @@ export function makeLibrariesRouter(
   // Handlers are chained so route types accumulate on the returned Hono
   // instance — required for hono/client (RPC) type inference.
   const router = new Hono()
+    .use('/:id', validate('param', resourceIdParamsSchema))
+    .use('/:id/*', validate('param', resourceIdParamsSchema))
     .post(
       '/',
       requireAuth,
@@ -117,11 +126,7 @@ export function makeLibrariesRouter(
       const user = c.get('user')
       const libraries = await libraryService.getLibrariesByUserId(db, user.id)
 
-      const etag = computeETag(libraries)
-      if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
-      c.header('ETag', etag)
-
-      return c.json(libraries)
+      return cachedJson(c, libraries)
     })
 
     // GET /libraries/:id — get single library
@@ -129,14 +134,9 @@ export function makeLibrariesRouter(
       const id = c.req.param('id')
       const library = await libraryService.getLibraryById(db, id)
 
-      if (library == null) return c.json({ error: 'Not found' }, 404)
+      if (library == null) return notFound(c, 'Library not found')
 
-      const etag = computeETag(library)
-
-      if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
-      c.header('ETag', etag)
-
-      return c.json(library)
+      return cachedJson(c, library)
     })
 
     // PUT /libraries/:id — update library
@@ -149,7 +149,7 @@ export function makeLibrariesRouter(
         const body = c.req.valid('json')
         const existing = await libraryService.getLibraryById(db, id)
 
-        if (!existing) return c.json({ error: 'Not found' }, 404)
+        if (!existing) return notFound(c, 'Library not found')
 
         const updates: Partial<Library> = {
           updatedAt: new Date(),
@@ -187,18 +187,21 @@ export function makeLibrariesRouter(
     // DELETE /libraries/:id — delete library
     .delete('/:id', requireAuth, async (c) => {
       const id = c.req.param('id')
-      const result = await libraryService.deleteLibraryById(db, id)
+      const existing = await libraryService.getLibraryById(db, id)
+      if (!existing) return notFound(c, 'Library not found')
+
+      await libraryService.deleteLibraryById(db, id)
 
       appCache.invalidate(LIBRARIES_ALL_KEY)
 
-      return c.json({ success: result })
+      return noContent(c)
     })
 
     // GET /libraries/:libraryId/stats — aggregate library-wide media totals
     .get('/:libraryId/stats', async (c) => {
       const libraryId = c.req.param('libraryId')
       const library = await libraryService.getLibraryById(db, libraryId)
-      if (!library) return c.json({ error: 'Not found' }, 404)
+      if (!library) return notFound(c, 'Library not found')
 
       const stats = await libraryService.getLibraryStats(db, libraryId)
       return c.json(stats)
@@ -215,7 +218,7 @@ export function makeLibrariesRouter(
           c.req.valid('query')
         const library = await libraryService.getLibraryById(db, libraryId)
 
-        if (!library) return c.json({ error: 'Not found' }, 404)
+        if (!library) return notFound(c, 'Library not found')
         const pageProps = {
           pageNumber: page,
           pageSize: limit,
@@ -235,17 +238,15 @@ export function makeLibrariesRouter(
           unmatched,
         )
 
-        c.header('X-Total-Count', String(results.total))
-
-        const etag = computeETag(results.data)
-
-        if (c.req.header('If-None-Match') === etag) {
-          return c.body(null, 304)
-        }
-
-        c.header('ETag', etag)
-
-        return c.json(results.data)
+        setPaginationHeaders(c, { page, limit, total: results.total })
+        return cachedJson(c, results.data, {
+          etagSource: {
+            items: results.data,
+            page,
+            limit,
+            total: results.total,
+          },
+        })
       },
     )
 
@@ -255,38 +256,48 @@ export function makeLibrariesRouter(
       const id = c.req.param('id')
       const index = Number(c.req.param('index'))
       if (!Number.isInteger(index) || index < 0) {
-        return c.json({ error: 'Unknown image' }, 404)
+        return notFound(c, 'Library image not found')
       }
 
       const library = await libraryService.getLibraryById(db, id)
       const source = library?.images.poster[index]
-      if (!source) return c.json({ error: 'Unknown image' }, 404)
+      if (!source) return notFound(c, 'Library image not found')
 
       try {
         const filePath = resolveLocalArtworkPath(source)
-        if (!filePath) return c.json({ error: 'Image not found' }, 404)
+        if (!filePath) return notFound(c, 'Library image not found')
         const data = await readFile(filePath)
         const detected = await fileTypeFromBuffer(data)
         if (!detected || !SUPPORTED_LIBRARY_IMAGE_TYPES.has(detected.mime)) {
-          return c.json({ error: 'Unsupported image' }, 415)
+          return errorResponse(
+            c,
+            415,
+            errorCodes.unsupportedMediaType,
+            'Unsupported image type',
+          )
         }
         return c.body(new Uint8Array(data), 200, {
           'Content-Type': detected.mime,
           'Cache-Control': 'private, no-cache',
         })
       } catch {
-        return c.json({ error: 'Image not found' }, 404)
+        return notFound(c, 'Library image not found')
       }
     })
     .put('/:id/images', validate('json', libraryImagesSchema), async (c) => {
       const id = c.req.param('id')
       const images = c.req.valid('json')
       const library = await libraryService.getLibraryById(db, id)
-      if (!library) return c.json({ error: 'Not found' }, 404)
+      if (!library) return notFound(c, 'Library not found')
 
       const existing = new Set(library.images.poster)
       if (images.poster.some((source) => !existing.has(source))) {
-        return c.json({ error: 'Images can only be reordered or removed' }, 400)
+        return errorResponse(
+          c,
+          400,
+          errorCodes.badRequest,
+          'Images can only be reordered or removed',
+        )
       }
 
       await libraryService.updateLibrary(db, id, {
@@ -306,23 +317,35 @@ export function makeLibrariesRouter(
     .post('/:id/images/poster', async (c) => {
       const id = c.req.param('id')
       const library = await libraryService.getLibraryById(db, id)
-      if (!library) return c.json({ error: 'Not found' }, 404)
+      if (!library) return notFound(c, 'Library not found')
 
       const form = await c.req.parseBody()
       const file = form.file
       if (!(file instanceof File)) {
-        return c.json({ error: 'Choose an image to upload' }, 400)
+        return errorResponse(
+          c,
+          400,
+          errorCodes.badRequest,
+          'Choose an image to upload',
+        )
       }
       if (file.size === 0 || file.size > MAX_LIBRARY_IMAGE_BYTES) {
-        return c.json({ error: 'Image must be between 1 byte and 20 MB' }, 413)
+        return errorResponse(
+          c,
+          413,
+          errorCodes.payloadTooLarge,
+          'Image must be between 1 byte and 20 MB',
+        )
       }
 
       const data = Buffer.from(await file.arrayBuffer())
       const detected = await fileTypeFromBuffer(data)
       if (!detected || !SUPPORTED_LIBRARY_IMAGE_TYPES.has(detected.mime)) {
-        return c.json(
-          { error: 'Upload a JPEG, PNG, WebP, GIF, or AVIF image' },
+        return errorResponse(
+          c,
           415,
+          errorCodes.unsupportedMediaType,
+          'Upload a JPEG, PNG, WebP, GIF, or AVIF image',
         )
       }
 
@@ -345,13 +368,15 @@ export function makeLibrariesRouter(
     .post('/:id/images/posters/generate', async (c) => {
       const id = c.req.param('id')
       const library = await libraryService.getLibraryById(db, id)
-      if (!library) return c.json({ error: 'Not found' }, 404)
+      if (!library) return notFound(c, 'Library not found')
 
       const source = await generateLibraryPoster(db, id)
       if (!source) {
-        return c.json(
-          { error: 'No media posters are available to create an image' },
+        return errorResponse(
+          c,
           422,
+          errorCodes.unprocessableEntity,
+          'No media posters are available to create an image',
         )
       }
 
@@ -376,7 +401,7 @@ export function makeLibrariesRouter(
       const id = c.req.param('id')
 
       const library = await libraryService.getLibraryById(db, id)
-      if (!library) return c.json({ error: 'Not found' }, 404)
+      if (!library) return notFound(c, 'Library not found')
 
       const selectedPoster = library.images.poster[0]
       if (selectedPoster) {
@@ -399,18 +424,17 @@ export function makeLibrariesRouter(
 
       const thumbnail = await getOrBuildThumbnail(db, id)
       if (!thumbnail) {
-        return c.json({ error: 'No posters available for this library' }, 404)
+        return notFound(c, 'No posters available for this library')
       }
 
       const etag = `"${Math.trunc(thumbnail.mtimeMs)}"`
-      if (c.req.header('If-None-Match') === etag) return c.body(null, 304)
+      if (setConditionalCacheHeaders(c, etag, 'public, max-age=86400'))
+        return c.body(null, 304)
 
       const buffer = await readFile(thumbnail.path)
 
       return c.body(new Uint8Array(buffer), 200, {
         'Content-Type': 'image/png',
-        'Cache-Control': 'public, max-age=86400',
-        ETag: etag,
       })
     })
     .route('/:libraryId/scan', makeScanRouter(db, scannerHandle))

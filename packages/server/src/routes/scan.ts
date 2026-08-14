@@ -6,6 +6,13 @@ import { appCache } from '../cache.ts'
 import { libraries } from '../db/schema.ts'
 import { emitEvent } from '../events.ts'
 import { requireAuth } from '../http/authMiddleware.js'
+import {
+  errorCodes,
+  errorResponse,
+  noCacheJSON,
+  notFound,
+} from '../http/responses.ts'
+import { resourceIdSchema } from '../http/schemas.ts'
 import { validate } from '../http/validate.ts'
 import { emitPluginEvent } from '../plugins/pluginManager.ts'
 import type { ScannerHandle } from '../scanner/scannerHandle.ts'
@@ -20,6 +27,10 @@ const scheduleSchema = z.object({
       (v) => v === null || parseCronInterval(v) !== null,
       "Invalid or unsupported cron expression. Supported: '*/N * * * *' or '0 */N * * *'",
     ),
+})
+
+const refreshSchema = z.object({
+  mediaItemId: resourceIdSchema.optional(),
 })
 
 /**
@@ -114,7 +125,12 @@ export function makeScanRouter(
       const libraryId = c.req.param('libraryId') as string
       const started = triggerLibraryScan(scannerHandle, libraryId)
       if (!started) {
-        return c.json({ status: 'already_running' }, 409)
+        return errorResponse(
+          c,
+          409,
+          errorCodes.conflict,
+          'A scan is already running',
+        )
       }
       return c.json({ status: 'started' }, 202)
     })
@@ -122,25 +138,30 @@ export function makeScanRouter(
     // POST /refresh — re-run metadata plugins for the whole library, or a
     // single item when the body carries { mediaItemId } (mounted at
     // /:libraryId/scan/refresh) (manager+)
-    .post('/refresh', requireAuth, async (c) => {
-      const libraryId = c.req.param('libraryId') as string
+    .post(
+      '/refresh',
+      requireAuth,
+      validate('json', refreshSchema),
+      async (c) => {
+        const libraryId = c.req.param('libraryId') as string
+        const { mediaItemId } = c.req.valid('json')
 
-      const body = (await c.req.json().catch(() => ({}))) as {
-        mediaItemId?: unknown
-      }
-      const mediaItemId =
-        typeof body.mediaItemId === 'string' ? body.mediaItemId : undefined
-
-      const started = triggerMetadataRefresh(
-        scannerHandle,
-        libraryId,
-        mediaItemId,
-      )
-      if (!started) {
-        return c.json({ status: 'already_running' }, 409)
-      }
-      return c.json({ status: 'started' }, 202)
-    })
+        const started = triggerMetadataRefresh(
+          scannerHandle,
+          libraryId,
+          mediaItemId,
+        )
+        if (!started) {
+          return errorResponse(
+            c,
+            409,
+            errorCodes.conflict,
+            'A scan or metadata refresh is already running',
+          )
+        }
+        return c.json({ status: 'started' }, 202)
+      },
+    )
 
     // GET /status — get scan status (mounted at /:libraryId/scan/status)
     .get('/status', (c) => {
@@ -148,10 +169,10 @@ export function makeScanRouter(
 
       const state = scanRegistry.get(libraryId)
       if (!state) {
-        return c.json({ status: 'idle' })
+        return noCacheJSON(c, { status: 'idle' })
       }
 
-      return c.json({
+      return noCacheJSON(c, {
         status: state.status,
         startedAt: state.startedAt.toISOString(),
         progress: state.progress,
@@ -173,7 +194,7 @@ export function makeScanRouter(
           .select()
           .from(libraries)
           .where(eq(libraries.id, libraryId))
-        if (existing.length === 0) return c.json({ error: 'Not found' }, 404)
+        if (existing.length === 0) return notFound(c, 'Library not found')
 
         await db
           .update(libraries)

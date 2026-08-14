@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { apiFetch } from '~/lib/apiFetch'
+import { apiFetch, getAPIError } from '~/lib/apiFetch'
 import styles from './CollectionDialog.module.css'
 
 export type ManualCollectionType =
@@ -97,8 +97,7 @@ export default function CollectionDialog({
         }),
       })
       if (!res.ok) {
-        const data = (await res.json()) as { error?: string }
-        setError(data.error ?? 'Failed to create collection')
+        setError(await getAPIError(res, 'Failed to create collection'))
         return
       }
       const collection = (await res.json()) as {

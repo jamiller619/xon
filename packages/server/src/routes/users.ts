@@ -3,6 +3,7 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { mediaItems, mediaPlayStates } from '../db/schema.ts'
 import { requireAuth } from '../http/authMiddleware.js'
+import { noCacheJSON } from '../http/responses.ts'
 
 export function makeUsersRouter(db: LibSQLDatabase) {
   const router = new Hono()
@@ -11,7 +12,7 @@ export function makeUsersRouter(db: LibSQLDatabase) {
     .get('/me', async (c) => {
       const user = c.get('user')
 
-      return c.json(user)
+      return noCacheJSON(c, user)
     })
 
     // GET /users/me/play-states — latest resumable playback state for the dashboard.
@@ -42,7 +43,7 @@ export function makeUsersRouter(db: LibSQLDatabase) {
         .orderBy(desc(mediaPlayStates.updatedAt))
         .limit(50)
 
-      return c.json(rows)
+      return noCacheJSON(c, rows)
     })
 
     // GET /users/me/play-states/progress — compact lookup data for media cards.
@@ -59,7 +60,7 @@ export function makeUsersRouter(db: LibSQLDatabase) {
         .from(mediaPlayStates)
         .where(eq(mediaPlayStates.userId, user.id))
 
-      return c.json(rows)
+      return noCacheJSON(c, rows)
     })
 
   return router

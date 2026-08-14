@@ -1,7 +1,7 @@
 import type { Context, MiddlewareHandler, Next } from 'hono'
 import { createMiddleware } from 'hono/factory'
-import { HTTPException } from 'hono/http-exception'
 import auth from '../lib/auth.ts'
+import { errorCodes, errorResponse } from './responses.ts'
 
 type User = typeof auth.$Infer.Session.user
 type Session = typeof auth.$Infer.Session.session
@@ -24,6 +24,10 @@ export function makeSessionMiddleware(): MiddlewareHandler {
   }
 }
 
+/**
+ * Requires an authenticated user (set by the session middleware).
+ * Responds 401 for unauthenticated requests.
+ */
 export const requireAuth = createMiddleware<{
   Variables: {
     user: User
@@ -34,9 +38,12 @@ export const requireAuth = createMiddleware<{
   const session = c.get('session')
 
   if (!user || !session) {
-    throw new HTTPException(401, {
-      message: 'Authentication required',
-    })
+    return errorResponse(
+      c,
+      401,
+      errorCodes.unauthorized,
+      'Authentication required',
+    )
   }
 
   // Re-setting them connects the runtime check with the middleware's
@@ -46,20 +53,6 @@ export const requireAuth = createMiddleware<{
 
   await next()
 })
-
-/**
- * Requires an authenticated user (set by the session middleware).
- * Responds 401 for unauthenticated requests.
- */
-export function requireAuth2(): MiddlewareHandler {
-  return async (c: Context, next: Next) => {
-    if (!c.get('user')) {
-      return c.json({ error: 'Unauthorized' }, 401)
-    }
-
-    return next()
-  }
-}
 
 declare module 'hono' {
   interface ContextVariableMap {

@@ -1,5 +1,7 @@
+import { unlink } from 'node:fs/promises'
 import { type Client, createClient } from '@libsql/client'
 import { CollectionType } from '@xon/shared'
+import { and, eq } from 'drizzle-orm'
 import { drizzle, type LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
@@ -10,9 +12,11 @@ describe('Collections API', () => {
   let client: Client
   let db: LibSQLDatabase
   let app: Hono
+  let databasePath: string
 
   beforeEach(async () => {
-    client = createClient({ url: ':memory:' })
+    databasePath = `/tmp/xon-collections-${crypto.randomUUID()}.db`
+    client = createClient({ url: `file:${databasePath}` })
     db = drizzle(client)
     await client.batch([
       `CREATE TABLE collections (
@@ -86,19 +90,25 @@ describe('Collections API', () => {
     app = new Hono()
     app.use('*', async (c, next) => {
       c.set('user', { id: 'user-1' } as never)
-      c.set('session', null)
+      c.set('session', { id: 'session-1' } as never)
       await next()
     })
     app.route('/collections', makeCollectionsRouter(db))
   })
 
-  afterEach(() => client.close())
+  afterEach(async () => {
+    client.close()
+    await unlink(databasePath).catch(() => undefined)
+  })
 
   it('paginates full media records in custom order across libraries', async () => {
     const firstPage = await app.request('/collections/mine/media?limit=1')
 
     expect(firstPage.status).toBe(200)
     expect(firstPage.headers.get('X-Total-Count')).toBe('2')
+    expect(firstPage.headers.get('X-Page')).toBe('1')
+    expect(firstPage.headers.get('X-Page-Size')).toBe('1')
+    expect(firstPage.headers.get('X-Total-Pages')).toBe('2')
     expect(await firstPage.json()).toMatchObject([
       { id: 'second', libraryId: 'library-b', title: 'Second' },
     ])
@@ -111,12 +121,128 @@ describe('Collections API', () => {
     ])
   })
 
+  it('returns stable date serialization and honors collection ETags', async () => {
+    const response = await app.request('/collections/mine')
+    const body = await response.json()
+
+    expect(response.status).toBe(200)
+    expect(body.createdAt).toBe('2026-08-11T12:00:00.000Z')
+    expect(response.headers.get('Cache-Control')).toBe('private, no-cache')
+
+    const notModified = await app.request('/collections/mine', {
+      headers: { 'If-None-Match': response.headers.get('ETag') ?? '' },
+    })
+    expect(notModified.status).toBe(304)
+  })
+
+  it('validates list input before querying media', async () => {
+    const response = await app.request('/collections/mine/media?page=0')
+
+    expect(response.status).toBe(400)
+    expect(await response.json()).toMatchObject({
+      error: {
+        code: 'VALIDATION_ERROR',
+        message: 'Request validation failed',
+        details: [{ path: ['page'] }],
+      },
+    })
+  })
+
+  it('does not partially reorder when any requested item is absent', async () => {
+    const response = await app.request('/collections/mine/items', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items: [
+          { mediaItemId: 'first', sortOrder: 99 },
+          { mediaItemId: 'missing', sortOrder: 100 },
+        ],
+      }),
+    })
+
+    expect(response.status).toBe(404)
+    expect(await response.json()).toEqual({
+      error: {
+        code: 'NOT_FOUND',
+        message: 'One or more collection items were not found',
+      },
+    })
+    const unchanged = await db
+      .select({ sortOrder: collectionItems.sortOrder })
+      .from(collectionItems)
+      .where(
+        and(
+          eq(collectionItems.collectionId, 'mine'),
+          eq(collectionItems.mediaItemId, 'first'),
+        ),
+      )
+      .get()
+    expect(unchanged?.sortOrder).toBe(1)
+  })
+
+  it('reorders every requested item transactionally', async () => {
+    const response = await app.request('/collections/mine/items', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        items: [
+          { mediaItemId: 'first', sortOrder: 0 },
+          { mediaItemId: 'second', sortOrder: 1 },
+        ],
+      }),
+    })
+
+    expect(response.status).toBe(200)
+    const rows = await db
+      .select({
+        mediaItemId: collectionItems.mediaItemId,
+        sortOrder: collectionItems.sortOrder,
+      })
+      .from(collectionItems)
+      .where(eq(collectionItems.collectionId, 'mine'))
+    expect(rows).toEqual(
+      expect.arrayContaining([
+        { mediaItemId: 'first', sortOrder: 0 },
+        { mediaItemId: 'second', sortOrder: 1 },
+      ]),
+    )
+  })
+
+  it('uses create, update, and delete status codes consistently', async () => {
+    const created = await app.request('/collections', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        type: CollectionType.Collection,
+        title: 'Contract collection',
+      }),
+    })
+    expect(created.status).toBe(201)
+    const collection = await created.json()
+
+    const updated = await app.request(`/collections/${collection.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title: 'Updated contract collection' }),
+    })
+    expect(updated.status).toBe(200)
+
+    const deleted = await app.request(`/collections/${collection.id}`, {
+      method: 'DELETE',
+    })
+    expect(deleted.status).toBe(204)
+    expect(await deleted.text()).toBe('')
+  })
+
   it('does not expose another users collection', async () => {
     const detail = await app.request('/collections/theirs')
     const media = await app.request('/collections/theirs/media')
 
     expect(detail.status).toBe(404)
     expect(media.status).toBe(404)
+    expect(await detail.json()).toEqual({
+      error: { code: 'NOT_FOUND', message: 'Collection not found' },
+    })
   })
 })
 

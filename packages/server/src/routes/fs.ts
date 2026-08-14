@@ -2,6 +2,7 @@ import { readdir } from 'node:fs/promises'
 import path from 'node:path'
 import { Hono } from 'hono'
 import { z } from 'zod'
+import { errorCodes, errorResponse } from '../http/responses.ts'
 import { validate } from '../http/validate.ts'
 
 export function makeFsRouter(): Hono {
@@ -28,7 +29,12 @@ export function makeFsRouter(): Hono {
             .sort((a, b) => a.name.localeCompare(b.name))
           return c.json({ path: resolved, entries })
         } catch {
-          return c.json({ error: 'Cannot read directory' }, 400)
+          return errorResponse(
+            c,
+            400,
+            errorCodes.badRequest,
+            'Cannot read directory',
+          )
         }
       },
     )

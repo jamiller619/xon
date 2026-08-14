@@ -1,10 +1,24 @@
-import { CollectionType, MediaType } from '@xon/shared'
-import { and, asc, count, desc, eq, isNull, like } from 'drizzle-orm'
+import { CollectionType } from '@xon/shared'
+import { and, asc, count, desc, eq, inArray, isNull, like } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { collectionItems, collections, mediaItems } from '../db/schema.ts'
 import { requireAuth } from '../http/authMiddleware.js'
+import {
+  cachedJson,
+  errorCodes,
+  errorResponse,
+  noContent,
+  notFound,
+  setPaginationHeaders,
+} from '../http/responses.ts'
+import {
+  listQuerySchema,
+  mediaFilterQuerySchema,
+  resourceIdParamsSchema,
+  resourceIdSchema,
+} from '../http/schemas.ts'
 import { validate } from '../http/validate.ts'
 
 const MANUAL_COLLECTION_TYPES = [
@@ -26,34 +40,43 @@ const updateCollectionSchema = z.object({
 })
 
 const addItemSchema = z.object({
-  mediaItemId: z.string().min(1),
+  mediaItemId: resourceIdSchema,
   sortOrder: z.number().int().optional(),
 })
 
 const reorderItemsSchema = z.object({
-  items: z.array(
-    z.object({
-      mediaItemId: z.string().min(1),
-      sortOrder: z.number().int(),
-    }),
-  ),
+  items: z
+    .array(
+      z.object({
+        mediaItemId: resourceIdSchema,
+        sortOrder: z.number().int(),
+      }),
+    )
+    .refine(
+      (items) =>
+        new Set(items.map(({ mediaItemId }) => mediaItemId)).size ===
+        items.length,
+      'Media item IDs must be unique',
+    ),
 })
 
-const collectionMediaQuerySchema = z.object({
-  mediaType: z.enum(MediaType.MainType).optional(),
-  unmatched: z.stringbool().optional().default(false),
-  sortBy: z
-    .enum(['sortOrder', 'title', 'fileSize', 'createdAt'])
-    .default('sortOrder'),
-  order: z.enum(['asc', 'desc']).default('asc'),
-  page: z.coerce.number().int().min(1).optional().default(1),
-  limit: z.coerce.number().int().min(1).max(100).optional().default(20),
+const collectionMediaQuerySchema = listQuerySchema(
+  ['sortOrder', 'title', 'fileSize', 'createdAt'] as const,
+  { sortBy: 'sortOrder', order: 'asc' },
+).extend({
+  ...mediaFilterQuerySchema.shape,
+})
+
+const collectionItemParamsSchema = resourceIdParamsSchema.extend({
+  mediaItemId: resourceIdSchema,
 })
 
 export function makeCollectionsRouter(db: LibSQLDatabase) {
   // Keep handlers chained so Hono retains the route schema for the typed web
   // client. Calling methods separately erases the accumulated route types.
   const router = new Hono()
+    .use('/:id', validate('param', resourceIdParamsSchema))
+    .use('/:id/*', validate('param', resourceIdParamsSchema))
     // POST /collections — create a manual collection (user+)
     .post(
       '/',
@@ -92,7 +115,7 @@ export function makeCollectionsRouter(db: LibSQLDatabase) {
         .where(eq(collections.userId, user.id))
         .orderBy(asc(collections.createdAt))
 
-      return c.json(rows)
+      return cachedJson(c, rows)
     })
 
     // GET /collections/:id/media — list full media records for a user collection
@@ -108,7 +131,7 @@ export function makeCollectionsRouter(db: LibSQLDatabase) {
           .from(collections)
           .where(and(eq(collections.id, id), eq(collections.userId, user.id)))
           .get()
-        if (!collection) return c.json({ error: 'Not found' }, 404)
+        if (!collection) return notFound(c, 'Collection not found')
 
         const { mediaType, unmatched, sortBy, order, page, limit } =
           c.req.valid('query')
@@ -137,8 +160,12 @@ export function makeCollectionsRouter(db: LibSQLDatabase) {
           .innerJoin(mediaItems, eq(collectionItems.mediaItemId, mediaItems.id))
           .where(filters)
 
-        c.header('X-Total-Count', String(totals[0]?.count ?? 0))
-        return c.json(rows.map(({ item }) => item))
+        const total = totals[0]?.count ?? 0
+        const items = rows.map(({ item }) => item)
+        setPaginationHeaders(c, { page, limit, total })
+        return cachedJson(c, items, {
+          etagSource: { items, page, limit, total },
+        })
       },
     )
 
@@ -151,11 +178,11 @@ export function makeCollectionsRouter(db: LibSQLDatabase) {
         .from(collections)
         .where(and(eq(collections.id, id), eq(collections.userId, user.id)))
       if (collectionRows.length === 0)
-        return c.json({ error: 'Not found' }, 404)
+        return notFound(c, 'Collection not found')
       const collection = collectionRows[0]
-      if (!collection) return c.json({ error: 'Not found' }, 404)
+      if (!collection) return notFound(c, 'Collection not found')
 
-      return c.json(collection)
+      return cachedJson(c, collection)
     })
 
     // PUT /collections/:id — update collection title/type (manager+)
@@ -172,9 +199,9 @@ export function makeCollectionsRouter(db: LibSQLDatabase) {
           .from(collections)
           .where(and(eq(collections.id, id), eq(collections.userId, user.id)))
         if (collectionRows.length === 0)
-          return c.json({ error: 'Not found' }, 404)
+          return notFound(c, 'Collection not found')
         const collection = collectionRows[0]
-        if (!collection) return c.json({ error: 'Not found' }, 404)
+        if (!collection) return notFound(c, 'Collection not found')
 
         // Only allow updating manual collection types
         if (
@@ -182,9 +209,11 @@ export function makeCollectionsRouter(db: LibSQLDatabase) {
             collection.type,
           )
         ) {
-          return c.json(
-            { error: 'Cannot update auto-generated collection' },
+          return errorResponse(
+            c,
             403,
+            errorCodes.forbidden,
+            'Cannot update an auto-generated collection',
           )
         }
 
@@ -216,9 +245,9 @@ export function makeCollectionsRouter(db: LibSQLDatabase) {
         .from(collections)
         .where(and(eq(collections.id, id), eq(collections.userId, user.id)))
       if (collectionRows.length === 0)
-        return c.json({ error: 'Not found' }, 404)
+        return notFound(c, 'Collection not found')
       const collection = collectionRows[0]
-      if (!collection) return c.json({ error: 'Not found' }, 404)
+      if (!collection) return notFound(c, 'Collection not found')
 
       // Only allow deleting manual collection types
       if (
@@ -226,11 +255,16 @@ export function makeCollectionsRouter(db: LibSQLDatabase) {
           collection.type,
         )
       ) {
-        return c.json({ error: 'Cannot delete auto-generated collection' }, 403)
+        return errorResponse(
+          c,
+          403,
+          errorCodes.forbidden,
+          'Cannot delete an auto-generated collection',
+        )
       }
 
       await db.delete(collections).where(eq(collections.id, id))
-      return c.json({ success: true })
+      return noContent(c)
     })
 
     // POST /collections/:id/items — add item to collection (upsert with sortOrder)
@@ -252,17 +286,27 @@ export function makeCollectionsRouter(db: LibSQLDatabase) {
             ),
           )
         if (collectionRows.length === 0)
-          return c.json({ error: 'Not found' }, 404)
+          return notFound(c, 'Collection not found')
         const collection = collectionRows[0]
-        if (!collection) return c.json({ error: 'Not found' }, 404)
+        if (!collection) return notFound(c, 'Collection not found')
 
         // Collections are user-scoped and may contain items from many libraries.
         const itemRows = await db
           .select({ id: mediaItems.id })
           .from(mediaItems)
           .where(eq(mediaItems.id, body.mediaItemId))
-        if (itemRows.length === 0)
-          return c.json({ error: 'Media item not found' }, 404)
+        if (itemRows.length === 0) return notFound(c, 'Media item not found')
+
+        const existingItem = await db
+          .select({ mediaItemId: collectionItems.mediaItemId })
+          .from(collectionItems)
+          .where(
+            and(
+              eq(collectionItems.collectionId, collectionId),
+              eq(collectionItems.mediaItemId, body.mediaItemId),
+            ),
+          )
+          .get()
 
         // Determine sort order: use provided or append to end
         let sortOrder = body.sortOrder
@@ -284,10 +328,12 @@ export function makeCollectionsRouter(db: LibSQLDatabase) {
             set: { sortOrder },
           })
 
-        return c.json(
-          { collectionId, mediaItemId: body.mediaItemId, sortOrder },
-          201,
-        )
+        const result = {
+          collectionId,
+          mediaItemId: body.mediaItemId,
+          sortOrder,
+        }
+        return existingItem ? c.json(result) : c.json(result, 201)
       },
     )
 
@@ -310,56 +356,81 @@ export function makeCollectionsRouter(db: LibSQLDatabase) {
             ),
           )
         if (collectionRows.length === 0)
-          return c.json({ error: 'Not found' }, 404)
+          return notFound(c, 'Collection not found')
         const collection = collectionRows[0]
-        if (!collection) return c.json({ error: 'Not found' }, 404)
+        if (!collection) return notFound(c, 'Collection not found')
 
-        for (const item of body.items) {
-          await db
-            .update(collectionItems)
-            .set({ sortOrder: item.sortOrder })
+        if (body.items.length > 0) {
+          const existingItems = await db
+            .select({ mediaItemId: collectionItems.mediaItemId })
+            .from(collectionItems)
             .where(
               and(
                 eq(collectionItems.collectionId, collectionId),
-                eq(collectionItems.mediaItemId, item.mediaItemId),
+                inArray(
+                  collectionItems.mediaItemId,
+                  body.items.map(({ mediaItemId }) => mediaItemId),
+                ),
               ),
             )
+          if (existingItems.length !== body.items.length) {
+            return notFound(c, 'One or more collection items were not found')
+          }
         }
+
+        await db.transaction(async (tx) => {
+          for (const item of body.items) {
+            await tx
+              .update(collectionItems)
+              .set({ sortOrder: item.sortOrder })
+              .where(
+                and(
+                  eq(collectionItems.collectionId, collectionId),
+                  eq(collectionItems.mediaItemId, item.mediaItemId),
+                ),
+              )
+          }
+        })
 
         return c.json({ success: true })
       },
     )
 
     // DELETE /collections/:id/items/:mediaItemId — remove item from collection (manager+)
-    .delete('/:id/items/:mediaItemId', requireAuth, async (c) => {
-      const collectionId = c.req.param('id')
-      const mediaItemId = c.req.param('mediaItemId')
-      const user = c.get('user')
-      const collectionRows = await db
-        .select()
-        .from(collections)
-        .where(
-          and(
-            eq(collections.id, collectionId),
-            eq(collections.userId, user.id),
-          ),
-        )
-      if (collectionRows.length === 0)
-        return c.json({ error: 'Not found' }, 404)
-      const collection = collectionRows[0]
-      if (!collection) return c.json({ error: 'Not found' }, 404)
+    .delete(
+      '/:id/items/:mediaItemId',
+      requireAuth,
+      validate('param', collectionItemParamsSchema),
+      async (c) => {
+        const collectionId = c.req.param('id')
+        const mediaItemId = c.req.param('mediaItemId')
+        const user = c.get('user')
+        const collectionRows = await db
+          .select()
+          .from(collections)
+          .where(
+            and(
+              eq(collections.id, collectionId),
+              eq(collections.userId, user.id),
+            ),
+          )
+        if (collectionRows.length === 0)
+          return notFound(c, 'Collection not found')
+        const collection = collectionRows[0]
+        if (!collection) return notFound(c, 'Collection not found')
 
-      await db
-        .delete(collectionItems)
-        .where(
-          and(
-            eq(collectionItems.collectionId, collectionId),
-            eq(collectionItems.mediaItemId, mediaItemId),
-          ),
-        )
+        await db
+          .delete(collectionItems)
+          .where(
+            and(
+              eq(collectionItems.collectionId, collectionId),
+              eq(collectionItems.mediaItemId, mediaItemId),
+            ),
+          )
 
-      return c.json({ success: true })
-    })
+        return noContent(c)
+      },
+    )
 
   return router
 }

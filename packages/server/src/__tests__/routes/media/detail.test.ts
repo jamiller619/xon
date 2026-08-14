@@ -9,8 +9,8 @@ import {
   libraries,
   mediaItems,
   users,
-} from '../../db/schema.ts'
-import { makeMediaRouter } from '../../routes/media.ts'
+} from '../../../db/schema.ts'
+import { makeMediaRouter } from '../../../routes/media.ts'
 
 describe('Media API - collection membership', () => {
   let client: Client

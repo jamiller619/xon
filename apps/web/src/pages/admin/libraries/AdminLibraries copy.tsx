@@ -3,7 +3,7 @@ import { Button } from '@xon/ui'
 import { useCallback, useEffect, useState } from 'react'
 import { CreateLibraryForm } from '~/components/create-library-form/CreateLibraryForm'
 import useLibraries from '~/hooks/useLibraries'
-import { apiFetch } from '~/lib/apiFetch'
+import { apiFetch, getAPIError } from '~/lib/apiFetch'
 import styles from './AdminLibraries.module.css'
 
 const ALL_MEDIA_TYPES = [
@@ -213,8 +213,7 @@ export default function AdminLibraries() {
         },
       )
       if (!res.ok) {
-        const body = (await res.json()) as { error?: string }
-        setSourceError(body.error ?? 'Failed to add data source')
+        setSourceError(await getAPIError(res, 'Failed to add data source'))
       } else {
         const newSource = (await res.json()) as DataSource
         setEditingLibrary({

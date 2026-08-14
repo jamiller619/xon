@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { apiFetch } from '~/lib/apiFetch'
+import { apiFetch, getAPIError } from '~/lib/apiFetch'
 import styles from './AdminBackup.module.css'
 
 // ---------------------------------------------------------------------------
@@ -611,8 +611,7 @@ export default function AdminBackup() {
       }),
     })
     if (!res.ok) {
-      const data = (await res.json()) as { error?: string }
-      setModalError(data.error ?? `HTTP ${res.status}`)
+      setModalError(await getAPIError(res, `HTTP ${res.status}`))
       return
     }
     setModal({ kind: 'none' })
@@ -634,8 +633,7 @@ export default function AdminBackup() {
       }),
     })
     if (!res.ok) {
-      const data = (await res.json()) as { error?: string }
-      setModalError(data.error ?? `HTTP ${res.status}`)
+      setModalError(await getAPIError(res, `HTTP ${res.status}`))
       return
     }
     setModal({ kind: 'none' })
@@ -648,8 +646,7 @@ export default function AdminBackup() {
       method: 'DELETE',
     })
     if (!res.ok) {
-      const data = (await res.json()) as { error?: string }
-      setActionError(data.error ?? `HTTP ${res.status}`)
+      setActionError(await getAPIError(res, `HTTP ${res.status}`))
     }
     setModal({ kind: 'none' })
     await loadAll()
@@ -679,8 +676,7 @@ export default function AdminBackup() {
       },
     )
     if (!res.ok) {
-      const data = (await res.json()) as { error?: string }
-      setModalError(data.error ?? `HTTP ${res.status}`)
+      setModalError(await getAPIError(res, `HTTP ${res.status}`))
       return
     }
     setModal({ kind: 'none' })
@@ -722,8 +718,7 @@ export default function AdminBackup() {
       body: JSON.stringify({ targetId: form.targetId, scope }),
     })
     if (!res.ok) {
-      const data = (await res.json()) as { error?: string }
-      setModalError(data.error ?? `HTTP ${res.status}`)
+      setModalError(await getAPIError(res, `HTTP ${res.status}`))
       return
     }
     setModal({ kind: 'none' })
@@ -738,8 +733,7 @@ export default function AdminBackup() {
       method: 'POST',
     })
     if (!res.ok) {
-      const data = (await res.json()) as { error?: string }
-      setActionError(data.error ?? `HTTP ${res.status}`)
+      setActionError(await getAPIError(res, `HTTP ${res.status}`))
       return
     }
     await loadAll()

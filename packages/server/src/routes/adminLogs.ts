@@ -1,7 +1,10 @@
 import { readdir, readFile, stat } from 'node:fs/promises'
 import { join } from 'node:path'
 import { Hono } from 'hono'
+import { z } from 'zod'
 import config from '../config.ts'
+import { noCacheJSON } from '../http/responses.ts'
+import { validate } from '../http/validate.ts'
 
 const DEFAULT_LINES = 500
 const MAX_LINES = 5000
@@ -9,12 +12,19 @@ const MAX_LINES = 5000
 /** Rotated log file names: `current.jsonl` or `YYYY-MM-DD[.N].jsonl`. */
 const LOG_FILE_PATTERN = /^[\w-]+(\.\d+)?\.jsonl$/
 
-function parseLimit(value: string | undefined): number {
-  const requested = Number(value)
-  return Number.isFinite(requested) && requested > 0
-    ? Math.min(requested, MAX_LINES)
-    : DEFAULT_LINES
-}
+const logQuerySchema = z.object({
+  lines: z.coerce
+    .number()
+    .int()
+    .min(1)
+    .max(MAX_LINES)
+    .optional()
+    .default(DEFAULT_LINES),
+})
+
+const logFileParamsSchema = z.object({
+  name: z.string().regex(LOG_FILE_PATTERN, 'Invalid log file name'),
+})
 
 async function readEntries(
   logFile: string,
@@ -52,11 +62,11 @@ export function makeAdminLogsRouter(): Hono {
      * GET /admin/logs?lines=N
      * Returns the last N parsed entries from the current rotating log file.
      */
-    .get('/', async (c) => {
-      const limit = parseLimit(c.req.query('lines'))
+    .get('/', validate('query', logQuerySchema), async (c) => {
+      const { lines: limit } = c.req.valid('query')
       const logFile = join(config.get('appdata.logsPath'), 'current.jsonl')
 
-      return c.json({ lines: await readEntries(logFile, limit) })
+      return noCacheJSON(c, { lines: await readEntries(logFile, limit) })
     })
 
     /**
@@ -70,7 +80,7 @@ export function makeAdminLogsRouter(): Hono {
       try {
         names = await readdir(logsDir)
       } catch {
-        return c.json({ files: [] })
+        return noCacheJSON(c, { files: [] })
       }
 
       const files = await Promise.all(
@@ -84,26 +94,25 @@ export function makeAdminLogsRouter(): Hono {
 
       files.sort((a, b) => b.mtime.localeCompare(a.mtime))
 
-      return c.json({ files })
+      return noCacheJSON(c, { files })
     })
 
     /**
      * GET /admin/logs/files/:name?lines=N
      * Returns the last N parsed entries from a specific rotated log file.
      */
-    .get('/files/:name', async (c) => {
-      const name = c.req.param('name')
+    .get(
+      '/files/:name',
+      validate('param', logFileParamsSchema),
+      validate('query', logQuerySchema),
+      async (c) => {
+        const { name } = c.req.valid('param')
+        const { lines: limit } = c.req.valid('query')
+        const logFile = join(config.get('appdata.logsPath'), name)
 
-      // Strict allowlist pattern — also guards against path traversal.
-      if (!LOG_FILE_PATTERN.test(name)) {
-        return c.json({ error: 'Invalid log file name' }, 400)
-      }
-
-      const limit = parseLimit(c.req.query('lines'))
-      const logFile = join(config.get('appdata.logsPath'), name)
-
-      return c.json({ lines: await readEntries(logFile, limit) })
-    })
+        return noCacheJSON(c, { lines: await readEntries(logFile, limit) })
+      },
+    )
 
   return router
 }
