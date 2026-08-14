@@ -6,9 +6,7 @@ import si, { type Systeminformation } from 'systeminformation'
 
 const DISK_REFRESH_MS = 30_000
 
-export function makeStatsRouter(): Hono {
-  const router = new Hono()
-
+export function makeStatsRouter() {
   // os/system info never changes for the life of the process — collect once
   // and share across every connection instead of re-collecting every tick.
   const staticInfoPromise: Promise<
@@ -37,7 +35,7 @@ export function makeStatsRouter(): Hono {
   void staticInfoPromise
   void getDisk()
 
-  router.get('/', async (c) => {
+  const router = new Hono().get('/', async (c) => {
     return streamSSE(c, async (stream) => {
       const cores = availableParallelism()
       let prevCPUUsage = process.cpuUsage()

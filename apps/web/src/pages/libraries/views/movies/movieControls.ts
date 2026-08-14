@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useLibrarySort } from '../../hooks/useLibrarySort'
 import type { SortOption, SortValue } from '../../types/collectionView'
 
-export type MovieSortKey = 'title' | 'fileSize' | 'createdAt'
+export type MovieSortKey = 'sortOrder' | 'title' | 'fileSize' | 'createdAt'
 
 export const MOVIE_SORT_OPTIONS = [
   { label: 'Title A→Z', key: 'title', direction: 'asc' },

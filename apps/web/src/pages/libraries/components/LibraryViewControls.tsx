@@ -17,7 +17,7 @@ import type {
 } from '../types/collectionView'
 
 type LibraryViewControlsProps<Mode extends string, SortKey extends string> = {
-  libraryId: string
+  libraryId?: string
   modes: readonly LibraryViewModeDefinition<Mode, SortKey>[]
   viewMode: Mode
   sortKey: SortKey
@@ -50,13 +50,17 @@ export default function LibraryViewControls<
   const activeMode = modes.find((mode) => mode.id === viewMode) ?? modes[0]
   const showToolbarSort = activeMode?.sortPresentation === 'toolbar'
   const scanRunning = useScanStore(
-    (state) => state.scans[libraryId]?.status === 'running',
+    (state) =>
+      libraryId !== undefined && state.scans[libraryId]?.status === 'running',
   )
   const applyScanStarted = useScanStore((state) => state.applyStarted)
   const removeScan = useScanStore((state) => state.remove)
   const scan = useMutation({
-    onMutate: () => applyScanStarted(libraryId),
+    onMutate: () => {
+      if (libraryId) applyScanStarted(libraryId)
+    },
     mutationFn: async () => {
+      if (!libraryId) return
       const response = await apiFetch(`/api/libraries/${libraryId}/scan`, {
         method: 'POST',
       })
@@ -70,7 +74,9 @@ export default function LibraryViewControls<
         throw new Error(await getAPIError(response, 'Could not scan library'))
       }
     },
-    onError: () => removeScan(libraryId),
+    onError: () => {
+      if (libraryId) removeScan(libraryId)
+    },
   })
   const scanning = scan.isPending || scanRunning
 
@@ -102,19 +108,21 @@ export default function LibraryViewControls<
       </FilterHeader.ToolbarControls>
       <FilterHeader.ToolbarControls>
         {actions}
-        <Button
-          loading={scanning}
-          disabled={scanning}
-          title={scan.error instanceof Error ? scan.error.message : undefined}
-          onClick={() => scan.mutate()}
-        >
-          <ScanIcon aria-hidden="true" />
-          {scan.error
-            ? 'Scan failed'
-            : scanning
-              ? 'Scanning library'
-              : 'Scan library'}
-        </Button>
+        {libraryId && (
+          <Button
+            loading={scanning}
+            disabled={scanning}
+            title={scan.error instanceof Error ? scan.error.message : undefined}
+            onClick={() => scan.mutate()}
+          >
+            <ScanIcon aria-hidden="true" />
+            {scan.error
+              ? 'Scan failed'
+              : scanning
+                ? 'Scanning library'
+                : 'Scan library'}
+          </Button>
+        )}
         <ToggleButtonGroup value={[viewMode]}>
           {modes.map((mode) => (
             <ToggleButton

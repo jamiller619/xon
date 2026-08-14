@@ -1,5 +1,6 @@
 import { Dialog as UIDialog } from '@base-ui/react'
-import { DismissFilled as CloseIcon } from '@fluentui/react-icons'
+import { Dismiss16Regular as CloseIcon } from '@fluentui/react-icons'
+import clsx from 'clsx'
 import type { ReactNode } from 'react'
 import { Button, type ButtonProps, Flex } from '../../index.js'
 import styles from './Dialog.module.css'
@@ -13,6 +14,9 @@ type DialogProps = Omit<UIDialog.Root.Props, 'children'> & {
   children: ReactNode
   buttonProps?: ButtonProps
   showCloseButton?: boolean
+  backdropClassName?: string | undefined
+  popupClassName?: string | undefined
+  headerClassName?: string | undefined
 }
 
 export default function Dialog({
@@ -23,6 +27,9 @@ export default function Dialog({
   children,
   buttonProps,
   showCloseButton = true,
+  backdropClassName,
+  popupClassName,
+  headerClassName,
   ...props
 }: DialogProps) {
   return (
@@ -35,23 +42,36 @@ export default function Dialog({
         </UIDialog.Trigger>
       )}
       <UIDialog.Portal>
-        <UIDialog.Backdrop className={styles.backdrop} />
-        <UIDialog.Popup className={styles.popup}>
-          <Flex align="center" gap="3" className={styles.header}>
-            {showCloseButton && (
-              <UIDialog.Close
-                className={styles.close}
-                render={(props) => (
-                  <Button.Icon {...props}>
-                    <CloseIcon />
-                  </Button.Icon>
-                )}
-              />
-            )}
+        <UIDialog.Backdrop
+          className={clsx(styles.backdrop, backdropClassName)}
+        />
+        <UIDialog.Popup className={clsx(styles.popup, popupClassName)}>
+          <Flex
+            align="center"
+            gap="3"
+            className={clsx(styles.header, headerClassName)}
+          >
+            <div>
+              {showCloseButton && (
+                <UIDialog.Close
+                  className={styles.close}
+                  render={(props) => (
+                    <Button.Icon
+                      {...props}
+                      aria-label="Close dialog"
+                      variant="ghost"
+                    >
+                      <CloseIcon />
+                    </Button.Icon>
+                  )}
+                />
+              )}
+            </div>
             <UIDialog.Title className={styles.title}>{title}</UIDialog.Title>
             {headerActions != null && (
               <div className={styles.headerActions}>{headerActions}</div>
             )}
+            <div />
           </Flex>
           {description && (
             <UIDialog.Description>{description}</UIDialog.Description>

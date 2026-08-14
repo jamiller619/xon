@@ -1,4 +1,5 @@
-.button {
+button.button,
+a.button {
   --height: var(--form-control-height);
   position: relative;
   display: inline-flex;
@@ -27,8 +28,15 @@
     transform 0.1s ease,
     background 0.2s ease;
 
-  /* background: var(--color-gray-a2); */
-  background: var(--color-gray-3);
+  background: var(--color-gray-a2);
+
+  &:hover {
+    background: oklch(from var(--color-gray-11) l c h / 0.3);
+  }
+
+  &:active {
+    background: oklch(from var(--color-gray-10) l c h / 0.6);
+  }
 
   &.link {
     padding: 0;
@@ -43,11 +51,11 @@
 
   &.primary,
   &[type="submit"] {
-    background: var(--color-accent-a1);
+    background: var(--color-accent-a2);
     color: var(--color-gray-12);
 
     &:hover:not([data-disabled]) {
-      background: var(--color-accent-8);
+      background: var(--color-accent-a1);
     }
   }
 
@@ -112,8 +120,12 @@
       background: transparent;
       outline: none;
 
+      &:hover {
+        background: var(--color-gray-a2);
+      }
+
       &[data-popup-open] {
-        background: var(--color-gray-8);
+        background: var(--color-gray-a3);
       }
     }
   }

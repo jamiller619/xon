@@ -64,6 +64,8 @@
   --color-red-a4: oklch(from var(--color-red-2) l c h / 0.2);
 
   --color-surface: var(--color-gray-a1);
+  --color-surface-2: var(--color-gray-a2);
+  --color-surface-3: var(--color-gray-a4);
 
   --color-text: var(--color-gray-12);
   --color-text-muted: var(--color-gray-10);

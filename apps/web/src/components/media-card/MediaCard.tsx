@@ -17,7 +17,7 @@ import {
   Dialog,
 } from '@xon/ui'
 import { type ComponentPropsWithRef, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { useRefreshMetadataConfirmation } from '~/components/confirmation/ConfirmationProvider'
 import usePlayState from '~/hooks/usePlayState'
 import { apiFetch, thumbnailUrl } from '~/lib/apiFetch'
@@ -27,6 +27,7 @@ import EditImages from '../EditImages'
 import FixMatchDialog from '../fix-match/FixMatchDialog'
 import ListView from './ListView'
 import styles from './MediaCard.module.css'
+import { startMediaViewTransition } from './mediaViewTransition'
 import ProgressBar, { getProgress } from './ProgressBar'
 
 interface MediaCardProps {
@@ -53,6 +54,7 @@ export default function MediaCard({
   listRowProps,
 }: MediaCardProps) {
   const confirmRefresh = useRefreshMetadataConfirmation()
+  const navigate = useNavigate()
   const playTrack = useAudioStore((s) => s.playTrack)
   const addToQueue = useAudioStore((s) => s.addToQueue)
   const [editImagesOpen, setEditImagesOpen] = useState(false)
@@ -63,10 +65,20 @@ export default function MediaCard({
   const link = mediaPath(item)
   const progress = getProgress(playState?.position, playState?.duration)
 
-  function handleOpen(e: React.MouseEvent) {
-    if (!onOpen) return
-    e.preventDefault()
-    onOpen(item, e)
+  function handleOpen(e: React.MouseEvent<HTMLElement>) {
+    if (onOpen) {
+      e.preventDefault()
+      onOpen(item, e)
+      return
+    }
+
+    startMediaViewTransition({
+      event: e,
+      item,
+      navigate,
+      state: { ...item, library },
+      to: link,
+    })
   }
 
   function handlePlay(e: React.MouseEvent) {
@@ -110,8 +122,8 @@ export default function MediaCard({
       <ListView
         item={item}
         handleAddToQueue={handleAddToQueue}
+        handleOpen={handleOpen}
         handlePlay={handlePlay}
-        onOpen={onOpen}
         progress={playState ? progress : undefined}
         {...(listRowProps ? { rowProps: listRowProps } : {})}
       />

@@ -1,6 +1,5 @@
 import path, { basename, dirname, extname } from 'node:path'
 import { CollectionType, MediaType } from '@xon/shared'
-// import { CollectionType, getMediaTypesForCategory, MediaCategory } from '@xon/shared'
 import { inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { collectionItems, collections } from '../db/schema.ts'
@@ -11,17 +10,6 @@ export interface TvEpisodeInfo {
   season: number
   episode: number
 }
-
-// export async function checkIfSeeded(db: LibSQLDatabase): Promise<void> {
-//   const data = await db.select().from(collections)
-
-//   if (data.length === 0) {
-//     await db.insert(collections).values({
-//       title: 'Favorites',
-//       type: CollectionType.Collection,
-//     })
-//   }
-// }
 
 /**
  * Parses TV episode info from a filename.
@@ -257,29 +245,6 @@ export async function createTvCollections(
   if (memberInserts.length > 0) {
     await db.insert(collectionItems).values(memberInserts)
   }
-}
-
-function makeAudiobookSeriesCollectionId(
-  libraryId: string,
-  seriesTitle: string,
-): string {
-  return `col:audiobook-series:${libraryId}:${seriesTitle}`
-}
-
-function makeAudiobookBookCollectionId(
-  libraryId: string,
-  bookTitle: string,
-): string {
-  return `col:book:${libraryId}:${bookTitle}`
-}
-
-interface AudiobookChapterData {
-  id: string
-  bookTitle: string
-  narrator: string | null
-  seriesName: string | null
-  trackNumber: number
-  fileName: string
 }
 
 /**

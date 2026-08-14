@@ -55,15 +55,15 @@
   corner-shape: var(--corner-shape);
   line-height: 0;
   letter-spacing: 0.04em;
-
-  &:hover {
-    text-decoration: none;
-  }
+  transition:
+    background 0.15s,
+    color 0.15s;
 
   &:hover,
-  &.active {
-    background: var(--color-gray-4);
+  &:global(.active) {
+    text-decoration: none;
     color: var(--color-gray-12);
+    background: var(--color-surface-2);
   }
 
   .iconDefault {
@@ -74,7 +74,7 @@
     display: none;
   }
 
-  &.active {
+  &:global(.active) {
     .iconDefault {
       display: none;
     }

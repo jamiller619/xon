@@ -48,63 +48,62 @@ async function readEntries(
  */
 export function makeAdminLogsRouter(): Hono {
   const router = new Hono()
+    /**
+     * GET /admin/logs?lines=N
+     * Returns the last N parsed entries from the current rotating log file.
+     */
+    .get('/', async (c) => {
+      const limit = parseLimit(c.req.query('lines'))
+      const logFile = join(config.get('appdata.logsPath'), 'current.jsonl')
 
-  /**
-   * GET /admin/logs?lines=N
-   * Returns the last N parsed entries from the current rotating log file.
-   */
-  router.get('/', async (c) => {
-    const limit = parseLimit(c.req.query('lines'))
-    const logFile = join(config.get('appdata.logsPath'), 'current.jsonl')
+      return c.json({ lines: await readEntries(logFile, limit) })
+    })
 
-    return c.json({ lines: await readEntries(logFile, limit) })
-  })
+    /**
+     * GET /admin/logs/files
+     * Lists the JSONL log files in the logs directory, newest first.
+     */
+    .get('/files', async (c) => {
+      const logsDir = config.get('appdata.logsPath')
 
-  /**
-   * GET /admin/logs/files
-   * Lists the JSONL log files in the logs directory, newest first.
-   */
-  router.get('/files', async (c) => {
-    const logsDir = config.get('appdata.logsPath')
+      let names: string[]
+      try {
+        names = await readdir(logsDir)
+      } catch {
+        return c.json({ files: [] })
+      }
 
-    let names: string[]
-    try {
-      names = await readdir(logsDir)
-    } catch {
-      return c.json({ files: [] })
-    }
+      const files = await Promise.all(
+        names
+          .filter((name) => LOG_FILE_PATTERN.test(name))
+          .map(async (name) => {
+            const info = await stat(join(logsDir, name))
+            return { name, size: info.size, mtime: info.mtime.toISOString() }
+          }),
+      )
 
-    const files = await Promise.all(
-      names
-        .filter((name) => LOG_FILE_PATTERN.test(name))
-        .map(async (name) => {
-          const info = await stat(join(logsDir, name))
-          return { name, size: info.size, mtime: info.mtime.toISOString() }
-        }),
-    )
+      files.sort((a, b) => b.mtime.localeCompare(a.mtime))
 
-    files.sort((a, b) => b.mtime.localeCompare(a.mtime))
+      return c.json({ files })
+    })
 
-    return c.json({ files })
-  })
+    /**
+     * GET /admin/logs/files/:name?lines=N
+     * Returns the last N parsed entries from a specific rotated log file.
+     */
+    .get('/files/:name', async (c) => {
+      const name = c.req.param('name')
 
-  /**
-   * GET /admin/logs/files/:name?lines=N
-   * Returns the last N parsed entries from a specific rotated log file.
-   */
-  router.get('/files/:name', async (c) => {
-    const name = c.req.param('name')
+      // Strict allowlist pattern — also guards against path traversal.
+      if (!LOG_FILE_PATTERN.test(name)) {
+        return c.json({ error: 'Invalid log file name' }, 400)
+      }
 
-    // Strict allowlist pattern — also guards against path traversal.
-    if (!LOG_FILE_PATTERN.test(name)) {
-      return c.json({ error: 'Invalid log file name' }, 400)
-    }
+      const limit = parseLimit(c.req.query('lines'))
+      const logFile = join(config.get('appdata.logsPath'), name)
 
-    const limit = parseLimit(c.req.query('lines'))
-    const logFile = join(config.get('appdata.logsPath'), name)
-
-    return c.json({ lines: await readEntries(logFile, limit) })
-  })
+      return c.json({ lines: await readEntries(logFile, limit) })
+    })
 
   return router
 }

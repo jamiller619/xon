@@ -15,7 +15,8 @@ import {
   type ScanProgress,
   scanLibrary,
 } from './orchestrator.ts'
-import { type SchedulerHandle, startScheduler } from './scheduler.ts'
+
+// import { type SchedulerHandle, startScheduler } from './scheduler.ts'
 
 const logger = createLogger('scanner-child')
 
@@ -41,7 +42,7 @@ type QueueItem = {
 
 const queue: QueueItem[] = []
 let running = false
-let scheduler: SchedulerHandle | undefined
+// let scheduler: SchedulerHandle | undefined
 
 async function runNext(): Promise<void> {
   if (running) return
@@ -108,7 +109,7 @@ async function main(): Promise<void> {
       void runNext()
     } else if (msg.type === 'shutdown') {
       logger.log('Shutdown requested')
-      scheduler?.stop()
+      // scheduler?.stop()
       client.close()
 
       process.removeAllListeners('message')
@@ -122,18 +123,18 @@ async function main(): Promise<void> {
   // Recursive fs.watch() setup can synchronously traverse very large directory
   // trees. Start it only after reporting ready so it cannot delay the HTTP
   // server, and keep that work isolated in this scanner process.
-  setImmediate(() => {
-    startScheduler(db, async (_, libraryId) => {
-      send({ type: 'scan-trigger', libraryId })
-    })
-      .then((handle) => {
-        scheduler = handle
-        logger.log('Scanner scheduler ready')
-      })
-      .catch((err) => {
-        logger.error('Scanner scheduler failed to start', err)
-      })
-  })
+  // setImmediate(() => {
+  //   startScheduler(db, async (_, libraryId) => {
+  //     send({ type: 'scan-trigger', libraryId })
+  //   })
+  //     .then((handle) => {
+  //       scheduler = handle
+  //       logger.log('Scanner scheduler ready')
+  //     })
+  //     .catch((err) => {
+  //       logger.error('Scanner scheduler failed to start', err)
+  //     })
+  // })
 }
 
 main().catch((err) => {

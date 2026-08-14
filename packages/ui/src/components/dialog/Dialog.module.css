@@ -21,23 +21,15 @@
 .title {
   font-size: var(--text-md);
   font-weight: 500;
-}
-
-.close {
-  /* border-radius: 1000px;
-  corner-shape: round;
-  display: flex;
-  padding: var(--space-xs);
-  margin: 0 0 0 -0.5rem;
-  font-size: 15px;
-  width: 30px;
-  height: 30px;
-  line-height: 0.9;
-  color: var(--color-gray-11); */
+  width: stretch;
+  text-align: center;
 }
 
 .header {
   margin-block-end: var(--space-md);
+  > * {
+    flex: 1;
+  }
 }
 
 .headerActions {

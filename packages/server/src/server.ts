@@ -6,7 +6,6 @@ import { createApp } from './app.ts'
 import db, { client } from './db/db.ts'
 import { migrateDatabase } from './db/migrate.ts'
 import { eventBus, type XonEvent } from './events.ts'
-import { makeStaticMiddleware } from './http/staticFiles.ts'
 import { closeLogger, createLogger, initLogger, setLogLevel } from './logger.ts'
 import { rebuildThumbnail } from './services/libraryThumbnailService.ts'
 
@@ -22,7 +21,6 @@ import {
   setPluginDatabase,
   setPluginSettingsSource,
 } from './plugins/pluginManager.ts'
-import { makeOpenDirectoryRouter } from './routes/openDirectory.ts'
 import { triggerLibraryScan } from './routes/scan.ts'
 import { createWsServer, WS_PATH } from './routes/ws.ts'
 import { startScannerChild } from './scanner/scannerHandle.ts'
@@ -46,8 +44,6 @@ process.on('unhandledRejection', (reason: unknown) => {
 export async function boot(): Promise<void> {
   const start = Date.now()
   const port = Number(config.get('network.httpPort'))
-  const webClientDir = process.env.WEB_CLIENT_DIR
-  const webSsrBundle = process.env.WEB_SSR_BUNDLE
 
   await initLogger()
 
@@ -154,12 +150,6 @@ export async function boot(): Promise<void> {
     const app = new Hono()
 
     app.route('/', apiApp)
-    app.route('/opendir', makeOpenDirectoryRouter(db))
-
-    if (webClientDir) {
-      logger.log(`Serving web client from ${webClientDir}`)
-      app.use('/*', makeStaticMiddleware(webClientDir, webSsrBundle))
-    }
 
     const serveOptions =
       tlsCert && tlsKey

@@ -11,9 +11,12 @@ import type {
 } from '@xon/plugin-sdk'
 import { BasePlugin, pluginSettingKey } from '@xon/plugin-sdk'
 import type { PluginCategory } from '@xon/shared'
+import { createLogger } from '../logger.ts'
 import { cacheReference } from '../media/cachePaths.ts'
 import { discoverPluginManifests } from './pluginLoader.ts'
 import { createSandboxedFetch } from './pluginSandbox.ts'
+
+const logger = createLogger('plugin-manager')
 
 type AnyPluginEventHandler = (payload: unknown) => void | Promise<void>
 
@@ -113,24 +116,17 @@ export async function emitPluginEvent<E extends PluginEvent>(
   if (!handlers) return
   for await (const handler of handlers) {
     await Promise.resolve(handler(payload)).catch((err: unknown) => {
-      console.error(`[plugin-manager] Hook error on "${event}":`, err)
+      logger.error(`[plugin-manager] Hook error on "${event}":`, err)
     })
   }
 }
 
 function buildContext(entry: PluginEntry): PluginContext {
-  // const db = _pluginClient
-  //   ? createPluginDatabaseAccess(entry.manifest.id, _pluginClient)
-  //   : {
-  //       query: async (_sql: string, _params?: unknown[]) => [],
-  //     }
-
   const allowedDomains = entry.manifest.permissions?.network ?? []
   const sandboxedFetch = createSandboxedFetch(entry.manifest.id, allowedDomains)
 
   return {
     manifest: entry.manifest,
-    // db,
     fetch: sandboxedFetch,
     images: {
       // Downloads on behalf of the plugin so plugins never touch the
@@ -209,11 +205,11 @@ function buildContext(entry: PluginEntry): PluginContext {
     },
     logger: {
       info: (msg: string) =>
-        console.log(`[plugin:${entry.manifest.id}] ${msg}`),
+        logger.info(`[plugin:${entry.manifest.id}] ${msg}`),
       warn: (msg: string) =>
-        console.warn(`[plugin:${entry.manifest.id}] ${msg}`),
+        logger.warn(`[plugin:${entry.manifest.id}] ${msg}`),
       error: (msg: string) =>
-        console.error(`[plugin:${entry.manifest.id}] ${msg}`),
+        logger.error(`[plugin:${entry.manifest.id}] ${msg}`),
     },
   }
 }
@@ -365,7 +361,7 @@ export async function discoverAndActivatePlugins(
 
   for (const result of results) {
     if (!result.success) {
-      console.error(
+      logger.error(
         `[plugin-manager] Skipping plugin at ${result.pluginDir}: ${result.error}`,
       )
       const fallbackId = basename(result.pluginDir)
@@ -381,12 +377,12 @@ export async function discoverAndActivatePlugins(
     try {
       await loadPlugin(dir, manifest)
       await activatePlugin(manifest.id)
-      console.log(
+      logger.info(
         `[plugin-manager] Activated plugin: ${manifest.id} (${manifest.name})`,
       )
     } catch (err) {
       const errorMsg = err instanceof Error ? err.message : String(err)
-      console.error(
+      logger.error(
         `[plugin-manager] Failed to activate plugin "${manifest.id}": ${errorMsg}`,
       )
       pluginErrors.set(manifest.id, {

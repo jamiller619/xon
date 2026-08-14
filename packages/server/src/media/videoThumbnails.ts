@@ -20,18 +20,6 @@ const RANDOM_FRAME_RANGE = 0.9
 const BACKDROP_WIDTH = 1280
 const BACKDROP_HEIGHT = 720
 
-// const VIDEO_CATEGORIES = new Set<string>([
-//   MediaCategory.Movies,
-//   MediaCategory.TVShows,
-//   // MediaCategory.Clips,
-//   MediaCategory.HomeVideos,
-// ])
-
-// export function isVideoCategory(category: string | null): boolean {
-//   if (!category) return false
-//   return VIDEO_CATEGORIES.has(category)
-// }
-
 function getVideoDuration(filePath: string): Promise<number | null> {
   return new Promise((resolve) => {
     let stdout = ''

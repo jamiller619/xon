@@ -17,18 +17,26 @@ type MovieLibraryMediaOptions = {
   unmatchedOnly: boolean
 }
 
+export type MovieMediaSource =
+  | { kind: 'library'; id: string }
+  | { kind: 'collection'; id: string }
+
+type MovieMediaOptions = Omit<MovieLibraryMediaOptions, 'libraryId'> & {
+  source: MovieMediaSource
+  sortKey: MovieSortKey | 'sortOrder'
+}
+
 type MovieLibraryMediaResult = {
   items: MediaItem[]
   total: number
 }
 
-export function useMovieLibraryMedia(options: MovieLibraryMediaOptions) {
-  const { libraryId, sortKey, sortDirection, mediaType, unmatchedOnly } =
-    options
+export function useMovieMedia(options: MovieMediaOptions) {
+  const { source, sortKey, sortDirection, mediaType, unmatchedOnly } = options
   const queryClient = useQueryClient()
   const queryKey = [
-    'library-media',
-    libraryId,
+    `${source.kind}-media`,
+    source.id,
     { sortKey, sortDirection, mediaType, unmatchedOnly },
   ] as const
 
@@ -48,10 +56,13 @@ export function useMovieLibraryMedia(options: MovieLibraryMediaOptions) {
       if (mediaType) params.set('mediaType', mediaType)
       if (unmatchedOnly) params.set('unmatched', 'true')
 
-      const response = await apiFetch(
-        `/api/libraries/${libraryId}/media?${params.toString()}`,
-        { signal },
-      )
+      const mediaPath =
+        source.kind === 'library'
+          ? `/api/libraries/${source.id}/media`
+          : `/api/collections/${source.id}/media`
+      const response = await apiFetch(`${mediaPath}?${params.toString()}`, {
+        signal,
+      })
       if (!response.ok) throw new Error('Failed to load media')
 
       const items = (await response.json()) as MediaItem[]
@@ -80,7 +91,8 @@ export function useMovieLibraryMedia(options: MovieLibraryMediaOptions) {
         event.type !== 'scan:error'
       )
         return
-      if (event.payload.libraryId !== libraryId) return
+      if (source.kind === 'library' && event.payload.libraryId !== source.id)
+        return
       if (
         event.type === 'scan:progress' &&
         event.payload.phase === 'discovering'
@@ -96,13 +108,23 @@ export function useMovieLibraryMedia(options: MovieLibraryMediaOptions) {
 
       lastRefresh = now
       void queryClient.invalidateQueries({
-        queryKey: ['library-media', libraryId],
+        queryKey: [`${source.kind}-media`, source.id],
       })
-      void queryClient.invalidateQueries({
-        queryKey: ['library-stats', libraryId],
-      })
+      if (source.kind === 'library') {
+        void queryClient.invalidateQueries({
+          queryKey: ['library-stats', source.id],
+        })
+      }
     })
-  }, [libraryId, queryClient])
+  }, [queryClient, source.id, source.kind])
 
   return query
+}
+
+export function useMovieLibraryMedia(options: MovieLibraryMediaOptions) {
+  const { libraryId, ...mediaOptions } = options
+  return useMovieMedia({
+    ...mediaOptions,
+    source: { kind: 'library', id: libraryId },
+  })
 }

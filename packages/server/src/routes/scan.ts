@@ -2,10 +2,10 @@ import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { requireAuth } from '../auth/middleware.ts'
 import { appCache } from '../cache.ts'
 import { libraries } from '../db/schema.ts'
 import { emitEvent } from '../events.ts'
+import { requireAuth } from '../http/authMiddleware.js'
 import { validate } from '../http/validate.ts'
 import { emitPluginEvent } from '../plugins/pluginManager.ts'
 import type { ScannerHandle } from '../scanner/scannerHandle.ts'
@@ -20,10 +20,6 @@ const scheduleSchema = z.object({
       (v) => v === null || parseCronInterval(v) !== null,
       "Invalid or unsupported cron expression. Supported: '*/N * * * *' or '0 */N * * *'",
     ),
-})
-
-const watchSchema = z.object({
-  watchEnabled: z.boolean(),
 })
 
 /**
@@ -110,111 +106,87 @@ function runScanJob(
 export function makeScanRouter(
   db: LibSQLDatabase,
   scannerHandle: ScannerHandle,
-): Hono {
+) {
   const router = new Hono()
 
-  // POST / — trigger scan (mounted at /:libraryId/scan) (manager+)
-  router.post('/', requireAuth(), (c) => {
-    const libraryId = c.req.param('libraryId') as string
-    const started = triggerLibraryScan(scannerHandle, libraryId)
-    if (!started) {
-      return c.json({ status: 'already_running' }, 409)
-    }
-    return c.json({ status: 'started' }, 202)
-  })
-
-  // POST /refresh — re-run metadata plugins for the whole library, or a
-  // single item when the body carries { mediaItemId } (mounted at
-  // /:libraryId/scan/refresh) (manager+)
-  router.post('/refresh', requireAuth(), async (c) => {
-    const libraryId = c.req.param('libraryId') as string
-
-    const body = (await c.req.json().catch(() => ({}))) as {
-      mediaItemId?: unknown
-    }
-    const mediaItemId =
-      typeof body.mediaItemId === 'string' ? body.mediaItemId : undefined
-
-    const started = triggerMetadataRefresh(scannerHandle, libraryId, mediaItemId)
-    if (!started) {
-      return c.json({ status: 'already_running' }, 409)
-    }
-    return c.json({ status: 'started' }, 202)
-  })
-
-  // GET /status — get scan status (mounted at /:libraryId/scan/status)
-  router.get('/status', (c) => {
-    const libraryId = c.req.param('libraryId') as string
-
-    const state = scanRegistry.get(libraryId)
-    if (!state) {
-      return c.json({ status: 'idle' })
-    }
-
-    return c.json({
-      status: state.status,
-      startedAt: state.startedAt.toISOString(),
-      progress: state.progress,
-      summary: state.summary,
-      error: state.error,
-    })
-  })
-
-  // PUT /schedule — update scan schedule for a library (manager+)
-  router.put(
-    '/schedule',
-    requireAuth(),
-    validate('json', scheduleSchema),
-    async (c) => {
+    // POST / — trigger scan (mounted at /:libraryId/scan) (manager+)
+    .post('/', requireAuth, (c) => {
       const libraryId = c.req.param('libraryId') as string
-      const { scanSchedule } = c.req.valid('json')
+      const started = triggerLibraryScan(scannerHandle, libraryId)
+      if (!started) {
+        return c.json({ status: 'already_running' }, 409)
+      }
+      return c.json({ status: 'started' }, 202)
+    })
 
-      const existing = await db
-        .select()
-        .from(libraries)
-        .where(eq(libraries.id, libraryId))
-      if (existing.length === 0) return c.json({ error: 'Not found' }, 404)
+    // POST /refresh — re-run metadata plugins for the whole library, or a
+    // single item when the body carries { mediaItemId } (mounted at
+    // /:libraryId/scan/refresh) (manager+)
+    .post('/refresh', requireAuth, async (c) => {
+      const libraryId = c.req.param('libraryId') as string
 
-      await db
-        .update(libraries)
-        .set({ scanSchedule, updatedAt: new Date() })
-        .where(eq(libraries.id, libraryId))
+      const body = (await c.req.json().catch(() => ({}))) as {
+        mediaItemId?: unknown
+      }
+      const mediaItemId =
+        typeof body.mediaItemId === 'string' ? body.mediaItemId : undefined
 
-      const updated = await db
-        .select()
-        .from(libraries)
-        .where(eq(libraries.id, libraryId))
-      return c.json(updated[0])
-    },
-  )
+      const started = triggerMetadataRefresh(
+        scannerHandle,
+        libraryId,
+        mediaItemId,
+      )
+      if (!started) {
+        return c.json({ status: 'already_running' }, 409)
+      }
+      return c.json({ status: 'started' }, 202)
+    })
 
-  // PUT /watch — enable/disable filesystem watch for a library (manager+)
-  // router.put(
-  //   '/watch',
-  //   requireAuth(),
-  //   validate('json', watchSchema),
-  //   async (c) => {
-  //     const libraryId = c.req.param('libraryId') as string
-  //     const { watchEnabled } = c.req.valid('json')
+    // GET /status — get scan status (mounted at /:libraryId/scan/status)
+    .get('/status', (c) => {
+      const libraryId = c.req.param('libraryId') as string
 
-  //     const existing = await db
-  //       .select()
-  //       .from(libraries)
-  //       .where(eq(libraries.id, libraryId))
-  //     if (existing.length === 0) return c.json({ error: 'Not found' }, 404)
+      const state = scanRegistry.get(libraryId)
+      if (!state) {
+        return c.json({ status: 'idle' })
+      }
 
-  //     await db
-  //       .update(libraries)
-  //       .set({ watchEnabled, updatedAt: new Date() })
-  //       .where(eq(libraries.id, libraryId))
+      return c.json({
+        status: state.status,
+        startedAt: state.startedAt.toISOString(),
+        progress: state.progress,
+        summary: state.summary,
+        error: state.error,
+      })
+    })
 
-  //     const updated = await db
-  //       .select()
-  //       .from(libraries)
-  //       .where(eq(libraries.id, libraryId))
-  //     return c.json(updated[0])
-  //   },
-  // )
+    // PUT /schedule — update scan schedule for a library (manager+)
+    .put(
+      '/schedule',
+      requireAuth,
+      validate('json', scheduleSchema),
+      async (c) => {
+        const libraryId = c.req.param('libraryId') as string
+        const { scanSchedule } = c.req.valid('json')
+
+        const existing = await db
+          .select()
+          .from(libraries)
+          .where(eq(libraries.id, libraryId))
+        if (existing.length === 0) return c.json({ error: 'Not found' }, 404)
+
+        await db
+          .update(libraries)
+          .set({ scanSchedule, updatedAt: new Date() })
+          .where(eq(libraries.id, libraryId))
+
+        const updated = await db
+          .select()
+          .from(libraries)
+          .where(eq(libraries.id, libraryId))
+        return c.json(updated[0])
+      },
+    )
 
   return router
 }

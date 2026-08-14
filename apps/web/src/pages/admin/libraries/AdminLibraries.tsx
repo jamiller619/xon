@@ -62,13 +62,13 @@ const styles = css`
 `
 
 export default function AdminLibraries() {
-  const { data: libraries, refetch } = useLibraries()
+  const { data: libraries, refetch: refetchLibraries } = useLibraries()
 
   return (
     <Page>
       <Page.Title>Manage Libraries</Page.Title>
       <header className={styles.header}>
-        <CreateLibraryButton onSuccess={() => void refetch()} />
+        <CreateLibraryButton onSuccess={() => void refetchLibraries()} />
         <Button onClick={() => void console.log('test')}>
           <AddLibraryIcon />
           Scan Libraries

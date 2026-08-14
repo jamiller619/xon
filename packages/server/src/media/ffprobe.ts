@@ -4,20 +4,6 @@ import { ffprobePath } from './binaries.ts'
 
 const logger = createLogger('ffprobe')
 
-// const VIDEO_CATEGORIES = new Set<string>([
-//   MediaCategory.Movies,
-//   MediaCategory.TVShows,
-//   // MediaCategory.Clips,
-//   MediaCategory.HomeVideos,
-// ])
-
-// const AUDIO_CATEGORIES = new Set<string>([
-//   MediaCategory.Music,
-//   // MediaCategory.Audiobooks,
-//   // MediaCategory.AudioClips,
-//   // MediaCategory.Podcasts,
-// ])
-
 export type FfprobeMetadata = {
   duration?: number
   bitrate?: number
@@ -35,12 +21,6 @@ export type StreamTrack = {
   language?: string
   title?: string
 }
-
-// export function isAudioVideoCategory(mediaType: string | null): boolean {
-//   if (!mediaType) return false
-
-//   return mediaType.startsWith('video/') || mediaType.startsWith('audio/')
-// }
 
 export async function extractStreamTracks(
   filePath: string,

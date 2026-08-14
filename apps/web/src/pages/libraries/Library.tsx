@@ -28,7 +28,8 @@ export default function LibraryBrowser() {
     return <LibraryRouteError>Failed to load library</LibraryRouteError>
   }
 
-  const LibraryView = LIBRARY_TYPE_VIEWS[library.type]
+  const LibraryView =
+    LIBRARY_TYPE_VIEWS[library.type as keyof typeof LIBRARY_TYPE_VIEWS]
   if (!LibraryView) {
     return <LibraryRouteError>Unsupported library type</LibraryRouteError>
   }

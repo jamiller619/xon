@@ -13,9 +13,10 @@ import {
   Surface,
 } from '@xon/ui'
 import clsx from 'clsx'
-import { useLayoutEffect, useRef, useState } from 'react'
+import { lazy, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { BackgroundSlideshow } from '~/components/background-slideshow/BackgroundSlideshow'
+import { mediaPosterTransitionName } from '~/components/media-card/mediaViewTransition'
 import PluginSlot from '~/components/PluginSlot'
 import useCollections from '~/hooks/useCollections'
 import useQueryAPIHelper from '~/hooks/useQueryAPIHelper'
@@ -24,7 +25,6 @@ import basename from '~/lib/basename'
 import icons from '~/lib/icons'
 import { findScrollViewport } from '~/lib/scrollViewport'
 import MetaTable from './components/MetaTable'
-import VideoPlayer from './components/VideoPlayer'
 import styles from './Media.module.css'
 import Cast from './movies/Cast'
 import MovieSubtitle from './movies/MovieSubtitle'
@@ -47,18 +47,26 @@ function buildMoreMenu(addToChildren?: MenuItem[] | undefined): MenuItems {
   ]
 }
 
+const VideoPlayer = lazy(() => import('./components/VideoPlayer'))
+
 export default function Media() {
   const { id } = useParams<{ id: string }>()
   const pageRef = useRef<HTMLDivElement>(null)
   const [showPlayer, setShowPlayer] = useState(false)
-  const placeholderData = useLocation().state as MediaItem & {
-    library?: Library
-  }
+  const placeholderData = useLocation().state as
+    | (MediaItem & { library?: Library })
+    | undefined
   const [collections, addMediaToCollection] = useCollections()
 
-  const { data, error } = useQuery<MediaItem & { library?: Library }>({
+  const {
+    data,
+    error,
+    refetch: refetchLibraries,
+  } = useQuery<MediaItem & { library?: Library; collectionIds: string[] }>({
     ...useQueryAPIHelper('mediaByIdWithLibrary', { id }),
-    placeholderData,
+    ...(placeholderData
+      ? { placeholderData: { ...placeholderData, collectionIds: [] } }
+      : {}),
   })
 
   useLayoutEffect(() => {
@@ -135,6 +143,11 @@ export default function Media() {
               alt={data.title ?? fileName}
               loading="lazy"
               className={styles.posterImg}
+              data-media-poster-id={data.id}
+              style={{
+                viewTransitionName: mediaPosterTransitionName(data.id),
+                viewTransitionClass: 'media-poster',
+              }}
             />
           ) : (
             <div className={styles.posterPlaceholder}></div>
@@ -144,6 +157,7 @@ export default function Media() {
           <Button
             className={styles.playButton}
             onClick={() => setShowPlayer(true)}
+            variant="primary"
           >
             <PlayIcon />
           </Button>
@@ -188,20 +202,24 @@ export default function Media() {
             <MovieSubtitle data={data} />
           )}
           <Menu
-            className={styles.optionsMenu}
+            className={styles.moreMenu}
             items={buildMoreMenu(
               collections?.map((c) => ({
                 label: c.title,
+                disabled: data.collectionIds.includes(c.id),
                 onClick: () => {
-                  addMediaToCollection.mutate({
-                    mediaItemId: data.id,
-                    collectionId: c.id,
-                  })
+                  addMediaToCollection.mutate(
+                    {
+                      mediaItemId: data.id,
+                      collectionId: c.id,
+                    },
+                    { onSuccess: () => void refetchLibraries() },
+                  )
                 },
               })),
             )}
           >
-            <Button.Icon>
+            <Button.Icon variant="ghost">
               <MoreVerticalIcon />
             </Button.Icon>
           </Menu>

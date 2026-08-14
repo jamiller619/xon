@@ -43,15 +43,22 @@ export default function Flex<C extends ElementType = 'div'>({
   return createElement(
     Component,
     {
-      className: clsx(styles.flex, className),
-      style: resolveStyle(
-        { ...style },
-        dir,
-        gap,
-        align,
-        justify,
-        wrap === true ? 'wrap' : wrap === false ? 'nowrap' : undefined,
-      ),
+      className: clsx(styles.flex, className, {
+        [styles.nowrap as string]: wrap === false,
+        [styles.row as string]: dir === 'row',
+        [styles.col as string]: dir === 'col',
+        [styles[`gap-${gap}`] as string]: gap,
+        [styles[`align-${align}`] as string]: align,
+        [styles[`justify-${justify}`] as string]: justify,
+      }),
+      // style: resolveStyle(
+      //   { ...style },
+      //   dir,
+      //   gap,
+      //   align,
+      //   justify,
+      //   wrap === true ? 'wrap' : wrap === false ? 'nowrap' : undefined,
+      // ),
       ref,
       ...props,
     },

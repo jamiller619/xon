@@ -10,6 +10,7 @@ interface AppState {
   setSelectMode: (mode: boolean) => void
   selectedItems: string[]
   setSelectedItems: (items: string[]) => void
+  startSelection: (id: string) => void
 }
 
 export const useAppStore = create<AppState>()(
@@ -21,6 +22,7 @@ export const useAppStore = create<AppState>()(
       setSelectMode: (mode) => set({ isSelectMode: mode }),
       selectedItems: [],
       setSelectedItems: (items) => set({ selectedItems: items }),
+      startSelection: (id) => set({ isSelectMode: true, selectedItems: [id] }),
     }),
     {
       name: VIEW_MODE_STORAGE_KEY,

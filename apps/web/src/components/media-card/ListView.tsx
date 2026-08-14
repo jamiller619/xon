@@ -11,7 +11,7 @@ type ListViewProps = {
   item: MediaItem
   handlePlay: (e: React.MouseEvent) => void
   handleAddToQueue: (e: React.MouseEvent) => void
-  onOpen?: ((item: MediaItem) => void) | undefined
+  handleOpen: (e: React.MouseEvent<HTMLElement>) => void
   progress?: number | undefined
   rowProps?: ComponentPropsWithRef<'tr'> & { 'data-index'?: number }
 }
@@ -20,7 +20,7 @@ export default function ListView({
   item,
   handlePlay,
   handleAddToQueue,
-  onOpen,
+  handleOpen,
   progress,
   rowProps,
 }: ListViewProps) {
@@ -28,17 +28,12 @@ export default function ListView({
   const posterSrc = thumbnailUrl(item, 'small')
   const link = mediaPath(item)
 
-  function handleOpen(e: React.MouseEvent) {
-    if (!onOpen) return
-    e.preventDefault()
-    onOpen(item)
-  }
-
   return (
     <tr {...rowProps}>
       <td className={styles.listThumbCell}>
         <Link
           to={link}
+          state={item}
           onClick={handleOpen}
           className={`${styles.listThumbLink} ${item.drmProtected ? styles.listThumbDrm : ''}`}
         >
@@ -61,7 +56,12 @@ export default function ListView({
         </Link>
       </td>
       <td className={styles.listTitleCell}>
-        <Link to={link} className={styles.listTitle} onClick={handleOpen}>
+        <Link
+          to={link}
+          state={item}
+          className={styles.listTitle}
+          onClick={handleOpen}
+        >
           {item.title}
         </Link>
         {item.mediaType && (

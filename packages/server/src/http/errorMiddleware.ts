@@ -1,11 +1,15 @@
 import type { Context } from 'hono'
+import { createLogger } from '../logger.ts'
+
+const logger = createLogger('error-middleware')
 
 /**
  * Global error handler for unhandled errors thrown inside Hono route handlers.
  * Returns a consistent JSON format: { error: string, message?: string }
  */
 export function onError(err: Error, c: Context) {
-  console.error('Unhandled server error:', err)
+  logger.error('Unhandled server error:', err)
+
   return c.json({ error: 'Internal server error', message: err.message }, 500)
 }
 

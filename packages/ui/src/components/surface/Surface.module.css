@@ -1,15 +1,15 @@
 .surface {
-  background: var(--color-gray-a1);
+  background: var(--color-surface);
   backdrop-filter: blur(16px) saturate(150%);
   corner-shape: var(--corner-shape);
 
   .surface {
-    background: var(--color-gray-a2);
+    background: var(--color-surface-2);
     backdrop-filter: none;
     border-radius: var(--border-radius-5);
 
     .surface {
-      background: var(--color-gray-a4);
+      background: var(--color-surface-3);
     }
   }
 
@@ -23,16 +23,5 @@
 
   &.large {
     border-radius: var(--border-radius-8);
-  }
-}
-
-a.surface,
-button.surface:not([disabled]):not([data-popup-open]) {
-  &:hover {
-    background: var(--color-gray-6);
-  }
-
-  &:active {
-    background: var(--color-gray-5);
   }
 }

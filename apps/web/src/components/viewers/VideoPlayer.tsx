@@ -228,7 +228,7 @@ export default function VideoPlayer({
         onClick={onClose}
         title="Close player"
       >
-        ✕
+        ✕ eh fuck off
       </button>
       <video
         ref={videoRef}

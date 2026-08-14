@@ -1,89 +1,22 @@
 export { app } from './app.ts'
-// export { hashPassword, verifyPassword } from './auth/password.ts'
 export type { LibSQLDatabase } from './db/db.ts'
 export { migrateDatabase } from './db/migrate.ts'
 export {
-  // type AiMode,
-  // type AiSettingsRow,
-  // type ApiToken,
-  // aiSettings,
-  // apiTokens,
-  // type BackupFileState,
-  // type BackupJob,
-  // type BackupTarget,
-  // type BackupVerifyJob,
-  // backupFileState,
-  // backupJobs,
-  // backupTargets,
-  // backupVerifyJobs,
-  // type DataSource,
-  // type DuplicateCandidate,
-  // dataSources,
-  // duplicateCandidates,
-  // type Favorite,
-  // favorites,
   type Collection,
   type CollectionMember,
   collectionItems,
   collections,
-  // type ImageHash,
-  // imageHashes,
   type Library,
-  // type LibraryAccess,
   libraries,
-  // libraryAccess,
-  // type MatchingQueueItem,
   type MediaItem,
-  // type MediaProgress,
-  // matchingQueue,
   mediaItems,
-  // mediaProgress,
-  // type NewAiSettings,
-  // type NewApiToken,
-  // type NewBackupFileState,
-  // type NewBackupJob,
-  // type NewBackupTarget,
-  // type NewBackupVerifyJob,
-  // type NewDataSource,
-  // type NewDuplicateCandidate,
-  // type NewFavorite,
   type NewCollection,
   type NewCollectionMember,
-  // type NewImageHash,
   type NewLibrary,
-  // type NewLibraryAccess,
-  // type NewMatchingQueueItem,
   type NewMediaItem,
-  // type NewMediaProgress,
-  // type NewRefreshToken,
-  // type NewSuggestedCollection,
-  // type NewSyncProfile,
-  // type NewSyncRun,
-  // type NewUser,
-  // type NewWatchlist,
-  // type RefreshToken,
-  // refreshTokens,
-  // type SuggestedCollection,
-  // type SyncProfile,
-  // type SyncRun,
-  // suggestedCollections,
-  // syncProfiles,
-  // syncRuns,
-  // type User,
   users,
-  // type Watchlist,
-  // watchlist,
 } from './db/schema.ts'
 export { emitEvent, eventBus, type XonEvent } from './events.ts'
-export {
-  type AutoTag,
-  type AutoTagOnnxSession,
-  autoTagMediaItems,
-  computeDocumentTags,
-  computeImageTags,
-  getAutoTagOnnxSession,
-  setAutoTagOnnxSession,
-} from './media/autoTag.ts'
 export {
   clusterCoordinate,
   createMusicCollections,
@@ -92,7 +25,6 @@ export {
   parseExifDate,
   parseExifTimestamp,
   parseTvEpisode,
-  // createAudiobookCollections,
   resolveAudiobookInfo,
   resolveSeriesName,
   type TvEpisodeInfo,
@@ -101,74 +33,17 @@ export { detectDrm } from './media/drm.ts'
 export {
   type ExiftoolMetadata,
   extractExiftoolMetadata,
-  // isImageCategory,
 } from './media/exiftool.ts'
 export {
   extractFfprobeMetadata,
   type FfprobeMetadata,
-  // isAudioVideoCategory,
 } from './media/ffprobe.ts'
-export {
-  computeMatchScore,
-  type FuzzyMatchConfig,
-  getOnnxSession,
-  jaroWinkler,
-  type MatchCandidate,
-  type MatchResult,
-  matchMediaFile,
-  ngramSimilarity,
-  type OnnxInferenceSession,
-  parseFilenameInfo,
-  setOnnxSession,
-} from './media/fuzzyMatch.ts'
-export {
-  type ArchiveMetadata,
-  // isDocumentCategory,
-  // isFontCategory,
-  // is3DModelCategory,
-  // isArchiveCategory,
-  type DocumentMetadata,
-  extract3DModelMetadata,
-  extractArchiveMetadata,
-  extractDocumentMetadata,
-  extractFontMetadata,
-  type FontMetadata,
-  type Model3DMetadata,
-} from './media/miscmeta.ts'
-export {
-  extractMusicTags,
-  isMusicCategory,
-  type MusicTagsMetadata,
-} from './media/musictags.ts'
-export {
-  computePerceptualHash,
-  getPerceptualHashOnnxSession,
-  hammingDistance,
-  hashSimilarity,
-  type PerceptualHashConfig,
-  type PerceptualHashOnnxSession,
-  scanLibraryForDuplicates,
-  setPerceptualHashOnnxSession,
-} from './media/perceptualHash.ts'
-export {} from // acceptSuggestedCollection,
-// detectMultiDiscAlbums,
-// detectBookSeries,
-// detectSupplementaryMaterials,
-// type SmartCollectionCandidate,
-// scanLibraryForSmartCollections,
-'./media/smartCollections.ts'
 export { generateThumbnails } from './media/thumbnails.ts'
 export {
   generateVideoBackdrops,
   generateVideoPosters,
   generateVideoThumbnails,
-  // isVideoCategory,
 } from './media/videoThumbnails.ts'
-export {
-  getBackupTargetPlugin,
-  registerBackupTargetPlugin,
-  unregisterBackupTargetPlugin,
-} from './plugins/backupTargetPluginRegistry.ts'
 export {
   getMediaProviderPlugin,
   registerMediaProviderPlugin,
@@ -191,16 +66,6 @@ export {
   uninstallPlugin,
 } from './plugins/pluginManager.ts'
 export type { CollectionsRoutes } from './routes/collections.ts'
-// export { runMediaBackupJob } from './routes/adminBackupMedia.ts'
-// export {
-//   copyFilesToDestination,
-//   type LocalBackupConfig,
-//   type NetworkBackupConfig,
-//   type PluginBackupConfig,
-//   runBackupToTarget,
-// } from './routes/adminBackupTargets.ts'
-// export { computeChecksum, runVerifyJob } from './routes/adminBackupVerify.ts'
-// export { runSyncJob } from './routes/sync.ts'
 export type { LibrariesRoutes } from './routes/libraries.ts'
 export type { ScanResult } from './scanner/scanner.ts'
 export {
@@ -209,9 +74,4 @@ export {
   startScheduler,
   type TriggerFn,
 } from './scanner/scheduler.ts'
-// export {
-//   scanLibrary,
-//   type ScanProgress,
-//   type ScanSummary,
-// } from './scanner/orchestrator.old.ts'
 export { boot } from './server.ts'

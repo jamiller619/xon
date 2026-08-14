@@ -9,8 +9,8 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { fileTypeFromBuffer } from 'file-type'
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { requireAuth } from '../auth/middleware.ts'
 import { appCache, computeETag } from '../cache.ts'
+import { requireAuth } from '../http/authMiddleware.js'
 import { validate } from '../http/validate.ts'
 import { resolveLocalArtworkPath } from '../media/cachePaths.ts'
 import type { ScannerHandle } from '../scanner/scannerHandle.ts'
@@ -88,12 +88,11 @@ export function makeLibrariesRouter(
   const router = new Hono()
     .post(
       '/',
-      // requireAuth(),
+      requireAuth,
       validate('json', createLibrarySchema),
       async (c) => {
         const body = c.req.valid('json')
-        // biome-ignore lint/style/noNonNullAssertion: middleware
-        const user = c.get('user')!
+        const user = c.get('user')
 
         const id = await libraryService.createLibrary(db, {
           ...body,
@@ -113,14 +112,9 @@ export function makeLibrariesRouter(
       },
     )
 
-    // GET /libraries — list accessible libraries (admin/manager see all; user/guest see granted)
-    .get('/', async (c) => {
+    // GET /libraries — list accessible libraries
+    .get('/', requireAuth, async (c) => {
       const user = c.get('user')
-
-      if (!user) {
-        return c.json({ error: 'Not authenticated' }, 401)
-      }
-
       const libraries = await libraryService.getLibrariesByUserId(db, user.id)
 
       const etag = computeETag(libraries)
@@ -130,15 +124,9 @@ export function makeLibrariesRouter(
       return c.json(libraries)
     })
 
-    // GET /libraries/:id — get single library with data sources (access-checked)
-    .get('/:id', async (c) => {
+    // GET /libraries/:id — get single library
+    .get('/:id', requireAuth, async (c) => {
       const id = c.req.param('id')
-      const user = c.get('user')
-
-      if (!user) {
-        return c.json({ error: 'Not authenticated' }, 401)
-      }
-
       const library = await libraryService.getLibraryById(db, id)
 
       if (library == null) return c.json({ error: 'Not found' }, 404)
@@ -151,10 +139,10 @@ export function makeLibrariesRouter(
       return c.json(library)
     })
 
-    // PUT /libraries/:id — update library (manager+)
+    // PUT /libraries/:id — update library
     .put(
       '/:id',
-      requireAuth(),
+      requireAuth,
       validate('json', updateLibrarySchema),
       async (c) => {
         const id = c.req.param('id')
@@ -196,8 +184,8 @@ export function makeLibrariesRouter(
       },
     )
 
-    // DELETE /libraries/:id — delete library and associated data sources (manager+)
-    .delete('/:id', requireAuth(), async (c) => {
+    // DELETE /libraries/:id — delete library
+    .delete('/:id', requireAuth, async (c) => {
       const id = c.req.param('id')
       const result = await libraryService.deleteLibraryById(db, id)
 
@@ -209,12 +197,6 @@ export function makeLibrariesRouter(
     // GET /libraries/:libraryId/stats — aggregate library-wide media totals
     .get('/:libraryId/stats', async (c) => {
       const libraryId = c.req.param('libraryId')
-      const user = c.get('user')
-
-      if (!user) {
-        return c.json({ error: 'Not authenticated' }, 401)
-      }
-
       const library = await libraryService.getLibraryById(db, libraryId)
       if (!library) return c.json({ error: 'Not found' }, 404)
 
@@ -225,15 +207,10 @@ export function makeLibrariesRouter(
     // GET /libraries/:libraryId/media — list media items with filtering, sorting, pagination
     .get(
       '/:libraryId/media',
+      requireAuth,
       validate('query', libraryMediaQuerySchema),
       async (c) => {
         const libraryId = c.req.param('libraryId') as string
-        const user = c.get('user')
-
-        if (!user) {
-          return c.json({ error: 'Not authenticated' }, 401)
-        }
-
         const { mediaType, unmatched, sortBy, order, page, limit } =
           c.req.valid('query')
         const library = await libraryService.getLibraryById(db, libraryId)
@@ -436,7 +413,6 @@ export function makeLibrariesRouter(
         ETag: etag,
       })
     })
-    // .route('/:libraryId/sources', makeSourcesRouter(db))
     .route('/:libraryId/scan', makeScanRouter(db, scannerHandle))
 
   return router

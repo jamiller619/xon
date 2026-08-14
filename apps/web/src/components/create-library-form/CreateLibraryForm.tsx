@@ -98,7 +98,7 @@ export default function CreateLibraryForm({
           block
         />
       </Field>
-      <Field label="Media Type(s)">
+      <Field label="Content Type">
         <RadioGroup
           items={LIBRARY_TYPES}
           value={contentType ?? ''}

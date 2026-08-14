@@ -1,5 +1,4 @@
 import {
-  FolderAdd20Regular as AddLibraryIcon,
   Glance20Regular as DashboardIcon,
   Glance20Filled as DashboardOnIcon,
   Heart20Regular as FavoritesIcon,
@@ -17,12 +16,11 @@ import {
 import { CollectionType } from '@xon/shared'
 import { Flex, Surface } from '@xon/ui'
 import clsx from 'clsx'
-import { NavLink } from 'react-router-dom'
+import { type NavLinkProps, NavLink as RouterNavLink } from 'react-router-dom'
 import Logo from '~/components/logo/Logo'
 import PluginSlot from '~/components/PluginSlot'
 import useCollections from '~/hooks/useCollections'
 import useLibraries from '~/hooks/useLibraries'
-import CreateLibraryButton from '../CreateLibraryButton'
 import LibraryIcon from '../icons/LibraryIcon'
 import styles from './Sidebar.module.css'
 
@@ -32,12 +30,9 @@ interface SidebarProps {
 }
 
 export default function Sidebar({ className, isOpen }: SidebarProps) {
-  const { data: libraries, refetch } = useLibraries()
+  const { data: libraries } = useLibraries()
 
   const [collections] = useCollections()
-
-  const navClass = ({ isActive }: { isActive: boolean }) =>
-    `${styles.navLink}${isActive ? ` ${styles.active}` : ''}`
 
   return (
     <Surface
@@ -47,80 +42,51 @@ export default function Sidebar({ className, isOpen }: SidebarProps) {
       className={clsx(styles.sidebar, className, isOpen && styles.open)}
       aria-label="Main navigation"
     >
+      {/* LOGO */}
       <Flex align="center" gap="4" className={styles.header}>
-        <NavLink to="/" className={styles.logo ?? ''}>
+        <RouterNavLink to="/" className={styles.logo ?? ''}>
           <Logo />
-        </NavLink>
+        </RouterNavLink>
       </Flex>
 
       <Section>
-        <NavLink to="/" end className={navClass}>
-          <NavItem label="Dashboard" />
-        </NavLink>
+        <NavItem label="Dashboard" to="/" end />
         <PluginSlot injectionPoint="nav-item" />
       </Section>
 
+      {/* LIBRARIES SECTION */}
       <Section>
         <div className={styles.sectionTitle}>Libraries</div>
         {Array.isArray(libraries) &&
           libraries.map((lib) => (
-            <NavLink
-              key={lib.id}
-              to={`/libraries/${lib.id}`}
-              className={navClass}
-            >
+            <NavLink key={lib.id} to={`/libraries/${lib.id}`}>
               <LibraryIcon type={lib.type} />
               <span>{lib.name}</span>
             </NavLink>
           ))}
-        <CreateLibraryButton
-          onSuccess={() => console.log('test')}
-          button={(onClick) => (
-            <NavLink
-              to=""
-              className={styles.navLink ?? ''}
-              onClick={(e) => {
-                e.preventDefault()
-                onClick()
-                void refetch()
-              }}
-            >
-              <AddLibraryIcon />
-              <span>Add Library</span>
-            </NavLink>
-          )}
-        />
+        <NavItem label="Manage Libraries" to="/admin/libraries" />
       </Section>
 
+      {/* COLLECTIONS SECTION */}
       <Section>
         <div className={styles.sectionTitle}>Collections</div>
         {Array.isArray(collections) &&
           collections.map((collection) => (
-            <NavLink
-              key={collection.id}
-              to={`/collections/${collection.id}`}
-              className={navClass}
-            >
+            <NavLink key={collection.id} to={`/collections/${collection.id}`}>
               <CollectionIcon type={collection.type} />
               <span>{collection.title}</span>
             </NavLink>
           ))}
-        <NavLink to="" className={styles.navLink ?? ''}>
-          <AddLibraryIcon />
-          <span>Add Collection</span>
-        </NavLink>
+        <NavItem label="Manage Collections" to="/admin/collections" />
       </Section>
+
+      {/* ADMIN SECTION */}
       <Section>
         <div className={styles.sectionTitle}>Admin</div>
-        <NavLink to="/settings" className={navClass}>
-          <NavItem label="Settings" />
-        </NavLink>
-        <NavLink to="/admin/libraries" className={navClass}>
-          <NavItem label="Manage Libraries" />
-        </NavLink>
-        <NavLink to="/admin/logs" className={navClass}>
-          <NavItem label="Log Viewer" />
-        </NavLink>
+        <NavItem label="Settings" to="/settings" />
+        <NavItem label="Users" to="/admin/users" />
+        <NavItem label="Plugins" to="/admin/plugins" />
+        <NavItem label="Log Viewer" to="/admin/logs" />
       </Section>
     </Surface>
   )
@@ -147,27 +113,55 @@ const navIcons = {
     default: <ManageLibrariesIcon />,
     active: <ManageLibrariesOnIcon />,
   },
+  'Manage Collections': {
+    default: <ManageLibrariesIcon />,
+    active: <ManageLibrariesOnIcon />,
+  },
+  Users: {
+    default: <ManageLibrariesIcon />,
+    active: <ManageLibrariesOnIcon />,
+  },
+  Plugins: {
+    default: <ManageLibrariesIcon />,
+    active: <ManageLibrariesOnIcon />,
+  },
 }
 
-type NavItemProps = {
+const navClass = ({ isActive }: { isActive: boolean }) =>
+  clsx(styles.navLink, {
+    [styles.active as string]: isActive,
+  })
+
+type NavItemProps = NavLinkProps & {
   label: keyof typeof navIcons
 }
 
-function NavItem({ label }: NavItemProps) {
+function NavLink({ children, className, ...props }: NavLinkProps) {
+  return (
+    <RouterNavLink
+      className={clsx(navClass, styles.navLink, className)}
+      {...props}
+    >
+      {children}
+    </RouterNavLink>
+  )
+}
+
+function NavItem({ label, ...props }: NavItemProps) {
   const icons = navIcons[label]
 
   return (
-    <>
+    <NavLink className={navClass} {...props}>
       <span className={styles.iconDefault}>{icons.default}</span>
       <span className={styles.iconActive}>{icons.active}</span>
       <span>{label}</span>
-    </>
+    </NavLink>
   )
 }
 
 function Section({ children }: { children: React.ReactNode }) {
   return (
-    <Flex dir="col" gap="2" className={styles.section}>
+    <Flex dir="col" gap="1" className={styles.section}>
       {children}
     </Flex>
   )

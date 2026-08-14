@@ -32,7 +32,7 @@ const styles = css`
   }
 
   .textbox {
-    background-color: var(--color-gray-a2);
+    background-color: var(--color-surface-2);
     border: none;
     font: inherit;
     border-radius: var(--border-radius-3);
@@ -47,6 +47,10 @@ const styles = css`
 
     &:-webkit-autofill {
       -webkit-box-shadow: 0 0 0px 1000px var(--color-gray-5) inset;
+    }
+
+    &:focus {
+      background-color: var(--color-surface-3);
     }
   }
 

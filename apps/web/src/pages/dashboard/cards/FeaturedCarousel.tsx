@@ -1,4 +1,7 @@
-import { IosChevronRightRegular } from '@fluentui/react-icons'
+import {
+  ChevronLeft20Regular as ChevronLeftIcon,
+  ChevronRight20Regular as ChevronRightIcon,
+} from '@fluentui/react-icons'
 import type { MediaItem } from '@xon/shared'
 import { Button } from '@xon/ui'
 import clsx from 'clsx'
@@ -19,7 +22,6 @@ import MovieSubtitle from '../../media/movies/MovieSubtitle'
 import styles from './FeaturedCarousel.module.css'
 
 const AUTOPLAY_DELAY_MS = 18000
-// const AUTOPLAY_DELAY_MS = 180000000
 
 type FeaturedCarouselProps = ComponentPropsWithRef<'section'> & {
   items?: MediaItem[] | undefined
@@ -183,14 +185,14 @@ export default function FeaturedCarousel({
             className={clsx(styles.navigationButton, styles.previousButton)}
             onClick={() => emblaApi?.scrollPrev()}
           >
-            <IosChevronRightRegular aria-hidden="true" />
+            <ChevronLeftIcon aria-hidden="true" />
           </Button.Icon>
           <Button.Icon
             aria-label="Show next featured item"
             className={styles.navigationButton}
             onClick={() => emblaApi?.scrollNext()}
           >
-            <IosChevronRightRegular aria-hidden="true" />
+            <ChevronRightIcon aria-hidden="true" />
           </Button.Icon>
         </div>
       )}

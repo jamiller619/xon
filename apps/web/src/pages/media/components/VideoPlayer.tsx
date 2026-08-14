@@ -10,6 +10,7 @@ import {
   defaultLayoutIcons,
 } from '@vidstack/react/player/layouts/default'
 import type { MediaItem, PlaybackClient } from '@xon/shared'
+import { Dialog } from '@xon/ui'
 import Hls from 'hls.js'
 import { useEffect, useRef, useState } from 'react'
 import { apiFetch, apiUrl } from '~/lib/apiFetch'
@@ -44,7 +45,6 @@ export default function VideoPlayerDialog({
   poster: string | undefined
   onClose: () => void
 }) {
-  const dialogRef = useRef<HTMLDialogElement>(null)
   const playerRef = useRef<MediaPlayerInstance>(null)
   const lastPositionRef = useRef(0)
   const completedRef = useRef(false)
@@ -52,14 +52,6 @@ export default function VideoPlayerDialog({
     [],
   )
   const [playbackError, setPlaybackError] = useState<string | null>(null)
-
-  useEffect(() => {
-    const dialog = dialogRef.current
-    if (!dialog) return
-
-    dialog.showModal()
-    return () => dialog.close()
-  }, [])
 
   useEffect(() => {
     const controller = new AbortController()
@@ -107,34 +99,17 @@ export default function VideoPlayerDialog({
   }, [item.id])
 
   return (
-    <dialog
-      ref={dialogRef}
-      className={styles.playerDialog}
-      aria-label={`Playing ${item.title}`}
-      onCancel={(event) => {
-        event.preventDefault()
-        onClose()
+    <Dialog
+      open
+      onOpenChange={(open) => {
+        if (!open) onClose()
       }}
-      onClick={(event) => {
-        if (event.target === event.currentTarget) onClose()
-      }}
-      onKeyDown={(event) => {
-        if (event.key === 'Escape') onClose()
-      }}
+      title={item.title}
+      popupClassName={styles.playerDialog}
+      backdropClassName={styles.playerBackdrop}
+      headerClassName={styles.playerHeader}
     >
       <div className={styles.playerShell}>
-        <div className={styles.playerHeader}>
-          <p className={styles.playerTitle}>{item.title}</p>
-          <button
-            type="button"
-            className={styles.closePlayerButton}
-            onClick={onClose}
-            aria-label="Close video player"
-            title="Close (Esc)"
-          >
-            <span aria-hidden="true">×</span>
-          </button>
-        </div>
         <MediaPlayer
           ref={playerRef}
           className={styles.videoPlayer}
@@ -225,6 +200,6 @@ export default function VideoPlayerDialog({
           </div>
         )}
       </div>
-    </dialog>
+    </Dialog>
   )
 }

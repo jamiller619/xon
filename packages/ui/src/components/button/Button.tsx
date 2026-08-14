@@ -69,8 +69,10 @@ export default function Button({
   )
 }
 
-Button.Icon = function IconButton(props: ButtonProps) {
+export function IconButton(props: ButtonProps) {
   return (
     <Button {...props} className={clsx(props.className, styles.iconButton)} />
   )
 }
+
+Button.Icon = IconButton

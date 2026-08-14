@@ -6,8 +6,8 @@ import {
   sqliteTable,
   text,
 } from 'drizzle-orm/sqlite-core'
-import { users } from './auth.ts'
 import { mediaItems } from './media.ts'
+import { users } from './users.ts'
 
 export const mediaPlayStates = sqliteTable(
   'media_play_states',
