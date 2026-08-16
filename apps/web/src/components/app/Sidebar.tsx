@@ -17,6 +17,7 @@ import { CollectionType } from '@xon/shared'
 import { Flex, Surface } from '@xon/ui'
 import clsx from 'clsx'
 import { type NavLinkProps, NavLink as RouterNavLink } from 'react-router-dom'
+import Eyebrow from '~/components/Eyebrow'
 import Logo from '~/components/logo/Logo'
 import PluginSlot from '~/components/PluginSlot'
 import useCollections from '~/hooks/useCollections'
@@ -56,7 +57,7 @@ export default function Sidebar({ className, isOpen }: SidebarProps) {
 
       {/* LIBRARIES SECTION */}
       <Section>
-        <div className={styles.sectionTitle}>Libraries</div>
+        <Eyebrow className={styles.sectionTitle}>Libraries</Eyebrow>
         {Array.isArray(libraries) &&
           libraries.map((lib) => (
             <NavLink key={lib.id} to={`/libraries/${lib.id}`}>
@@ -69,7 +70,7 @@ export default function Sidebar({ className, isOpen }: SidebarProps) {
 
       {/* COLLECTIONS SECTION */}
       <Section>
-        <div className={styles.sectionTitle}>Collections</div>
+        <Eyebrow className={styles.sectionTitle}>Collections</Eyebrow>
         {Array.isArray(collections) &&
           collections.map((collection) => (
             <NavLink key={collection.id} to={`/collections/${collection.id}`}>
@@ -82,7 +83,7 @@ export default function Sidebar({ className, isOpen }: SidebarProps) {
 
       {/* ADMIN SECTION */}
       <Section>
-        <div className={styles.sectionTitle}>Admin</div>
+        <Eyebrow className={styles.sectionTitle}>Admin</Eyebrow>
         <NavItem label="Settings" to="/settings" />
         <NavItem label="Users" to="/admin/users" />
         <NavItem label="Plugins" to="/admin/plugins" />

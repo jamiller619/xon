@@ -1,4 +1,5 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
+import { Skeleton } from '@xon/ui'
 import { Fragment, useEffect, useRef } from 'react'
 import { useScrollViewport } from '../hooks/useScrollViewport'
 import styles from '../Library.module.css'
@@ -100,7 +101,11 @@ export default function ListView<Item, SortKey extends string>({
           {isLoading ? (
             Array.from({ length: 10 }).map((_, index) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: stable loading placeholders
-              <SkeletonRow key={index} columnCount={columns.length} />
+              <tr key={index} className={styles.skeletonRow ?? ''}>
+                <td colSpan={columns.length}>
+                  <Skeleton className={styles.skeletonLine ?? ''} />
+                </td>
+              </tr>
             ))
           ) : items.length === 0 ? (
             <tr>
@@ -151,16 +156,6 @@ export default function ListView<Item, SortKey extends string>({
         </tbody>
       </table>
     </div>
-  )
-}
-
-function SkeletonRow({ columnCount }: { columnCount: number }) {
-  return (
-    <tr className={styles.skeletonRow ?? ''}>
-      <td colSpan={columnCount}>
-        <div className={styles.skeletonLine ?? ''} />
-      </td>
-    </tr>
   )
 }
 

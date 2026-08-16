@@ -1,11 +1,14 @@
+:root {
+  --surface-backdrop-filters: blur(16px) saturate(150%);
+}
+
 .surface {
   background: var(--color-surface);
-  backdrop-filter: blur(16px) saturate(150%);
+  backdrop-filter: var(--surface-backdrop-filters);
   corner-shape: var(--corner-shape);
 
   .surface {
     background: var(--color-surface-2);
-    backdrop-filter: none;
     border-radius: var(--border-radius-5);
 
     .surface {
@@ -23,5 +26,9 @@
 
   &.large {
     border-radius: var(--border-radius-8);
+  }
+
+  button.surface {
+    backdrop-filter: none;
   }
 }

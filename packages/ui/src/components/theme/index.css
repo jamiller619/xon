@@ -68,7 +68,7 @@ p {
  * don't flash a glow. The box-shadow follows each element's border-radius.
  */
 :focus-visible {
-  outline: 2px solid var(--color-accent-a2);
+  outline: 2px solid var(--color-accent-a1);
   outline-offset: 1px;
   box-shadow:
     0 0 8px 2px var(--color-accent-a3),

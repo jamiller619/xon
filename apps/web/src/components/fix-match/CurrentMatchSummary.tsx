@@ -1,5 +1,5 @@
 import type { MediaItem } from '@xon/shared'
-import { Badge, Flex } from '@xon/ui'
+import { Chip, Flex } from '@xon/ui'
 import { thumbnailUrl } from '~/lib/apiFetch'
 import styles from './FixMatchDialog.module.css'
 
@@ -19,7 +19,7 @@ export default function CurrentMatchSummary({ item }: { item: MediaItem }) {
         <strong>{item.title}</strong>
         <Flex gap="2" align="center" style={{ flexWrap: 'wrap' }}>
           {item.metadata.year != null && (
-            <Badge size="small">{String(item.metadata.year)}</Badge>
+            <Chip size="small">{String(item.metadata.year)}</Chip>
           )}
           <span>{item.filePath}</span>
         </Flex>

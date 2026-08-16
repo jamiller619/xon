@@ -1,238 +1,284 @@
-import { Search20Filled as SearchIcon } from '@fluentui/react-icons'
-import { Textbox } from '@xon/ui'
-import { css } from 'inline-css-modules'
-import { useCallback, useEffect, useRef, useState } from 'react'
+import {
+  ErrorCircle16Regular as ErrorIcon,
+  Search20Filled as SearchIcon,
+  Checkmark20Regular as SuccessIcon,
+} from '@fluentui/react-icons'
+import type { MediaItem } from '@xon/shared'
+import { Surface, Textbox } from '@xon/ui'
+import clsx from 'clsx'
+import { type RefObject, useCallback, useId, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useNavigate } from 'react-router-dom'
-import { apiFetch } from '~/lib/apiFetch'
+import { useOnClickOutside } from 'usehooks-ts'
+import Eyebrow from '~/components/Eyebrow'
+import { mediaPath } from '~/lib/utils'
+import styles from './SearchDialog.module.css'
+import SearchResults, { resultAnnouncement } from './SearchResults'
+import SearchSidebar from './SearchSidebar'
+import { type SearchStatus, useSearchDialogData } from './useSearchDialogData'
+import { useSearchHistory } from './useSearchHistory'
 
-const styles = css`
-  .searchWrapper {
-    flex: 1;
-    max-width: 480px;
-    position: relative;
+export type SearchDialogVisualState =
+  | 'default'
+  | 'hover'
+  | 'focus'
+  | 'active'
+  | 'disabled'
+  | SearchStatus
 
-    input {
-      width: stretch;
-
-      &:focus {
-        background: var(--color-gray-3);
-      }
-    }
-
-    /* input {
-      border-radius: 112px;
-      corner-shape: round;
-      width: stretch;
-    } */
-  }
-
-  .dropdown {
-    position: absolute;
-    top: calc(100% + 6px);
-    left: 0;
-    right: 0;
-    background: var(--color-gray-4);
-    border-radius: 10px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
-    z-index: 1000;
-    overflow: hidden;
-    max-height: 360px;
-    overflow-y: auto;
-  }
-
-  .dropdownLabel {
-    padding: 8px 14px 4px;
-    font-size: 0.7rem;
-    font-weight: 600;
-    color: var(--color-gray-10);
-    text-transform: uppercase;
-    letter-spacing: 0.06em;
-  }
-
-  .dropdownItem {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    width: 100%;
-    padding: 8px 14px;
-    background: none;
-    border: none;
-    color: var(--color-gray-12);
-    font-size: 0.875rem;
-    cursor: pointer;
-    text-align: left;
-    transition: background 0.12s ease;
-  }
-
-  .dropdownItem:hover,
-  .dropdownItemActive {
-    background: var(--color-gray-5);
-    color: #e0e0f0;
-  }
-`
-
-interface SuggestionItem {
-  id: string
-  title: string | null
-  mediaCategory: string | null
-  thumbnailUrls: { small: string; medium: string; large: string } | null
+export interface SearchDialogProps {
+  preview?: boolean
+  visualState?: SearchDialogVisualState
+  initialQuery?: string
+  initialResults?: MediaItem[]
+  initialGenres?: string[]
 }
 
-const DEBOUNCE_MS = 300
-const HISTORY_KEY = 'xon:searchHistory'
-const MAX_HISTORY = 10
-
-export default function SearchDialog() {
+export default function SearchDialog({
+  preview = false,
+  visualState,
+  initialQuery = '',
+  initialResults = [],
+  initialGenres = [],
+}: SearchDialogProps = {}) {
   const navigate = useNavigate()
-  const [query, setQuery] = useState('')
-  const wrapperRef = useRef<HTMLDivElement>(null)
-  const [open, setOpen] = useState(false)
+  const componentId = useId()
+  const historyId = `${componentId}-history`
+  const resultsId = `${componentId}-results`
+  const portalRef = useRef<HTMLDivElement>(null)
+  const [query, setQuery] = useState(initialQuery)
+  const [open, setOpen] = useState(preview)
   const [highlightIdx, setHighlightIdx] = useState(-1)
-  const [suggestions, setSuggestions] = useState<SuggestionItem[]>([])
-  const [history, setHistory] = useState<string[]>([])
-  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const normalizedQuery = query.trim()
+  const { clearHistory, refreshHistory, saveQuery, visibleHistory } =
+    useSearchHistory()
 
-  // Close dropdown on outside click
-  useEffect(() => {
-    function handleMouseDown(e: MouseEvent) {
-      if (
-        wrapperRef.current &&
-        !wrapperRef.current.contains(e.target as Node)
-      ) {
-        setOpen(false)
-      }
-    }
-    document.addEventListener('mousedown', handleMouseDown)
-    return () => document.removeEventListener('mousedown', handleMouseDown)
-  }, [])
+  const { genresStatus, popularGenres, status, suggestions } =
+    useSearchDialogData({
+      initialGenres,
+      initialQuery,
+      initialResults,
+      open,
+      preview,
+      query,
+    })
 
-  const fetchSuggestions = useCallback((q: string) => {
-    if (!q.trim()) {
-      setSuggestions([])
-      return
-    }
-    apiFetch(`/api/search?q=${encodeURIComponent(q)}&limit=5`)
-      .then((r) => r.json())
-      .then((data) => {
-        setSuggestions((data as { results: SuggestionItem[] }).results ?? [])
-      })
-      .catch(() => setSuggestions([]))
-  }, [])
+  const resolvedStatus: SearchStatus = isSearchStatus(visualState)
+    ? visualState
+    : status
+  const componentState = visualState ?? resolvedStatus
+  const navigableItems = normalizedQuery ? suggestions : visibleHistory
+  const activeDescendant = getActiveDescendant({
+    highlightIdx,
+    historyId,
+    normalizedQuery,
+    resultsId,
+    suggestions,
+    visibleHistory,
+  })
 
-  function handleChange(e: React.ChangeEvent<HTMLInputElement>) {
-    const val = e.target.value
-    setQuery(val)
+  const handleClickOutside = useCallback(() => {
+    if (!preview) setOpen(false)
+  }, [preview])
+
+  useOnClickOutside(portalRef as RefObject<HTMLElement>, handleClickOutside)
+
+  function handleChange(event: React.ChangeEvent<HTMLInputElement>) {
+    setQuery(event.target.value)
     setHighlightIdx(-1)
-    if (debounceRef.current) clearTimeout(debounceRef.current)
-    if (val.trim()) {
-      debounceRef.current = setTimeout(() => fetchSuggestions(val), DEBOUNCE_MS)
-    } else {
-      setSuggestions([])
-    }
     setOpen(true)
   }
 
   function handleFocus() {
-    setHistory(loadHistory())
+    refreshHistory()
     setOpen(true)
   }
 
-  function handleKeyDown(e: React.KeyboardEvent<HTMLInputElement>) {
-    const items =
-      suggestions.length > 0 ? suggestions.map((s) => s.title ?? s.id) : history
-    if (e.key === 'ArrowDown') {
-      e.preventDefault()
-      setHighlightIdx((i) => Math.min(i + 1, items.length - 1))
-    } else if (e.key === 'ArrowUp') {
-      e.preventDefault()
-      setHighlightIdx((i) => Math.max(i - 1, -1))
-    } else if (e.key === 'Enter') {
-      e.preventDefault()
-      if (highlightIdx >= 0 && items[highlightIdx]) {
-        navigate2search(items[highlightIdx])
-      } else {
-        navigate2search(query)
-      }
-    } else if (e.key === 'Escape') {
-      setOpen(false)
+  function handleKeyDown(event: React.KeyboardEvent<HTMLInputElement>) {
+    if (event.key === 'ArrowDown') {
+      event.preventDefault()
+      setHighlightIdx((index) => Math.min(index + 1, navigableItems.length - 1))
+      return
     }
+    if (event.key === 'ArrowUp') {
+      event.preventDefault()
+      setHighlightIdx((index) => Math.max(index - 1, -1))
+      return
+    }
+    if (event.key === 'Enter') {
+      event.preventDefault()
+      if (highlightIdx >= 0 && normalizedQuery) {
+        const result = suggestions[highlightIdx]
+        if (result) openResult(result)
+        return
+      }
+      if (highlightIdx >= 0) {
+        const historicalQuery = visibleHistory[highlightIdx]
+        if (historicalQuery) navigateToSearch(historicalQuery)
+        return
+      }
+      navigateToSearch(query)
+      return
+    }
+    if (event.key === 'Escape') setOpen(false)
   }
 
-  function navigate2search(q: string) {
-    if (!q.trim()) return
-    saveHistory(q.trim())
-    setHistory(loadHistory())
+  function navigateToSearch(value: string) {
+    const nextQuery = value.trim()
+    if (!nextQuery) return
+    saveQuery(nextQuery)
     setOpen(false)
     setQuery('')
-    navigate(`/search?q=${encodeURIComponent(q.trim())}`)
+    navigate(`/search?q=${encodeURIComponent(nextQuery)}`)
   }
 
-  function removeHistoryItem(e: React.MouseEvent, item: string) {
-    e.stopPropagation()
-    const next = loadHistory().filter((h) => h !== item)
-    localStorage.setItem(HISTORY_KEY, JSON.stringify(next))
-    setHistory(next)
+  function handleClearHistory() {
+    clearHistory()
+    setHighlightIdx(-1)
   }
 
-  const showHistory = open && !query.trim() && history.length > 0
-  const showSuggestions = open && query.trim().length > 0
+  function openResult(item: MediaItem) {
+    saveQuery(normalizedQuery || item.title)
+    setOpen(false)
+    setQuery('')
+    navigate(mediaPath(item))
+  }
+
+  function renderPanel(expanded: boolean, autoFocus = false) {
+    return (
+      <Surface
+        className={clsx(
+          styles.searchPanel,
+          expanded ? styles.open : styles.closed,
+          preview && styles.preview,
+        )}
+        data-state={componentState}
+        aria-busy={resolvedStatus === 'loading'}
+        role={expanded ? 'dialog' : undefined}
+        aria-label={expanded ? 'Search' : undefined}
+      >
+        <Textbox
+          className={styles.searchField}
+          size={expanded ? undefined : 'small'}
+          type="search"
+          role="combobox"
+          placeholder="Search..."
+          aria-label="Search media"
+          aria-expanded={expanded}
+          aria-controls={normalizedQuery ? resultsId : historyId}
+          aria-autocomplete="list"
+          aria-activedescendant={activeDescendant}
+          aria-invalid={resolvedStatus === 'error'}
+          value={query}
+          autoFocus={autoFocus}
+          disabled={visualState === 'disabled'}
+          onChange={handleChange}
+          onFocus={handleFocus}
+          onKeyDown={handleKeyDown}
+          autoComplete="off"
+          startIcon={<SearchIcon />}
+          endIcon={
+            <InputStatus status={normalizedQuery ? resolvedStatus : 'idle'} />
+          }
+          block
+        />
+
+        {expanded && (
+          <div className={styles.panelBody}>
+            <SearchSidebar
+              historyId={historyId}
+              visibleHistory={visibleHistory}
+              highlightIdx={normalizedQuery ? -1 : highlightIdx}
+              genres={popularGenres}
+              genresStatus={genresStatus}
+              onClearHistory={handleClearHistory}
+              onSearch={navigateToSearch}
+            />
+
+            <section className={clsx(styles.section, styles.results)}>
+              <Eyebrow>Top results</Eyebrow>
+              <SearchResults
+                id={resultsId}
+                query={query}
+                status={resolvedStatus}
+                results={suggestions}
+                highlightIdx={normalizedQuery ? highlightIdx : -1}
+                onOpen={openResult}
+              />
+            </section>
+          </div>
+        )}
+
+        <span className={styles.visuallyHidden} aria-live="polite">
+          {resultAnnouncement(query, resolvedStatus, suggestions.length)}
+        </span>
+      </Surface>
+    )
+  }
+
+  const portalRoot =
+    typeof document === 'undefined' ? null : document.getElementById('root')
 
   return (
-    <div className={styles.searchWrapper}>
-      <Textbox
-        size="small"
-        type="search"
-        placeholder="Search media..."
-        aria-label="Search"
-        value={query}
-        onChange={handleChange}
-        onFocus={handleFocus}
-        onKeyDown={handleKeyDown}
-        autoComplete="off"
-        startIcon={<SearchIcon />}
-      />
-      {(showHistory || showSuggestions) && (
-        <div className={styles.dropdown}>
-          {showHistory && (
-            <>
-              <div className={styles.dropdownLabel}>Recent searches</div>
-              {history.map((item, i) => (
-                <div
-                  key={item}
-                  // aria-selected={i === highlightIdx}
-                  className={`${styles.dropdownItem} ${i === highlightIdx ? styles.dropdownItemActive : ''}`}
-                  // onKeyDown={() => navigate2search(item)}
-                >
-                  <span className={styles.historyIcon}>↵</span>
-                  <span className={styles.dropdownItemText}>{item}</span>
-                  <button
-                    type="button"
-                    className={styles.removeHistory}
-                    onClick={(e) => removeHistoryItem(e, item)}
-                    aria-label={`Remove ${item} from history`}
-                  >
-                    ×
-                  </button>
-                </div>
-              ))}
-            </>
-          )}
-        </div>
-      )}
-    </div>
+    <>
+      {!open && !preview && renderPanel(false)}
+      {preview && renderPanel(true)}
+
+      {!preview &&
+        open &&
+        portalRoot &&
+        createPortal(
+          <>
+            <div className={styles.searchBackdrop} aria-hidden="true" />
+            <div ref={portalRef}>{renderPanel(true, true)}</div>
+          </>,
+          portalRoot,
+        )}
+    </>
   )
 }
 
-function saveHistory(query: string) {
-  const prev = loadHistory().filter((h) => h !== query)
-  const next = [query, ...prev].slice(0, MAX_HISTORY)
-  localStorage.setItem(HISTORY_KEY, JSON.stringify(next))
+function InputStatus({ status }: { status: SearchStatus }) {
+  if (status === 'idle') return null
+
+  return (
+    <span className={styles.inputStatus} data-state={status} aria-hidden="true">
+      {status === 'loading' && <span className={styles.spinner} />}
+      {status === 'error' && <ErrorIcon />}
+      {status === 'success' && <SuccessIcon />}
+    </span>
+  )
 }
 
-function loadHistory(): string[] {
-  try {
-    return JSON.parse(localStorage.getItem(HISTORY_KEY) ?? '[]') as string[]
-  } catch {
-    return []
+interface ActiveDescendantInput {
+  highlightIdx: number
+  historyId: string
+  normalizedQuery: string
+  resultsId: string
+  suggestions: MediaItem[]
+  visibleHistory: string[]
+}
+
+function getActiveDescendant({
+  highlightIdx,
+  historyId,
+  normalizedQuery,
+  resultsId,
+  suggestions,
+  visibleHistory,
+}: ActiveDescendantInput): string | undefined {
+  if (highlightIdx < 0) return
+  if (normalizedQuery) {
+    const suggestion = suggestions[highlightIdx]
+    return suggestion ? `${resultsId}-${suggestion.id}` : undefined
   }
+  return visibleHistory[highlightIdx]
+    ? `${historyId}-${highlightIdx}`
+    : undefined
+}
+
+function isSearchStatus(
+  state: SearchDialogVisualState | undefined,
+): state is SearchStatus {
+  return state === 'loading' || state === 'error' || state === 'success'
 }

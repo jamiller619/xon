@@ -1,27 +1,14 @@
-import {
-  Calendar16Regular as CalendarIcon,
-  Clock16Regular as ClockIcon,
-  Star16Filled as StarIcon,
-} from '@fluentui/react-icons'
-import type { CastMember, MediaItem } from '@xon/shared'
-import { Badge, Button, Flex } from '@xon/ui'
+import type { MediaItem } from '@xon/shared'
+import { Button } from '@xon/ui'
 import clsx from 'clsx'
 import { css } from 'inline-css-modules'
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { sentenceCase } from 'text-case'
-import {
-  formatBytes,
-  formatDuration,
-  formatYear,
-  truncateMiddle,
-} from '~/lib/utils'
-import Resolution from './Resolution'
+import { formatBytes, truncateMiddle } from '~/lib/utils'
 
 const styles = css`
-  /* Metadata table */
   .metaTable {
     width: 100%;
-    /* margin: var(--space-3); */
     border-collapse: collapse;
     font-size: var(--text-sm);
     table-layout: fixed;
@@ -81,6 +68,7 @@ const META_KEYS_TO_HIDE = [
   'metascore',
   'rottenTomatoesRating',
   'genres',
+  'cast',
   'crew',
   'actors',
   'runtime',
@@ -116,15 +104,6 @@ export default function MetaTable({
     (entry): entry is [string, unknown[]] =>
       !META_KEYS_TO_HIDE.includes(entry[0]) && Array.isArray(entry[1]),
   )
-
-  const genres = data.metadata.genres ?? []
-  const rottenTomatoes = data.metadata.rottenTomatoesRating
-  const rtFresh = rottenTomatoes >= 60
-  const metascore = data.metadata.metascore
-  const imdbRating = data.metadata.imdbRating
-  const rating = data.metadata.rated
-  const year = formatYear(data)
-  const resolution = data.fileMetadata.resolution
 
   return (
     <div className={clsx(styles.metaTableContainer, className)}>
@@ -165,7 +144,7 @@ export default function MetaTable({
           })}
           {metaArrayEntries.map(([key, val]) => (
             <MetaRow key={key} label={key}>
-              {parseArray(key, val)}
+              {parseArray(val)}
             </MetaRow>
           ))}
         </tbody>
@@ -349,22 +328,11 @@ function parseValue(value?: unknown): ReactNode {
   return JSON.stringify(value)
 }
 
-function parseArray(key: string, arr: unknown[]): ReactNode {
+function parseArray(arr: unknown[]): ReactNode {
   const isStringOrNumberArray =
     typeof arr[0] === 'string' || typeof arr[0] === 'number'
 
   if (isStringOrNumberArray) return arr.join(', ')
-
-  if (key === 'cast') {
-    return (arr as CastMember[])
-      .sort((a, b) => (a?.order ?? 0) - (b?.order ?? 0))
-      .map((v) => (
-        <div key={v.id}>
-          <div>{v.name}</div>
-          {v.character && <div>as {v.character}</div>}
-        </div>
-      ))
-  }
 
   return arr.map((v) => JSON.stringify(v)).join(', ')
 }

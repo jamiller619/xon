@@ -74,6 +74,7 @@ export {
 } from './plugins/pluginManager.ts'
 export type { CollectionsRoutes } from './routes/collections.ts'
 export type { LibrariesRoutes } from './routes/libraries.ts'
+export type { SearchRoutes } from './routes/search.ts'
 export type { ScanResult } from './scanner/scanner.ts'
 export {
   parseCronInterval,

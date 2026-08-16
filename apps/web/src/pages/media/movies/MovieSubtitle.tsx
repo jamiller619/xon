@@ -4,20 +4,22 @@ import {
   Star16Filled as StarIcon,
 } from '@fluentui/react-icons'
 import type { MediaItem } from '@xon/shared'
-import { Badge, Flex } from '@xon/ui'
-import { formatDuration, formatYear } from '~/lib/utils'
+import { Chip, Flex } from '@xon/ui'
+import useMetadata from '~/hooks/useMetadata'
+import { mediaGenres } from '~/lib/mediaMetadata'
 import Resolution from '../components/Resolution'
 import styles from '../Media.module.css'
 import * as icons from './icons'
 
 export default function MovieSubtitle({ data }: { data: MediaItem }) {
-  const genres = data.metadata.genres ?? []
+  const genres = mediaGenres(data)
   const rottenTomatoes = data.metadata.rottenTomatoesRating
   const rtFresh = rottenTomatoes >= 60
   const metascore = data.metadata.metascore
   const imdbRating = data.metadata.imdbRating
   const rating = data.metadata.rated
-  const year = formatYear(data)
+  const year = useMetadata(data, 'year')
+  const duration = useMetadata(data, 'duration')
 
   return (
     <>
@@ -27,22 +29,22 @@ export default function MovieSubtitle({ data }: { data: MediaItem }) {
           <span>{year}</span>
         </Flex>
       )}
-      {rating && <Badge variant="ghost">{rating}</Badge>}
+      {rating && <Chip variant="ghost">{rating}</Chip>}
       {genres && genres.length > 0 && (
         <span>{genres.slice(0, 3).join(' · ')}</span>
       )}
       {data.fileMetadata.resolution && (
-        <Badge className={styles.resolution}>
+        <Chip className={styles.resolution}>
           <Resolution
             height={data.fileMetadata.resolution.height}
             width={data.fileMetadata.resolution.width}
             layout="$n $a"
           />
-        </Badge>
+        </Chip>
       )}
       <Flex gap="1" align="center">
         <ClockIcon />
-        <span>{formatDuration(data)}</span>
+        <span>{duration}</span>
       </Flex>
       {data.metadata.voteAverage && (
         <Flex gap="1" align="center">

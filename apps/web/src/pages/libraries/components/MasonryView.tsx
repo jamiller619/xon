@@ -1,10 +1,10 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
+import { Skeleton } from '@xon/ui'
 import { css } from 'inline-css-modules'
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useScrollViewport } from '../hooks/useScrollViewport'
 import styles from '../Library.module.css'
 import type { CollectionViewProps } from '../types/collectionView'
-import SkeletonCard from './SkeletonCard'
 
 const DEFAULT_MIN_ITEM_WIDTH = 180
 const DEFAULT_GAP = 12
@@ -66,7 +66,7 @@ export default function MasonryView<Item>({
   renderItem,
   getItemAspectRatio,
   renderSkeleton = (index) => (
-    <SkeletonCard aspectRatio={index % 3 === 0 ? '3 / 4' : '4 / 3'} />
+    <Skeleton aspectRatio={index % 3 === 0 ? '3 / 4' : '4 / 3'} />
   ),
   minItemWidth = DEFAULT_MIN_ITEM_WIDTH,
   gap = DEFAULT_GAP,

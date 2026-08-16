@@ -27,6 +27,7 @@
       "title": "Application Locale",
       "type": "string",
       "default": "en-US",
+      "readOnly": true,
       "description": "A [BCP 47 language tag](https://en.wikipedia.org/wiki/IETF_language_tag#List_of_major_primary_language_subtags) used throughout the application."
     },
     "log.level": {

@@ -1,4 +1,4 @@
-import { Badge, Button, Flex } from '@xon/ui'
+import { Button, Chip, Flex } from '@xon/ui'
 import styles from './FixMatchDialog.module.css'
 import type { MatchSearchResult } from './types'
 
@@ -32,8 +32,8 @@ export default function MetadataMatchResult({
         <Flex dir="col" gap="1" align="start" className={styles.resultText}>
           <strong>{result.title}</strong>
           <Flex gap="2" align="center" style={{ flexWrap: 'wrap' }}>
-            {result.year != null && <Badge size="small">{result.year}</Badge>}
-            {result.mediaKind && <Badge size="small">{result.mediaKind}</Badge>}
+            {result.year != null && <Chip size="small">{result.year}</Chip>}
+            {result.mediaKind && <Chip size="small">{result.mediaKind}</Chip>}
           </Flex>
           {result.description && <span>{result.description}</span>}
         </Flex>

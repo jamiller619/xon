@@ -57,6 +57,13 @@
       "when": 1786314124979,
       "tag": "0007_normalize_library_content_types",
       "breakpoints": true
+    },
+    {
+      "idx": 8,
+      "version": "6",
+      "when": 1786766400000,
+      "tag": "0008_search_fts",
+      "breakpoints": true
     }
   ]
 }

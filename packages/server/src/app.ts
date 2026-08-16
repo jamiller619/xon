@@ -1,6 +1,5 @@
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
-import { makeConfigRouter } from './config/config.router.ts'
 import { makeSessionMiddleware, requireAuth } from './http/authMiddleware.js'
 import { makeCorsMiddleware } from './http/corsMiddleware.ts'
 import { onError, onNotFound } from './http/errorMiddleware.ts'
@@ -11,10 +10,12 @@ import { pluginRouteDispatcher } from './plugins/pluginRoutes.ts'
 import { makeAdminLogsRouter } from './routes/adminLogs.ts'
 import { makeAuthRouter } from './routes/auth.ts'
 import { makeCollectionsRouter } from './routes/collections.ts'
+import { makeConfigRouter } from './routes/config.ts'
 import { makeFsRouter } from './routes/fs.ts'
 import { makeLibrariesRouter } from './routes/libraries.ts'
 import { makeMediaRouter } from './routes/media.ts'
 import { makePluginsRouter } from './routes/plugins.ts'
+import { makeSearchRouter } from './routes/search.ts'
 import { makeStatsRouter } from './routes/stats.ts'
 import { makeUsersRouter } from './routes/users.ts'
 import type { ScannerHandle } from './scanner/scannerHandle.ts'
@@ -57,6 +58,7 @@ export function createApp(
     }
     app.route('/collections', makeCollectionsRouter(db))
     app.route('/media', makeMediaRouter(db))
+    app.route('/search', makeSearchRouter(db))
     app.route('/users', makeUsersRouter(db))
   }
 

@@ -46,7 +46,7 @@ const data = {
 
 export default new ConfigStore(configFilePath, data)
 
-export * from './config/config.router.ts'
+export * from './routes/config.ts'
 
 async function getConfig(): Promise<Config> {
   try {
@@ -151,6 +151,7 @@ async function parseEnvFile(
 type JsonSchema = {
   type?: string
   default?: unknown
+  readOnly?: boolean
   properties?: Record<string, JsonSchema>
   items?: JsonSchema
   oneOf?: JsonSchema[]

@@ -4,7 +4,10 @@ import type { HTMLAttributes, PropsWithChildren } from 'react'
 import type { Size, Variant } from './types.js'
 
 const styles = css`
-  .badge {
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     line-height: 1;
     padding: var(--space-2xs) var(--space-xs);
     border-radius: var(--border-radius-2);
@@ -16,7 +19,6 @@ const styles = css`
     text-overflow: ellipsis;
 
     background: var(--color-gray-5);
-    color: var(--color-text);
     
     &.primary {
       color: var(--color-accent-12);
@@ -36,22 +38,22 @@ const styles = css`
   }
 `
 
-type BadgeProps = PropsWithChildren<HTMLAttributes<HTMLDivElement>> & {
+type ChipProps = PropsWithChildren<HTMLAttributes<HTMLDivElement>> & {
   variant?: Variant
   size?: Size
 }
 
-export default function Badge({
+export default function Chip({
   children,
   className,
   variant,
   size,
   ...props
-}: BadgeProps) {
+}: ChipProps) {
   return (
     <div
       className={clsx(
-        styles.badge,
+        styles.chip,
         className,
         variant && styles[variant],
         size && styles[size],

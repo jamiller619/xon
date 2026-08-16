@@ -1,4 +1,7 @@
 export type StatsPayload = {
+  app: {
+    version: string
+  }
   cpu: number
   memory: {
     used: number

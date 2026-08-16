@@ -1,172 +1,176 @@
-import type { Client } from '@libsql/client'
-import type { LibSQLDatabase } from 'drizzle-orm/libsql'
+import { mkdtemp, readFile, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
+import { type Client, createClient } from '@libsql/client'
+import { eq } from 'drizzle-orm'
+import { drizzle, type LibSQLDatabase } from 'drizzle-orm/libsql'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { openDatabase } from '../../db/db.ts'
 import { migrateDatabase } from '../../db/migrate.ts'
-import { dataSources, libraries, mediaItems } from '../../db/schema.ts'
+import { libraries, mediaItems, users } from '../../db/schema.ts'
 
-describe('FTS5 full-text search index', () => {
+describe('FTS5 media index', () => {
   let client: Client
   let db: LibSQLDatabase
+  let databaseDirectory: string
 
   beforeEach(async () => {
-    ;({ client, db } = await openDatabase(':memory:'))
+    databaseDirectory = await mkdtemp(join(tmpdir(), 'xon-fts-test-'))
+    client = createClient({
+      url: pathToFileURL(join(databaseDirectory, 'search.db')).href,
+    })
+    db = drizzle(client)
     await migrateDatabase(db)
 
-    await db
-      .insert(libraries)
-      .values({ id: 'lib-1', name: 'Movies', mediaTypes: '[]' })
-    await db.insert(dataSources).values({
-      id: 'ds-1',
-      libraryId: 'lib-1',
-      type: 'local',
-      path: '/media',
+    await db.insert(users).values({
+      id: 'user-1',
+      name: 'Search User',
+      email: 'search@example.com',
+    })
+    await db.insert(libraries).values({
+      id: 'library-1',
+      ownerId: 'user-1',
+      name: 'Movies',
+      type: 'video/movie',
+      dataSources: [],
     })
   })
 
-  afterEach(() => {
+  afterEach(async () => {
     client.close()
+    await rm(databaseDirectory, { recursive: true, force: true })
   })
 
-  async function queryFts(term: string): Promise<{ id: string }[]> {
-    const result = await client.execute({
-      sql: 'SELECT id FROM media_fts WHERE media_fts MATCH ? ORDER BY rank',
-      args: [term],
+  async function insertMedia(
+    overrides: Partial<typeof mediaItems.$inferInsert> = {},
+  ) {
+    await db.insert(mediaItems).values({
+      id: 'media-1',
+      libraryId: 'library-1',
+      filePath: '/movies/arrival.mkv',
+      fileSize: 1024,
+      fileMetadata: {},
+      mediaType: 'video/x-matroska',
+      title: 'Arrival',
+      description: 'A linguist encounters mysterious visitors',
+      metadata: {
+        genres: ['Science Fiction'],
+        cast: [{ name: 'Amy Adams', character: 'Louise Banks' }],
+        crew: [{ name: 'Denis Villeneuve', job: 'Director' }],
+        tmdbId: 329865,
+        images: {
+          poster: [{ src: 'https://images.example/ArtworkOnlyToken.jpg' }],
+        },
+        website: 'https://RemoteOnlyToken.example/movie',
+      },
+      scannedAt: new Date(),
+      tags: ['science-fiction', 'first-contact'],
+      ...overrides,
     })
-    return result.rows as { id: string }[]
   }
 
-  it('inserts media item into FTS index via trigger', async () => {
-    await db.insert(mediaItems).values({
-      id: 'item-1',
-      libraryId: 'lib-1',
-      dataSourceId: 'ds-1',
-      filePath: '/media/inception.mkv',
-      fileName: 'inception.mkv',
-      fileSize: 5000,
-      title: 'Inception',
-      description: 'A mind-bending thriller',
-      metadata: '{}',
-    })
-
-    const rows = await queryFts('Inception')
-    expect(rows.some((r) => r.id === 'item-1')).toBe(true)
-  })
-
-  it('finds items by description text', async () => {
-    await db.insert(mediaItems).values({
-      id: 'item-2',
-      libraryId: 'lib-1',
-      dataSourceId: 'ds-1',
-      filePath: '/media/interstellar.mkv',
-      fileName: 'interstellar.mkv',
-      fileSize: 6000,
-      title: 'Interstellar',
-      description: 'A journey through wormholes',
-      metadata: '{}',
-    })
-
-    const rows = await queryFts('wormholes')
-    expect(rows.some((r) => r.id === 'item-2')).toBe(true)
-  })
-
-  it('finds items by file name', async () => {
-    await db.insert(mediaItems).values({
-      id: 'item-3',
-      libraryId: 'lib-1',
-      dataSourceId: 'ds-1',
-      filePath: '/media/the-matrix.mkv',
-      fileName: 'the-matrix.mkv',
-      fileSize: 4000,
-      metadata: '{}',
-    })
-
-    const rows = await queryFts('matrix')
-    expect(rows.some((r) => r.id === 'item-3')).toBe(true)
-  })
-
-  it('updates FTS index when media item title changes', async () => {
-    await db.insert(mediaItems).values({
-      id: 'item-4',
-      libraryId: 'lib-1',
-      dataSourceId: 'ds-1',
-      filePath: '/media/movie-alpha.mkv',
-      fileName: 'movie-alpha.mkv',
-      fileSize: 3000,
-      title: 'OldTitle',
-      metadata: '{}',
-    })
-
-    // Verify original title is indexed
-    let rows = await queryFts('OldTitle')
-    expect(rows.some((r) => r.id === 'item-4')).toBe(true)
-
-    // Update the title via raw SQL to trigger the UPDATE trigger
-    await client.execute({
-      sql: "UPDATE media_items SET title = 'NewTitle', updated_at = unixepoch() WHERE id = 'item-4'",
-      args: [],
-    })
-
-    // Old title should no longer match
-    rows = await queryFts('OldTitle')
-    expect(rows.some((r) => r.id === 'item-4')).toBe(false)
-
-    // New title should match
-    rows = await queryFts('NewTitle')
-    expect(rows.some((r) => r.id === 'item-4')).toBe(true)
-  })
-
-  it('removes media item from FTS index when deleted', async () => {
-    await db.insert(mediaItems).values({
-      id: 'item-5',
-      libraryId: 'lib-1',
-      dataSourceId: 'ds-1',
-      filePath: '/media/todelete.mkv',
-      fileName: 'todelete.mkv',
-      fileSize: 2000,
-      title: 'ToDelete',
-      metadata: '{}',
-    })
-
-    // Verify it's indexed
-    let rows = await queryFts('ToDelete')
-    expect(rows.some((r) => r.id === 'item-5')).toBe(true)
-
-    // Delete the media item
-    await client.execute({
-      sql: "DELETE FROM media_items WHERE id = 'item-5'",
-      args: [],
-    })
-
-    // Should no longer appear in FTS results
-    rows = await queryFts('ToDelete')
-    expect(rows.some((r) => r.id === 'item-5')).toBe(false)
-  })
-
-  it('indexes tags from metadata JSON', async () => {
-    await db.insert(mediaItems).values({
-      id: 'item-6',
-      libraryId: 'lib-1',
-      dataSourceId: 'ds-1',
-      filePath: '/media/documentary.mkv',
-      fileName: 'documentary.mkv',
-      fileSize: 7000,
-      title: 'Nature Documentary',
-      metadata: JSON.stringify({ tags: ['wildlife', 'nature', 'documentary'] }),
-    })
-
-    const rows = await queryFts('wildlife')
-    expect(rows.some((r) => r.id === 'item-6')).toBe(true)
-  })
-
-  it('backfills pre-existing items when migrated', async () => {
-    // The backfill INSERT in the migration runs on existing data at migration time.
-    // In this test, items are inserted after migration so they go through triggers.
-    // This test validates the FTS table exists and is queryable.
+  async function matchingIds(query: string): Promise<string[]> {
     const result = await client.execute({
-      sql: 'SELECT count(*) as cnt FROM media_fts',
-      args: [],
+      sql: 'SELECT id FROM media_fts WHERE media_fts MATCH ? ORDER BY rank',
+      args: [query],
     })
-    expect(result.rows[0]).toBeDefined()
+    return result.rows.map((row) => String(row.id))
+  }
+
+  it('creates the FTS5 virtual table during migration', async () => {
+    const result = await client.execute(
+      "SELECT sql FROM sqlite_master WHERE type = 'table' AND name = 'media_fts'",
+    )
+
+    expect(result.rows[0]?.sql).toContain('fts5')
+  })
+
+  it('backfills media that exists before the FTS5 migration', async () => {
+    const legacyClient = createClient({
+      url: pathToFileURL(join(databaseDirectory, 'legacy.db')).href,
+    })
+
+    try {
+      await legacyClient.executeMultiple(`
+        CREATE TABLE media_items (
+          id TEXT PRIMARY KEY NOT NULL,
+          title TEXT NOT NULL,
+          description TEXT,
+          file_path TEXT NOT NULL,
+          tags TEXT NOT NULL,
+          metadata TEXT NOT NULL
+        );
+        INSERT INTO media_items (id, title, description, file_path, tags, metadata)
+        VALUES (
+          'legacy-media',
+          'Legacy Arrival',
+          'Indexed during migration',
+          '/legacy/arrival.mkv',
+          '["archive"]',
+          '{"genres":["Historical Drama"]}'
+        );
+      `)
+      const migration = await readFile(
+        new URL('../../../drizzle/0008_search_fts.sql', import.meta.url),
+        'utf8',
+      )
+      await legacyClient.executeMultiple(migration)
+
+      const result = await legacyClient.execute(
+        "SELECT id FROM media_fts WHERE media_fts MATCH 'Legacy'",
+      )
+      expect(result.rows.map((row) => row.id)).toEqual(['legacy-media'])
+      const metadataResult = await legacyClient.execute(
+        "SELECT id FROM media_fts WHERE media_fts MATCH 'Historical'",
+      )
+      expect(metadataResult.rows.map((row) => row.id)).toEqual(['legacy-media'])
+    } finally {
+      legacyClient.close()
+    }
+  })
+
+  it('indexes title, description, file path, tags, and metadata on insert', async () => {
+    await insertMedia()
+
+    await expect(matchingIds('Arrival')).resolves.toEqual(['media-1'])
+    await expect(matchingIds('linguist')).resolves.toEqual(['media-1'])
+    await expect(matchingIds('movies')).resolves.toEqual(['media-1'])
+    await expect(matchingIds('fiction')).resolves.toEqual(['media-1'])
+    await expect(matchingIds('Amy')).resolves.toEqual(['media-1'])
+    await expect(matchingIds('Villeneuve')).resolves.toEqual(['media-1'])
+    await expect(matchingIds('329865')).resolves.toEqual(['media-1'])
+  })
+
+  it('does not index metadata keys, artwork, or URL values', async () => {
+    await insertMedia()
+
+    await expect(matchingIds('genres')).resolves.toEqual([])
+    await expect(matchingIds('ArtworkOnlyToken')).resolves.toEqual([])
+    await expect(matchingIds('RemoteOnlyToken')).resolves.toEqual([])
+  })
+
+  it('replaces indexed values when searchable fields change', async () => {
+    await insertMedia({ title: 'OldTitle' })
+    await db
+      .update(mediaItems)
+      .set({
+        title: 'Contact',
+        tags: ['radio-astronomy'],
+        metadata: { genres: ['Mystery'] },
+      })
+      .where(eq(mediaItems.id, 'media-1'))
+
+    await expect(matchingIds('OldTitle')).resolves.toEqual([])
+    await expect(matchingIds('Contact')).resolves.toEqual(['media-1'])
+    await expect(matchingIds('astronomy')).resolves.toEqual(['media-1'])
+    await expect(matchingIds('Amy')).resolves.toEqual([])
+    await expect(matchingIds('Mystery')).resolves.toEqual(['media-1'])
+  })
+
+  it('removes indexed values when media is deleted', async () => {
+    await insertMedia()
+    await db.delete(mediaItems).where(eq(mediaItems.id, 'media-1'))
+
+    await expect(matchingIds('Arrival')).resolves.toEqual([])
   })
 })

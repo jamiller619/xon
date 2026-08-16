@@ -30,7 +30,6 @@
     "embla-carousel-react": "^8.6.0",
     "hls.js": "^1.6.0",
     "hono": "^4.7.4",
-    "iconoir-react": "^7.11.1",
     "inline-css-modules": "^0.3.0",
     "motion": "^12.38.0",
     "pretty-bytes": "^7.1.0",
@@ -40,6 +39,7 @@
     "react-grid-layout": "^2.2.4",
     "react-router-dom": "^7.0.0",
     "text-case": "^1.2.11",
+    "usehooks-ts": "^3.1.1",
     "zustand": "^5.0.0"
   },
   "devDependencies": {

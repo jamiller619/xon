@@ -45,6 +45,7 @@ export default function Flex<C extends ElementType = 'div'>({
     {
       className: clsx(styles.flex, className, {
         [styles.nowrap as string]: wrap === false,
+        [styles.wrap as string]: wrap === true,
         [styles.row as string]: dir === 'row',
         [styles.col as string]: dir === 'col',
         [styles[`gap-${gap}`] as string]: gap,

@@ -10,16 +10,16 @@ const configUpdateSchema = z.record(z.string(), z.unknown())
 export function makeConfigRouter(): Hono {
   const router = new Hono()
 
-  router.get('/', async (c) => {
-    return noCacheJSON(c, config.getStore())
-  })
+    .get('/', async (c) => {
+      return noCacheJSON(c, config.getStore())
+    })
 
-  router.post('/', validate('json', configUpdateSchema), async (c) => {
-    const body = c.req.valid('json')
-    await config.setStore(body as Partial<Config>)
+    .post('/', validate('json', configUpdateSchema), async (c) => {
+      const body = c.req.valid('json')
+      await config.setStore(body as Partial<Config>)
 
-    return noCacheJSON(c, body)
-  })
+      return noCacheJSON(c, body)
+    })
 
   return router
 }

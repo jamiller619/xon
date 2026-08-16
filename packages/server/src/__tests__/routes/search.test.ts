@@ -1,244 +1,313 @@
-import type { Client } from '@libsql/client'
-import { eq } from 'drizzle-orm'
-import type { LibSQLDatabase } from 'drizzle-orm/libsql'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
-import { createApp } from '../../app.ts'
-import { openDatabase } from '../../db/db.ts'
+import { mkdtemp, rm } from 'node:fs/promises'
+import { tmpdir } from 'node:os'
+import { join } from 'node:path'
+import { pathToFileURL } from 'node:url'
+import { type Client, createClient } from '@libsql/client'
+import { drizzle, type LibSQLDatabase } from 'drizzle-orm/libsql'
+import { Hono } from 'hono'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { migrateDatabase } from '../../db/migrate.ts'
-import {
-  dataSources,
-  libraries,
-  libraryAccess,
-  mediaItems,
-  users,
-} from '../../db/schema.ts'
-import { signAccessToken } from '../../routes/auth.ts'
+import { libraries, mediaItems, users } from '../../db/schema.ts'
+import { makeSearchRouter } from '../../routes/search.ts'
+import { searchMedia, toFtsQuery } from '../../services/searchService.ts'
 
-const ADMIN_AUTH = `Bearer ${await signAccessToken('admin-id', 'admin', 'admin')}`
-const USER_AUTH = `Bearer ${await signAccessToken('user-id', 'regularuser', 'user')}`
+vi.mock('../../lib/auth.ts', () => ({ default: {} }))
 
-describe('Search API - GET /api/search', () => {
+describe('Search API', () => {
   let client: Client
   let db: LibSQLDatabase
-  let app: ReturnType<typeof createApp>
+  let databaseDirectory: string
 
   beforeEach(async () => {
-    ;({ client, db } = await openDatabase(':memory:'))
+    databaseDirectory = await mkdtemp(join(tmpdir(), 'xon-search-test-'))
+    client = createClient({
+      url: pathToFileURL(join(databaseDirectory, 'search.db')).href,
+    })
+    db = drizzle(client)
     await migrateDatabase(db)
-    app = createApp(db)
 
-    // Create libraries
-    await db.insert(libraries).values([
-      { id: 'lib-1', name: 'Movies', mediaTypes: '[]' },
-      { id: 'lib-2', name: 'Music', mediaTypes: '[]' },
-    ])
-
-    // Create data sources
-    await db.insert(dataSources).values([
-      { id: 'ds-1', libraryId: 'lib-1', type: 'local', path: '/movies' },
-      { id: 'ds-2', libraryId: 'lib-2', type: 'local', path: '/music' },
-    ])
-
-    // Create users
     await db.insert(users).values([
+      { id: 'user-1', name: 'First User', email: 'first@example.com' },
+      { id: 'user-2', name: 'Second User', email: 'second@example.com' },
+    ])
+    await db.insert(libraries).values([
       {
-        id: 'admin-id',
-        username: 'admin',
-        email: 'admin@example.com',
-        displayName: 'Admin',
-        passwordHash: 'hash',
-        role: 'admin',
+        id: 'library-1',
+        ownerId: 'user-1',
+        name: 'First Movies',
+        type: 'video/movie',
+        dataSources: [],
       },
       {
-        id: 'user-id',
-        username: 'regularuser',
-        email: 'user@example.com',
-        displayName: 'Regular User',
-        passwordHash: 'hash',
-        role: 'user',
+        id: 'library-2',
+        ownerId: 'user-2',
+        name: 'Second Movies',
+        type: 'video/movie',
+        dataSources: [],
+      },
+      {
+        id: 'library-music',
+        ownerId: 'user-1',
+        name: 'First Music',
+        type: 'audio',
+        dataSources: [],
       },
     ])
-
-    // Create media items
     await db.insert(mediaItems).values([
       {
-        id: 'item-1',
-        libraryId: 'lib-1',
-        dataSourceId: 'ds-1',
-        filePath: '/movies/inception.mkv',
-        fileName: 'inception.mkv',
-        fileSize: 5000,
-        title: 'Inception',
-        description: 'A mind-bending thriller about dreams',
-        mediaCategory: 'Movies',
-        metadata: '{}',
+        id: 'arrival-title',
+        libraryId: 'library-1',
+        filePath: '/movies/arrival.mkv',
+        fileSize: 1024,
+        fileMetadata: {},
+        mediaType: 'video/x-matroska',
+        title: 'Arrival',
+        description: 'First contact drama',
+        metadata: {
+          genres: ['Science Fiction', 'Drama'],
+          cast: [{ name: 'Amy Adams', character: 'Louise Banks' }],
+          crew: [{ name: 'Denis Villeneuve', job: 'Director' }],
+        },
+        scannedAt: new Date(),
+        tags: ['science-fiction'],
       },
       {
-        id: 'item-2',
-        libraryId: 'lib-1',
-        dataSourceId: 'ds-1',
-        filePath: '/movies/interstellar.mkv',
-        fileName: 'interstellar.mkv',
-        fileSize: 6000,
-        title: 'Interstellar',
-        description: 'A journey through space and wormholes',
-        mediaCategory: 'Movies',
-        metadata: '{}',
+        id: 'arrival-description',
+        libraryId: 'library-1',
+        filePath: '/movies/other.mkv',
+        fileSize: 2048,
+        fileMetadata: {},
+        mediaType: 'video/x-matroska',
+        title: 'Another Film',
+        description: 'An arrival changes everything',
+        metadata: { genres: ['drama', 'Comedy', 'Drama'] },
+        scannedAt: new Date(),
+        tags: [],
       },
       {
-        id: 'item-3',
-        libraryId: 'lib-2',
-        dataSourceId: 'ds-2',
-        filePath: '/music/dark-side.flac',
-        fileName: 'dark-side.flac',
-        fileSize: 3000,
-        title: 'Dark Side of the Moon',
-        description: 'Progressive rock album',
-        mediaCategory: 'Music',
-        metadata: '{}',
+        id: 'contact-soundtrack',
+        libraryId: 'library-music',
+        filePath: '/music/contact.flac',
+        fileSize: 8192,
+        fileMetadata: {},
+        mediaType: 'audio/flac',
+        title: 'First Encounter',
+        description: null,
+        metadata: {
+          album: 'Contact',
+          artists: [{ name: 'Jóhann Jóhannsson' }],
+          genre: 'Ambient',
+        },
+        scannedAt: new Date(),
+        tags: [],
+      },
+      {
+        id: 'arrival-private',
+        libraryId: 'library-2',
+        filePath: '/private/arrival.mkv',
+        fileSize: 4096,
+        fileMetadata: {},
+        mediaType: 'video/x-matroska',
+        title: 'Arrival Private Copy',
+        description: null,
+        metadata: { genres: ['Science Fiction', 'Private'] },
+        scannedAt: new Date(),
+        tags: [],
       },
     ])
-
-    // Grant regular user access to lib-1 only
-    await db.insert(libraryAccess).values({
-      userId: 'user-id',
-      libraryId: 'lib-1',
-      grantedBy: 'admin-id',
-    })
   })
 
-  afterEach(() => {
+  afterEach(async () => {
     client.close()
+    await rm(databaseDirectory, { recursive: true, force: true })
   })
 
-  it('returns 400 when q param is missing', async () => {
-    const res = await app.request('/api/search', {
-      headers: { Authorization: ADMIN_AUTH },
-    })
-    expect(res.status).toBe(400)
-    const body = await res.json()
-    expect(body.error).toBeDefined()
-  })
-
-  it('returns search results matching title', async () => {
-    const res = await app.request('/api/search?q=Inception', {
-      headers: { Authorization: ADMIN_AUTH },
-    })
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.results).toHaveLength(1)
-    expect(body.results[0].id).toBe('item-1')
-    expect(body.results[0].title).toBe('Inception')
-  })
-
-  it('returns results with thumbnailUrls null when no thumbnail', async () => {
-    const res = await app.request('/api/search?q=Inception', {
-      headers: { Authorization: ADMIN_AUTH },
-    })
-    const body = await res.json()
-    expect(body.results[0].thumbnailUrls).toBeNull()
-  })
-
-  it('returns results with thumbnailUrls when thumbnail exists', async () => {
-    await db
-      .update(mediaItems)
-      .set({
-        thumbnailPaths: JSON.stringify({ small: '/thumbs/item-1-sm.jpg' }),
+  function makeApp(userId?: string) {
+    const app = new Hono()
+    if (userId) {
+      app.use('*', async (c, next) => {
+        c.set('user', { id: userId } as never)
+        c.set('session', { id: 'test-session' } as never)
+        await next()
       })
-      .where(eq(mediaItems.id, 'item-1'))
+    }
+    return app.route('/search', makeSearchRouter(db))
+  }
 
-    const res = await app.request('/api/search?q=Inception', {
-      headers: { Authorization: ADMIN_AUTH },
-    })
-    const body = await res.json()
-    expect(body.results[0].thumbnailUrls).toEqual({
-      small: '/api/media/item-1/thumbnail?size=small',
-      medium: '/api/media/item-1/thumbnail?size=medium',
-      large: '/api/media/item-1/thumbnail?size=large',
-    })
-  })
-
-  it('returns results matching description', async () => {
-    const res = await app.request('/api/search?q=wormholes', {
-      headers: { Authorization: ADMIN_AUTH },
-    })
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.results.some((r: { id: string }) => r.id === 'item-2')).toBe(
-      true,
+  it('treats user input as literal prefix terms instead of FTS syntax', () => {
+    expect(toFtsQuery('  Arrival OR "private" -- copy  ')).toBe(
+      '"Arrival"* AND "OR"* AND "private"* AND "copy"*',
     )
+    expect(toFtsQuery('---')).toBeNull()
   })
 
-  it('filters results by category', async () => {
-    const res = await app.request('/api/search?q=Dark+Side&category=Music', {
-      headers: { Authorization: ADMIN_AUTH },
+  it('ranks a title match ahead of a description match', async () => {
+    const results = await searchMedia(db, {
+      userId: 'user-1',
+      query: 'arrival',
+      page: 1,
+      limit: 20,
     })
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.results).toHaveLength(1)
-    expect(body.results[0].id).toBe('item-3')
+
+    expect(results.total).toBe(2)
+    expect(results.data.map((item) => item.id)).toEqual([
+      'arrival-title',
+      'arrival-description',
+    ])
   })
 
-  it('returns empty results for category with no matches', async () => {
-    const res = await app.request('/api/search?q=Inception&category=Music', {
-      headers: { Authorization: ADMIN_AUTH },
+  it('supports prefix search', async () => {
+    const results = await searchMedia(db, {
+      userId: 'user-1',
+      query: 'arriv',
+      page: 1,
+      limit: 20,
     })
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.results).toHaveLength(0)
+
+    expect(results.total).toBe(2)
   })
 
-  it('scopes results to accessible libraries for regular users', async () => {
-    // Regular user has access to lib-1 only (not lib-2)
-    const res = await app.request('/api/search?q=Dark+Side', {
-      headers: { Authorization: USER_AUTH },
+  it('matches nested metadata values, including cast', async () => {
+    const results = await searchMedia(db, {
+      userId: 'user-1',
+      query: 'Amy Villeneuve science',
+      page: 1,
+      limit: 20,
     })
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    // item-3 is in lib-2 which user has no access to
-    expect(body.results.some((r: { id: string }) => r.id === 'item-3')).toBe(
-      false,
+
+    expect(results.data.map((item) => item.id)).toEqual(['arrival-title'])
+  })
+
+  it('filters results by the owning library content type', async () => {
+    const allResults = await searchMedia(db, {
+      userId: 'user-1',
+      query: 'contact',
+      page: 1,
+      limit: 20,
+    })
+    const musicResults = await searchMedia(db, {
+      userId: 'user-1',
+      query: 'contact',
+      category: 'audio',
+      page: 1,
+      limit: 20,
+    })
+
+    expect(allResults.total).toBe(2)
+    expect(musicResults.total).toBe(1)
+    expect(musicResults.data.map((item) => item.id)).toEqual([
+      'contact-soundtrack',
+    ])
+  })
+
+  it("never returns media from another user's libraries", async () => {
+    const firstUser = await searchMedia(db, {
+      userId: 'user-1',
+      query: 'private',
+      page: 1,
+      limit: 20,
+    })
+    const secondUser = await searchMedia(db, {
+      userId: 'user-2',
+      query: 'private',
+      page: 1,
+      limit: 20,
+    })
+
+    expect(firstUser.data).toEqual([])
+    expect(secondUser.data.map((item) => item.id)).toEqual(['arrival-private'])
+  })
+
+  it('requires authentication', async () => {
+    const response = await makeApp().request('/search?q=arrival')
+
+    expect(response.status).toBe(401)
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: 'UNAUTHORIZED' },
+    })
+  })
+
+  it('requires authentication for popular genres', async () => {
+    const response = await makeApp().request('/search/genres')
+
+    expect(response.status).toBe(401)
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: 'UNAUTHORIZED' },
+    })
+  })
+
+  it('validates the query', async () => {
+    const response = await makeApp('user-1').request('/search')
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: 'VALIDATION_ERROR' },
+    })
+  })
+
+  it('validates the popular genre limit', async () => {
+    const response = await makeApp('user-1').request('/search/genres?limit=0')
+
+    expect(response.status).toBe(400)
+    await expect(response.json()).resolves.toMatchObject({
+      error: { code: 'VALIDATION_ERROR' },
+    })
+  })
+
+  it('returns the most-used genres from the current user libraries', async () => {
+    const response = await makeApp('user-1').request('/search/genres?limit=3')
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('ETag')).toBeTruthy()
+    await expect(response.json()).resolves.toEqual([
+      { name: 'Drama', count: 2 },
+      { name: 'Ambient', count: 1 },
+      { name: 'Comedy', count: 1 },
+    ])
+  })
+
+  it('returns MediaItem rows with pagination and cache headers', async () => {
+    const response = await makeApp('user-1').request(
+      '/search?q=arrival&page=1&limit=1',
     )
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('X-Total-Count')).toBe('2')
+    expect(response.headers.get('X-Page')).toBe('1')
+    expect(response.headers.get('X-Page-Size')).toBe('1')
+    expect(response.headers.get('X-Total-Pages')).toBe('2')
+    expect(response.headers.get('ETag')).toBeTruthy()
+    await expect(response.json()).resolves.toMatchObject([
+      {
+        id: 'arrival-title',
+        libraryId: 'library-1',
+        title: 'Arrival',
+        tags: ['science-fiction'],
+      },
+    ])
   })
 
-  it('admin can see all results across libraries', async () => {
-    const res = await app.request('/api/search?q=side', {
-      headers: { Authorization: ADMIN_AUTH },
-    })
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    // "dark-side.flac" filename and "Dark Side of the Moon" title both match "side"
-    expect(body.results.some((r: { id: string }) => r.id === 'item-3')).toBe(
-      true,
+  it('paginates in stable relevance order', async () => {
+    const response = await makeApp('user-1').request(
+      '/search?q=arrival&page=2&limit=1',
     )
+
+    expect(response.status).toBe(200)
+    expect(response.headers.get('X-Page')).toBe('2')
+    await expect(response.json()).resolves.toMatchObject([
+      { id: 'arrival-description' },
+    ])
   })
 
-  it('returns empty results when user has no library access', async () => {
-    // Create a user with no library access at all
-    await db.insert(users).values({
-      id: 'no-access-id',
-      username: 'noaccess',
-      email: 'noaccess@example.com',
-      displayName: 'No Access',
-      passwordHash: 'hash',
-      role: 'user',
-    })
-    const noAccessAuth = `Bearer ${await signAccessToken('no-access-id', 'noaccess', 'user')}`
+  it('accepts a category and includes it in pagination results', async () => {
+    const response = await makeApp('user-1').request(
+      '/search?q=contact&category=audio&page=1&limit=20',
+    )
 
-    const res = await app.request('/api/search?q=Inception', {
-      headers: { Authorization: noAccessAuth },
-    })
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.results).toHaveLength(0)
-  })
-
-  it('respects limit and offset pagination', async () => {
-    const res = await app.request('/api/search?q=the&limit=1&offset=0', {
-      headers: { Authorization: ADMIN_AUTH },
-    })
-    expect(res.status).toBe(200)
-    const body = await res.json()
-    expect(body.results).toHaveLength(1)
+    expect(response.status).toBe(200)
+    expect(response.headers.get('X-Total-Count')).toBe('1')
+    await expect(response.json()).resolves.toMatchObject([
+      { id: 'contact-soundtrack', libraryId: 'library-music' },
+    ])
   })
 })

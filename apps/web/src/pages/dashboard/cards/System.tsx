@@ -86,6 +86,10 @@ export default function System({ className, ...props }: SystemProps) {
         {error && <p className={styles.error}>{error}</p>}
         <dl className={styles.dlist}>
           <div className={styles.row}>
+            <dt>Xon Server</dt>
+            <dd>v{data.app?.version}</dd>
+          </div>
+          <div className={styles.row}>
             <dt>{data.system?.hostname}</dt>
             <dd>
               {data.system?.platform} {data.system?.release}

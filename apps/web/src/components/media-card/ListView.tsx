@@ -1,5 +1,5 @@
 import type { MediaItem } from '@xon/shared'
-import { Badge } from '@xon/ui'
+import { Chip } from '@xon/ui'
 import type { ComponentPropsWithRef } from 'react'
 import { Link } from 'react-router-dom'
 import { thumbnailUrl } from '~/lib/apiFetch'
@@ -49,7 +49,7 @@ export default function ListView({
               {isAudio ? '♪' : '▶'}
             </div>
           )}
-          {item.drmProtected && <span className={styles.listDrmBadge}>🔒</span>}
+          {item.drmProtected && <span className={styles.listDrmChip}>🔒</span>}
           {progress !== undefined && (
             <ProgressBar title={item.title} value={progress} />
           )}
@@ -65,9 +65,9 @@ export default function ListView({
           {item.title}
         </Link>
         {item.mediaType && (
-          <Badge size="small">
+          <Chip size="small">
             {item.mediaType.split('/')[1] ?? item.mediaType}
-          </Badge>
+          </Chip>
         )}
       </td>
       <td className={styles.listCell}>{formatDuration(item) ?? '—'}</td>

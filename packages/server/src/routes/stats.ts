@@ -3,6 +3,7 @@ import type { StatsPayload } from '@xon/shared'
 import { Hono } from 'hono'
 import { streamSSE } from 'hono/streaming'
 import si, { type Systeminformation } from 'systeminformation'
+import manifest from '../../package.json' with { type: 'json' }
 
 const DISK_REFRESH_MS = 30_000
 
@@ -28,6 +29,7 @@ export function makeStatsRouter() {
 
     diskCache = await diskInFlight
     diskFetchedAt = Date.now()
+
     return diskCache
   }
 
@@ -65,6 +67,9 @@ export function makeStatsRouter() {
         prevTime = time
 
         const payload: StatsPayload = {
+          app: {
+            version: manifest.version,
+          },
           timestamp: Date.now(),
           cpu: cpu.currentLoad,
           memory: {

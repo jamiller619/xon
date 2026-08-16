@@ -1,4 +1,4 @@
-import { Badge, Flex, Surface } from '@xon/ui'
+import { Chip, Flex, Surface } from '@xon/ui'
 import styles from './FixMatchDialog.module.css'
 import MetadataMatchResult from './MetadataMatchResult'
 import type { MatchProviderResults, SelectedMatch } from './types'
@@ -25,7 +25,7 @@ export default function MetadataProviderSection({
       <Flex align="center" gap="2">
         <strong>{provider.name}</strong>
         {provider.status !== 'success' && (
-          <Badge size="small">{provider.status}</Badge>
+          <Chip size="small">{provider.status}</Chip>
         )}
       </Flex>
       {provider.status === 'error' && (

@@ -1,5 +1,5 @@
 import { Delete16Regular as DeleteIcon } from '@fluentui/react-icons'
-import { Badge, Button, Flex } from '@xon/ui'
+import { Button, Chip, Flex } from '@xon/ui'
 import { css } from 'inline-css-modules'
 import Page from '~/pages/Page'
 import { useAppStore } from '~/store/appStore'
@@ -99,9 +99,9 @@ export default function FilterHeader({
             <Flex align="center" gap="4">
               <Flex align="center" gap="2">
                 <span>Selected:</span>
-                <Badge size="small" variant="primary">
+                <Chip size="small" variant="primary">
                   {selectedItemCount}
-                </Badge>
+                </Chip>
               </Flex>
               <Button.Icon>
                 <DeleteIcon />

@@ -21,7 +21,7 @@ export default function Surface<T extends ElementType = 'div'>({
       className={clsx(
         styles.surface,
         className,
-        borderRadius ? styles[borderRadius] : styles.md,
+        borderRadius ? styles[borderRadius] : styles.medium,
       )}
       {...props}
     />

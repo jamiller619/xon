@@ -19,6 +19,7 @@ import {
 import { type ComponentPropsWithRef, useState } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { useRefreshMetadataConfirmation } from '~/components/confirmation/ConfirmationProvider'
+import useMetadata from '~/hooks/useMetadata'
 import usePlayState from '~/hooks/usePlayState'
 import { apiFetch, thumbnailUrl } from '~/lib/apiFetch'
 import { mediaPath } from '~/lib/utils'
@@ -64,6 +65,7 @@ export default function MediaCard({
   const posterSrc = thumbnailUrl(item, 'medium')
   const link = mediaPath(item)
   const progress = getProgress(playState?.position, playState?.duration)
+  const metadata = useMetadata(item, 'year')
 
   function handleOpen(e: React.MouseEvent<HTMLElement>) {
     if (onOpen) {
@@ -227,9 +229,7 @@ export default function MediaCard({
           {!imageOnly && (
             <Card.Info>
               <Card.Title>{item.title}</Card.Title>
-              <Card.Meta>
-                <span>{item.metadata.year}</span>
-              </Card.Meta>
+              {metadata && <Card.Meta>{metadata}</Card.Meta>}
             </Card.Info>
           )}
         </Card>

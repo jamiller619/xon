@@ -1,4 +1,3 @@
-export { default as Badge } from './components/Badge.js'
 export {
   type ButtonProps,
   default as Button,
@@ -10,6 +9,7 @@ export {
   type ToggleButtonProps,
 } from './components/button/ToggleButton.jsx'
 export { default as CheckboxGroup } from './components/CheckboxGroup.jsx'
+export { default as Chip } from './components/Chip.js'
 export { default as Collapsible } from './components/Collapsible.jsx'
 export {
   type CardProps,
@@ -45,6 +45,10 @@ export { default as Progress } from './components/progress/Progress.jsx'
 export { default as RadioGroup } from './components/RadioGroup.jsx'
 export { default as ScrollArea } from './components/scroll-area/ScrollArea.jsx'
 export { default as Select } from './components/select/Select.jsx'
+export {
+  default as Skeleton,
+  type SkeletonProps,
+} from './components/skeleton/Skeleton.jsx'
 export { default as Surface } from './components/surface/Surface.jsx'
 export { default as Theme } from './components/theme/Theme.jsx'
 export { default as Tooltip } from './components/tooltip/Tooltip.jsx'

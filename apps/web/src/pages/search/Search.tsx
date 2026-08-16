@@ -1,72 +1,21 @@
+import type { MediaItem } from '@xon/shared'
+import { Skeleton } from '@xon/ui'
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import MediaCard, {
-  type MediaCardItem,
-} from '~/components/media-card/MediaCard'
+import MediaCard from '~/components/media-card/MediaCard'
 import { apiFetch } from '~/lib/apiFetch'
 import { useAppStore } from '~/store/appStore'
 import styles from './Search.module.css'
 
 const MEDIA_CATEGORIES = [
-  'Movies',
-  'TV Shows',
-  'Clips',
-  'Music',
-  'Audiobooks',
-  'Audio Clips',
-  'Podcasts',
-  'Pictures',
-  'Images',
-  'Textures',
-  'Home Videos',
-  'Games',
-  'Interactive Media',
-  'Documents',
-  'Web Media',
-  'Design Files',
-  '3D Models',
-  'Archives',
-  'Fonts',
-  'Icons',
+  { label: 'Movies', value: 'video/movie' },
+  { label: 'TV Shows', value: 'video/tvshow' },
+  { label: 'Music', value: 'audio' },
+  { label: 'Photos', value: 'image' },
+  { label: 'Videos', value: 'video' },
 ] as const
 
 const PAGE_SIZE = 20
-
-interface SearchResult {
-  id: string
-  title: string | null
-  mediaCategory: string | null
-  thumbnailUrls: { small: string; medium: string; large: string } | null
-  createdAt: string | null
-}
-
-function toMediaCardItem(r: SearchResult): MediaCardItem {
-  return {
-    id: r.id,
-    title: r.title ?? r.id,
-    mediaCategory: r.mediaCategory,
-    mimeType: null,
-    fileSize: null,
-    createdAt: r.createdAt
-      ? Math.floor(new Date(r.createdAt).getTime() / 1000)
-      : null,
-    thumbnailUrls: r.thumbnailUrls,
-  }
-}
-
-function SkeletonCard() {
-  return <div className={styles.skeletonCard ?? ''} />
-}
-
-function SkeletonRow() {
-  return (
-    <tr className={styles.skeletonRow ?? ''}>
-      <td colSpan={4}>
-        <div className={styles.skeletonLine ?? ''} />
-      </td>
-    </tr>
-  )
-}
 
 export default function Search() {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -74,9 +23,11 @@ export default function Search() {
 
   const q = searchParams.get('q') ?? ''
   const category = searchParams.get('category') ?? ''
-  const page = Number(searchParams.get('page') ?? '1')
+  const requestedPage = Number(searchParams.get('page') ?? '1')
+  const page =
+    Number.isInteger(requestedPage) && requestedPage > 0 ? requestedPage : 1
 
-  const [results, setResults] = useState<MediaCardItem[]>([])
+  const [results, setResults] = useState<MediaItem[]>([])
   const [totalPages, setTotalPages] = useState(1)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -91,30 +42,48 @@ export default function Search() {
 
     setLoading(true)
     setError(null)
+    const controller = new AbortController()
 
     const params = new URLSearchParams({
       q,
+      page: String(page),
       limit: String(PAGE_SIZE),
-      offset: String((page - 1) * PAGE_SIZE),
     })
     if (category) params.set('category', category)
 
-    apiFetch(`/api/search?${params.toString()}`)
-      .then((r) => r.json())
-      .then((data) => {
-        const rows = (data as { results: SearchResult[] }).results
-        setResults(rows.map(toMediaCardItem))
-        if (rows.length === PAGE_SIZE) {
-          setTotalPages((prev) => Math.max(prev, page + 1))
-        } else {
-          setTotalPages(page)
+    apiFetch(`/api/search?${params.toString()}`, {
+      signal: controller.signal,
+    })
+      .then(async (response) => {
+        if (!response.ok) throw new Error('Search request failed')
+        const data: unknown = await response.json()
+        if (!Array.isArray(data)) throw new Error('Invalid search response')
+
+        const totalPages = Number(response.headers.get('X-Total-Pages'))
+        return {
+          rows: data as MediaItem[],
+          totalPages:
+            Number.isInteger(totalPages) && totalPages > 0 ? totalPages : 1,
         }
+      })
+      .then(({ rows, totalPages }) => {
+        if (controller.signal.aborted) return
+        setResults(rows)
+        setTotalPages(totalPages)
         setLoading(false)
       })
-      .catch(() => {
+      .catch((requestError: unknown) => {
+        if (
+          requestError instanceof DOMException &&
+          requestError.name === 'AbortError'
+        ) {
+          return
+        }
         setError('Search failed. Please try again.')
         setLoading(false)
       })
+
+    return () => controller.abort()
   }, [q, category, page])
 
   function setCategory(val: string) {
@@ -177,14 +146,14 @@ export default function Search() {
         >
           All
         </button>
-        {MEDIA_CATEGORIES.map((cat) => (
+        {MEDIA_CATEGORIES.map((categoryOption) => (
           <button
-            key={cat}
+            key={categoryOption.value}
             type="button"
-            className={`${styles.tab ?? ''} ${category === cat ? (styles.tabActive ?? '') : ''}`}
-            onClick={() => setCategory(cat)}
+            className={`${styles.tab ?? ''} ${category === categoryOption.value ? (styles.tabActive ?? '') : ''}`}
+            onClick={() => setCategory(categoryOption.value)}
           >
-            {cat}
+            {categoryOption.label}
           </button>
         ))}
       </div>
@@ -200,7 +169,7 @@ export default function Search() {
           <div className={styles.grid ?? ''}>
             {Array.from({ length: PAGE_SIZE }).map((_, i) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders
-              <SkeletonCard key={i} />
+              <Skeleton key={i} className={styles.skeletonCard ?? ''} />
             ))}
           </div>
         ) : results.length === 0 && q ? (
@@ -221,19 +190,26 @@ export default function Search() {
               <tr>
                 <th className={`${styles.th ?? ''} ${styles.thThumb ?? ''}`} />
                 <th className={styles.th ?? ''}>Title</th>
-                <th className={styles.th ?? ''}>Category</th>
+                <th className={styles.th ?? ''}>Duration</th>
+                <th className={styles.th ?? ''}>Size</th>
+                <th className={styles.th ?? ''}>Year</th>
                 <th className={styles.th ?? ''}>Date Added</th>
+                <th className={styles.th ?? ''} />
               </tr>
             </thead>
             <tbody>
               {loading ? (
                 Array.from({ length: 10 }).map((_, i) => (
                   // biome-ignore lint/suspicious/noArrayIndexKey: skeleton placeholders
-                  <SkeletonRow key={i} />
+                  <tr key={i} className={styles.skeletonRow ?? ''}>
+                    <td colSpan={7}>
+                      <Skeleton className={styles.skeletonLine ?? ''} />
+                    </td>
+                  </tr>
                 ))
               ) : results.length === 0 && q ? (
                 <tr>
-                  <td colSpan={4} className={styles.emptyCell ?? ''}>
+                  <td colSpan={7} className={styles.emptyCell ?? ''}>
                     No results found for &ldquo;{q}&rdquo;.
                   </td>
                 </tr>

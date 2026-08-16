@@ -41,7 +41,10 @@
   color: #888;
   font-size: 0.8125rem;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease,
+    border-color 0.15s ease;
   white-space: nowrap;
 }
 
@@ -71,7 +74,9 @@
   color: #888;
   font-size: 1rem;
   cursor: pointer;
-  transition: background 0.15s ease, color 0.15s ease;
+  transition:
+    background 0.15s ease,
+    color 0.15s ease;
 }
 
 .toggleBtn:hover {
@@ -94,20 +99,8 @@
 
 .skeletonCard {
   aspect-ratio: 16 / 9;
-  background: linear-gradient(90deg, #1a1a2e 25%, #222240 50%, #1a1a2e 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
   border-radius: 8px;
   min-height: 140px;
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: 200% 0;
-  }
-  100% {
-    background-position: -200% 0;
-  }
 }
 
 /* List/table view */
@@ -148,9 +141,6 @@
 
 .skeletonLine {
   height: 14px;
-  background: linear-gradient(90deg, #1a1a2e 25%, #222240 50%, #1a1a2e 75%);
-  background-size: 200% 100%;
-  animation: shimmer 1.5s infinite;
   border-radius: 4px;
   width: 60%;
 }

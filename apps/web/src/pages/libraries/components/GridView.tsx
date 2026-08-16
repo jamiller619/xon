@@ -1,10 +1,10 @@
 import { useVirtualizer } from '@tanstack/react-virtual'
+import { Skeleton } from '@xon/ui'
 import { css } from 'inline-css-modules'
 import { Fragment, useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useScrollViewport } from '../hooks/useScrollViewport'
 import styles from '../Library.module.css'
 import type { CollectionViewProps } from '../types/collectionView'
-import SkeletonCard from './SkeletonCard'
 
 const DEFAULT_MIN_CARD_WIDTH = 160
 const DEFAULT_GAP = 12
@@ -61,7 +61,7 @@ export default function GridView<Item>({
   getItemKey,
   emptyContent = 'No items in this library yet.',
   renderItem,
-  renderSkeleton = () => <SkeletonCard />,
+  renderSkeleton = () => <Skeleton aspectRatio="2 / 3" />,
   minCardWidth = DEFAULT_MIN_CARD_WIDTH,
   gap = DEFAULT_GAP,
   cardHeightRatio = DEFAULT_CARD_HEIGHT_RATIO,

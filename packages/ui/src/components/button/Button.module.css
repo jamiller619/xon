@@ -20,6 +20,7 @@ a.button {
   font-weight: 400;
   font-family: inherit;
   white-space: nowrap;
+  line-height: 1;
 
   letter-spacing: 0.03em;
   cursor: pointer;
@@ -27,6 +28,10 @@ a.button {
   transition:
     transform 0.1s ease,
     background 0.2s ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    transition: none;
+  }
 
   background: var(--color-gray-a2);
 
@@ -39,9 +44,17 @@ a.button {
   }
 
   &.link {
+    display: inline-flex;
+    width: fit-content;
     padding: 0;
     background: none;
-    color: var(--color-accent-8);
+    color: var(--color-accent-11);
+    text-decoration: underline;
+    text-underline-offset: 3px;
+
+    &:hover {
+      text-decoration: none;
+    }
   }
 
   &[data-disabled] {
@@ -61,8 +74,15 @@ a.button {
 
   &.xsmall {
     --height: var(--form-control-height-xsmall);
-    font-size: var(--text-sm);
+    font-size: calc(var(--text-sm) - 1px);
     padding-inline: var(--space-xs);
+
+    gap: var(--space-2xs);
+
+    svg {
+      width: 1.25em;
+      height: 1.25em;
+    }
   }
 
   &.small {
@@ -77,9 +97,20 @@ a.button {
   }
 
   &.ghost {
-    background: none;
-    outline: 2px solid var(--color-gray-5);
-    outline-offset: -2px;
+    background: transparent;
+
+    &:hover:not([data-disabled]) {
+      background: var(--color-gray-a2);
+    }
+  }
+
+  &.chip {
+    --height: var(--form-control-height-xsmall);
+    padding: 0 var(--space-xs);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    font-weight: 600;
+    letter-spacing: 0.04em;
   }
 
   &.block {
