@@ -3,6 +3,30 @@
   "title": "Xon Config Schema",
   "type": "object",
   "additionalProperties": false,
+  "x-xon-ui": {
+    "categories": [
+      {
+        "namespace": "app",
+        "title": "Application"
+      },
+      {
+        "namespace": "log",
+        "title": "Logging"
+      },
+      {
+        "namespace": "appdata",
+        "title": "Application Data"
+      },
+      {
+        "namespace": "network",
+        "title": "Network"
+      },
+      {
+        "namespace": "session",
+        "title": "Sessions"
+      }
+    ]
+  },
   "required": [
     "app.locale",
     "log.level",
@@ -33,12 +57,7 @@
     "log.level": {
       "title": "Logging Level",
       "type": "string",
-      "enum": [
-        "debug",
-        "info",
-        "warn",
-        "error"
-      ],
+      "enum": ["debug", "info", "warn", "error"],
       "default": "info",
       "description": "The level of detail recorded by the logger."
     },
@@ -117,10 +136,7 @@
       "items": {
         "type": "string"
       },
-      "default": [
-        "http://localhost:6019",
-        "https://localhost:6020"
-      ]
+      "default": ["http://localhost:6019", "https://localhost:6020"]
     },
     "session.ttlDays": {
       "title": "Session TTL Days",

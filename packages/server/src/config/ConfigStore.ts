@@ -4,6 +4,7 @@ import writeAtomic from 'write-file-atomic'
 export default class ConfigStore {
   #data: Config
   #filePath: string
+  #mutationQueue: Promise<void> = Promise.resolve()
 
   constructor(filePath: string, savedConfig: Config) {
     this.#data = savedConfig
@@ -17,9 +18,17 @@ export default class ConfigStore {
   }
 
   async setStore(data: Partial<Config>): Promise<void> {
-    Object.assign(this.#data, data)
+    return this.#enqueue(async () => {
+      const previous = { ...this.#data }
+      Object.assign(this.#data, data)
 
-    await this.#write()
+      try {
+        await this.#write()
+      } catch (error) {
+        this.#data = previous
+        throw error
+      }
+    })
   }
 
   get<K extends ConfigKey>(key: K): Config[K] {
@@ -27,9 +36,28 @@ export default class ConfigStore {
   }
 
   async set<K extends ConfigKey>(key: K, value?: Config[K]): Promise<void> {
-    Object.assign(this.#data, { [key]: value })
+    return this.#enqueue(async () => {
+      const data = this.#data as unknown as Record<string, unknown>
+      const hadPreviousValue = Object.hasOwn(data, key)
+      const previousValue = data[key]
 
-    await this.#write()
+      if (value === undefined) delete data[key]
+      else data[key] = value
+
+      try {
+        await this.#write()
+      } catch (error) {
+        if (hadPreviousValue) data[key] = previousValue
+        else delete data[key]
+        throw error
+      }
+    })
+  }
+
+  #enqueue(mutation: () => Promise<void>): Promise<void> {
+    const result = this.#mutationQueue.then(mutation, mutation)
+    this.#mutationQueue = result.catch(() => undefined)
+    return result
   }
 
   async #write() {

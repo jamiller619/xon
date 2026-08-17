@@ -129,6 +129,105 @@ describe('FTS5 media index', () => {
     }
   })
 
+  it('upgrades and backfills an existing five-column FTS index', async () => {
+    const legacyClient = createClient({
+      url: pathToFileURL(join(databaseDirectory, 'legacy-fts.db')).href,
+    })
+
+    try {
+      await legacyClient.executeMultiple(`
+        CREATE TABLE media_items (
+          id TEXT PRIMARY KEY NOT NULL,
+          title TEXT NOT NULL,
+          description TEXT,
+          file_path TEXT NOT NULL,
+          tags TEXT NOT NULL,
+          metadata TEXT NOT NULL
+        );
+        CREATE VIRTUAL TABLE media_fts USING fts5(
+          id UNINDEXED,
+          title,
+          description,
+          file_path,
+          tags,
+          tokenize = 'unicode61 remove_diacritics 2'
+        );
+        CREATE TRIGGER media_items_fts_insert
+        AFTER INSERT ON media_items
+        BEGIN
+          INSERT INTO media_fts (id, title, description, file_path, tags)
+          VALUES (
+            new.id,
+            new.title,
+            coalesce(new.description, ''),
+            new.file_path,
+            coalesce(new.tags, '[]')
+          );
+        END;
+        CREATE TRIGGER media_items_fts_update
+        AFTER UPDATE OF id, title, description, file_path, tags ON media_items
+        BEGIN
+          DELETE FROM media_fts WHERE id = old.id;
+          INSERT INTO media_fts (id, title, description, file_path, tags)
+          VALUES (
+            new.id,
+            new.title,
+            coalesce(new.description, ''),
+            new.file_path,
+            coalesce(new.tags, '[]')
+          );
+        END;
+        CREATE TRIGGER media_items_fts_delete
+        AFTER DELETE ON media_items
+        BEGIN
+          DELETE FROM media_fts WHERE id = old.id;
+        END;
+        INSERT INTO media_items (id, title, description, file_path, tags, metadata)
+        VALUES (
+          'legacy-media',
+          'Legacy Arrival',
+          'Indexed before migration',
+          '/legacy/arrival.mkv',
+          '["archive"]',
+          '{"genres":["Historical Drama"]}'
+        );
+      `)
+
+      const migration = await readFile(
+        new URL(
+          '../../../drizzle/0009_rebuild_search_fts_metadata.sql',
+          import.meta.url,
+        ),
+        'utf8',
+      )
+      await legacyClient.executeMultiple(migration)
+
+      const columns = await legacyClient.execute('PRAGMA table_info(media_fts)')
+      expect(columns.rows.map((row) => row.name)).toContain('metadata_text')
+
+      const backfilled = await legacyClient.execute(
+        "SELECT id FROM media_fts WHERE media_fts MATCH 'Historical'",
+      )
+      expect(backfilled.rows.map((row) => row.id)).toEqual(['legacy-media'])
+
+      await legacyClient.execute({
+        sql: 'UPDATE media_items SET metadata = ? WHERE id = ?',
+        args: ['{"genres":["Mystery"]}', 'legacy-media'],
+      })
+
+      const replaced = await legacyClient.execute(
+        "SELECT id FROM media_fts WHERE media_fts MATCH 'Mystery'",
+      )
+      expect(replaced.rows.map((row) => row.id)).toEqual(['legacy-media'])
+      const removed = await legacyClient.execute(
+        "SELECT id FROM media_fts WHERE media_fts MATCH 'Historical'",
+      )
+      expect(removed.rows).toHaveLength(0)
+    } finally {
+      legacyClient.close()
+    }
+  })
+
   it('indexes title, description, file path, tags, and metadata on insert', async () => {
     await insertMedia()
 

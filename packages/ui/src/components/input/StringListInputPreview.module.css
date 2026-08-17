@@ -1,0 +1,27 @@
+.preview {
+  display: grid;
+  gap: var(--space-xl);
+  max-width: 42rem;
+  padding: var(--space-xl);
+  color: var(--color-text);
+}
+
+.preview h1,
+.preview h2 {
+  margin: 0;
+}
+
+.preview h1 {
+  font-size: var(--text-xl);
+}
+
+.preview h2 {
+  color: var(--color-gray-11);
+  font-size: var(--text-sm);
+  font-weight: 500;
+}
+
+.example {
+  display: grid;
+  gap: var(--space-xs);
+}

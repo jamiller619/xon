@@ -1,0 +1,51 @@
+.artwork {
+  position: relative;
+  display: block;
+  width: 100%;
+  height: 100%;
+  overflow: hidden;
+}
+
+.skeleton,
+.image,
+.fallback {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.fallback {
+  display: grid;
+  place-items: center;
+}
+
+.skeleton {
+  border-radius: inherit;
+  opacity: 1;
+  transition: opacity 160ms ease;
+}
+
+.image {
+  display: block;
+  object-fit: cover;
+  opacity: 0;
+  transition: opacity 160ms ease;
+}
+
+.artwork[data-state="loaded"] .image {
+  opacity: 1;
+}
+
+.artwork[data-state="loaded"] .skeleton,
+.artwork[data-state="error"] .skeleton {
+  opacity: 0;
+  animation-play-state: paused;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .skeleton,
+  .image {
+    transition: none;
+  }
+}

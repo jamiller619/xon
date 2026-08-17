@@ -28,22 +28,24 @@ export default function SearchSidebar({
       <section className={styles.section}>
         <Eyebrow>Recent searches</Eyebrow>
         {visibleHistory.length > 0 ? (
-          <div id={historyId} className={styles.historyList} role="listbox">
-            {visibleHistory.map((item, index) => (
-              <Button
-                key={item}
-                id={`${historyId}-${index}`}
-                size="xsmall"
-                role="option"
-                aria-selected={highlightIdx === index}
-                className={styles.historyButton}
-                variant="ghost"
-                onClick={() => onSearch(item)}
-              >
-                <HistoryIcon aria-hidden="true" />
-                <span>{item}</span>
-              </Button>
-            ))}
+          <>
+            <Flex id={historyId} gap="1" wrap role="listbox">
+              {visibleHistory.map((item, index) => (
+                <Button
+                  key={item}
+                  id={`${historyId}-${index}`}
+                  size="xsmall"
+                  role="option"
+                  aria-selected={highlightIdx === index}
+                  className={styles.historyButton}
+                  variant="ghost"
+                  onClick={() => onSearch(item)}
+                >
+                  <HistoryIcon aria-hidden="true" />
+                  <span>{item}</span>
+                </Button>
+              ))}
+            </Flex>
             <Button
               variant="link"
               size="xsmall"
@@ -52,7 +54,7 @@ export default function SearchSidebar({
             >
               Clear history
             </Button>
-          </div>
+          </>
         ) : (
           <p id={historyId} className={styles.resultMessage}>
             No recent searches.
@@ -63,9 +65,9 @@ export default function SearchSidebar({
       <section className={styles.section}>
         <Eyebrow>Explore genres</Eyebrow>
         {genresStatus === 'loading' ? (
-          <p className={styles.sidebarMessage}>Loading genres…</p>
+          <p className={styles.sidebarMessage}>Loading genres...</p>
         ) : genres.length > 0 ? (
-          <Flex gap="1" wrap>
+          <Flex gap="1" wrap role="listbox">
             {genres.map((genre) => (
               <Button
                 key={genre}

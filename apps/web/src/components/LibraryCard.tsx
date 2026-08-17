@@ -10,6 +10,7 @@ import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import useLibraryThumbnail from '~/hooks/useLibraryThumbnail'
 import { apiPost } from '~/lib/apiFetch'
+import ArtworkImage from './ArtworkImage'
 import { useRefreshMetadataConfirmation } from './confirmation/ConfirmationProvider'
 import EditImages from './EditImages'
 
@@ -63,18 +64,11 @@ export default function LibraryCard({ data, withLink }: LibraryCardProps) {
     <>
       <Card.Thumb aspectRatio="4 / 3">
         <span className={styles.libraryThumbnailBackdrop}>
-          <img
+          <ArtworkImage
             src={thumbnailURL}
             alt=""
             loading="lazy"
-            decoding="async"
             className={styles.libraryThumbnailImg}
-            onLoad={(e) => {
-              e.currentTarget.style.display = ''
-            }}
-            onError={(e) => {
-              e.currentTarget.style.display = 'none'
-            }}
           />
         </span>
       </Card.Thumb>

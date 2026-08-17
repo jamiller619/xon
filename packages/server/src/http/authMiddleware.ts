@@ -6,6 +6,13 @@ import { errorCodes, errorResponse } from './responses.ts'
 type User = typeof auth.$Infer.Session.user
 type Session = typeof auth.$Infer.Session.session
 
+export type AuthenticatedEnv = {
+  Variables: {
+    user: User
+    session: Session
+  }
+}
+
 export function makeSessionMiddleware(): MiddlewareHandler {
   return async (c: Context, next: Next) => {
     const session = await auth.api.getSession({ headers: c.req.raw.headers })
@@ -28,31 +35,28 @@ export function makeSessionMiddleware(): MiddlewareHandler {
  * Requires an authenticated user (set by the session middleware).
  * Responds 401 for unauthenticated requests.
  */
-export const requireAuth = createMiddleware<{
-  Variables: {
-    user: User
-    session: Session
-  }
-}>(async (c, next) => {
-  const user = c.get('user')
-  const session = c.get('session')
+export const requireAuth = createMiddleware<AuthenticatedEnv>(
+  async (c, next) => {
+    const user = c.get('user')
+    const session = c.get('session')
 
-  if (!user || !session) {
-    return errorResponse(
-      c,
-      401,
-      errorCodes.unauthorized,
-      'Authentication required',
-    )
-  }
+    if (!user || !session) {
+      return errorResponse(
+        c,
+        401,
+        errorCodes.unauthorized,
+        'Authentication required',
+      )
+    }
 
-  // Re-setting them connects the runtime check with the middleware's
-  // non-null output type.
-  c.set('user', user)
-  c.set('session', session)
+    // Re-setting them connects the runtime check with the middleware's
+    // non-null output type.
+    c.set('user', user)
+    c.set('session', session)
 
-  await next()
-})
+    await next()
+  },
+)
 
 declare module 'hono' {
   interface ContextVariableMap {

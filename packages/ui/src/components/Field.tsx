@@ -18,7 +18,19 @@ const styles = css`
   }
 
   .error {
-    color: var(--color-error);
+    color: var(--color-red-11);
+  }
+
+  .helper {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+    width: 100%;
+    font-size: var(--text-sm);
+  }
+
+  .reserved {
+    min-height: 1lh;
   }
 `
 
@@ -27,6 +39,7 @@ type FieldProps = BaseField.Root.Props & {
   error?: string
   description?: ReactNode
   children: ReactNode
+  reserveMessageSpace?: boolean
 }
 
 export default function Field({
@@ -34,6 +47,7 @@ export default function Field({
   error,
   children,
   description,
+  reserveMessageSpace = false,
   className,
   ...props
 }: FieldProps) {
@@ -41,10 +55,24 @@ export default function Field({
     <BaseField.Root className={clsx(styles.field, className)} {...props}>
       <BaseField.Label className={styles.label}>{label}</BaseField.Label>
       {children}
-      {error && (
-        <BaseField.Error className={styles.error}>{error}</BaseField.Error>
+      {reserveMessageSpace ? (
+        <div className={clsx(styles.helper, styles.reserved)}>
+          {error ? (
+            <BaseField.Error className={styles.error}>{error}</BaseField.Error>
+          ) : (
+            description && (
+              <BaseField.Description>{description}</BaseField.Description>
+            )
+          )}
+        </div>
+      ) : (
+        <>
+          {error && (
+            <BaseField.Error className={styles.error}>{error}</BaseField.Error>
+          )}
+          <BaseField.Description>{description}</BaseField.Description>
+        </>
       )}
-      <BaseField.Description>{description}</BaseField.Description>
     </BaseField.Root>
   )
 }

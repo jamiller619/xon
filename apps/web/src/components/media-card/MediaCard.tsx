@@ -24,6 +24,7 @@ import usePlayState from '~/hooks/usePlayState'
 import { apiFetch, thumbnailUrl } from '~/lib/apiFetch'
 import { mediaPath } from '~/lib/utils'
 import { useAudioStore } from '~/store/audioStore'
+import ArtworkImage from '../ArtworkImage'
 import EditImages from '../EditImages'
 import FixMatchDialog from '../fix-match/FixMatchDialog'
 import ListView from './ListView'
@@ -184,13 +185,16 @@ export default function MediaCard({
           }}
         >
           <Card.Thumb aspectRatio={thumbAspectRatio}>
-            {posterSrc ? (
-              <img src={posterSrc} alt={item.title} loading="lazy" />
-            ) : (
-              <div className={styles.thumbPlaceholder}>
-                {!imageOnly && <span>{isAudio ? '♪' : '▶'}</span>}
-              </div>
-            )}
+            <ArtworkImage
+              src={posterSrc}
+              alt={item.title}
+              loading="lazy"
+              fallback={
+                <div className={styles.thumbPlaceholder}>
+                  {!imageOnly && <span>{isAudio ? '♪' : '▶'}</span>}
+                </div>
+              }
+            />
             {item.drmProtected && <div className={styles.drmBadge}>🔒</div>}
             {playState && <ProgressBar title={item.title} value={progress} />}
             {onToggleFavorite && (

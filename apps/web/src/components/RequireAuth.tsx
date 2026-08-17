@@ -1,6 +1,6 @@
 import { type ReactNode, useCallback, useEffect, useRef, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import useConfig from '~/hooks/useConfig'
+import { useConfigBootstrapQuery } from '~/hooks/useConfig'
 import authClient from '~/lib/authClient'
 
 /**
@@ -34,7 +34,13 @@ export default function RequireAuth({
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const hasAttemptedSignIn = useRef(false)
-  const [areAnonLoginsEnabled] = useConfig('session.enableAnonymousLogins')
+  const {
+    data: configBootstrap,
+    error: configError,
+    isPending: isConfigPending,
+  } = useConfigBootstrapQuery()
+  const areAnonLoginsEnabled =
+    configBootstrap?.['session.enableAnonymousLogins']
 
   const loginAnonymously = useCallback(async () => {
     setError(null)
@@ -56,6 +62,8 @@ export default function RequireAuth({
 
   useEffect(() => {
     if (
+      isConfigPending ||
+      configError ||
       areAnonLoginsEnabled === undefined ||
       !areAnonLoginsEnabled ||
       hasAttemptedSignIn.current ||
@@ -67,12 +75,21 @@ export default function RequireAuth({
 
     hasAttemptedSignIn.current = true
     loginAnonymously()
-  }, [areAnonLoginsEnabled, data, isPending, isRefetching, loginAnonymously])
+  }, [
+    areAnonLoginsEnabled,
+    configError,
+    data,
+    isConfigPending,
+    isPending,
+    isRefetching,
+    loginAnonymously,
+  ])
 
   useEffect(() => {
     // Config hasn't resolved yet — don't redirect to /login until we know
     // whether anonymous logins are enabled
-    if (areAnonLoginsEnabled === undefined) return
+    if (isConfigPending || configError || areAnonLoginsEnabled === undefined)
+      return
     if (isPending || isRefetching || isLoading) return
 
     const isAuthenticated = !!(!sessionError && data?.user)
@@ -91,18 +108,29 @@ export default function RequireAuth({
     isRefetching,
     isLoading,
     areAnonLoginsEnabled,
+    configError,
+    isConfigPending,
     navigate,
   ])
 
   if (
     data?.user == null &&
-    (areAnonLoginsEnabled === undefined ||
+    (isConfigPending ||
+      areAnonLoginsEnabled === undefined ||
       isLoading ||
       isPending ||
       isRefetching)
   )
     return <p>Loading...</p>
-  if (error || sessionError) return <p>{error ?? sessionError?.message}</p>
+  if (error || sessionError || configError)
+    return (
+      <p>
+        {error ??
+          sessionError?.message ??
+          configError?.message ??
+          'Authentication failed'}
+      </p>
+    )
 
   return <>{children}</>
 }

@@ -46,8 +46,6 @@ const data = {
 
 export default new ConfigStore(configFilePath, data)
 
-export * from './routes/config.ts'
-
 async function getConfig(): Promise<Config> {
   try {
     const data = await fsp.readFile(configFilePath, 'utf-8')

@@ -1,4 +1,5 @@
 import { Button, Chip, Flex } from '@xon/ui'
+import ArtworkImage from '../ArtworkImage'
 import styles from './FixMatchDialog.module.css'
 import type { MatchSearchResult } from './types'
 
@@ -23,11 +24,12 @@ export default function MetadataMatchResult({
     >
       <Flex gap="3" align="center">
         <div className={styles.resultPoster}>
-          {result.posterUrl ? (
-            <img src={result.posterUrl} alt="" loading="lazy" />
-          ) : (
-            <span aria-hidden="true">▶</span>
-          )}
+          <ArtworkImage
+            src={result.posterUrl}
+            alt=""
+            loading="lazy"
+            fallback={<span aria-hidden="true">▶</span>}
+          />
         </div>
         <Flex dir="col" gap="1" align="start" className={styles.resultText}>
           <strong>{result.title}</strong>

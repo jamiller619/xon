@@ -52,6 +52,30 @@ const styles = css`
     &:focus {
       background-color: var(--color-surface-3);
     }
+
+    &:focus-visible {
+      outline: 2px solid var(--color-gray-12);
+      outline-offset: 2px;
+    }
+
+    &:hover:not(:disabled) {
+      background-color: var(--color-gray-5);
+    }
+
+    &:active:not(:disabled) {
+      background-color: var(--color-gray-5);
+    }
+
+    &[aria-invalid="true"] {
+      outline: 2px solid var(--color-red-11);
+      outline-offset: 1px;
+    }
+
+    &:disabled {
+      background-color: var(--color-gray-a1);
+      opacity: 0.55;
+      cursor: not-allowed;
+    }
   }
 
   .block {

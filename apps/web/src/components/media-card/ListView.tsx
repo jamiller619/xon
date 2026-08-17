@@ -4,6 +4,7 @@ import type { ComponentPropsWithRef } from 'react'
 import { Link } from 'react-router-dom'
 import { thumbnailUrl } from '~/lib/apiFetch'
 import { formatBytes, formatDuration, formatYear, mediaPath } from '~/lib/utils'
+import ArtworkImage from '../ArtworkImage'
 import styles from './MediaCard.module.css'
 import ProgressBar from './ProgressBar'
 
@@ -37,18 +38,17 @@ export default function ListView({
           onClick={handleOpen}
           className={`${styles.listThumbLink} ${item.drmProtected ? styles.listThumbDrm : ''}`}
         >
-          {posterSrc ? (
-            <img
-              src={posterSrc}
-              alt=""
-              loading="lazy"
-              className={styles.listThumbImg}
-            />
-          ) : (
-            <div className={styles.listThumbPlaceholder}>
-              {isAudio ? '♪' : '▶'}
-            </div>
-          )}
+          <ArtworkImage
+            src={posterSrc}
+            alt=""
+            loading="lazy"
+            className={styles.listThumbImg}
+            fallback={
+              <div className={styles.listThumbPlaceholder}>
+                {isAudio ? '♪' : '▶'}
+              </div>
+            }
+          />
           {item.drmProtected && <span className={styles.listDrmChip}>🔒</span>}
           {progress !== undefined && (
             <ProgressBar title={item.title} value={progress} />

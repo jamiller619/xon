@@ -41,7 +41,6 @@ export type ApplicationLogsPath = string;
  * The file system path where application plugins are stored.
  */
 export type ApplicationPluginsPath = string;
-export type ServerPort = number;
 export type HTTPPort = number;
 export type HTTPSPort = number;
 /**
@@ -61,7 +60,7 @@ export type SessionUpdateAge = number;
  */
 export type DisableSessionRefresh = boolean;
 /**
- * By default, Xon does not require an account to login. This makes Xon very easy to use, especially for people that don't need the additional security features. If, however, you want to require accounts, simply turn this off.
+ * While Xon does not require users login with an account, that is what's happening behind the scenes we just handle it for you automatically. These are called "anonymous" accounts, and there is exactly one created and shared for everyone that connects to the server. Turning this off can improve security.
  */
 export type AllowAnonymousLogins = boolean;
 
@@ -75,7 +74,6 @@ export interface XonConfigSchema {
   "appdata.cacheQuota": ApplicationCacheQuota;
   "appdata.logsPath": ApplicationLogsPath;
   "appdata.pluginsPath": ApplicationPluginsPath;
-  "server.port"?: ServerPort;
   "network.httpPort": HTTPPort;
   "network.httpsPort"?: HTTPSPort;
   "network.sslPath"?: SSLCertificatesPath;

@@ -1,6 +1,7 @@
 import { Search20Filled as SearchIcon } from '@fluentui/react-icons'
 import type { MediaItem } from '@xon/shared'
 import { Card, Skeleton } from '@xon/ui'
+import ArtworkImage from '~/components/ArtworkImage'
 import useMetadata from '~/hooks/useMetadata'
 import { thumbnailUrl } from '~/lib/apiFetch'
 import styles from './SearchDialog.module.css'
@@ -104,13 +105,16 @@ function SearchResult({ id, item, selected, onOpen }: SearchResultProps) {
       onClick={() => onOpen(item)}
     >
       <Card.Thumb className={styles.resultThumb} aspectRatio="2 / 3">
-        {poster ? (
-          <img src={poster} alt="" loading="lazy" />
-        ) : (
-          <div className={styles.posterPlaceholder}>
-            <SearchIcon aria-hidden="true" />
-          </div>
-        )}
+        <ArtworkImage
+          src={poster}
+          alt=""
+          loading="lazy"
+          fallback={
+            <div className={styles.posterPlaceholder}>
+              <SearchIcon aria-hidden="true" />
+            </div>
+          }
+        />
       </Card.Thumb>
       <Card.Info className={styles.resultInfo}>
         <Card.Title className={styles.resultTitle}>{item.title}</Card.Title>
