@@ -1,4 +1,8 @@
-import type { CollectionsRoutes, LibrariesRoutes } from '@xon/server'
+import type {
+  CollectionsRoutes,
+  LibrariesRoutes,
+  SessionsRoutes,
+} from '@xon/server'
 import { hc } from 'hono/client'
 import { useAuthStore } from '~/store/authStore'
 
@@ -22,5 +26,10 @@ export const librariesAPI = hc<LibrariesRoutes>('/api/libraries', {
 
 /** Typed RPC client for /api/collections. */
 export const collectionsAPI = hc<CollectionsRoutes>('/api/collections', {
+  headers: authHeaders,
+})
+
+/** Typed RPC client for the current user's active sessions. */
+export const sessionsAPI = hc<SessionsRoutes>('/api/sessions', {
   headers: authHeaders,
 })

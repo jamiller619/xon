@@ -16,6 +16,7 @@ import { makeLibrariesRouter } from './routes/libraries.ts'
 import { makeMediaRouter } from './routes/media.ts'
 import { makePluginsRouter } from './routes/plugins.ts'
 import { makeSearchRouter } from './routes/search.ts'
+import { makeSessionsRouter } from './routes/sessions.ts'
 import { makeStatsRouter } from './routes/stats.ts'
 import { makeUsersRouter } from './routes/users.ts'
 import type { ScannerHandle } from './scanner/scannerHandle.ts'
@@ -32,7 +33,7 @@ export function createApp(
   app.notFound(onNotFound)
   app.use('/*', makeCorsMiddleware())
   app.use('/*', makeLoggingMiddleware())
-  app.use('/*', makeSessionMiddleware())
+  app.use('/*', makeSessionMiddleware(db))
 
   // Security headers on all responses
   app.use(
@@ -59,6 +60,7 @@ export function createApp(
     app.route('/collections', makeCollectionsRouter(db))
     app.route('/media', makeMediaRouter(db))
     app.route('/search', makeSearchRouter(db))
+    app.route('/sessions', makeSessionsRouter(db))
     app.route('/users', makeUsersRouter(db))
   }
 

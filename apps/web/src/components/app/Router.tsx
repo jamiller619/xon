@@ -11,6 +11,7 @@ const AdminLibraries = lazy(
 const LogViewer = lazy(() => import('~/pages/admin/logs/LogViewer'))
 const AdminPlugins = lazy(() => import('~/pages/admin/plugins/AdminPlugins'))
 const AdminUsers = lazy(() => import('~/pages/admin/users/AdminUsers'))
+const Sessions = lazy(() => import('~/pages/account/sessions/Sessions'))
 const Dashboard = lazy(() => import('~/pages/dashboard/Dashboard'))
 const CollectionBrowser = lazy(() => import('~/pages/collections/Collection'))
 const LibraryBrowser = lazy(() => import('~/pages/libraries/Library'))
@@ -38,6 +39,7 @@ export default function Router() {
         <Route path="/media/:title/:id" element={<Media />} />
         <Route path="/collections/:id" element={<CollectionBrowser />} />
         <Route path="/search" element={<Search />} />
+        <Route path="/account/sessions" element={<Sessions />} />
         <Route path="/admin/libraries" element={<AdminLibraries />} />
         <Route path="/admin/plugins" element={<AdminPlugins />} />
         <Route path="/admin/users" element={<AdminUsers />} />

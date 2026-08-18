@@ -10,7 +10,7 @@ export default function ScrollArea({ children, ...props }: ScrollAreaProps) {
   return (
     <UIScrollArea.Root {...props}>
       <UIScrollArea.Viewport className={styles.viewport}>
-        {children}
+        <UIScrollArea.Content>{children}</UIScrollArea.Content>
       </UIScrollArea.Viewport>
       <UIScrollArea.Scrollbar
         orientation="vertical"

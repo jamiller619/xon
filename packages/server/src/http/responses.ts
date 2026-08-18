@@ -5,6 +5,7 @@ import { computeETag } from '../cache.ts'
 export const errorCodes = {
   badRequest: 'BAD_REQUEST',
   conflict: 'CONFLICT',
+  currentSession: 'current_session',
   forbidden: 'FORBIDDEN',
   internal: 'INTERNAL_ERROR',
   notFound: 'NOT_FOUND',

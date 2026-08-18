@@ -1,7 +1,16 @@
 import type { Context, MiddlewareHandler, Next } from 'hono'
 import { createMiddleware } from 'hono/factory'
+import type { LibSQLDatabase } from '../db/db.ts'
 import auth from '../lib/auth.ts'
+import { createLogger } from '../logger.ts'
+import { sessionClientNameFromHeaders } from '../services/sessionClient.ts'
+import {
+  captureSessionClientName,
+  touchSessionActivity,
+} from '../services/sessionService.ts'
 import { errorCodes, errorResponse } from './responses.ts'
+
+const logger = createLogger('auth-middleware')
 
 type User = typeof auth.$Infer.Session.user
 type Session = typeof auth.$Infer.Session.session
@@ -13,7 +22,7 @@ export type AuthenticatedEnv = {
   }
 }
 
-export function makeSessionMiddleware(): MiddlewareHandler {
+export function makeSessionMiddleware(db?: LibSQLDatabase): MiddlewareHandler {
   return async (c: Context, next: Next) => {
     const session = await auth.api.getSession({ headers: c.req.raw.headers })
 
@@ -26,6 +35,19 @@ export function makeSessionMiddleware(): MiddlewareHandler {
 
     c.set('user', session.user)
     c.set('session', session.session)
+
+    if (db) {
+      try {
+        await captureSessionClientName(
+          db,
+          session.session.id,
+          sessionClientNameFromHeaders(c.req.raw.headers),
+        )
+        await touchSessionActivity(db, session.session.id)
+      } catch (error) {
+        logger.warn('Could not update session activity', error)
+      }
+    }
 
     return next()
   }

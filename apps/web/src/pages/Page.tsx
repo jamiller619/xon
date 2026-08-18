@@ -8,11 +8,16 @@ const styles = css`
   }
 
   .title {
-    flex: none;
-    margin: 0;
-    padding-block: var(--space-sm);
+    display: block;
+    padding-block-start: var(--space-md);
+    margin-block-end: var(--space-md);
     font-size: var(--text-2xl);
     font-weight: 500;
+  }
+
+  .subtitle {
+    margin: 0;
+    color: var(--color-gray-11);
   }
 `
 
@@ -30,4 +35,8 @@ export default function Page({
 
 Page.Title = ({ children }: { children: React.ReactNode }) => (
   <h1 className={styles.title}>{children}</h1>
+)
+
+Page.Subtitle = ({ children }: { children: React.ReactNode }) => (
+  <p className={styles.subtitle}>{children}</p>
 )

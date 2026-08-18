@@ -37,6 +37,7 @@ export type ConfirmationDialogProps = {
   description?: ReactNode
   yesLabel?: string
   noLabel?: string
+  loading?: boolean
   onYes: () => void
   onNo: () => void
 }
@@ -47,6 +48,7 @@ export default function ConfirmationDialog({
   description,
   yesLabel = 'Yes',
   noLabel = 'No',
+  loading = false,
   onYes,
   onNo,
 }: ConfirmationDialogProps) {
@@ -54,15 +56,17 @@ export default function ConfirmationDialog({
     <Dialog
       open={open}
       onOpenChange={(nextOpen) => {
-        if (!nextOpen) onNo()
+        if (!nextOpen && !loading) onNo()
       }}
       title={title}
       {...(description != null ? { description } : {})}
       showCloseButton={false}
     >
       <div className={styles.actions}>
-        <Button onClick={onNo}>{noLabel}</Button>
-        <Button variant="primary" onClick={onYes}>
+        <Button disabled={loading} onClick={onNo}>
+          {noLabel}
+        </Button>
+        <Button loading={loading} variant="primary" onClick={onYes}>
           {yesLabel}
         </Button>
       </div>

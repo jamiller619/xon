@@ -13,7 +13,7 @@ a.button {
 
   min-height: var(--height);
   padding-block: var(--space-xs);
-  padding-inline: var(--space-md);
+  padding-inline: var(--space-sm);
 
   color: var(--color-text);
   font-size: var(--text-sm);
@@ -118,8 +118,8 @@ a.button {
   }
 
   &.danger {
-    color: var(--color-red-10);
-    background: var(--color-red-3);
+    color: var(--color-red-12);
+    background: var(--color-red-8);
 
     &:hover:not([data-disabled]) {
       background: var(--color-red-9);

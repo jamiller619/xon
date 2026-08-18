@@ -14,6 +14,10 @@ export const sessions = sqliteTable(
     updatedAt: integer('updated_at', { mode: 'timestamp_ms' })
       .$onUpdate(() => /* @__PURE__ */ new Date())
       .notNull(),
+    lastSeenAt: integer('last_seen_at', { mode: 'timestamp_ms' })
+      .default(sql`(cast(unixepoch('subsecond') * 1000 as integer))`)
+      .notNull(),
+    clientName: text('client_name'),
     ipAddress: text('ip_address'),
     userAgent: text('user_agent'),
     userId: text('user_id')

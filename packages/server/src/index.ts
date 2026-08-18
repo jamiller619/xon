@@ -14,6 +14,7 @@ export {
   type NewCollectionMember,
   type NewLibrary,
   type NewMediaItem,
+  sessions,
   users,
 } from './db/schema.ts'
 export { emitEvent, eventBus, type XonEvent } from './events.ts'
@@ -75,6 +76,7 @@ export {
 export type { CollectionsRoutes } from './routes/collections.ts'
 export type { LibrariesRoutes } from './routes/libraries.ts'
 export type { SearchRoutes } from './routes/search.ts'
+export type { SessionsRoutes } from './routes/sessions.ts'
 export type { ScanResult } from './scanner/scanner.ts'
 export {
   parseCronInterval,
@@ -83,3 +85,12 @@ export {
   type TriggerFn,
 } from './scanner/scheduler.ts'
 export { boot } from './server.ts'
+export {
+  SESSION_CLIENT_NAME_HEADER,
+  SESSION_CLIENT_NAME_MAX_LENGTH,
+} from './services/sessionClient.ts'
+export type {
+  SessionDevice,
+  SessionDeviceType,
+} from './services/sessionDevice.ts'
+export type { ClientSession } from './services/sessionService.ts'

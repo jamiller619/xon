@@ -21,11 +21,11 @@
   }
 
   &.medium {
-    border-radius: var(--border-radius-6);
+    border-radius: var(--border-radius-5);
   }
 
   &.large {
-    border-radius: var(--border-radius-8);
+    border-radius: var(--border-radius-6);
   }
 
   button.surface {

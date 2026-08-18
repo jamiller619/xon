@@ -15,11 +15,6 @@ import useLibraryThumbnail from '~/hooks/useLibraryThumbnail'
 import Page from '~/pages/Page'
 
 const styles = css`
-  header {
-    display: flex;
-    gap: var(--space-md);
-  }
-
   .library {
     display: flex;
     flex-direction: column;
@@ -66,13 +61,15 @@ export default function AdminLibraries() {
 
   return (
     <Page>
-      <Page.Title>Manage Libraries</Page.Title>
       <header className={styles.header}>
-        <CreateLibraryButton onSuccess={() => void refetchLibraries()} />
-        <Button onClick={() => void console.log('test')}>
-          <AddLibraryIcon />
-          Scan Libraries
-        </Button>
+        <Page.Title>Manage Libraries</Page.Title>
+        <Flex gap="2">
+          <CreateLibraryButton onSuccess={() => void refetchLibraries()} />
+          <Button onClick={() => void console.log('test')}>
+            <AddLibraryIcon />
+            Scan Libraries
+          </Button>
+        </Flex>
       </header>
       <Flex gap="4">
         {libraries?.map((library) => (

@@ -10,6 +10,8 @@ import {
   TextBulletList20Regular as PlaylistIcon,
   WindowConsole20Regular as ServerOutputIcon,
   WindowConsole20Filled as ServerOutputOnIcon,
+  Key20Regular as SessionsIcon,
+  Key20Filled as SessionsOnIcon,
   Settings20Regular as SettingsIcon,
   Settings20Filled as SettingsOnIcon,
 } from '@fluentui/react-icons'
@@ -81,6 +83,12 @@ export default function Sidebar({ className, isOpen }: SidebarProps) {
         <NavItem label="Manage Collections" to="/admin/collections" />
       </Section>
 
+      {/* ACCOUNT SECTION */}
+      <Section>
+        <Eyebrow className={styles.sectionTitle}>Account</Eyebrow>
+        <NavItem label="Sessions" to="/account/sessions" />
+      </Section>
+
       {/* ADMIN SECTION */}
       <Section>
         <Eyebrow className={styles.sectionTitle}>Admin</Eyebrow>
@@ -109,6 +117,10 @@ const navIcons = {
   Settings: {
     default: <SettingsIcon />,
     active: <SettingsOnIcon />,
+  },
+  Sessions: {
+    default: <SessionsIcon />,
+    active: <SessionsOnIcon />,
   },
   'Manage Libraries': {
     default: <ManageLibrariesIcon />,
