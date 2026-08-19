@@ -48,7 +48,7 @@ export default function TopBar({
           <span className={styles.avatar}>
             {authData?.user.name.charAt(0).toUpperCase()}
           </span>
-          <span>My Account</span>
+          <span>My account</span>
           {/* <span>{authData?.user.name}</span> */}
         </Button>
       </Menu>

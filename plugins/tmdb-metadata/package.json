@@ -49,7 +49,7 @@
         "description": "Maximum number of images to save locally per image type (posters, backdrops) for each item. 0 means no limit. Images beyond the limit remain TMDb URLs."
       }
     },
-    "libraryTypes": [
+    "contentTypes": [
       "movies",
       "tv_shows"
     ],

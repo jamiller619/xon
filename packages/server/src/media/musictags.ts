@@ -9,6 +9,7 @@ import { type IPicture, parseFile, selectCover } from 'music-metadata'
 export type MusicTagsMetadata = {
   title?: string
   artist?: string
+  albumArtist?: string
   album?: string
   trackNumber?: number
   discNumber?: number
@@ -52,6 +53,8 @@ export async function extractMusicTags(
 
     if (typeof common.title === 'string') result.title = common.title
     if (typeof common.artist === 'string') result.artist = common.artist
+    if (typeof common.albumartist === 'string')
+      result.albumArtist = common.albumartist
     if (typeof common.album === 'string') result.album = common.album
     if (typeof common.year === 'number') result.year = common.year
     if (Array.isArray(common.genre) && common.genre.length > 0) {

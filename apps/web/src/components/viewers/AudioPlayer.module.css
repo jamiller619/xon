@@ -3,9 +3,7 @@
   bottom: 0;
   left: 0;
   right: 0;
-  z-index: 300;
-  background: #1a1a2e;
-  border-top: 1px solid #333;
+  z-index: 10;
   display: flex;
   flex-direction: column;
 }
@@ -30,7 +28,6 @@
 .trackTitle {
   font-size: 13px;
   font-weight: 600;
-  color: #e0e0e0;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -38,7 +35,7 @@
 
 .trackType {
   font-size: 11px;
-  color: #888;
+  color: var(--color-text-muted);
 }
 
 /* Playback controls */
@@ -49,7 +46,7 @@
   flex-shrink: 0;
 }
 
-.iconBtn {
+/* .iconBtn {
   background: none;
   border: none;
   color: #aaa;
@@ -71,9 +68,9 @@
 .iconBtn:disabled {
   color: #555;
   cursor: default;
-}
+} */
 
-.playBtn {
+/* .playBtn {
   background: #7c6af7;
   border: none;
   color: #fff;
@@ -90,7 +87,7 @@
 
 .playBtn:hover {
   background: #9d8fff;
-}
+} */
 
 /* Seek bar */
 .seekArea {

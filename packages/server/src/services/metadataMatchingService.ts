@@ -71,7 +71,7 @@ function applicablePlugins(
   return getPluginsByCategory<MetadataSourcePlugin>('MetadataSource')
     .filter((plugin) => plugin.status === 'active')
     .filter((plugin) =>
-      plugin.manifest.libraryTypes.includes(context.contentType),
+      plugin.manifest.contentTypes.includes(context.contentType),
     )
     .filter((plugin) => plugin.instance.mediaTypes.includes(context.mediaType))
 }

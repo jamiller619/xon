@@ -90,13 +90,16 @@ export default function Dashboard() {
           </DashboardSection>
           {libraries?.map((library, index) => (
             <MediaSection
-              title={`Recently Added in ${library.name}`}
+              title={`Recently added in ${library.name}`}
               media={recentMediaQueries[index]?.data}
               library={library}
               key={`recently-added-${library.id}`}
             />
           ))}
-          <DashboardSection title="Continue Watching" key="continue-watching">
+          <DashboardSection
+            title="Continue where you left off"
+            key="continue-watching"
+          >
             {continueWatching?.map((playState) => (
               <MediaCard
                 key={playState.mediaItem?.id}

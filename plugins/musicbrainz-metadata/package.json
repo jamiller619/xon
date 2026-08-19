@@ -1,16 +1,14 @@
 {
   "name": "@xon/plugin-musicbrainz-metadata",
+  "description": "Fetches music metadata from MusicBrainz and cover art from the Cover Art Archive",
   "version": "1.0.0",
   "private": true,
   "type": "module",
   "xon": {
-    "id": "musicbrainz-metadata",
-    "name": "MusicBrainz Metadata",
-    "version": "1.0.0",
-    "description": "Fetches music metadata from MusicBrainz and cover art from the Cover Art Archive",
+    "displayName": "MusicBrainz Metadata",
     "author": "Xon",
     "category": "MetadataSource",
-    "libraryTypes": [
+    "contentTypes": [
       "music"
     ],
     "main": "dist/index.js",

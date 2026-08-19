@@ -21,7 +21,7 @@ function pluginEntry(
       author: '',
       category: 'MetadataSource',
       priority,
-      libraryTypes: [LibraryType.Movies],
+      contentTypes: [LibraryType.Movies],
     },
     pluginDir: '',
     instance,

@@ -64,7 +64,7 @@ a.button {
 
   &.primary,
   &[type="submit"] {
-    background: var(--color-accent-a2);
+    background: var(--color-accent-9);
     color: var(--color-gray-12);
 
     &:hover:not([data-disabled]) {

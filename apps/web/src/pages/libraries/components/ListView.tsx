@@ -53,6 +53,11 @@ export default function ListView<Item, SortKey extends string>({
   const virtualRows = rowVirtualizer.getVirtualItems()
   const lastVirtualRowIndex = virtualRows.at(-1)?.index
   const isVirtualized = !isLoading && items.length > 0
+  const tableStyle = {
+    '--list-columns': columns
+      .map((column) => column.width ?? 'minmax(8rem, 1fr)')
+      .join(' '),
+  } as React.CSSProperties
 
   useEffect(() => {
     if (previousResetKey.current !== resetKey) {
@@ -80,7 +85,7 @@ export default function ListView<Item, SortKey extends string>({
 
   return (
     <div ref={wrapperRef} className={styles.tableWrapper}>
-      <table className={styles.table}>
+      <table className={styles.table} style={tableStyle}>
         <thead>
           <tr>
             {columns.map((column) => (
@@ -120,8 +125,6 @@ export default function ListView<Item, SortKey extends string>({
                 top: 0,
                 left: 0,
                 width: '100%',
-                display: 'table',
-                tableLayout: 'fixed',
               } as const
 
               if (virtualRow.index === items.length) {
@@ -147,6 +150,8 @@ export default function ListView<Item, SortKey extends string>({
                   {renderRow(item, {
                     ref: rowVirtualizer.measureElement,
                     'data-index': virtualRow.index,
+                    'data-striped':
+                      virtualRow.index % 2 === 1 ? true : undefined,
                     style: rowStyle,
                   })}
                 </Fragment>

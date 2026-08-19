@@ -30,6 +30,7 @@ import {
   removeLibraryPoster,
   storeUploadedLibraryPoster,
 } from '../services/libraryThumbnailService.ts'
+import { getMusicLibrarySummary } from '../services/musicLibraryService.ts'
 import { makeScanRouter, triggerLibraryScan } from './scan.ts'
 
 const LIBRARIES_ALL_KEY = 'libraries:all'
@@ -205,6 +206,15 @@ export function makeLibrariesRouter(
 
       const stats = await libraryService.getLibraryStats(db, libraryId)
       return c.json(stats)
+    })
+
+    // GET /libraries/:libraryId/music — summarize albums and artists for a music library
+    .get('/:libraryId/music', requireAuth, async (c) => {
+      const libraryId = c.req.param('libraryId')
+      const library = await libraryService.getLibraryById(db, libraryId)
+      if (!library) return notFound(c, 'Library not found')
+
+      return cachedJson(c, await getMusicLibrarySummary(db, libraryId))
     })
 
     // GET /libraries/:libraryId/media — list media items with filtering, sorting, pagination

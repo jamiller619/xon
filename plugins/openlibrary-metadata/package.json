@@ -10,7 +10,7 @@
     "description": "Fetches book and document metadata from OpenLibrary",
     "author": "Xon",
     "category": "MetadataSource",
-    "libraryTypes": [
+    "contentTypes": [
       "Documents"
     ],
     "main": "dist/index.js",

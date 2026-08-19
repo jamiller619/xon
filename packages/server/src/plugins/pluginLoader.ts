@@ -29,7 +29,7 @@ function validateManifest(data: unknown, source: string): PluginManifest {
     'version',
     'description',
     'author',
-    'libraryTypes',
+    'contentTypes',
     'main',
     'category',
   ]

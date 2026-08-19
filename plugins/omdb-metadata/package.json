@@ -29,7 +29,7 @@
         "secret": true
       }
     },
-    "libraryTypes": [
+    "contentTypes": [
       "movies",
       "tv_shows"
     ],

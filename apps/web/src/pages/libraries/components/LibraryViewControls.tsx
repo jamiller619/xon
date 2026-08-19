@@ -22,8 +22,10 @@ type LibraryViewControlsProps<Mode extends string, SortKey extends string> = {
   viewMode: Mode
   sortKey: SortKey
   sortDirection: SortDirection
+  primaryControls?: React.ReactNode
   filters?: React.ReactNode
   actions?: React.ReactNode
+  selectionEnabled?: boolean
   onViewModeChange: (mode: Mode) => void
   onSortOptionChange: (value: string) => void
 }
@@ -37,8 +39,10 @@ export default function LibraryViewControls<
   viewMode,
   sortKey,
   sortDirection,
+  primaryControls,
   filters,
   actions,
+  selectionEnabled = true,
   onViewModeChange,
   onSortOptionChange,
 }: LibraryViewControlsProps<Mode, SortKey>) {
@@ -88,6 +92,7 @@ export default function LibraryViewControls<
   return (
     <>
       <FilterHeader.ToolbarControls>
+        {primaryControls}
         {showToolbarSort && activeMode && (
           <Label size="small">
             Sort
@@ -136,18 +141,20 @@ export default function LibraryViewControls<
             </ToggleButton>
           ))}
         </ToggleButtonGroup>
-        <ToggleButton
-          pressed={isSelectMode}
-          variant="primary"
-          onPressedChange={handleSelectModeToggle}
-          aria-label="Select items"
-        >
-          {isSelectMode ? (
-            <SelectIconFilled aria-hidden="true" />
-          ) : (
-            <SelectIcon aria-hidden="true" />
-          )}
-        </ToggleButton>
+        {selectionEnabled && (
+          <ToggleButton
+            pressed={isSelectMode}
+            variant="primary"
+            onPressedChange={handleSelectModeToggle}
+            aria-label="Select items"
+          >
+            {isSelectMode ? (
+              <SelectIconFilled aria-hidden="true" />
+            ) : (
+              <SelectIcon aria-hidden="true" />
+            )}
+          </ToggleButton>
+        )}
       </FilterHeader.ToolbarControls>
     </>
   )

@@ -11,7 +11,7 @@ const styles = css`
   }
 
   .pressed {
-    background: var(--color-gray-3);
+    background: var(--color-accent-9);
     color: var(--color-text);
   }
 `
@@ -61,6 +61,7 @@ const groupStyles = css`
 
     button[data-pressed] {
       pointer-events: none;
+      background: var(--color-accent-9);
     }
   }
 `

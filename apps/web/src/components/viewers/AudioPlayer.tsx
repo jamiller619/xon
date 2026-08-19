@@ -1,3 +1,12 @@
+import {
+  Next16Regular as NextIcon,
+  Pause16Regular as PauseIcon,
+  Play16Regular as PlayIcon,
+  Previous16Regular as PreviousIcon,
+  ArrowShuffle16Regular as ShuffleIcon,
+} from '@fluentui/react-icons'
+import { Button, Surface } from '@xon/ui'
+import clsx from 'clsx'
 import { useEffect, useRef, useState } from 'react'
 import { type PlayStatus, savePlayState } from '~/lib/playState'
 import type { QueueItem } from '~/store/audioStore'
@@ -137,7 +146,7 @@ export default function AudioPlayer() {
         : 'Repeat: one'
 
   return (
-    <div className={styles.bar ?? ''}>
+    <Surface className={styles.bar} borderRadius="none">
       {/* biome-ignore lint/a11y/useMediaCaption: audio player — captions not applicable for music */}
       <audio
         ref={audioRef}
@@ -148,7 +157,7 @@ export default function AudioPlayer() {
 
       {/* Queue panel */}
       {showQueue && (
-        <div className={styles.queuePanel ?? ''}>
+        <div className={styles.queuePanel}>
           <div className={styles.queueHeader ?? ''}>
             <span className={styles.queueTitle ?? ''}>
               Queue ({queue.length})
@@ -214,56 +223,54 @@ export default function AudioPlayer() {
       )}
 
       {/* Player bar */}
-      <div className={styles.controls ?? ''}>
+      <div className={styles.controls}>
         {/* Track info */}
-        <div className={styles.trackInfo ?? ''}>
-          <span className={styles.trackTitle ?? ''}>
+        <div className={styles.trackInfo}>
+          <span className={styles.trackTitle}>
             {currentTrack?.title ?? '—'}
           </span>
-          <span className={styles.trackType ?? ''}>
+          <span className={styles.trackType}>
             {currentTrack?.mimeType?.split('/')[1]?.toUpperCase() ?? ''}
           </span>
         </div>
 
         {/* Playback controls */}
-        <div className={styles.playbackControls ?? ''}>
-          <button
-            type="button"
-            className={`${styles.iconBtn ?? ''}${shuffle ? ` ${styles.active ?? ''}` : ''}`}
+        <div className={styles.playbackControls}>
+          <Button
+            className={clsx(styles.iconBtn, shuffle && styles.active)}
             onClick={toggleShuffle}
             title={shuffle ? 'Shuffle: on' : 'Shuffle: off'}
           >
-            ⇄
-          </button>
-          <button
-            type="button"
-            className={styles.iconBtn ?? ''}
+            <ShuffleIcon />
+            {/* ⇄ */}
+          </Button>
+          <Button
+            className={styles.iconBtn}
             onClick={playPrev}
             title="Previous"
             disabled={queue.length === 0}
           >
-            ⏮
-          </button>
-          <button
-            type="button"
-            className={styles.playBtn ?? ''}
+            <PreviousIcon />
+          </Button>
+          <Button
+            className={styles.playBtn}
             onClick={() => setPlaying(!playing)}
             title={playing ? 'Pause' : 'Play'}
           >
-            {playing ? '⏸' : '▶'}
-          </button>
-          <button
+            {playing ? <PlayIcon /> : <PauseIcon />}
+          </Button>
+          <Button
             type="button"
-            className={styles.iconBtn ?? ''}
+            className={styles.iconBtn}
             onClick={playNext}
             title="Next"
             disabled={queue.length === 0}
           >
-            ⏭
-          </button>
+            <NextIcon />
+          </Button>
           <button
             type="button"
-            className={`${styles.iconBtn ?? ''}${repeat !== 'none' ? ` ${styles.active ?? ''}` : ''}`}
+            className={`${styles.iconBtn}${repeat !== 'none' ? ` ${styles.active ?? ''}` : ''}`}
             onClick={toggleRepeat}
             title={repeatTitle}
           >
@@ -311,6 +318,6 @@ export default function AudioPlayer() {
           </button>
         </div>
       </div>
-    </div>
+    </Surface>
   )
 }

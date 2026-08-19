@@ -25,7 +25,7 @@ const styles = css`
     min-height: 180px;
     overflow: hidden;
     background-size: cover;
-    filter: grayscale(1);
+    box-shadow: var(--shadow-2);
     
     &::before {
       content: '';
@@ -54,6 +54,10 @@ const styles = css`
   .muted {
     color: var(--color-text-muted);
   }
+
+  .deleteButton {
+    margin-left: auto;
+  }
 `
 
 export default function AdminLibraries() {
@@ -62,12 +66,12 @@ export default function AdminLibraries() {
   return (
     <Page>
       <header className={styles.header}>
-        <Page.Title>Manage Libraries</Page.Title>
+        <Page.Title>Manage libraries</Page.Title>
         <Flex gap="2">
           <CreateLibraryButton onSuccess={() => void refetchLibraries()} />
           <Button onClick={() => void console.log('test')}>
             <AddLibraryIcon />
-            Scan Libraries
+            Scan all libraries
           </Button>
         </Flex>
       </header>
@@ -103,10 +107,17 @@ function LibraryCard({ library }: { library: Library }) {
           </p>
         </Flex>
         <Flex gap="2">
-          <Button.Icon>
+          <Button.Icon title="Edit library">
             <EditIcon />
           </Button.Icon>
-          <Button.Icon variant="danger">
+          <Button.Icon title="Scan library">
+            <ScanIcon />
+          </Button.Icon>
+          <Button.Icon
+            variant="danger"
+            title="Delete library"
+            className={styles.deleteButton}
+          >
             <DeleteIcon />
           </Button.Icon>
         </Flex>

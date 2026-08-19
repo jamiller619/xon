@@ -113,7 +113,7 @@ function getMetadataPlugins(
 ): MetadataPluginSelection {
   const plugins = getPluginsByCategory<MetadataSourcePlugin>(
     'MetadataSource',
-  ).filter((plugin) => plugin.manifest.libraryTypes.includes(job.contentType))
+  ).filter((plugin) => plugin.manifest.contentTypes.includes(job.contentType))
 
   const storedMatchSource =
     job.data.matchIdSource ??

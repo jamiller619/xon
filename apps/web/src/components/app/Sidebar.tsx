@@ -63,7 +63,12 @@ export default function Sidebar({ className, isOpen }: SidebarProps) {
         {Array.isArray(libraries) &&
           libraries.map((lib) => (
             <NavLink key={lib.id} to={`/libraries/${lib.id}`}>
-              <LibraryIcon type={lib.type} />
+              <span className={styles.iconDefault}>
+                <LibraryIcon type={lib.type} />
+              </span>
+              <span className={styles.iconActive}>
+                <LibraryIcon type={lib.type} filled />
+              </span>
               <span>{lib.name}</span>
             </NavLink>
           ))}

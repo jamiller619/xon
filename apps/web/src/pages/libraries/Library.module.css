@@ -42,19 +42,38 @@
 }
 
 .tableWrapper {
+  width: 100%;
+  min-width: 0;
   overflow-x: auto;
   border-radius: var(--border-radius-3);
   corner-shape: var(--corner-shape);
 }
 
 .table {
+  --list-columns: minmax(8rem, 1fr);
+
+  display: block;
   width: 100%;
   border-collapse: collapse;
+  color: var(--color-text);
+  font-variant-numeric: tabular-nums;
+
+  thead,
+  tbody {
+    display: block;
+    width: 100%;
+  }
+
+  tr {
+    display: grid;
+    width: 100%;
+    grid-template-columns: var(--list-columns);
+  }
 
   tbody tr {
     transition: background 0.1s ease;
 
-    &:nth-child(2n) {
+    &[data-striped] {
       background: var(--color-gray-a1);
     }
 
@@ -65,6 +84,7 @@
 
   th,
   td {
+    min-width: 0;
     padding: var(--space-sm) var(--space-md);
     text-align: left;
   }
@@ -91,6 +111,7 @@
 }
 
 .loadingMore {
+  grid-column: 1 / -1;
   padding: var(--space-md);
   color: var(--color-text-muted);
   text-align: center;
@@ -126,7 +147,12 @@
 }
 
 .skeletonRow td {
+  grid-column: 1 / -1;
   border-bottom: 1px solid var(--color-gray-a2);
+}
+
+.skeletonRow:nth-child(2n) {
+  background: var(--color-gray-a1);
 }
 
 .skeletonLine {
@@ -143,6 +169,7 @@
 }
 
 .emptyCell {
+  grid-column: 1 / -1;
   padding: var(--space-lg);
   color: var(--color-text-muted);
   text-align: center;

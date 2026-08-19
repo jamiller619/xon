@@ -25,7 +25,7 @@ export interface PluginManifest {
   author: string
   category: PluginCategory
   /** Library types this plugin handles */
-  libraryTypes: (ContentType | string)[]
+  contentTypes: (ContentType | string)[]
   /** Media types this plugin handles */
   mediaTypes?: (MediaType | string)[]
   /** Minimum Xon server version required */

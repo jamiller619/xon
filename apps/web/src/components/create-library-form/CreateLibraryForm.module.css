@@ -4,6 +4,36 @@
   gap: var(--space-xs);
 }
 
+.locationList {
+  display: flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: var(--space-xs);
+  width: 100%;
+  min-width: 0;
+}
+
+.locationRow {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto auto;
+  align-items: center;
+  gap: var(--space-xs);
+}
+
+.browseButton,
+.addLocationButton {
+  min-height: 44px;
+}
+
+.removeLocationButton {
+  min-width: 44px;
+  min-height: 44px;
+}
+
+.addLocationButton {
+  align-self: start;
+}
+
 .folderRow {
   display: flex;
   align-items: center;

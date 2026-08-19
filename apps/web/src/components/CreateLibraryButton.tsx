@@ -22,7 +22,7 @@ export default function CreateLibraryButton({
       ) : (
         <Button onClick={() => setCreateDialogOpen(true)}>
           <AddLibraryIcon />
-          Create Library
+          Create library
         </Button>
       )}
       <Dialog

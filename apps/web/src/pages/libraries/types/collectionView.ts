@@ -45,4 +45,5 @@ export type ListColumn<SortKey extends string> = {
 
 export type ListRowProps = ComponentPropsWithRef<'tr'> & {
   'data-index': number
+  'data-striped'?: boolean | undefined
 }

@@ -1,0 +1,25 @@
+.collectionCard {
+  color: inherit;
+}
+
+.collectionArtwork {
+  display: grid;
+  place-items: center;
+  background:
+    radial-gradient(circle at 35% 30%, var(--color-accent-a5), transparent 45%),
+    var(--color-gray-3);
+  color: var(--color-accent-11);
+
+  svg {
+    width: 35%;
+    height: 35%;
+  }
+}
+
+.collectionTitle {
+  font-weight: 600;
+}
+
+.muted {
+  color: var(--color-text-muted);
+}

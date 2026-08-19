@@ -7,9 +7,9 @@ vi.mock('music-metadata', () => ({
 import { MediaCategory } from '@xon/shared'
 import { parseFile } from 'music-metadata'
 import {
-  type MusicTagsMetadata,
   extractMusicTags,
   isMusicCategory,
+  type MusicTagsMetadata,
 } from '../../media/musictags.ts'
 
 const mockParseFile = vi.mocked(parseFile)
@@ -17,6 +17,7 @@ const mockParseFile = vi.mocked(parseFile)
 type MockCommon = {
   title?: string
   artist?: string
+  albumartist?: string
   album?: string
   year?: number
   genre?: string[]
@@ -81,6 +82,7 @@ describe('extractMusicTags', () => {
         {
           title: 'Bohemian Rhapsody',
           artist: 'Queen',
+          albumartist: 'Queen',
           album: 'A Night at the Opera',
           year: 1975,
           genre: ['Rock'],
@@ -105,6 +107,7 @@ describe('extractMusicTags', () => {
     expect(result).toEqual<MusicTagsMetadata>({
       title: 'Bohemian Rhapsody',
       artist: 'Queen',
+      albumArtist: 'Queen',
       album: 'A Night at the Opera',
       year: 1975,
       genre: 'Rock',
