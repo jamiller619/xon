@@ -1,6 +1,10 @@
-import { describe, expect, it } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import type { MediaItem } from '../db/schema.ts'
-import { summarizeMusicItems } from './musicLibraryService.ts'
+import * as libraryService from './libraryService.ts'
+import {
+  getMusicAlbumDetail,
+  summarizeMusicItems,
+} from './musicLibraryService.ts'
 
 function musicItem(
   id: string,
@@ -110,6 +114,48 @@ describe('summarizeMusicItems', () => {
     expect(summarizeMusicItems([playlist])).toEqual({
       albums: [],
       artists: [],
+    })
+  })
+
+  it('returns only the selected album tracks in disc and track order', async () => {
+    const selectedTracks = [
+      musicItem('disc-two', { album: 'Album', artist: 'Artist' }, undefined, {
+        discNumber: 2,
+        trackNumber: 1,
+      }),
+      musicItem('track-two', { album: 'Album', artist: 'Artist' }, undefined, {
+        discNumber: 1,
+        trackNumber: 2,
+      }),
+      musicItem('track-one', { album: 'Album', artist: 'Artist' }, undefined, {
+        discNumber: 1,
+        trackNumber: 1,
+      }),
+    ]
+    const items = [
+      ...selectedTracks,
+      musicItem('other-artist', { album: 'Album', artist: 'Other Artist' }),
+    ]
+    vi.spyOn(libraryService, 'getMediaByTypeAndLibraryId').mockResolvedValue(
+      items,
+    )
+    const albumId = summarizeMusicItems(selectedTracks).albums[0]?.id
+
+    const detail = await getMusicAlbumDetail(
+      {} as Parameters<typeof getMusicAlbumDetail>[0],
+      'library-1',
+      albumId ?? '',
+    )
+
+    expect(detail?.tracks.map((track) => track.id)).toEqual([
+      'track-one',
+      'track-two',
+      'disc-two',
+    ])
+    expect(detail).toMatchObject({
+      title: 'Album',
+      artist: 'Artist',
+      songCount: 3,
     })
   })
 })

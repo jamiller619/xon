@@ -26,8 +26,8 @@ a.button {
   cursor: pointer;
   user-select: none;
   transition:
-    transform 0.1s ease,
-    background 0.2s ease;
+    transform 80ms ease,
+    background 80ms ease;
 
   @media (prefers-reduced-motion: reduce) {
     transition: none;

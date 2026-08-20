@@ -217,6 +217,7 @@
 
 .contentStart {
   width: 60%;
+  min-width: 0;
 }
 
 .metaTableContainer {

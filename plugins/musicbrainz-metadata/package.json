@@ -26,7 +26,8 @@
   },
   "dependencies": {
     "@xon/plugin-sdk": "*",
-    "@xon/shared": "*"
+    "@xon/shared": "*",
+    "musicbrainz-api": "^1.2.1"
   },
   "devDependencies": {
     "@types/node": "^22.0.0",

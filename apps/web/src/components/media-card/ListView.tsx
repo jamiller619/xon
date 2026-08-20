@@ -55,7 +55,7 @@ export default function ListView({
           )}
         </Link>
       </td>
-      <td className={styles.listTitleCell}>
+      <td className={styles.listTitleCell} data-column="title">
         <Link
           to={link}
           state={item}

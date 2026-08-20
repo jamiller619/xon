@@ -5,10 +5,17 @@ import {
   List16Regular as ListIcon,
 } from '@fluentui/react-icons'
 import { useQuery, useQueryClient } from '@tanstack/react-query'
-import type { LibraryStats, PosterInput } from '@xon/shared'
-import { Card, Skeleton, ToggleButton, ToggleButtonGroup } from '@xon/ui'
+import type { LibraryStats } from '@xon/shared'
+import {
+  Card,
+  Drawer,
+  Skeleton,
+  ToggleButton,
+  ToggleButtonGroup,
+} from '@xon/ui'
+import clsx from 'clsx'
 import prettyBytes from 'pretty-bytes'
-import { useEffect, useMemo } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import ArtworkImage from '~/components/ArtworkImage'
 import MediaCard from '~/components/media-card/MediaCard'
 import { apiFetch, thumbnailUrl } from '~/lib/apiFetch'
@@ -33,32 +40,13 @@ import type {
   SortValue,
 } from '../../types/collectionView'
 import { useMovieLibraryMedia } from '../movies/useMovieLibraryMedia'
+import AlbumTrackList from './AlbumTrackList'
 import styles from './MusicLibraryView.module.css'
+import type { MusicGroup, MusicSummary } from './musicTypes'
 
 type MusicCategory = 'album' | 'artist' | 'song'
 type MusicViewMode = 'grid' | 'list'
 type MusicSortKey = 'title' | 'createdAt'
-
-type MusicArtwork = {
-  id: string
-  metadata: { images?: { poster?: PosterInput } }
-  updatedAt: string | null
-}
-
-type MusicGroup = {
-  id: string
-  title: string
-  createdAt: string
-  songCount: number
-  artwork: MusicArtwork | null
-  artist?: string
-  albumCount?: number
-}
-
-type MusicSummary = {
-  albums: MusicGroup[]
-  artists: MusicGroup[]
-}
 
 const MUSIC_CATEGORIES = [
   { id: 'album', label: 'Album' },
@@ -147,6 +135,8 @@ function groupDetail(item: MusicGroup, category: MusicCategory): string {
 
 export default function MusicLibraryView({ library }: LibraryTypeViewProps) {
   const queryClient = useQueryClient()
+  const [selectedAlbum, setSelectedAlbum] = useState<MusicGroup | null>(null)
+  const [albumDrawerOpen, setAlbumDrawerOpen] = useState(false)
   const setSelectMode = useAppStore(({ setSelectMode }) => setSelectMode)
   const setSelectedItems = useAppStore(
     ({ setSelectedItems }) => setSelectedItems,
@@ -199,6 +189,10 @@ export default function MusicLibraryView({ library }: LibraryTypeViewProps) {
     setSelectMode(false)
     setSelectedItems([])
   }, [category, setSelectMode, setSelectedItems])
+
+  useEffect(() => {
+    if (category !== 'album') setAlbumDrawerOpen(false)
+  }, [category])
 
   useEffect(
     () =>
@@ -261,117 +255,147 @@ export default function MusicLibraryView({ library }: LibraryTypeViewProps) {
     emptyContent: 'No songs in this library yet.',
   }
 
+  function openAlbum(album: MusicGroup) {
+    setSelectedAlbum(album)
+    setAlbumDrawerOpen(true)
+  }
+
   return (
-    <LibraryViewLayout
-      title={library.name}
-      stats={stats}
-      {...(error ? { error } : {})}
-      footer={
-        viewMode === 'grid' ? (
-          <ThumbnailSizeControl
-            value={thumbnailSize}
-            onChange={setThumbnailSize}
+    <>
+      <LibraryViewLayout
+        title={library.name}
+        stats={stats}
+        {...(error ? { error } : {})}
+        footer={
+          viewMode === 'grid' ? (
+            <ThumbnailSizeControl
+              value={thumbnailSize}
+              onChange={setThumbnailSize}
+            />
+          ) : undefined
+        }
+        controls={
+          <LibraryViewControls
+            libraryId={library.id}
+            modes={MUSIC_VIEW_MODES}
+            viewMode={viewMode}
+            sortKey={controls.sortKey}
+            sortDirection={controls.sortDirection}
+            primaryControls={
+              <ToggleButtonGroup value={[category]} aria-label="Music category">
+                {MUSIC_CATEGORIES.map((item) => (
+                  <ToggleButton
+                    key={item.id}
+                    value={item.id}
+                    onClick={() => setCategory(item.id)}
+                  >
+                    {item.label}
+                  </ToggleButton>
+                ))}
+              </ToggleButtonGroup>
+            }
+            selectionEnabled={category === 'song'}
+            onViewModeChange={setViewMode}
+            onSortOptionChange={controls.handleSortOption}
           />
-        ) : undefined
-      }
-      controls={
-        <LibraryViewControls
-          libraryId={library.id}
-          modes={MUSIC_VIEW_MODES}
-          viewMode={viewMode}
-          sortKey={controls.sortKey}
-          sortDirection={controls.sortDirection}
-          primaryControls={
-            <ToggleButtonGroup value={[category]} aria-label="Music category">
-              {MUSIC_CATEGORIES.map((item) => (
-                <ToggleButton
-                  key={item.id}
-                  value={item.id}
-                  onClick={() => setCategory(item.id)}
-                >
-                  {item.label}
-                </ToggleButton>
-              ))}
-            </ToggleButtonGroup>
-          }
-          selectionEnabled={category === 'song'}
-          onViewModeChange={setViewMode}
-          onSortOptionChange={controls.handleSortOption}
-        />
-      }
-    >
-      {category === 'song' ? (
-        viewMode === 'grid' ? (
+        }
+      >
+        {category === 'song' ? (
+          viewMode === 'grid' ? (
+            <GridView
+              {...songCollectionProps}
+              minCardWidth={thumbnailSize}
+              renderItem={(item) => (
+                <SelectWrapper id={item.id}>
+                  {(onOpen) => (
+                    <MediaCard
+                      item={item}
+                      library={library}
+                      {...(onOpen ? { onOpen } : {})}
+                    />
+                  )}
+                </SelectWrapper>
+              )}
+            />
+          ) : (
+            <ListView
+              {...songCollectionProps}
+              columns={SONG_LIST_COLUMNS}
+              sortKey={controls.sortKey}
+              sortDirection={controls.sortDirection}
+              onSort={controls.handleSort}
+              renderRow={(item, rowProps) => (
+                <MediaCard
+                  item={item}
+                  library={library}
+                  listView
+                  listRowProps={rowProps}
+                />
+              )}
+            />
+          )
+        ) : viewMode === 'grid' ? (
           <GridView
-            {...songCollectionProps}
+            {...groupCollectionProps}
             minCardWidth={thumbnailSize}
+            cardHeightRatio={1}
+            renderSkeleton={() => <Skeleton aspectRatio="1 / 1" />}
             renderItem={(item) => (
-              <SelectWrapper id={item.id}>
-                {(onOpen) => (
-                  <MediaCard
-                    item={item}
-                    library={library}
-                    {...(onOpen ? { onOpen } : {})}
-                  />
-                )}
-              </SelectWrapper>
+              <MusicGroupCard
+                item={item}
+                category={category}
+                {...(category === 'album'
+                  ? { onOpen: () => openAlbum(item) }
+                  : {})}
+              />
             )}
           />
         ) : (
           <ListView
-            {...songCollectionProps}
-            columns={SONG_LIST_COLUMNS}
+            {...groupCollectionProps}
+            columns={GROUP_LIST_COLUMNS}
             sortKey={controls.sortKey}
             sortDirection={controls.sortDirection}
             onSort={controls.handleSort}
             renderRow={(item, rowProps) => (
-              <MediaCard
+              <MusicGroupRow
                 item={item}
-                library={library}
-                listView
-                listRowProps={rowProps}
+                category={category}
+                rowProps={rowProps}
+                {...(category === 'album'
+                  ? { onOpen: () => openAlbum(item) }
+                  : {})}
               />
             )}
           />
-        )
-      ) : viewMode === 'grid' ? (
-        <GridView
-          {...groupCollectionProps}
-          minCardWidth={thumbnailSize}
-          cardHeightRatio={1}
-          renderSkeleton={() => <Skeleton aspectRatio="1 / 1" />}
-          renderItem={(item) => (
-            <MusicGroupCard item={item} category={category} />
-          )}
-        />
-      ) : (
-        <ListView
-          {...groupCollectionProps}
-          columns={GROUP_LIST_COLUMNS}
-          sortKey={controls.sortKey}
-          sortDirection={controls.sortDirection}
-          onSort={controls.handleSort}
-          renderRow={(item, rowProps) => (
-            <MusicGroupRow
-              item={item}
-              category={category}
-              rowProps={rowProps}
-            />
-          )}
-        />
-      )}
-    </LibraryViewLayout>
+        )}
+      </LibraryViewLayout>
+      <Drawer
+        open={albumDrawerOpen}
+        onOpenChange={setAlbumDrawerOpen}
+        onOpenChangeComplete={(open: boolean) => {
+          if (!open) setSelectedAlbum(null)
+        }}
+        title={selectedAlbum?.title ?? 'Album'}
+        description={selectedAlbum?.artist ?? 'Track list'}
+      >
+        {selectedAlbum != null && (
+          <AlbumTrackList libraryId={library.id} album={selectedAlbum} />
+        )}
+      </Drawer>
+    </>
   )
 }
 
 type MusicGroupProps = {
   item: MusicGroup
   category: Exclude<MusicCategory, 'song'>
+  onOpen?: (() => void) | undefined
 }
 
-function MusicGroupCard({ item, category }: MusicGroupProps) {
-  return (
-    <Card className={styles.collectionCard}>
+function MusicGroupCard({ item, category, onOpen }: MusicGroupProps) {
+  const content = (
+    <>
       <Card.Thumb aspectRatio="1 / 1" className={styles.collectionArtwork}>
         <ArtworkImage
           src={item.artwork ? thumbnailUrl(item.artwork, 'medium') : undefined}
@@ -384,7 +408,20 @@ function MusicGroupCard({ item, category }: MusicGroupProps) {
         <Card.Title>{item.title}</Card.Title>
         <Card.Meta>{groupDetail(item, category)}</Card.Meta>
       </Card.Info>
+    </>
+  )
+
+  return onOpen ? (
+    <Card
+      as="button"
+      type="button"
+      className={clsx(styles.collectionCard, styles.collectionButton)}
+      onClick={onOpen}
+    >
+      {content}
     </Card>
+  ) : (
+    <Card className={styles.collectionCard}>{content}</Card>
   )
 }
 
@@ -392,10 +429,32 @@ function MusicGroupRow({
   item,
   category,
   rowProps,
+  onOpen,
 }: MusicGroupProps & { rowProps: ListRowProps }) {
+  const { className, ...restRowProps } = rowProps
+
   return (
-    <tr {...rowProps}>
-      <td className={styles.collectionTitle}>{item.title}</td>
+    <tr
+      {...restRowProps}
+      className={clsx(className, onOpen && styles.collectionRow)}
+      onClick={onOpen}
+    >
+      <td className={styles.collectionTitle} data-column="title">
+        {onOpen ? (
+          <button
+            type="button"
+            className={styles.collectionTitleButton}
+            onClick={(event) => {
+              event.stopPropagation()
+              onOpen()
+            }}
+          >
+            {item.title}
+          </button>
+        ) : (
+          item.title
+        )}
+      </td>
       <td className={styles.muted}>{groupDetail(item, category)}</td>
       <td className={styles.muted}>
         {new Date(item.createdAt).toLocaleDateString()}

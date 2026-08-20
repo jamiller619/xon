@@ -23,6 +23,10 @@ export type MusicArtistSummary = {
   artwork: MusicArtwork | null
 }
 
+export type MusicAlbumDetail = MusicAlbumSummary & {
+  tracks: MediaItem[]
+}
+
 type MutableArtistSummary = MusicArtistSummary & {
   albumIds: Set<string>
 }
@@ -50,6 +54,31 @@ function musicTag(
 
 function normalizedMusicKey(value: string): string {
   return value.normalize('NFKC').trim().toLocaleLowerCase()
+}
+
+function albumIdForItem(item: MediaItem): string {
+  const artistName = musicTag(item, 'artist', 'Unknown Artist')
+  const albumTitle = musicTag(item, 'album', 'Unknown Album')
+  const albumArtist = musicTag(
+    item,
+    'albumArtist',
+    primaryTrackArtist(artistName),
+  )
+
+  return JSON.stringify([
+    normalizedMusicKey(albumTitle),
+    normalizedMusicKey(albumArtist),
+  ])
+}
+
+function musicNumber(
+  item: MediaItem,
+  key: 'discNumber' | 'trackNumber',
+): number {
+  const value = item.fileMetadata[key] ?? item.metadata[key]
+  return typeof value === 'number' && Number.isFinite(value)
+    ? value
+    : Number.MAX_SAFE_INTEGER
 }
 
 function primaryTrackArtist(value: string): string {
@@ -87,15 +116,7 @@ export function summarizeMusicItems(items: readonly MediaItem[]) {
     const artistName = musicTag(item, 'artist', 'Unknown Artist')
     const artistId = normalizedMusicKey(artistName)
     const albumTitle = musicTag(item, 'album', 'Unknown Album')
-    const albumArtist = musicTag(
-      item,
-      'albumArtist',
-      primaryTrackArtist(artistName),
-    )
-    const albumId = JSON.stringify([
-      normalizedMusicKey(albumTitle),
-      normalizedMusicKey(albumArtist),
-    ])
+    const albumId = albumIdForItem(item)
     const album = albums.get(albumId)
 
     if (album) {
@@ -159,4 +180,45 @@ export async function getMusicLibrarySummary(
     libraryId,
   )
   return summarizeMusicItems(items)
+}
+
+export async function getMusicAlbumDetail(
+  db: LibSQLDatabase,
+  libraryId: string,
+  albumId: string,
+): Promise<MusicAlbumDetail | null> {
+  const items = await libraryService.getMediaByTypeAndLibraryId(
+    db,
+    MediaType.MainType.Audio,
+    libraryId,
+  )
+  const album = summarizeMusicItems(items).albums.find(
+    (item) => item.id === albumId,
+  )
+
+  if (!album) return null
+
+  const tracks = items
+    .filter(
+      (item) =>
+        !PLAYLIST_MEDIA_TYPES.has(item.mediaType) &&
+        albumIdForItem(item) === albumId,
+    )
+    .sort((left, right) => {
+      const disc =
+        musicNumber(left, 'discNumber') - musicNumber(right, 'discNumber')
+      if (disc !== 0) return disc
+
+      const track =
+        musicNumber(left, 'trackNumber') - musicNumber(right, 'trackNumber')
+      if (track !== 0) return track
+
+      const title = left.title.localeCompare(right.title, undefined, {
+        numeric: true,
+        sensitivity: 'base',
+      })
+      return title || left.id.localeCompare(right.id)
+    })
+
+  return { ...album, tracks }
 }

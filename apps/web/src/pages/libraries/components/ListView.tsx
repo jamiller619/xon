@@ -1,3 +1,7 @@
+import {
+  ChevronDown16Filled as ChevronDownIcon,
+  ChevronUp16Filled as ChevronUpIcon,
+} from '@fluentui/react-icons'
 import { useVirtualizer } from '@tanstack/react-virtual'
 import { Skeleton } from '@xon/ui'
 import { Fragment, useEffect, useRef } from 'react'
@@ -201,8 +205,13 @@ function ListHeader<SortKey extends string>({
       >
         {column.label}
         {isActive && (
-          <span className={styles.sortArrow} aria-hidden="true">
-            {sortDirection === 'asc' ? ' ▲' : ' ▼'}
+          <span className={styles.sortIcons} aria-hidden="true">
+            <ChevronUpIcon
+              data-active={sortDirection === 'asc' ? true : undefined}
+            />
+            <ChevronDownIcon
+              data-active={sortDirection === 'desc' ? true : undefined}
+            />
           </span>
         )}
       </button>

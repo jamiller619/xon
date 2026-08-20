@@ -22,6 +22,7 @@ import {
 } from '../http/schemas.ts'
 import { validate } from '../http/validate.ts'
 import { resolveLocalArtworkPath } from '../media/cachePaths.ts'
+import { MediaClassifier } from '../scanner/classifier.ts'
 import type { ScannerHandle } from '../scanner/scannerHandle.ts'
 import * as libraryService from '../services/libraryService.ts'
 import {
@@ -30,10 +31,14 @@ import {
   removeLibraryPoster,
   storeUploadedLibraryPoster,
 } from '../services/libraryThumbnailService.ts'
-import { getMusicLibrarySummary } from '../services/musicLibraryService.ts'
+import {
+  getMusicAlbumDetail,
+  getMusicLibrarySummary,
+} from '../services/musicLibraryService.ts'
 import { makeScanRouter, triggerLibraryScan } from './scan.ts'
 
 const LIBRARIES_ALL_KEY = 'libraries:all'
+const mediaClassifier = new MediaClassifier()
 const MAX_LIBRARY_IMAGE_BYTES = 20 * 1024 * 1024
 const SUPPORTED_LIBRARY_IMAGE_TYPES = new Set([
   'image/avif',
@@ -47,6 +52,11 @@ const libraryImagesSchema = z.object({
   poster: z.array(z.string().trim().min(1).max(8192)).max(100),
 })
 
+const contentTypeSchema = z.custom<ContentType>(
+  (value) => typeof value === 'string' && value.length > 0,
+  'Content type is required',
+)
+
 const libraryMediaQuerySchema = listQuerySchema(
   ['title', 'fileSize', 'createdAt'] as const,
   { sortBy: 'createdAt', order: 'desc' },
@@ -57,7 +67,7 @@ const libraryMediaQuerySchema = listQuerySchema(
 const createLibrarySchema = z.object({
   name: z.string().min(1),
   description: z.string().optional(),
-  type: z.string<ContentType>(),
+  type: contentTypeSchema.optional(),
   scanSchedule: z.string().optional(),
   dataSources: z.array(
     z.object({
@@ -73,6 +83,7 @@ const createLibrarySchema = z.object({
 const updateLibrarySchema = z.object({
   name: z.string().min(1).optional(),
   description: z.string().optional(),
+  type: contentTypeSchema.optional(),
   scanSchedule: z.string().optional(),
   dataSources: z
     .array(
@@ -103,9 +114,29 @@ export function makeLibrariesRouter(
       async (c) => {
         const body = c.req.valid('json')
         const user = c.get('user')
+        let contentType = body.type
+
+        if (!contentType) {
+          const classification = await mediaClassifier.classify(
+            body.dataSources
+              .filter((source) => source.type === DataSourceType.local)
+              .map((source) => source.path),
+          )
+          contentType = classification.type
+
+          if (!contentType) {
+            return errorResponse(
+              c,
+              422,
+              errorCodes.unprocessableEntity,
+              `${classification.reason}. Choose a content type manually to continue.`,
+            )
+          }
+        }
 
         const id = await libraryService.createLibrary(db, {
           ...body,
+          type: contentType,
           dataSources: body.dataSources.map((source) => ({
             ...source,
             id: source.id ?? crypto.randomUUID(),
@@ -157,6 +188,7 @@ export function makeLibrariesRouter(
         }
         if (body.name != null) updates.name = body.name
         if (body.description != null) updates.description = body.description
+        if (body.type != null) updates.type = body.type
         if (body.dataSources != null) {
           updates.dataSources = body.dataSources.map((source, index) => {
             const prior = source.id
@@ -215,6 +247,22 @@ export function makeLibrariesRouter(
       if (!library) return notFound(c, 'Library not found')
 
       return cachedJson(c, await getMusicLibrarySummary(db, libraryId))
+    })
+
+    // GET /libraries/:libraryId/music/albums/:albumId — get one album and its tracks
+    .get('/:libraryId/music/albums/:albumId', requireAuth, async (c) => {
+      const libraryId = c.req.param('libraryId')
+      const library = await libraryService.getLibraryById(db, libraryId)
+      if (!library) return notFound(c, 'Library not found')
+
+      const album = await getMusicAlbumDetail(
+        db,
+        libraryId,
+        c.req.param('albumId'),
+      )
+      if (!album) return notFound(c, 'Album not found')
+
+      return cachedJson(c, album)
     })
 
     // GET /libraries/:libraryId/media — list media items with filtering, sorting, pagination

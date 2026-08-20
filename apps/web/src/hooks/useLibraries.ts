@@ -1,5 +1,6 @@
 import { useQuery } from '@tanstack/react-query'
 import type { InferRequestType, InferResponseType } from 'hono/client'
+import { getAPIError } from '../lib/apiFetch'
 import { librariesAPI } from '../lib/rpc'
 
 /** A library as actually serialized over the wire (dates are strings). */
@@ -16,7 +17,29 @@ export const createLibraryMutation = {
   mutationFn: async (data: CreateLibraryInput) => {
     const res = await librariesAPI.index.$post({ json: data })
 
-    if (!res.ok) throw new Error(res.statusText)
+    if (!res.ok) {
+      throw new Error(await getAPIError(res, 'Library could not be created'))
+    }
+
+    return res.json()
+  },
+}
+
+type UpdateLibraryRequest = InferRequestType<
+  (typeof librariesAPI)[':id']['$put']
+>
+
+export type UpdateLibraryInput = UpdateLibraryRequest['json'] & {
+  id: UpdateLibraryRequest['param']['id']
+}
+
+export const updateLibraryMutation = {
+  mutationFn: async ({ id, ...json }: UpdateLibraryInput) => {
+    const res = await librariesAPI[':id'].$put({ param: { id }, json })
+
+    if (!res.ok) {
+      throw new Error(await getAPIError(res, 'Library could not be updated'))
+    }
 
     return res.json()
   },

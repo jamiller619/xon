@@ -5,12 +5,15 @@ import {
   Folder16Regular as FolderIcon,
   FolderSearch16Regular as ScanIcon,
 } from '@fluentui/react-icons'
-import type { Library } from '@xon/shared'
-import { Button, Flex, Surface } from '@xon/ui'
+import { useMutation, useQueryClient } from '@tanstack/react-query'
+import type { ContentType, Library } from '@xon/shared'
+import { Button, Dialog, Field, Flex, RadioGroup, Surface } from '@xon/ui'
 import { css } from 'inline-css-modules'
+import { useState } from 'react'
 import CreateLibraryButton from '~/components/CreateLibraryButton'
+import { LIBRARY_TYPES } from '~/components/create-library-form/libraryTypes'
 import LibraryIcon from '~/components/icons/LibraryIcon'
-import useLibraries from '~/hooks/useLibraries'
+import useLibraries, { updateLibraryMutation } from '~/hooks/useLibraries'
 import useLibraryThumbnail from '~/hooks/useLibraryThumbnail'
 import Page from '~/pages/Page'
 
@@ -86,42 +89,95 @@ export default function AdminLibraries() {
 
 function LibraryCard({ library }: { library: Library }) {
   const thumbnailURL = useLibraryThumbnail(library)
+  const queryClient = useQueryClient()
+  const [editOpen, setEditOpen] = useState(false)
+  const [contentType, setContentType] = useState<ContentType>(library.type)
+  const updateLibrary = useMutation({
+    ...updateLibraryMutation,
+    onSuccess: () => {
+      setEditOpen(false)
+      void queryClient.invalidateQueries({ queryKey: ['libraries'] })
+      void queryClient.invalidateQueries({
+        queryKey: ['library', library.id],
+      })
+    },
+  })
+
+  function openEditor() {
+    updateLibrary.reset()
+    setContentType(library.type)
+    setEditOpen(true)
+  }
+
+  async function saveContentType() {
+    await updateLibrary.mutateAsync({ id: library.id, type: contentType })
+  }
 
   return (
-    <Surface
-      className={styles.library}
-      borderRadius="small"
-      style={{ backgroundImage: `url('${thumbnailURL}')` }}
-    >
-      <Flex gap="2" dir="col">
-        <LibraryIcon
-          className={styles.libraryIcon ?? ''}
-          type={library.type}
-          size="large"
-        />
-        <h3 className={styles.title}>{library.name}</h3>
-        <Flex align="start" gap="1" className={styles.muted}>
-          <FolderIcon />
-          <p className={styles.path}>
-            {library.dataSources.map((ds) => ds.path).join(', ')}
-          </p>
+    <>
+      <Surface
+        className={styles.library}
+        borderRadius="small"
+        style={{ backgroundImage: `url('${thumbnailURL}')` }}
+      >
+        <Flex gap="2" dir="col">
+          <LibraryIcon
+            className={styles.libraryIcon ?? ''}
+            type={library.type}
+            size="large"
+          />
+          <h3 className={styles.title}>{library.name}</h3>
+          <Flex align="start" gap="1" className={styles.muted}>
+            <FolderIcon />
+            <p className={styles.path}>
+              {library.dataSources.map((ds) => ds.path).join(', ')}
+            </p>
+          </Flex>
+          <Flex gap="2">
+            <Button.Icon title="Edit library" onClick={openEditor}>
+              <EditIcon />
+            </Button.Icon>
+            <Button.Icon title="Scan library">
+              <ScanIcon />
+            </Button.Icon>
+            <Button.Icon
+              variant="danger"
+              title="Delete library"
+              className={styles.deleteButton}
+            >
+              <DeleteIcon />
+            </Button.Icon>
+          </Flex>
         </Flex>
-        <Flex gap="2">
-          <Button.Icon title="Edit library">
-            <EditIcon />
-          </Button.Icon>
-          <Button.Icon title="Scan library">
-            <ScanIcon />
-          </Button.Icon>
-          <Button.Icon
-            variant="danger"
-            title="Delete library"
-            className={styles.deleteButton}
+      </Surface>
+      <Dialog
+        open={editOpen}
+        onOpenChange={setEditOpen}
+        title={`Edit ${library.name}`}
+      >
+        <Flex as="form" action={saveContentType} dir="col" gap="4">
+          <Field
+            label="Content Type"
+            description="Change this if automatic detection chose the wrong library type."
+            {...(updateLibrary.error
+              ? { error: updateLibrary.error.message }
+              : {})}
           >
-            <DeleteIcon />
-          </Button.Icon>
+            <RadioGroup
+              items={LIBRARY_TYPES}
+              value={contentType}
+              onChange={(value) => setContentType(value as ContentType)}
+            />
+          </Field>
+          <Button
+            type="submit"
+            variant="primary"
+            disabled={updateLibrary.isPending}
+          >
+            Save changes
+          </Button>
         </Flex>
-      </Flex>
-    </Surface>
+      </Dialog>
+    </>
   )
 }

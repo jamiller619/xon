@@ -8,35 +8,10 @@ import { Button, Dialog, Field, Flex, RadioGroup, Textbox } from '@xon/ui'
 import { useEffect, useRef, useState } from 'react'
 import { createLibraryMutation } from '~/hooks/useLibraries'
 import styles from './CreateLibraryForm.module.css'
+import { LIBRARY_TYPES } from './libraryTypes'
 import MediaFolderBrowser from './MediaFolderBrowser'
 
-const LIBRARY_TYPES = [
-  {
-    label: 'Movies',
-    icon: '🍿',
-    value: 'video/movie',
-  },
-  {
-    label: 'TV Shows',
-    icon: '📺',
-    value: 'video/tvshow',
-  },
-  {
-    label: 'Music',
-    icon: '🎶',
-    value: 'audio',
-  },
-  {
-    label: 'Photos',
-    icon: '🖼️',
-    value: 'image',
-  },
-  {
-    label: 'Videos',
-    icon: '📹',
-    value: 'video',
-  },
-]
+const AUTOMATIC_CONTENT_TYPE = 'automatic'
 
 export type CreateLibraryFormProps = {
   onSuccess: (libraryId: string) => void
@@ -60,12 +35,13 @@ export default function CreateLibraryForm({
     { id: 0, path: '' },
   ])
   const nextLocationId = useRef(1)
-  const [contentType, setContentType] = useState<ContentType>()
+  const [contentType, setContentType] = useState<
+    ContentType | typeof AUTOMATIC_CONTENT_TYPE
+  >(AUTOMATIC_CONTENT_TYPE)
   const mutation = useMutation(createLibraryMutation)
 
   const canFormSubmit =
     name.trim() !== '' &&
-    (contentType?.length || 0) > 0 &&
     locations.every((location) => location.path.trim() !== '')
 
   useEffect(() => {
@@ -77,12 +53,10 @@ export default function CreateLibraryForm({
   // A React 19 form action: useFormStatus tracks the returned promise, so the
   // submit button drives its own spinner while this is in flight.
   async function handleSubmit() {
-    if (!contentType) return
-
     await mutation.mutateAsync({
       name,
       description,
-      type: contentType,
+      ...(contentType === AUTOMATIC_CONTENT_TYPE ? {} : { type: contentType }),
       dataSources: locations.map((location) => ({
         type: DataSourceType.local,
         path: location.path.trim(),
@@ -135,13 +109,27 @@ export default function CreateLibraryForm({
           block
         />
       </Field>
-      <Field label="Content Type">
+      {/* <Field
+        label="Content Type"
+        description="Automatic analyzes the selected folders on the server. Choose a type to override it."
+        {...(mutation.error ? { error: mutation.error.message } : {})}
+      >
         <RadioGroup
-          items={LIBRARY_TYPES}
-          value={contentType ?? ''}
-          onChange={(value) => setContentType(value as ContentType)}
+          items={[
+            {
+              label: 'Automatic',
+              icon: '✨',
+              value: AUTOMATIC_CONTENT_TYPE,
+            },
+            ...LIBRARY_TYPES,
+          ]}
+          value={contentType}
+          onChange={(value) => {
+            mutation.reset()
+            setContentType(value as ContentType | typeof AUTOMATIC_CONTENT_TYPE)
+          }}
         />
-      </Field>
+      </Field> */}
       <Field
         label="Locations"
         description="Add every folder that belongs to this library."

@@ -25,6 +25,10 @@ export {
   default as ConfirmationDialog,
 } from './components/dialog/ConfirmationDialog.jsx'
 export { default as Dialog } from './components/dialog/Dialog.jsx'
+export {
+  type DrawerProps,
+  default as Drawer,
+} from './components/drawer/Drawer.jsx'
 export { default as Field } from './components/Field.js'
 export * from './components/flex/Flex.jsx'
 export { default as Flex } from './components/flex/Flex.jsx'

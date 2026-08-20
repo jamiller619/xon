@@ -1,5 +1,7 @@
 .viewport {
   position: relative;
+  /* Keep the full intrinsic width of the scroll row from sizing ancestors. */
+  contain: inline-size;
 }
 
 .button {

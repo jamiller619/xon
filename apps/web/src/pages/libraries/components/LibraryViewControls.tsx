@@ -92,7 +92,6 @@ export default function LibraryViewControls<
   return (
     <>
       <FilterHeader.ToolbarControls>
-        {primaryControls}
         {showToolbarSort && activeMode && (
           <Label size="small">
             Sort
@@ -109,6 +108,7 @@ export default function LibraryViewControls<
             </Select>
           </Label>
         )}
+        {primaryControls}
         {filters}
       </FilterHeader.ToolbarControls>
       <FilterHeader.ToolbarControls>
