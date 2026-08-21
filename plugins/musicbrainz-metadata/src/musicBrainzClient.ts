@@ -4,7 +4,7 @@ const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
 // MusicBrainz requires at least 1 request per second for anonymous users
 const RATE_LIMIT_MS = 1100
 
-const USER_AGENT = 'XonMediaCenter/1.0 (https://github.com/xon-media-center)'
+const USER_AGENT = 'XonMediaCenter/0.1 (https://github.com/xon-media-center)'
 
 interface CacheEntry<T> {
   data: T

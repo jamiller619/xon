@@ -85,6 +85,13 @@
       "when": 1787013852821,
       "tag": "0011_romantic_celestials",
       "breakpoints": true
+    },
+    {
+      "idx": 12,
+      "version": "6",
+      "when": 1787288052053,
+      "tag": "0012_pale_slipstream",
+      "breakpoints": true
     }
   ]
 }

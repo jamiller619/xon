@@ -10,7 +10,7 @@ export const mediaItems = sqliteTable(
     ...timestamps,
     libraryId: text('library_id')
       .notNull()
-      .references(() => libraries.id),
+      .references(() => libraries.id, { onDelete: 'cascade' }),
     dataSourceId: text('data_source_id'),
     matchId: text('match_id'),
     matchIdSource: text('match_id_source'),

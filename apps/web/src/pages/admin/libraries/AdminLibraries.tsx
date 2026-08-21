@@ -3,11 +3,20 @@ import {
   Delete16Regular as DeleteIcon,
   Edit16Regular as EditIcon,
   Folder16Regular as FolderIcon,
+  MoreVertical20Regular as MoreIcon,
   FolderSearch16Regular as ScanIcon,
 } from '@fluentui/react-icons'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { ContentType, Library } from '@xon/shared'
-import { Button, Dialog, Field, Flex, RadioGroup, Surface } from '@xon/ui'
+import {
+  Button,
+  ConfirmationDialog,
+  Dialog,
+  Field,
+  Flex,
+  RadioGroup,
+  Surface,
+} from '@xon/ui'
 import { css } from 'inline-css-modules'
 import { useState } from 'react'
 import CreateLibraryButton from '~/components/CreateLibraryButton'
@@ -15,6 +24,8 @@ import { LIBRARY_TYPES } from '~/components/create-library-form/libraryTypes'
 import LibraryIcon from '~/components/icons/LibraryIcon'
 import useLibraries, { updateLibraryMutation } from '~/hooks/useLibraries'
 import useLibraryThumbnail from '~/hooks/useLibraryThumbnail'
+import { getAPIError } from '~/lib/apiFetch'
+import { librariesAPI } from '~/lib/rpc'
 import Page from '~/pages/Page'
 
 const styles = css`
@@ -91,6 +102,7 @@ function LibraryCard({ library }: { library: Library }) {
   const thumbnailURL = useLibraryThumbnail(library)
   const queryClient = useQueryClient()
   const [editOpen, setEditOpen] = useState(false)
+  const [deleteOpen, setDeleteOpen] = useState(false)
   const [contentType, setContentType] = useState<ContentType>(library.type)
   const updateLibrary = useMutation({
     ...updateLibraryMutation,
@@ -102,6 +114,24 @@ function LibraryCard({ library }: { library: Library }) {
       })
     },
   })
+  const deleteLibrary = useMutation({
+    mutationFn: async () => {
+      const response = await librariesAPI[':id'].$delete({
+        param: { id: library.id },
+      })
+
+      if (!response.ok) {
+        throw new Error(
+          await getAPIError(response, 'Library could not be deleted'),
+        )
+      }
+    },
+    onSuccess: () => {
+      setDeleteOpen(false)
+      queryClient.removeQueries({ queryKey: ['library', library.id] })
+      void queryClient.invalidateQueries({ queryKey: ['libraries'] })
+    },
+  })
 
   function openEditor() {
     updateLibrary.reset()
@@ -111,6 +141,17 @@ function LibraryCard({ library }: { library: Library }) {
 
   async function saveContentType() {
     await updateLibrary.mutateAsync({ id: library.id, type: contentType })
+  }
+
+  function openDeleteConfirmation() {
+    deleteLibrary.reset()
+    setDeleteOpen(true)
+  }
+
+  function closeDeleteConfirmation() {
+    if (deleteLibrary.isPending) return
+    setDeleteOpen(false)
+    deleteLibrary.reset()
   }
 
   return (
@@ -140,10 +181,14 @@ function LibraryCard({ library }: { library: Library }) {
             <Button.Icon title="Scan library">
               <ScanIcon />
             </Button.Icon>
+            <Button.Icon title="More">
+              <MoreIcon />
+            </Button.Icon>
             <Button.Icon
               variant="danger"
               title="Delete library"
               className={styles.deleteButton}
+              onClick={openDeleteConfirmation}
             >
               <DeleteIcon />
             </Button.Icon>
@@ -178,6 +223,22 @@ function LibraryCard({ library }: { library: Library }) {
           </Button>
         </Flex>
       </Dialog>
+      <ConfirmationDialog
+        open={deleteOpen}
+        title={`Delete ${library.name}?`}
+        description={
+          deleteLibrary.error ? (
+            <span role="alert">{deleteLibrary.error.message}</span>
+          ) : (
+            'This will permanently remove the library from Xon. Your files on disk will not be deleted.'
+          )
+        }
+        yesLabel="Delete library"
+        noLabel="Cancel"
+        loading={deleteLibrary.isPending}
+        onYes={() => deleteLibrary.mutate()}
+        onNo={closeDeleteConfirmation}
+      />
     </>
   )
 }
