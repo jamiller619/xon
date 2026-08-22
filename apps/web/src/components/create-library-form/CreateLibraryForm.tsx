@@ -4,11 +4,10 @@ import {
 } from '@fluentui/react-icons'
 import { useMutation } from '@tanstack/react-query'
 import { type ContentType, DataSourceType } from '@xon/shared'
-import { Button, Dialog, Field, Flex, RadioGroup, Textbox } from '@xon/ui'
+import { Button, Dialog, Field, Flex, Textbox } from '@xon/ui'
 import { useEffect, useRef, useState } from 'react'
 import { createLibraryMutation } from '~/hooks/useLibraries'
 import styles from './CreateLibraryForm.module.css'
-import { LIBRARY_TYPES } from './libraryTypes'
 import MediaFolderBrowser from './MediaFolderBrowser'
 
 const AUTOMATIC_CONTENT_TYPE = 'automatic'

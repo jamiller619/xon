@@ -20,7 +20,7 @@ import {
 import { css } from 'inline-css-modules'
 import { useState } from 'react'
 import CreateLibraryButton from '~/components/CreateLibraryButton'
-import { LIBRARY_TYPES } from '~/components/create-library-form/libraryTypes'
+// import { LIBRARY_TYPES } from '~/components/create-library-form/libraryTypes'
 import LibraryIcon from '~/components/icons/LibraryIcon'
 import useLibraries, { updateLibraryMutation } from '~/hooks/useLibraries'
 import useLibraryThumbnail from '~/hooks/useLibraryThumbnail'
@@ -201,7 +201,7 @@ function LibraryCard({ library }: { library: Library }) {
         title={`Edit ${library.name}`}
       >
         <Flex as="form" action={saveContentType} dir="col" gap="4">
-          <Field
+          {/* <Field
             label="Content Type"
             description="Change this if automatic detection chose the wrong library type."
             {...(updateLibrary.error
@@ -213,7 +213,7 @@ function LibraryCard({ library }: { library: Library }) {
               value={contentType}
               onChange={(value) => setContentType(value as ContentType)}
             />
-          </Field>
+          </Field> */}
           <Button
             type="submit"
             variant="primary"

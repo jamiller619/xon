@@ -74,22 +74,6 @@ export type Collection = {
   mediaItems?: MediaItem[]
 }
 
-// export enum LibraryType {
-//   // These coorespond to the top-level name in a mime type,
-//   // or content type.
-//   Audio = 'audio',
-//   Application = 'application',
-//   Font = 'font',
-//   Image = 'image',
-//   Video = 'video',
-//   Text = 'text',
-//   Model = 'model',
-
-//   // Specialized types always inherit from a base type and
-//   // are pluggable. These are the types we ship by default.
-//   Movies = 'video/movies',
-//   TVShows = 'video/tv_shows',
-// }
 export const ContentTypeMain = {
   // These coorespond to the top-level name in a mime type,
   // or content type.
@@ -105,6 +89,8 @@ export const ContentTypeMain = {
 export type ContentTypeMain =
   (typeof ContentTypeMain)[keyof typeof ContentTypeMain]
 
+// Used to represent a sub-type of a content type, e.g.
+// `video/movie` or `audio/song`
 export type SpecializedContentType = `${ContentTypeMain}/${string}`
 
 export type ContentType = ContentTypeMain | SpecializedContentType
