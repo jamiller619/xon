@@ -1,5 +1,5 @@
 import type { PluginContext } from '@xon/plugin-sdk'
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { describe, expect, it, vi } from 'vitest'
 import { MusicBrainzMetadataPlugin } from '../index.js'
 import { MusicBrainzClient } from '../musicBrainzClient.js'
 import { parseMusicPath } from '../musicParser.js'
@@ -72,7 +72,12 @@ describe('parseMusicPath', () => {
 // ─── MusicBrainzClient tests ──────────────────────────────────────────────────
 
 function makeFetch(
-  responses: Array<{ ok: boolean; status?: number; json: unknown }>,
+  responses: Array<{
+    ok: boolean
+    status?: number
+    json: unknown
+    headers?: Record<string, string>
+  }>,
 ) {
   let i = 0
   return vi.fn(async (_url: string, _init?: RequestInit) => {
@@ -80,6 +85,9 @@ function makeFetch(
     return {
       ok: resp.ok,
       status: resp.status ?? (resp.ok ? 200 : 404),
+      statusText: resp.ok ? 'OK' : 'Not Found',
+      url: _url,
+      headers: new Headers(resp.headers),
       json: async () => resp.json,
     } as unknown as Response
   })
@@ -214,6 +222,22 @@ describe('MusicBrainzClient', () => {
       expect(url).toContain('Album')
     })
 
+    it('routes musicbrainz-api requests through the plugin fetch', async () => {
+      const fetch = makeFetch([
+        { ok: true, json: { count: 0, recordings: [] } },
+      ])
+      const client = new MusicBrainzClient(fetch)
+
+      await client.searchRecording('Title')
+
+      const [url, init] = fetch.mock.calls[0] as [string, RequestInit]
+      expect(new URL(url).pathname).toBe('/ws/2/recording/')
+      expect(new URL(url).searchParams.get('fmt')).toBe('json')
+      expect(new Headers(init.headers).get('User-Agent')).toBe(
+        'XonMediaCenter/0.1 (https://github.com/xon-media-center)',
+      )
+    })
+
     it('caches results to avoid duplicate requests', async () => {
       const fetch = makeFetch([
         { ok: true, json: { count: 0, recordings: [] } },
@@ -336,16 +360,29 @@ describe('MusicBrainzClient', () => {
   })
 
   describe('fetchCoverArtUrl', () => {
-    it('returns URL when cover art exists (200)', async () => {
-      const fetch = makeFetch([{ ok: true, status: 200, json: {} }])
+    it('returns the package-resolved URL when cover art exists', async () => {
+      const fetch = makeFetch([
+        {
+          ok: false,
+          status: 307,
+          json: {},
+          headers: { Location: 'https://archive.org/front.jpg' },
+        },
+      ])
       const client = new MusicBrainzClient(fetch)
       const url = await client.fetchCoverArtUrl('rel-1')
-      expect(url).toContain('coverartarchive.org')
-      expect(url).toContain('rel-1')
+      expect(url).toBe('https://archive.org/front.jpg')
     })
 
     it('returns URL when cover art redirects (307)', async () => {
-      const fetch = makeFetch([{ ok: false, status: 307, json: {} }])
+      const fetch = makeFetch([
+        {
+          ok: false,
+          status: 307,
+          json: {},
+          headers: { Location: 'https://archive.org/rel-2.jpg' },
+        },
+      ])
       const client = new MusicBrainzClient(fetch)
       const url = await client.fetchCoverArtUrl('rel-2')
       expect(url).toContain('rel-2')

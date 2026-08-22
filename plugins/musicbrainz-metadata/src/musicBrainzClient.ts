@@ -1,10 +1,20 @@
-const MB_BASE = 'https://musicbrainz.org/ws/2'
-const CAA_BASE = 'https://coverartarchive.org'
-const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
-// MusicBrainz requires at least 1 request per second for anonymous users
-const RATE_LIMIT_MS = 1100
+import {
+  CoverArtArchiveApi,
+  HttpClient,
+  type IFetchOptions,
+  type IRecording,
+  type IRelease,
+  MusicBrainzApi,
+} from 'musicbrainz-api'
 
-const USER_AGENT = 'XonMediaCenter/0.1 (https://github.com/xon-media-center)'
+const MUSICBRAINZ_BASE_URL = 'https://musicbrainz.org'
+const COVER_ART_ARCHIVE_BASE_URL = 'https://coverartarchive.org'
+const CACHE_TTL_MS = 60 * 60 * 1000 // 1 hour
+
+const APP_NAME = 'XonMediaCenter'
+const APP_VERSION = '0.1'
+const APP_CONTACT_INFO = 'https://github.com/xon-media-center'
+const USER_AGENT = `${APP_NAME}/${APP_VERSION} (${APP_CONTACT_INFO})`
 
 interface CacheEntry<T> {
   data: T
@@ -13,68 +23,100 @@ interface CacheEntry<T> {
 
 type FetchFn = (url: string, init?: RequestInit) => Promise<Response>
 
-// ─── MusicBrainz API response shapes ────────────────────────────────────────
+/**
+ * Adapts musicbrainz-api to Xon's permission-checked plugin fetch.
+ *
+ * musicbrainz-api deliberately owns request construction and rate limiting,
+ * but currently creates its HTTP client with global fetch. Keeping this small
+ * transport adapter prevents the dependency from bypassing the plugin's
+ * declared network permissions.
+ */
+class SandboxedHttpClient extends HttpClient {
+  readonly #baseUrl: string
+  readonly #fetchFn: FetchFn
+  readonly #rejectHttpErrors: boolean
+  readonly #userAgent: string
 
-interface MbArtistCredit {
-  artist: {
-    id: string
-    name: string
-    'sort-name': string
+  constructor(
+    baseUrl: string,
+    fetchFn: FetchFn,
+    userAgent: string,
+    rejectHttpErrors = false,
+  ) {
+    super({ baseUrl, timeout: 500, userAgent })
+    this.#baseUrl = baseUrl
+    this.#fetchFn = fetchFn
+    this.#rejectHttpErrors = rejectHttpErrors
+    this.#userAgent = userAgent
   }
-  name: string
-  joinphrase: string
+
+  override async get(
+    path: string,
+    options: IFetchOptions = {},
+  ): Promise<Response> {
+    const url = new URL(path, `${this.#baseUrl}/`)
+
+    for (const [key, value] of Object.entries(options.query ?? {})) {
+      const values = Array.isArray(value) ? value : [value]
+      for (const item of values) url.searchParams.append(key, String(item))
+    }
+
+    const headers = new Headers(options.headers)
+    headers.set('User-Agent', this.#userAgent)
+
+    const response = await this.#fetchFn(url.toString(), {
+      method: 'GET',
+      headers,
+      redirect: options.followRedirects === false ? 'manual' : 'follow',
+    })
+
+    if (this.#rejectHttpErrors && !response.ok) {
+      throw new Error(
+        `MusicBrainz request failed (${response.status}): ${response.statusText}`,
+      )
+    }
+
+    return response
+  }
 }
 
-interface MbLabel {
-  id: string
-  name: string
+class SandboxedMusicBrainzApi extends MusicBrainzApi {
+  constructor(fetchFn: FetchFn) {
+    super({
+      appName: APP_NAME,
+      appVersion: APP_VERSION,
+      appContactInfo: APP_CONTACT_INFO,
+      // MusicBrainz permits one request per second for anonymous clients.
+      rateLimit: [1, 1.1],
+    })
+
+    this.httpClient = new SandboxedHttpClient(
+      MUSICBRAINZ_BASE_URL,
+      fetchFn,
+      USER_AGENT,
+      true,
+    )
+  }
 }
 
-interface MbLabelInfo {
-  label: MbLabel | null
-  'catalog-number': string | null
-}
+function createCoverArtApi(fetchFn: FetchFn): CoverArtArchiveApi {
+  const api = new CoverArtArchiveApi()
 
-interface MbGenre {
-  id: string
-  name: string
-  count: number
-}
+  // CoverArtArchiveApi does not expose transport injection. Its TypeScript
+  // private field is a normal property at runtime, so install the same
+  // permission-checked adapter used by MusicBrainzApi.
+  ;(
+    api as unknown as {
+      httpClient: HttpClient
+    }
+  ).httpClient = new SandboxedHttpClient(
+    COVER_ART_ARCHIVE_BASE_URL,
+    fetchFn,
+    USER_AGENT,
+  )
 
-interface MbReleaseGroup {
-  id: string
-  title: string
-  'primary-type': string | null
-  'secondary-types': string[]
+  return api
 }
-
-interface MbRelease {
-  id: string
-  title: string
-  date: string
-  'artist-credit': MbArtistCredit[]
-  'label-info': MbLabelInfo[]
-  genres?: MbGenre[]
-  'release-group'?: MbReleaseGroup
-}
-
-interface MbRecording {
-  id: string
-  title: string
-  length: number | null
-  'artist-credit': MbArtistCredit[]
-  releases: MbRelease[]
-  genres?: MbGenre[]
-}
-
-interface MbSearchResult<T> {
-  count: number
-  offset: number
-  recordings?: T[]
-  releases?: T[]
-}
-
-// ─── Public types ────────────────────────────────────────────────────────────
 
 export interface MusicBrainzArtist {
   mbid: string
@@ -97,196 +139,142 @@ export interface MusicBrainzMetadata {
   durationMs: number | null
 }
 
-// ─── Rate limiter ────────────────────────────────────────────────────────────
-
-class RateLimiter {
-  private lastRequestAt = 0
-  private queue: Array<() => void> = []
-  private processing = false
-
-  async throttle(): Promise<void> {
-    return new Promise<void>((resolve) => {
-      this.queue.push(resolve)
-      if (!this.processing) {
-        this.processQueue()
-      }
-    })
-  }
-
-  private processQueue(): void {
-    this.processing = true
-    const next = this.queue.shift()
-    if (!next) {
-      this.processing = false
-      return
-    }
-
-    const now = Date.now()
-    const elapsed = now - this.lastRequestAt
-    const delay = Math.max(0, RATE_LIMIT_MS - elapsed)
-
-    setTimeout(() => {
-      this.lastRequestAt = Date.now()
-      next()
-      this.processQueue()
-    }, delay)
-  }
-}
-
-// ─── Client ──────────────────────────────────────────────────────────────────
-
 export class MusicBrainzClient {
-  private readonly fetchFn: FetchFn
-  private readonly cache = new Map<string, CacheEntry<unknown>>()
-  private readonly rateLimiter = new RateLimiter()
+  readonly #musicBrainzApi: MusicBrainzApi
+  readonly #coverArtApi: CoverArtArchiveApi
+  readonly #cache = new Map<string, CacheEntry<unknown>>()
 
   constructor(fetchFn: FetchFn) {
-    this.fetchFn = fetchFn
+    this.#musicBrainzApi = new SandboxedMusicBrainzApi(fetchFn)
+    this.#coverArtApi = createCoverArtApi(fetchFn)
   }
 
-  private async get<T>(url: string): Promise<T | null> {
-    const cached = this.cache.get(url) as CacheEntry<T> | undefined
-    if (cached !== undefined && Date.now() < cached.expiresAt) {
-      return cached.data
-    }
-
-    await this.rateLimiter.throttle()
-
-    const res = await this.fetchFn(url, {
-      headers: {
-        'User-Agent': USER_AGENT,
-        Accept: 'application/json',
-      },
-    })
-
-    if (!res.ok) return null
-
-    const data = (await res.json()) as T
-    this.cache.set(url, { data, expiresAt: Date.now() + CACHE_TTL_MS })
-    return data
-  }
-
-  /**
-   * Searches for a recording by title and optional artist/album.
-   */
+  /** Searches for a recording by title and optional artist/album. */
   async searchRecording(
     title: string,
     artist?: string,
     album?: string,
   ): Promise<MusicBrainzMetadata | null> {
-    const parts: string[] = [`recording:"${title}"`]
-    if (artist) parts.push(`artist:"${artist}"`)
-    if (album) parts.push(`release:"${album}"`)
+    const query: Record<string, string> = { recording: title }
+    if (artist) query.artist = artist
+    if (album) query.release = album
 
-    const query = parts.join(' AND ')
-    const url = `${MB_BASE}/recording?query=${encodeURIComponent(query)}&fmt=json&limit=5&inc=artist-credits+releases+genres`
-
-    const result = await this.get<MbSearchResult<MbRecording>>(url)
-    const recording = result?.recordings?.[0]
-    if (!recording) return null
-
-    return this.recordingToMetadata(recording)
+    try {
+      return await this.#cached(
+        `recording:${JSON.stringify(query)}`,
+        async () => {
+          const result = await this.#musicBrainzApi.search('recording', {
+            query,
+            limit: 5,
+            inc: ['artist-credits', 'releases', 'genres'],
+          })
+          const recording = result.recordings[0]
+          return recording ? this.#recordingToMetadata(recording) : null
+        },
+      )
+    } catch {
+      return null
+    }
   }
 
-  /**
-   * Fetches detailed release info including labels, genres, and cover art.
-   */
+  /** Fetches detailed release info including labels, genres, and cover art. */
   async fetchReleaseDetails(
     releaseMbid: string,
   ): Promise<Partial<MusicBrainzMetadata> | null> {
-    const url = `${MB_BASE}/release/${releaseMbid}?fmt=json&inc=artist-credits+labels+genres+release-groups`
-    const release = await this.get<MbRelease>(url)
-    if (!release) return null
-
-    const labelInfo = release['label-info']?.[0]
-    const label = labelInfo?.label?.name ?? null
-    const catalogNumber = labelInfo?.['catalog-number'] ?? null
-    const genres = (release.genres ?? [])
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5)
-      .map((g) => g.name)
-
-    const releaseGroup = release['release-group']
-    const secondaryTypes = releaseGroup?.['secondary-types'] ?? []
-    const isCompilation =
-      releaseGroup?.['primary-type'] === 'Compilation' ||
-      secondaryTypes.includes('Compilation') ||
-      release['artist-credit'].some(
-        (ac) => ac.artist.name.toLowerCase() === 'various artists',
-      )
-
-    const coverArtUrl = await this.fetchCoverArtUrl(releaseMbid)
-
-    return { label, catalogNumber, genres, isCompilation, coverArtUrl }
-  }
-
-  /**
-   * Attempts to get a cover art URL from the Cover Art Archive.
-   * Returns null if no cover art is available.
-   */
-  async fetchCoverArtUrl(releaseMbid: string): Promise<string | null> {
-    const url = `${CAA_BASE}/release/${releaseMbid}/front-250`
-    // CAA returns a redirect; we just need to check if the endpoint exists.
-    // We return the constructed URL directly — the browser/client can follow the redirect.
-    // To verify it exists, we make a HEAD request.
-    await this.rateLimiter.throttle()
     try {
-      const res = await this.fetchFn(url, { method: 'HEAD' })
-      if (
-        res.ok ||
-        res.status === 307 ||
-        res.status === 302 ||
-        res.status === 301
-      ) {
-        return url
-      }
+      return await this.#cached(`release:${releaseMbid}`, async () => {
+        const release = await this.#musicBrainzApi.lookup(
+          'release',
+          releaseMbid,
+          ['artist-credits', 'labels', 'genres', 'release-groups'],
+        )
+        const labelInfo = release['label-info']?.[0]
+        const genres = this.#topGenres(release)
+        const releaseGroup = release['release-group']
+        const secondaryTypes = releaseGroup?.['secondary-types'] ?? []
+        const isCompilation =
+          releaseGroup?.['primary-type'] === 'Compilation' ||
+          secondaryTypes.includes('Compilation') ||
+          (release['artist-credit'] ?? []).some(
+            (credit) => credit.artist.name.toLowerCase() === 'various artists',
+          )
+
+        return {
+          label: labelInfo?.label?.name ?? null,
+          catalogNumber: labelInfo?.['catalog-number'] ?? null,
+          genres,
+          isCompilation,
+          coverArtUrl: await this.fetchCoverArtUrl(releaseMbid),
+        }
+      })
     } catch {
-      // Network error — no cover art
+      return null
     }
-    return null
   }
 
-  private recordingToMetadata(recording: MbRecording): MusicBrainzMetadata {
-    const artists: MusicBrainzArtist[] = recording['artist-credit'].map(
-      (ac) => ({
-        mbid: ac.artist.id,
-        name: ac.name || ac.artist.name,
-        sortName: ac.artist['sort-name'],
+  /** Returns the Cover Art Archive's front-cover URL when one exists. */
+  async fetchCoverArtUrl(releaseMbid: string): Promise<string | null> {
+    try {
+      return await this.#cached(`cover:${releaseMbid}`, async () => {
+        const cover = await this.#coverArtApi.getReleaseCover(
+          releaseMbid,
+          'front',
+        )
+        return cover.url
+      })
+    } catch {
+      return null
+    }
+  }
+
+  #recordingToMetadata(recording: IRecording): MusicBrainzMetadata {
+    const artists: MusicBrainzArtist[] = (recording['artist-credit'] ?? []).map(
+      (credit) => ({
+        mbid: credit.artist.id,
+        name: credit.name || credit.artist.name,
+        sortName: credit.artist['sort-name'],
       }),
     )
 
     const primaryRelease = recording.releases?.[0]
-    const releaseMbid = primaryRelease?.id ?? null
-    const album = primaryRelease?.title ?? null
-    const releaseDate = primaryRelease?.date ?? null
-    const releaseYear = releaseDate ? releaseDate.slice(0, 4) : null
-
-    const genres = (recording.genres ?? [])
-      .sort((a, b) => b.count - a.count)
-      .slice(0, 5)
-      .map((g) => g.name)
-
-    const isCompilation =
-      artists.some((a) => a.name.toLowerCase() === 'various artists') ||
-      artists.length > 1
+    const releaseDate = primaryRelease?.date || null
 
     return {
       recordingMbid: recording.id,
-      releaseMbid,
+      releaseMbid: primaryRelease?.id ?? null,
       title: recording.title,
       artists,
-      album,
-      releaseYear,
-      genres,
+      album: primaryRelease?.title ?? null,
+      releaseYear: releaseDate ? releaseDate.slice(0, 4) : null,
+      genres: this.#topGenres(recording),
       label: null,
       catalogNumber: null,
       coverArtUrl: null,
-      isCompilation,
+      isCompilation:
+        artists.some(
+          (artist) => artist.name.toLowerCase() === 'various artists',
+        ) || artists.length > 1,
       durationMs: recording.length ?? null,
     }
   }
 
+  #topGenres(entity: Pick<IRecording | IRelease, 'genres'>): string[] {
+    return [...(entity.genres ?? [])]
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 5)
+      .map((genre) => genre.name)
+  }
+
+  async #cached<T>(key: string, load: () => Promise<T>): Promise<T> {
+    const cached = this.#cache.get(key) as CacheEntry<T> | undefined
+    if (cached && Date.now() < cached.expiresAt) return cached.data
+
+    const data = await load()
+    this.#cache.set(key, { data, expiresAt: Date.now() + CACHE_TTL_MS })
+    return data
+  }
+
   clearCache(): void {
-    this.cache.clear()
+    this.#cache.clear()
   }
 }
