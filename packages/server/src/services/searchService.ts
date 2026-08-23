@@ -1,11 +1,13 @@
+import type { MediaItem } from '@xon/shared'
 import { inArray, sql } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
-import { mediaItems } from '../db/schema.ts'
+import { publicMediaColumns } from '../db/publicSelections.ts'
+import { libraries, mediaItems } from '../db/schema.ts'
 
 const MAX_SEARCH_TOKENS = 32
 
 export interface SearchMediaOptions {
-  userId: string
+  userId: number
   query: string
   category?: string | undefined
   page: number
@@ -13,12 +15,12 @@ export interface SearchMediaOptions {
 }
 
 export interface SearchMediaPage {
-  data: (typeof mediaItems.$inferSelect)[]
+  data: MediaItem[]
   total: number
 }
 
 interface RankedMediaId {
-  id: string
+  id: number
 }
 
 interface CountRow {
@@ -93,15 +95,22 @@ export async function searchMedia(
   }
 
   const rows = await db
-    .select()
+    .select({
+      ...publicMediaColumns,
+      libraryId: libraries.publicId,
+      internalId: mediaItems.id,
+    })
     .from(mediaItems)
+    .innerJoin(libraries, sql`${mediaItems.libraryId} = ${libraries.id}`)
     .where(inArray(mediaItems.id, ids))
-  const rowsById = new Map(rows.map((row) => [row.id, row]))
+  const rowsById = new Map(rows.map((row) => [row.internalId, row]))
 
   return {
     data: ids.flatMap((id) => {
       const row = rowsById.get(id)
-      return row ? [row] : []
+      if (!row) return []
+      const { internalId: _internalId, ...publicRow } = row
+      return [publicRow]
     }),
     total: Number(countRows[0]?.count ?? 0),
   }
@@ -115,7 +124,7 @@ export async function searchMedia(
  */
 export async function getPopularGenres(
   db: LibSQLDatabase,
-  options: { userId: string; limit: number },
+  options: { userId: number; limit: number },
 ): Promise<PopularGenre[]> {
   const rows = await db.all<PopularGenreRow>(sql`
     WITH genre_values AS (

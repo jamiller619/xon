@@ -72,7 +72,11 @@ function ScanItem({
           )}
         </Flex>
         {status === 'running' && (
-          <Progress value={indeterminate ? null : percent} />
+          <Progress
+            animated
+            value={indeterminate ? null : percent}
+            variant="primary"
+          />
         )}
         <span className={styles.line ?? ''} title={line}>
           {line}

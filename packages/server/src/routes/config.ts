@@ -4,9 +4,9 @@ import { z } from 'zod'
 import config, { type ConfigStore, configSchema } from '../config.ts'
 import { type AuthenticatedEnv, requireAuth } from '../http/authMiddleware.ts'
 import {
+  createNoStoreJSONResponse,
   errorCodes,
   errorResponse,
-  noCacheJSON,
   type ValidationErrorDetail,
 } from '../http/responses.ts'
 import { validate } from '../http/validate.ts'
@@ -44,7 +44,7 @@ export function makeConfigRouter(
   const router = new Hono()
 
     .get('/bootstrap', (c) => {
-      return noCacheJSON(c, {
+      return createNoStoreJSONResponse(c, {
         'session.enableAnonymousLogins': configStore.get(
           'session.enableAnonymousLogins',
         ),
@@ -54,7 +54,7 @@ export function makeConfigRouter(
     .use('*', requireAuth)
 
     .get('/', (c) => {
-      return noCacheJSON(c, getCoreConfig(configStore))
+      return createNoStoreJSONResponse(c, getCoreConfig(configStore))
     })
 
     .post('/', validate('json', configUpdateSchema), async (c) => {
@@ -121,7 +121,7 @@ export function makeConfigRouter(
           : undefined
       await configStore.set(key, value)
 
-      return noCacheJSON(c, {
+      return createNoStoreJSONResponse(c, {
         key,
         ...(value === undefined ? {} : { value }),
       })

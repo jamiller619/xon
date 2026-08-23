@@ -1,11 +1,11 @@
 import { and, asc, eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
-import { collectionItems, collections } from '../db/schema.ts'
+import { collectionItems, collections, mediaItems } from '../db/schema.ts'
 import * as mediaService from './mediaService.ts'
 
 export interface MediaDetailOptions {
   withLibrary: boolean
-  userId?: string | undefined
+  userId?: number | undefined
 }
 
 export async function getMediaDetail(
@@ -22,15 +22,16 @@ export async function getMediaDetail(
   const collectionIds = options.userId
     ? (
         await db
-          .select({ collectionId: collectionItems.collectionId })
+          .select({ collectionId: collections.publicId })
           .from(collectionItems)
           .innerJoin(
             collections,
             eq(collectionItems.collectionId, collections.id),
           )
+          .innerJoin(mediaItems, eq(collectionItems.mediaItemId, mediaItems.id))
           .where(
             and(
-              eq(collectionItems.mediaItemId, id),
+              eq(mediaItems.publicId, id),
               eq(collections.userId, options.userId),
             ),
           )

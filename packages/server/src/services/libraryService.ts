@@ -2,7 +2,18 @@ import crypto from 'node:crypto'
 import type { Library, MediaType, PageProps, SortProps } from '@xon/shared'
 import { and, asc, count, desc, eq, isNull, like, sql } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
-import { libraries, type MediaItem, mediaItems } from '../db/schema.ts'
+import {
+  publicLibraryColumns,
+  publicMediaColumns,
+} from '../db/publicSelections.ts'
+import {
+  type Library as LibraryRecord,
+  libraries,
+  type MediaItem,
+  mediaItems,
+  users,
+} from '../db/schema.ts'
+import { insertWithGeneratedPublicId } from '../lib/publicId.ts'
 import { createLogger } from '../logger.ts'
 
 const logger = createLogger('library-service')
@@ -12,80 +23,113 @@ type LibraryMediaSortFields = Pick<
   'title' | 'fileSize' | 'createdAt'
 >
 
+type CreateLibraryInput = Omit<typeof libraries.$inferInsert, 'id' | 'publicId'>
+
 export async function createLibrary(
   db: LibSQLDatabase,
-  data: typeof libraries.$inferInsert,
-) {
-  const libraryId = data.id ?? crypto.randomUUID()
-
-  await db.insert(libraries).values({
-    ...data,
-    id: libraryId,
-    dataSources: (data.dataSources ?? []).map((source) => ({
-      ...source,
-      id: source.id || crypto.randomUUID(),
-    })),
+  data: CreateLibraryInput,
+): Promise<string> {
+  const created = await insertWithGeneratedPublicId(async (publicId) => {
+    const [row] = await db
+      .insert(libraries)
+      .values({
+        ...data,
+        publicId,
+        dataSources: (data.dataSources ?? []).map((source) => ({
+          ...source,
+          id: source.id || crypto.randomUUID(),
+        })),
+      })
+      .returning({ publicId: libraries.publicId })
+    return row
   })
 
-  return libraryId
+  if (!created) throw new Error('Failed to create library')
+  return created.publicId
 }
 
-export async function getAllLibraries(db: LibSQLDatabase) {
-  return db.select().from(libraries)
+export async function getAllLibraries(db: LibSQLDatabase): Promise<Library[]> {
+  return db
+    .select({ ...publicLibraryColumns, ownerId: users.publicId })
+    .from(libraries)
+    .innerJoin(users, eq(libraries.ownerId, users.id))
+}
+
+export function getLibraryRecordByPublicId(
+  db: LibSQLDatabase,
+  publicId: string,
+): Promise<LibraryRecord | undefined> {
+  return db
+    .select()
+    .from(libraries)
+    .where(eq(libraries.publicId, publicId))
+    .get()
 }
 
 export async function getLibraryById(
   db: LibSQLDatabase,
-  id: string,
+  publicId: string,
 ): Promise<Library | undefined> {
-  const data = await db
-    .select()
+  return db
+    .select({ ...publicLibraryColumns, ownerId: users.publicId })
     .from(libraries)
-    .where(eq(libraries.id, id))
+    .innerJoin(users, eq(libraries.ownerId, users.id))
+    .where(eq(libraries.publicId, publicId))
     .get()
-
-  return data
 }
 
 export async function getLibrariesByUserId(
   db: LibSQLDatabase,
-  userId: string,
-): Promise<Library[] | undefined> {
-  return db.select().from(libraries).where(eq(libraries.ownerId, userId))
+  userId: number,
+): Promise<Library[]> {
+  return db
+    .select({ ...publicLibraryColumns, ownerId: users.publicId })
+    .from(libraries)
+    .innerJoin(users, eq(libraries.ownerId, users.id))
+    .where(eq(libraries.ownerId, userId))
 }
 
-export async function deleteLibraryById(db: LibSQLDatabase, id: string) {
+export async function deleteLibraryById(
+  db: LibSQLDatabase,
+  publicId: string,
+): Promise<boolean> {
   try {
-    await db.delete(libraries).where(eq(libraries.id, id))
-
-    return true
+    const deleted = await db
+      .delete(libraries)
+      .where(eq(libraries.publicId, publicId))
+      .returning({ id: libraries.id })
+    return deleted.length > 0
   } catch (error) {
-    logger.error('Failed to delete library', { id, error })
+    logger.error('Failed to delete library', { publicId, error })
     throw error
   }
 }
 
 export async function getMediaByLibraryId(
   db: LibSQLDatabase,
-  id: string,
+  publicId: string,
   pageProps?: PageProps,
   sortProps?: SortProps<LibraryMediaSortFields>,
   mediaType?: MediaType.MainType,
   unmatchedOnly = false,
 ) {
+  const library = await getLibraryRecordByPublicId(db, publicId)
+  if (!library) return { data: [], total: 0 }
+
   const sortDir = sortProps?.order === 'asc' ? asc : desc
   const pageSize = pageProps?.pageSize ?? 10
   const pageNumber = pageProps?.pageNumber ?? 1
   const offset = (pageNumber - 1) * pageSize
   const filters = and(
-    eq(mediaItems.libraryId, id),
+    eq(mediaItems.libraryId, library.id),
     mediaType ? like(mediaItems.mediaType, `${mediaType}/%`) : undefined,
     unmatchedOnly ? isNull(mediaItems.matchId) : undefined,
   )
 
   const results = await db
-    .select()
+    .select({ ...publicMediaColumns, libraryId: libraries.publicId })
     .from(mediaItems)
+    .innerJoin(libraries, eq(mediaItems.libraryId, libraries.id))
     .where(filters)
     .orderBy(
       sortDir(mediaItems[sortProps?.field ?? 'createdAt']),
@@ -99,20 +143,20 @@ export async function getMediaByLibraryId(
     .from(mediaItems)
     .where(filters)
 
-  return {
-    data: results,
-    total: total[0]?.count ?? 0,
-  }
+  return { data: results, total: total[0]?.count ?? 0 }
 }
 
-export async function getLibraryStats(db: LibSQLDatabase, libraryId: string) {
+export async function getLibraryStats(db: LibSQLDatabase, publicId: string) {
+  const library = await getLibraryRecordByPublicId(db, publicId)
+  if (!library) return { totalItems: 0, totalSize: 0 }
+
   const [stats] = await db
     .select({
       totalItems: count(),
       totalSize: sql<number>`coalesce(sum(${mediaItems.fileSize}), 0)`,
     })
     .from(mediaItems)
-    .where(eq(mediaItems.libraryId, libraryId))
+    .where(eq(mediaItems.libraryId, library.id))
 
   return {
     totalItems: stats?.totalItems ?? 0,
@@ -123,14 +167,18 @@ export async function getLibraryStats(db: LibSQLDatabase, libraryId: string) {
 export async function getMediaByTypeAndLibraryId(
   db: LibSQLDatabase,
   mediaType: MediaType.MainType,
-  libraryId: string,
+  publicId: string,
 ) {
+  const library = await getLibraryRecordByPublicId(db, publicId)
+  if (!library) return []
+
   return db
-    .select()
+    .select({ ...publicMediaColumns, libraryId: libraries.publicId })
     .from(mediaItems)
+    .innerJoin(libraries, eq(mediaItems.libraryId, libraries.id))
     .where(
       and(
-        eq(mediaItems.libraryId, libraryId),
+        eq(mediaItems.libraryId, library.id),
         like(mediaItems.mediaType, `${mediaType}/%`),
       ),
     )
@@ -138,21 +186,24 @@ export async function getMediaByTypeAndLibraryId(
 
 export async function updateLibrary(
   db: LibSQLDatabase,
-  id: string,
+  publicId: string,
   updates: Partial<Library>,
 ): Promise<Library | undefined> {
-  const normalizedUpdates = updates.dataSources
+  const { id: _id, ownerId: _ownerId, ...mutableUpdates } = updates
+  const normalizedUpdates = mutableUpdates.dataSources
     ? {
-        ...updates,
-        dataSources: updates.dataSources.map((source) => ({
+        ...mutableUpdates,
+        dataSources: mutableUpdates.dataSources.map((source) => ({
           ...source,
           id: source.id || crypto.randomUUID(),
         })),
       }
-    : { ...updates }
-  await db.update(libraries).set(normalizedUpdates).where(eq(libraries.id, id))
+    : mutableUpdates
 
-  const results = await db.select().from(libraries).where(eq(libraries.id, id))
+  await db
+    .update(libraries)
+    .set(normalizedUpdates)
+    .where(eq(libraries.publicId, publicId))
 
-  return results[0]
+  return getLibraryById(db, publicId)
 }

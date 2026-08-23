@@ -251,6 +251,9 @@ export async function loadMediaSubtitle(
 }
 
 async function getMediaItem(db: LibSQLDatabase, id: string) {
-  const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
+  const rows = await db
+    .select()
+    .from(mediaItems)
+    .where(eq(mediaItems.publicId, id))
   return rows[0]
 }

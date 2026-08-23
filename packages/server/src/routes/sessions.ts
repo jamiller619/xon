@@ -2,9 +2,9 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { requireAuth } from '../http/authMiddleware.ts'
 import {
+  createNoStoreJSONResponse,
   errorCodes,
   errorResponse,
-  noCacheJSON,
   noContent,
   notFound,
 } from '../http/responses.ts'
@@ -22,7 +22,7 @@ export function makeSessionsRouter(db: LibSQLDatabase) {
       const session = c.get('session')
       const activeSessions = await listActiveSessions(db, user.id, session.id)
 
-      return noCacheJSON(c, activeSessions)
+      return createNoStoreJSONResponse(c, activeSessions)
     })
     .delete(
       '/:id',
@@ -33,7 +33,7 @@ export function makeSessionsRouter(db: LibSQLDatabase) {
         const user = c.get('user')
         const session = c.get('session')
 
-        if (id === session.id) {
+        if (id === session.publicId) {
           return errorResponse(
             c,
             409,

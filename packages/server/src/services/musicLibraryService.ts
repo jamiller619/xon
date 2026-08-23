@@ -1,6 +1,5 @@
-import { MediaType } from '@xon/shared'
+import { type MediaItem, MediaType } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
-import type { MediaItem } from '../db/schema.ts'
 import * as libraryService from './libraryService.ts'
 
 type MusicArtwork = Pick<MediaItem, 'id' | 'metadata' | 'updatedAt'>

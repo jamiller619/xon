@@ -16,6 +16,10 @@
   border-radius: var(--border-radius-5);
   corner-shape: var(--corner-shape);
   box-shadow: 0 0 18px rgb(0 0 0 / 40%);
+
+  p {
+    max-width: 32em;
+  }
 }
 
 .title {

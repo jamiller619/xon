@@ -1,8 +1,13 @@
 import { sql } from 'drizzle-orm'
 import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { generatePublicId } from '../../lib/publicId.ts'
 
 export const users = sqliteTable('users', {
-  id: text('id').primaryKey(),
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  publicId: text('public_id')
+    .notNull()
+    .unique('users_public_id_unique')
+    .$defaultFn(() => generatePublicId()),
   name: text('name').notNull(),
   email: text('email').notNull().unique(),
   emailVerified: integer('email_verified', { mode: 'boolean' })

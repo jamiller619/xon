@@ -9,7 +9,7 @@
     "author": "Xon",
     "category": "MetadataSource",
     "contentTypes": [
-      "music"
+      "audio"
     ],
     "main": "dist/index.js",
     "permissions": {

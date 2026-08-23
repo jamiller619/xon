@@ -73,9 +73,7 @@ export default function Dialog({
             )}
             <div />
           </Flex>
-          {description && (
-            <UIDialog.Description>{description}</UIDialog.Description>
-          )}
+          {description}
           {children}
         </UIDialog.Popup>
       </UIDialog.Portal>

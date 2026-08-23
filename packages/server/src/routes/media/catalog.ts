@@ -1,8 +1,7 @@
-import type { SortProps } from '@xon/shared'
+import type { MediaItem, SortProps } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
-import type { MediaItem } from '../../db/schema.ts'
 import { requireAuth } from '../../http/authMiddleware.ts'
 import {
   cachedJson,

@@ -1,6 +1,7 @@
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
+import { requireAuth } from '../../http/authMiddleware.ts'
 import { errorCodes, errorResponse, notFound } from '../../http/responses.ts'
 import { validate } from '../../http/validate.ts'
 import {
@@ -98,8 +99,12 @@ export function makeMediaMetadataRouter(db: LibSQLDatabase) {
         )
       }
     })
-    .post('/bulk', validate('json', bulkSchema), async (c) => {
-      const result = await mutateMediaBulk(db, c.req.valid('json'))
+    .post('/bulk', requireAuth, validate('json', bulkSchema), async (c) => {
+      const result = await mutateMediaBulk(
+        db,
+        c.get('user').id,
+        c.req.valid('json'),
+      )
       if (result.status === 'items-not-found') {
         return notFound(c, 'One or more media items were not found')
       }

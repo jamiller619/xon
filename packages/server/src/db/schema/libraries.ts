@@ -1,12 +1,12 @@
 import type { ContentType, DataSource } from '@xon/shared'
-import { sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
 import { keys, timestamps } from './shared.ts'
 import { users } from './users.ts'
 
 export const libraries = sqliteTable('libraries', {
-  ...keys,
+  ...keys('libraries'),
   ...timestamps,
-  ownerId: text('owner_id')
+  ownerId: integer('owner_id')
     .notNull()
     .references(() => users.id, { onDelete: 'cascade' }),
   name: text('name').notNull(),

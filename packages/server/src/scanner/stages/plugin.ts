@@ -3,7 +3,7 @@ import {
   getPluginsByCategory,
   type PluginEntry,
 } from '../../plugins/pluginManager.ts'
-import type { PipelineStage } from '../pipeline.ts'
+import type { ItemPipelineStage, PipelineStage } from '../pipeline.ts'
 
 export default {
   name: 'plugin',
@@ -28,7 +28,7 @@ type MetadataPluginSelection = {
 }
 
 function getMetadataPlugins(
-  job: Parameters<PipelineStage['run']>[1],
+  job: Parameters<ItemPipelineStage['run']>[1],
 ): MetadataPluginSelection {
   const plugins = getPluginsByCategory<MetadataSourcePlugin>(
     'MetadataSource',

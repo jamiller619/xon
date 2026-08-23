@@ -6,6 +6,7 @@ import type {
 import type { MediaType, Metadata, PosterImage } from '@xon/shared'
 import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
+import { publicMediaColumns } from '../db/publicSelections.ts'
 import { libraries, mediaItems } from '../db/schema.ts'
 import {
   findMediaDataSource,
@@ -46,7 +47,7 @@ export async function getMatchContext(
   const item = await db
     .select()
     .from(mediaItems)
-    .where(eq(mediaItems.id, mediaId))
+    .where(eq(mediaItems.publicId, mediaId))
     .get()
   if (!item) return
 
@@ -237,8 +238,9 @@ export async function applyMatch(
   })
 
   const item = await db
-    .select()
+    .select({ ...publicMediaColumns, libraryId: libraries.publicId })
     .from(mediaItems)
+    .innerJoin(libraries, eq(mediaItems.libraryId, libraries.id))
     .where(eq(mediaItems.id, context.item.id))
     .get()
 

@@ -23,7 +23,7 @@ export default {
   retry: 1,
   async run(ctx, job) {
     if (job.type === 'changed') return
-    if (!job.data.id) {
+    if (job.data.id == null) {
       job.errors.push(
         new Error('Missing required media item id for thumbnails job'),
       )
@@ -55,9 +55,9 @@ export default {
       fullSize = cover.posterPath
       thumbs = cover.thumbs
     } else if (isImage(job.file.mediaType)) {
-      thumbs = await generateThumbnails(job.file.path, job.data.id)
+      thumbs = await generateThumbnails(job.file.path, job.data.publicId)
     } else if (isVideo(job.file.mediaType)) {
-      thumbs = await generateVideoThumbnails(job.file.path, job.data.id)
+      thumbs = await generateVideoThumbnails(job.file.path, job.data.publicId)
     } else {
       return
     }
@@ -122,14 +122,17 @@ async function saveEmbeddedArt(job: MediaJob) {
 
   const buffer = Buffer.from(art.data)
   const ext = mime.extension(art.format) || 'jpg'
-  const posterReference = mediaImageCacheReference(job.data.id, `cover.${ext}`)
+  const posterReference = mediaImageCacheReference(
+    job.data.publicId,
+    `cover.${ext}`,
+  )
   const posterPath = resolveCacheReference(posterReference)
 
   await fsp.mkdir(dirname(posterPath), { recursive: true })
 
   await fsp.writeFile(posterPath, buffer)
 
-  const thumbs = await writeThumbnailImages(job.data.id, buffer)
+  const thumbs = await writeThumbnailImages(job.data.publicId, buffer)
 
   return { posterPath: posterReference, thumbs }
 }

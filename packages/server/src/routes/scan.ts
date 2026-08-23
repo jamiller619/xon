@@ -7,9 +7,9 @@ import { libraries } from '../db/schema.ts'
 import { emitEvent } from '../events.ts'
 import { requireAuth } from '../http/authMiddleware.js'
 import {
+  createNoStoreJSONResponse,
   errorCodes,
   errorResponse,
-  noCacheJSON,
   notFound,
 } from '../http/responses.ts'
 import { resourceIdSchema } from '../http/schemas.ts'
@@ -18,6 +18,7 @@ import { emitPluginEvent } from '../plugins/pluginManager.ts'
 import type { ScannerHandle } from '../scanner/scannerHandle.ts'
 import { type ScanState, scanRegistry } from '../scanner/scanRegistry.ts'
 import { parseCronInterval } from '../scanner/scheduler.ts'
+import * as libraryService from '../services/libraryService.ts'
 
 const scheduleSchema = z.object({
   scanSchedule: z
@@ -169,10 +170,10 @@ export function makeScanRouter(
 
       const state = scanRegistry.get(libraryId)
       if (!state) {
-        return noCacheJSON(c, { status: 'idle' })
+        return createNoStoreJSONResponse(c, { status: 'idle' })
       }
 
-      return noCacheJSON(c, {
+      return createNoStoreJSONResponse(c, {
         status: state.status,
         startedAt: state.startedAt.toISOString(),
         progress: state.progress,
@@ -193,19 +194,15 @@ export function makeScanRouter(
         const existing = await db
           .select()
           .from(libraries)
-          .where(eq(libraries.id, libraryId))
+          .where(eq(libraries.publicId, libraryId))
         if (existing.length === 0) return notFound(c, 'Library not found')
 
         await db
           .update(libraries)
           .set({ scanSchedule, updatedAt: new Date() })
-          .where(eq(libraries.id, libraryId))
+          .where(eq(libraries.publicId, libraryId))
 
-        const updated = await db
-          .select()
-          .from(libraries)
-          .where(eq(libraries.id, libraryId))
-        return c.json(updated[0])
+        return c.json(await libraryService.getLibraryById(db, libraryId))
       },
     )
 

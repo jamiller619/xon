@@ -6,9 +6,9 @@ import { keys, timestamps } from './shared.ts'
 export const mediaItems = sqliteTable(
   'media_items',
   {
-    ...keys,
+    ...keys('media_items'),
     ...timestamps,
-    libraryId: text('library_id')
+    libraryId: integer('library_id')
       .notNull()
       .references(() => libraries.id, { onDelete: 'cascade' }),
     dataSourceId: text('data_source_id'),

@@ -1,5 +1,6 @@
 import type { ContentType, DataSource } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
+import { generatePublicId } from '../../lib/publicId.ts'
 import * as mediaService from '../../services/mediaService.ts'
 import type { FileEntry } from '../fileEntry.ts'
 import type { MediaJob } from '../pipeline.ts'
@@ -8,12 +9,17 @@ export type Discovery = {
   jobs: MediaJob[]
   removedCount: number
   totalDiscovered: number
+  musicFolderAssets?: {
+    artworkPaths: string[]
+    playlistPaths: string[]
+  }
   reconcile: () => void
 }
 
 export type DiscoveryContext = {
   db: LibSQLDatabase
-  libraryId: string
+  libraryId: number
+  libraryPublicId: string
   dataSource: DataSource
   extSet: Set<string>
   contentType: ContentType
@@ -27,7 +33,8 @@ export async function createMediaJob(
   db: LibSQLDatabase,
   file: FileEntry,
   isNew: boolean,
-  libraryId: string,
+  libraryId: number,
+  libraryPublicId: string,
   contentType: ContentType,
   dataSourceId: string,
   dataSourcePath: string,
@@ -38,12 +45,13 @@ export async function createMediaJob(
     file,
     errors: [],
     libraryId,
+    libraryPublicId,
     contentType,
     dataSourcePath,
     dataSourceId,
     mediaTypes: [], // This will be filled in later based on the file extension
     data: {
-      id: crypto.randomUUID(),
+      publicId: generatePublicId(),
       metadata: {},
     },
   }

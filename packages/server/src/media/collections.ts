@@ -1,8 +1,9 @@
 import path, { basename, dirname, extname } from 'node:path'
 import { CollectionType, MediaType } from '@xon/shared'
-import { inArray } from 'drizzle-orm'
+import { eq, inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
-import { collectionItems, collections } from '../db/schema.ts'
+import { collectionItems, collections, mediaItems } from '../db/schema.ts'
+import { insertWithGeneratedPublicId } from '../lib/publicId.ts'
 import * as libraryService from '../services/libraryService.ts'
 
 export interface TvEpisodeInfo {
@@ -100,7 +101,7 @@ function makeSeasonCollectionId(
 export async function createTvCollections(
   db: LibSQLDatabase,
   libraryId: string,
-  userId: string,
+  userId: number,
 ): Promise<void> {
   // Fetch all TV Show items for this library
   const tvItems = await libraryService.getMediaByTypeAndLibraryId(
@@ -158,21 +159,12 @@ export async function createTvCollections(
     }
   }
 
-  // Fetch existing collection IDs to avoid inserting duplicates
-  const allCollectionIds = [
-    ...seriesCollectionIds,
-    ...seasonCollectionMap.keys(),
-  ]
-  const existingCollections = await db
-    .select({ id: collections.id })
-    .from(collections)
-    .where(inArray(collections.id, allCollectionIds))
-  const existingCollectionIdSet = new Set(existingCollections.map((g) => g.id))
+  const collectionsByKey = await autoCollectionsByKey(db, userId)
 
   // Insert missing series collections
   const seriesInserts: Array<typeof collections.$inferInsert> = []
   for (const seriesCollectionId of seriesCollectionIds) {
-    if (!existingCollectionIdSet.has(seriesCollectionId)) {
+    if (!collectionsByKey.has(seriesCollectionId)) {
       const seriesTitle = episodes.find(
         (e) =>
           makeSeriesCollectionId(libraryId, e.seriesName) ===
@@ -180,18 +172,18 @@ export async function createTvCollections(
       )?.seriesName
       if (seriesTitle) {
         seriesInserts.push({
-          id: seriesCollectionId,
           type: CollectionType.Series,
           title: seriesTitle,
           parentCollectionId: null,
-          metadata: '{}',
+          metadata: autoCollectionMetadata(seriesCollectionId),
           userId,
         })
       }
     }
   }
   if (seriesInserts.length > 0) {
-    await db.insert(collections).values(seriesInserts)
+    const inserted = await insertAutoCollections(db, seriesInserts)
+    addAutoCollections(collectionsByKey, inserted)
   }
 
   // Insert missing season collections
@@ -200,23 +192,30 @@ export async function createTvCollections(
     seasonCollectionId,
     { seriesCollectionId, season },
   ] of seasonCollectionMap) {
-    if (!existingCollectionIdSet.has(seasonCollectionId)) {
+    if (!collectionsByKey.has(seasonCollectionId)) {
+      const parentCollectionId = collectionsByKey.get(seriesCollectionId)
+      if (parentCollectionId === undefined) continue
       seasonInserts.push({
-        id: seasonCollectionId,
         type: CollectionType.Season,
         title: `Season ${season}`,
-        parentCollectionId: seriesCollectionId,
-        metadata: '{}',
+        parentCollectionId,
+        metadata: autoCollectionMetadata(seasonCollectionId),
         userId,
       })
     }
   }
   if (seasonInserts.length > 0) {
-    await db.insert(collections).values(seasonInserts)
+    const inserted = await insertAutoCollections(db, seasonInserts)
+    addAutoCollections(collectionsByKey, inserted)
   }
 
   // Fetch existing collection members to avoid duplicates
-  const episodeIds = episodes.map((e) => e.id)
+  const mediaIdsByPublicId = await internalMediaIds(
+    db,
+    episodes.map((e) => e.id),
+  )
+  const episodeIds = [...mediaIdsByPublicId.values()]
+  if (episodeIds.length === 0) return
   const existingMembers = await db
     .select({ mediaItemId: collectionItems.mediaItemId })
     .from(collectionItems)
@@ -226,7 +225,8 @@ export async function createTvCollections(
   // Insert missing collection members
   const memberInserts: Array<typeof collectionItems.$inferInsert> = []
   for (const ep of episodes) {
-    if (!existingMemberSet.has(ep.id)) {
+    const mediaItemId = mediaIdsByPublicId.get(ep.id)
+    if (mediaItemId !== undefined && !existingMemberSet.has(mediaItemId)) {
       const seriesCollectionId = makeSeriesCollectionId(
         libraryId,
         ep.seriesName,
@@ -235,9 +235,11 @@ export async function createTvCollections(
         seriesCollectionId,
         ep.info.season,
       )
+      const collectionId = collectionsByKey.get(seasonCollectionId)
+      if (collectionId === undefined) continue
       memberInserts.push({
-        collectionId: seasonCollectionId,
-        mediaItemId: ep.id,
+        collectionId,
+        mediaItemId,
         sortOrder: ep.info.episode,
       })
     }
@@ -332,7 +334,7 @@ interface MusicTrackData {
 export async function createMusicCollections(
   db: LibSQLDatabase,
   libraryId: string,
-  userId: string,
+  userId: number,
 ): Promise<void> {
   // Fetch all Music category items for this library
   const musicItems = await libraryService.getMediaByTypeAndLibraryId(
@@ -410,33 +412,24 @@ export async function createMusicCollections(
     }
   }
 
-  // Fetch existing collections to avoid duplicates
-  const allCollectionIds = [
-    ...artistCollectionIds.values(),
-    ...albumCollectionMap.keys(),
-  ]
-  const existingCollections = await db
-    .select({ id: collections.id })
-    .from(collections)
-    .where(inArray(collections.id, allCollectionIds))
-  const existingCollectionIdSet = new Set(existingCollections.map((g) => g.id))
+  const collectionsByKey = await autoCollectionsByKey(db, userId)
 
   // Insert missing artist collections
   const artistInserts: Array<typeof collections.$inferInsert> = []
   for (const [artistName, artistCollectionId] of artistCollectionIds) {
-    if (!existingCollectionIdSet.has(artistCollectionId)) {
+    if (!collectionsByKey.has(artistCollectionId)) {
       artistInserts.push({
-        id: artistCollectionId,
         type: CollectionType.Artist,
         title: artistName,
         parentCollectionId: null,
-        metadata: '{}',
+        metadata: autoCollectionMetadata(artistCollectionId),
         userId,
       })
     }
   }
   if (artistInserts.length > 0) {
-    await db.insert(collections).values(artistInserts)
+    const inserted = await insertAutoCollections(db, artistInserts)
+    addAutoCollections(collectionsByKey, inserted)
   }
 
   // Insert missing album collections
@@ -445,24 +438,32 @@ export async function createMusicCollections(
     albumCollectionId,
     { albumArtist, albumTitle },
   ] of albumCollectionMap) {
-    if (!existingCollectionIdSet.has(albumCollectionId)) {
-      const artistCollectionId = artistCollectionIds.get(albumArtist) ?? null
+    if (!collectionsByKey.has(albumCollectionId)) {
+      const artistCollectionKey = artistCollectionIds.get(albumArtist)
+      const artistCollectionId = artistCollectionKey
+        ? (collectionsByKey.get(artistCollectionKey) ?? null)
+        : null
       albumInserts.push({
-        id: albumCollectionId,
         type: CollectionType.Album,
         title: albumTitle,
         parentCollectionId: artistCollectionId,
-        metadata: '{}',
+        metadata: autoCollectionMetadata(albumCollectionId),
         userId,
       })
     }
   }
   if (albumInserts.length > 0) {
-    await db.insert(collections).values(albumInserts)
+    const inserted = await insertAutoCollections(db, albumInserts)
+    addAutoCollections(collectionsByKey, inserted)
   }
 
   // Fetch existing collection members
-  const trackIds = tracks.map((t) => t.id)
+  const mediaIdsByPublicId = await internalMediaIds(
+    db,
+    tracks.map((t) => t.id),
+  )
+  const trackIds = [...mediaIdsByPublicId.values()]
+  if (trackIds.length === 0) return
   const existingMembers = await db
     .select({ mediaItemId: collectionItems.mediaItemId })
     .from(collectionItems)
@@ -472,16 +473,19 @@ export async function createMusicCollections(
   // Insert missing members — sort by disc * 1000 + trackNumber
   const memberInserts: Array<typeof collectionItems.$inferInsert> = []
   for (const track of tracks) {
-    if (!existingMemberSet.has(track.id)) {
+    const mediaItemId = mediaIdsByPublicId.get(track.id)
+    if (mediaItemId !== undefined && !existingMemberSet.has(mediaItemId)) {
       const albumArtist = getAlbumArtist(track.album)
       const albumCollectionId = makeMusicAlbumCollectionId(
         libraryId,
         albumArtist,
         track.album,
       )
+      const collectionId = collectionsByKey.get(albumCollectionId)
+      if (collectionId === undefined) continue
       memberInserts.push({
-        collectionId: albumCollectionId,
-        mediaItemId: track.id,
+        collectionId,
+        mediaItemId,
         sortOrder: track.discNumber * 1000 + track.trackNumber,
       })
     }
@@ -554,7 +558,7 @@ interface PhotoData {
 export async function createPhotoCollections(
   db: LibSQLDatabase,
   libraryId: string,
-  userId: string,
+  userId: number,
 ): Promise<void> {
   const photoItems = await libraryService.getMediaByTypeAndLibraryId(
     db,
@@ -615,51 +619,51 @@ export async function createPhotoCollections(
   ]
   if (allCollectionIds.length === 0) return
 
-  // Fetch existing collections to avoid duplicates
-  const existingCollections = await db
-    .select({ id: collections.id })
-    .from(collections)
-    .where(inArray(collections.id, allCollectionIds))
-  const existingCollectionIdSet = new Set(existingCollections.map((g) => g.id))
+  const collectionsByKey = await autoCollectionsByKey(db, userId)
 
   // Insert missing date collections
   const dateInserts: Array<typeof collections.$inferInsert> = []
   for (const [gid, dateStr] of dateCollectionMap) {
-    if (!existingCollectionIdSet.has(gid)) {
+    if (!collectionsByKey.has(gid)) {
       dateInserts.push({
-        id: gid,
         type: CollectionType.PhotoDate,
         title: dateStr,
         parentCollectionId: null,
-        metadata: '{}',
+        metadata: autoCollectionMetadata(gid),
         userId,
       })
     }
   }
   if (dateInserts.length > 0) {
-    await db.insert(collections).values(dateInserts)
+    const inserted = await insertAutoCollections(db, dateInserts)
+    addAutoCollections(collectionsByKey, inserted)
   }
 
   // Insert missing location collections
   const locationInserts: Array<typeof collections.$inferInsert> = []
   for (const [gid, { lat, lon }] of locationCollectionMap) {
-    if (!existingCollectionIdSet.has(gid)) {
+    if (!collectionsByKey.has(gid)) {
       locationInserts.push({
-        id: gid,
         type: CollectionType.PhotoLocation,
         title: `${lat}, ${lon}`,
         parentCollectionId: null,
-        metadata: JSON.stringify({ lat, lon }),
+        metadata: JSON.stringify({ autoKey: gid, lat, lon }),
         userId,
       })
     }
   }
   if (locationInserts.length > 0) {
-    await db.insert(collections).values(locationInserts)
+    const inserted = await insertAutoCollections(db, locationInserts)
+    addAutoCollections(collectionsByKey, inserted)
   }
 
   // Fetch existing members to avoid duplicates (track by collectionId:mediaItemId)
-  const photoIds = photos.map((p) => p.id)
+  const mediaIdsByPublicId = await internalMediaIds(
+    db,
+    photos.map((p) => p.id),
+  )
+  const photoIds = [...mediaIdsByPublicId.values()]
+  if (photoIds.length === 0) return
   const existingMembers = await db
     .select({
       collectionId: collectionItems.collectionId,
@@ -674,13 +678,17 @@ export async function createPhotoCollections(
   // Insert missing memberships
   const memberInserts: Array<typeof collectionItems.$inferInsert> = []
   for (const photo of photos) {
+    const mediaItemId = mediaIdsByPublicId.get(photo.id)
+    if (mediaItemId === undefined) continue
     if (photo.dateStr) {
       const gid = makePhotoDateCollectionId(libraryId, photo.dateStr)
-      const key = `${gid}:${photo.id}`
+      const collectionId = collectionsByKey.get(gid)
+      if (collectionId === undefined) continue
+      const key = `${collectionId}:${mediaItemId}`
       if (!existingMemberKeys.has(key)) {
         memberInserts.push({
-          collectionId: gid,
-          mediaItemId: photo.id,
+          collectionId,
+          mediaItemId,
           sortOrder: photo.timestamp,
         })
       }
@@ -691,11 +699,13 @@ export async function createPhotoCollections(
         photo.latCluster,
         photo.lonCluster,
       )
-      const key = `${gid}:${photo.id}`
+      const collectionId = collectionsByKey.get(gid)
+      if (collectionId === undefined) continue
+      const key = `${collectionId}:${mediaItemId}`
       if (!existingMemberKeys.has(key)) {
         memberInserts.push({
-          collectionId: gid,
-          mediaItemId: photo.id,
+          collectionId,
+          mediaItemId,
           sortOrder: 0,
         })
       }
@@ -704,4 +714,77 @@ export async function createPhotoCollections(
   if (memberInserts.length > 0) {
     await db.insert(collectionItems).values(memberInserts)
   }
+}
+
+function autoCollectionMetadata(autoKey: string): string {
+  return JSON.stringify({ autoKey })
+}
+
+function autoKeyFromMetadata(metadata: string): string | undefined {
+  try {
+    const parsed = JSON.parse(metadata) as { autoKey?: unknown }
+    return typeof parsed.autoKey === 'string' ? parsed.autoKey : undefined
+  } catch {
+    return undefined
+  }
+}
+
+async function autoCollectionsByKey(
+  db: LibSQLDatabase,
+  userId: number,
+): Promise<Map<string, number>> {
+  const rows = await db
+    .select({
+      id: collections.id,
+      publicId: collections.publicId,
+      metadata: collections.metadata,
+    })
+    .from(collections)
+    .where(eq(collections.userId, userId))
+  const result = new Map<string, number>()
+  addAutoCollections(result, rows)
+  return result
+}
+
+function addAutoCollections(
+  target: Map<string, number>,
+  rows: Array<{ id: number; metadata: string; publicId?: string }>,
+): void {
+  for (const row of rows) {
+    const autoKey =
+      autoKeyFromMetadata(row.metadata) ??
+      (row.publicId?.startsWith('col:') ? row.publicId : undefined)
+    if (autoKey) target.set(autoKey, row.id)
+  }
+}
+
+async function internalMediaIds(
+  db: LibSQLDatabase,
+  publicIds: string[],
+): Promise<Map<string, number>> {
+  if (publicIds.length === 0) return new Map()
+  const rows = await db
+    .select({ id: mediaItems.id, publicId: mediaItems.publicId })
+    .from(mediaItems)
+    .where(inArray(mediaItems.publicId, publicIds))
+  return new Map(rows.map((row) => [row.publicId, row.id]))
+}
+
+async function insertAutoCollections(
+  db: LibSQLDatabase,
+  values: Array<typeof collections.$inferInsert>,
+): Promise<Array<{ id: number; metadata: string }>> {
+  const inserted: Array<{ id: number; metadata: string }> = []
+  for (const value of values) {
+    const row = await insertWithGeneratedPublicId(async (publicId) => {
+      const [created] = await db
+        .insert(collections)
+        .values({ ...value, publicId })
+        .returning({ id: collections.id, metadata: collections.metadata })
+      if (!created) throw new Error('Failed to create automatic collection')
+      return created
+    })
+    inserted.push(row)
+  }
+  return inserted
 }

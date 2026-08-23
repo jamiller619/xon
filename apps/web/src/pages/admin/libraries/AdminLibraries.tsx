@@ -51,7 +51,7 @@ const styles = css`
   }
 
   .title {
-    font-size: var(--text-lg);
+    font-size: var(--text-xl);
     font-weight: 500;
   }
 
@@ -230,10 +230,16 @@ function LibraryCard({ library }: { library: Library }) {
           deleteLibrary.error ? (
             <span role="alert">{deleteLibrary.error.message}</span>
           ) : (
-            'This will permanently remove the library from Xon. Your files on disk will not be deleted.'
+            <p className="center">
+              This will permanently remove the library and all metadata from Xon
+              and is irreversible! Are you sure?
+              <br />
+              <br />
+              <i className="muted">Your files on disk will NOT be deleted.</i>
+            </p>
           )
         }
-        yesLabel="Delete library"
+        yesLabel="Yes, delete library"
         noLabel="Cancel"
         loading={deleteLibrary.isPending}
         onYes={() => deleteLibrary.mutate()}

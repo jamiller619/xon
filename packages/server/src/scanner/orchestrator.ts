@@ -90,6 +90,7 @@ const stages: Partial<Record<ContentType, PipelineStage[]>> = {
     stage.libraryMetadata,
     stage.persist,
     stage.thumbnail,
+    stage.musicFolderAssets,
   ],
   video: [
     stage.drm,
@@ -107,7 +108,7 @@ export async function scanLibrary(
   onProgress?: (progress: ScanProgress) => void,
 ): Promise<ScanSummary> {
   const scanStart = Date.now()
-  const library = await libraryService.getLibraryById(db, libraryId)
+  const library = await libraryService.getLibraryRecordByPublicId(db, libraryId)
 
   if (!library) {
     throw new Error(`Library not found: ${libraryId}`)
@@ -119,6 +120,13 @@ export async function scanLibrary(
     throw new Error(`No data sources found for library: ${libraryId}`)
   }
 
+  logger.info('Library scan started', {
+    libraryId: library.publicId,
+    libraryName: library.name,
+    contentType: library.type,
+    dataSources: dataSources.length,
+  })
+
   const extSet = getExtensionsForLibraryType(library.type)
 
   let totalNew = 0
@@ -127,12 +135,18 @@ export async function scanLibrary(
   let totalDiscovered = 0
 
   for await (const dataSource of dataSources) {
+    const sourceStart = Date.now()
     const sourceLabel =
       dataSource.type === DataSourceType.plugin
         ? `${dataSource.pluginId}:${dataSource.path}`
         : toLocalPath(dataSource.path)
 
-    logger.debug(`Scanning data source: ${sourceLabel}`)
+    logger.info('Data source scan started', {
+      libraryId: library.publicId,
+      dataSourceId: dataSource.id,
+      dataSourceType: dataSource.type,
+      source: sourceLabel,
+    })
 
     const discoverer = discoverers[dataSource.type]
 
@@ -143,7 +157,8 @@ export async function scanLibrary(
 
     const discoveryCtx: DiscoveryContext = {
       db,
-      libraryId,
+      libraryId: library.id,
+      libraryPublicId: library.publicId,
       dataSource,
       extSet,
       contentType: library.type,
@@ -159,9 +174,28 @@ export async function scanLibrary(
       message: `Discovering files in ${sourceLabel}`,
     })
 
+    const discoveryStart = Date.now()
     const discovery = await discoverer.discover(discoveryCtx)
 
-    if (!discovery) continue
+    if (!discovery) {
+      logger.warn('Data source discovery returned no result', {
+        libraryId: library.publicId,
+        dataSourceId: dataSource.id,
+        durationMs: Date.now() - discoveryStart,
+      })
+      continue
+    }
+
+    logger.info('Data source discovery finished', {
+      libraryId: library.publicId,
+      dataSourceId: dataSource.id,
+      durationMs: Date.now() - discoveryStart,
+      discoveredFiles: discovery.totalDiscovered,
+      filesToProcess: discovery.jobs.length,
+      removedFiles: discovery.removedCount,
+      artworkFiles: discovery.musicFolderAssets?.artworkPaths.length ?? 0,
+      playlistFiles: discovery.musicFolderAssets?.playlistPaths.length ?? 0,
+    })
 
     totalDiscovered += discovery.totalDiscovered
     totalRemoved += discovery.removedCount
@@ -181,8 +215,6 @@ export async function scanLibrary(
         currentFile: null,
         message: `Found ${discovery.totalDiscovered} files, none to process in ${sourceLabel}`,
       })
-      discovery.reconcile()
-      continue
     }
 
     for (const job of discovery.jobs) {
@@ -190,25 +222,46 @@ export async function scanLibrary(
       else totalUpdated += 1
     }
 
-    onProgress?.({
-      dataSourceId: dataSource.id,
-      phase: 'processing',
-      discoveredFiles: discovery.totalDiscovered,
-      totalFiles,
-      processedFiles: 0,
-      currentFile: null,
-      message: `Found ${discovery.totalDiscovered} files, ${totalFiles} to process in ${sourceLabel}`,
-    })
+    if (totalFiles > 0) {
+      onProgress?.({
+        dataSourceId: dataSource.id,
+        phase: 'processing',
+        discoveredFiles: discovery.totalDiscovered,
+        totalFiles,
+        processedFiles: 0,
+        currentFile: null,
+        message: `Found ${discovery.totalDiscovered} files, ${totalFiles} to process in ${sourceLabel}`,
+      })
+    }
 
     const ctx: PipelineContext = {
       db,
-      libraryId,
+      libraryId: library.id,
+      libraryPublicId: library.publicId,
       contentType: library.type,
       logger,
+      ownerId: library.ownerId,
+      dataSource,
+      ...(discovery.musicFolderAssets
+        ? { musicFolderAssets: discovery.musicFolderAssets }
+        : {}),
     }
 
     if (onProgress) {
+      let processedFiles = 0
+      ctx.onJobActivity = (currentFile, activity) => {
+        onProgress({
+          dataSourceId: dataSource.id,
+          phase: 'processing',
+          discoveredFiles: discovery.totalDiscovered,
+          totalFiles,
+          processedFiles,
+          currentFile,
+          message: `${activity}: ${basename(currentFile)}`,
+        })
+      }
       ctx.onJobComplete = (processed, currentFile) => {
+        processedFiles = processed
         onProgress({
           dataSourceId: dataSource.id,
           phase: 'processing',
@@ -231,7 +284,16 @@ export async function scanLibrary(
       stages[library.type] ?? defaultStages,
     )
 
+    const reconcileStart = Date.now()
     discovery.reconcile()
+    logger.info('Data source scan finished', {
+      libraryId: library.publicId,
+      dataSourceId: dataSource.id,
+      durationMs: Date.now() - sourceStart,
+      reconcileDurationMs: Date.now() - reconcileStart,
+      discoveredFiles: discovery.totalDiscovered,
+      processedFiles: totalFiles,
+    })
   }
 
   const summary: ScanSummary = {
@@ -242,9 +304,10 @@ export async function scanLibrary(
     totalDiscovered,
   }
 
-  logger.debug(`Scan finished: "${library.name}"`, {
+  logger.info('Library scan finished', {
+    libraryName: library.name,
     ...summary,
-    duration: Date.now() - scanStart,
+    durationMs: Date.now() - scanStart,
   })
 
   return summary
@@ -281,7 +344,7 @@ export async function refreshMetadata(
   onProgress?: (progress: ScanProgress) => void,
 ): Promise<ScanSummary> {
   const refreshStart = Date.now()
-  const library = await libraryService.getLibraryById(db, libraryId)
+  const library = await libraryService.getLibraryRecordByPublicId(db, libraryId)
 
   if (!library) {
     throw new Error(`Library not found: ${libraryId}`)
@@ -293,16 +356,23 @@ export async function refreshMetadata(
     )
   }
 
+  logger.info('Metadata refresh started', {
+    libraryId: library.publicId,
+    libraryName: library.name,
+    contentType: library.type,
+    mediaItemId: mediaItemId ?? null,
+  })
+
   const items = await db
     .select()
     .from(mediaItems)
     .where(
       mediaItemId
         ? and(
-            eq(mediaItems.libraryId, libraryId),
-            eq(mediaItems.id, mediaItemId),
+            eq(mediaItems.libraryId, library.id),
+            eq(mediaItems.publicId, mediaItemId),
           )
-        : eq(mediaItems.libraryId, libraryId),
+        : eq(mediaItems.libraryId, library.id),
     )
 
   if (mediaItemId && items.length === 0) {
@@ -336,13 +406,15 @@ export async function refreshMetadata(
       type: 'refresh',
       file,
       errors: [],
-      libraryId,
+      libraryId: library.id,
+      libraryPublicId: library.publicId,
       contentType: library.type,
       dataSourceId: source?.id ?? '',
       dataSourcePath: source ? toLocalPath(source.path) : '',
       mediaTypes: [],
       data: {
         id: item.id,
+        publicId: item.publicId,
         title: item.title,
         fileMetadata: item.fileMetadata,
         metadata: seed,
@@ -366,13 +438,27 @@ export async function refreshMetadata(
 
   const ctx: PipelineContext = {
     db,
-    libraryId,
+    libraryId: library.id,
+    libraryPublicId: library.publicId,
     contentType: library.type,
     logger,
   }
 
   if (onProgress) {
+    let processedFiles = 0
+    ctx.onJobActivity = (currentFile, activity) => {
+      onProgress({
+        dataSourceId: libraryId,
+        phase: 'processing',
+        discoveredFiles: totalFiles,
+        totalFiles,
+        processedFiles,
+        currentFile,
+        message: `${activity}: ${basename(currentFile)}`,
+      })
+    }
     ctx.onJobComplete = (processed, currentFile) => {
+      processedFiles = processed
       onProgress({
         dataSourceId: libraryId,
         phase: 'processing',
@@ -384,8 +470,6 @@ export async function refreshMetadata(
       })
     }
   }
-
-  const stages = refreshStages[library.type]
 
   await runPipeline(
     ctx,
@@ -401,9 +485,10 @@ export async function refreshMetadata(
     totalDiscovered: totalFiles,
   }
 
-  logger.debug(`Metadata refresh finished: "${library.name}"`, {
+  logger.info('Metadata refresh finished', {
+    libraryName: library.name,
     ...summary,
-    duration: Date.now() - refreshStart,
+    durationMs: Date.now() - refreshStart,
   })
 
   return summary

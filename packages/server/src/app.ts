@@ -4,7 +4,7 @@ import { makeSessionMiddleware, requireAuth } from './http/authMiddleware.js'
 import { makeCorsMiddleware } from './http/corsMiddleware.ts'
 import { onError, onNotFound } from './http/errorMiddleware.ts'
 import { makeLoggingMiddleware } from './http/loggingMiddleware.ts'
-import { noCacheJSON } from './http/responses.ts'
+import { createNoStoreJSONResponse } from './http/responses.ts'
 import { makeSecurityHeadersMiddleware } from './http/securityHeadersMiddleware.ts'
 import { pluginRouteDispatcher } from './plugins/pluginRoutes.ts'
 import { makeAdminLogsRouter } from './routes/adminLogs.ts'
@@ -42,7 +42,7 @@ export function createApp(
   )
 
   app.get('/health', (c) => {
-    return noCacheJSON(c, {
+    return createNoStoreJSONResponse(c, {
       status: 'ok',
       timestamp: new Date().toISOString(),
     })

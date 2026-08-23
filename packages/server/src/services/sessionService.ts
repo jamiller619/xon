@@ -19,7 +19,7 @@ export type ClientSession = {
 
 export async function captureSessionClientName(
   db: LibSQLDatabase,
-  sessionId: string,
+  sessionId: number,
   value: string | null | undefined,
 ): Promise<void> {
   const clientName = normalizeSessionClientName(value)
@@ -33,7 +33,7 @@ export async function captureSessionClientName(
 
 export async function touchSessionActivity(
   db: LibSQLDatabase,
-  sessionId: string,
+  sessionId: number,
   now = new Date(),
 ): Promise<void> {
   const staleBefore = new Date(now.getTime() - SESSION_ACTIVITY_WINDOW_MS)
@@ -51,13 +51,14 @@ export async function touchSessionActivity(
 
 export async function listActiveSessions(
   db: LibSQLDatabase,
-  userId: string,
-  currentSessionId: string,
+  userId: number,
+  currentSessionId: number,
   now = new Date(),
 ): Promise<ClientSession[]> {
   const rows = await db
     .select({
-      id: sessions.id,
+      internalId: sessions.id,
+      id: sessions.publicId,
       clientName: sessions.clientName,
       ipAddress: sessions.ipAddress,
       userAgent: sessions.userAgent,
@@ -72,7 +73,7 @@ export async function listActiveSessions(
   return rows
     .map((session) => ({
       id: session.id,
-      isCurrent: session.id === currentSessionId,
+      isCurrent: session.internalId === currentSessionId,
       clientName: session.clientName,
       ipAddress: session.ipAddress || null,
       createdAt: session.createdAt.toISOString(),
@@ -85,12 +86,12 @@ export async function listActiveSessions(
 
 export async function revokeOwnedSession(
   db: LibSQLDatabase,
-  userId: string,
+  userId: number,
   sessionId: string,
 ): Promise<boolean> {
   const deleted = await db
     .delete(sessions)
-    .where(and(eq(sessions.id, sessionId), eq(sessions.userId, userId)))
+    .where(and(eq(sessions.publicId, sessionId), eq(sessions.userId, userId)))
     .returning({ id: sessions.id })
 
   return deleted.length > 0

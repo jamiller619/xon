@@ -148,11 +148,90 @@ describe('MusicBrainzClient', () => {
       expect(result?.durationMs).toBe(354000)
     })
 
-    it('returns null when fetch fails', async () => {
+    it('propagates fetch failures instead of reporting no match', async () => {
       const fetch = makeFetch([{ ok: false, json: {} }])
       const client = new MusicBrainzClient(fetch)
-      const result = await client.searchRecording('Foobar')
-      expect(result).toBeNull()
+      await expect(client.searchRecording('Foobar')).rejects.toThrow(
+        'MusicBrainz request failed',
+      )
+    })
+
+    it('retries a temporary 503 response', async () => {
+      const fetch = makeFetch([
+        { ok: false, status: 503, json: {} },
+        { ok: true, json: { count: 1, recordings: [sampleRecording] } },
+      ])
+      const client = new MusicBrainzClient(fetch)
+
+      const result = await client.searchRecording('Bohemian Rhapsody', 'Queen')
+
+      expect(result?.recordingMbid).toBe('rec-1')
+      expect(fetch).toHaveBeenCalledTimes(2)
+    })
+
+    it('serializes concurrent MusicBrainz requests', async () => {
+      vi.useFakeTimers()
+      try {
+        const requestTimes: number[] = []
+        const fetch = vi.fn(async (_url: string) => {
+          requestTimes.push(Date.now())
+          return {
+            ok: true,
+            status: 200,
+            statusText: 'OK',
+            url: _url,
+            headers: new Headers(),
+            json: async () => ({ count: 0, recordings: [] }),
+          } as unknown as Response
+        })
+        const client = new MusicBrainzClient(fetch)
+
+        const searches = Promise.all([
+          client.searchRecording('First'),
+          client.searchRecording('Second'),
+          client.searchRecording('Third'),
+        ])
+        await vi.runAllTimersAsync()
+        await searches
+
+        expect(requestTimes).toHaveLength(3)
+        expect(
+          (requestTimes[1] ?? 0) - (requestTimes[0] ?? 0),
+        ).toBeGreaterThanOrEqual(1_100)
+        expect(
+          (requestTimes[2] ?? 0) - (requestTimes[1] ?? 0),
+        ).toBeGreaterThanOrEqual(1_100)
+      } finally {
+        vi.useRealTimers()
+      }
+    })
+
+    it('aborts a MusicBrainz request that exceeds the network deadline', async () => {
+      vi.useFakeTimers()
+      try {
+        const fetch = vi.fn(
+          async (_url: string, init?: RequestInit): Promise<Response> =>
+            new Promise((_, reject) => {
+              const signal = init?.signal
+              if (!signal) {
+                reject(new Error('Missing abort signal'))
+                return
+              }
+              signal.addEventListener('abort', () => reject(signal.reason), {
+                once: true,
+              })
+            }),
+        )
+        const client = new MusicBrainzClient(fetch)
+        const rejection = expect(
+          client.searchRecording('Slow Track'),
+        ).rejects.toThrow('timed out after 10000ms')
+
+        await vi.advanceTimersByTimeAsync(10_000)
+        await rejection
+      } finally {
+        vi.useRealTimers()
+      }
     })
 
     it('sets isCompilation for Various Artists', async () => {
@@ -213,13 +292,32 @@ describe('MusicBrainzClient', () => {
     it('includes album in search query when provided', async () => {
       const fetch = makeFetch([
         { ok: true, json: { count: 0, recordings: [] } },
+        { ok: true, json: { count: 0, recordings: [] } },
       ])
       const client = new MusicBrainzClient(fetch)
       await client.searchRecording('Title', 'Artist', 'Album')
-      const url = (fetch.mock.calls[0] as [string])[0]
-      expect(url).toContain('release')
-      expect(url).toContain('Artist')
-      expect(url).toContain('Album')
+      const strictUrl = new URL((fetch.mock.calls[0] as [string])[0])
+      const relaxedUrl = new URL((fetch.mock.calls[1] as [string])[0])
+      expect(strictUrl.searchParams.get('query')).toContain('release:"Album"')
+      expect(strictUrl.searchParams.get('query')).toContain('artist:"Artist"')
+      expect(relaxedUrl.searchParams.get('query')).not.toContain('release:')
+    })
+
+    it('retries without album when the strict search has no match', async () => {
+      const fetch = makeFetch([
+        { ok: true, json: { count: 0, recordings: [] } },
+        { ok: true, json: { count: 1, recordings: [sampleRecording] } },
+      ])
+      const client = new MusicBrainzClient(fetch)
+
+      const result = await client.searchRecording(
+        'Bohemian Rhapsody',
+        'Queen',
+        'Queen - A Night at the Opera [Source]',
+      )
+
+      expect(result?.recordingMbid).toBe('rec-1')
+      expect(fetch).toHaveBeenCalledTimes(2)
     })
 
     it('routes musicbrainz-api requests through the plugin fetch', async () => {
@@ -246,6 +344,20 @@ describe('MusicBrainzClient', () => {
       const client = new MusicBrainzClient(fetch)
       await client.searchRecording('CachedTrack')
       await client.searchRecording('CachedTrack')
+      expect(fetch).toHaveBeenCalledOnce()
+    })
+
+    it('coalesces concurrent requests for the same cache key', async () => {
+      const fetch = makeFetch([
+        { ok: true, json: { count: 0, recordings: [] } },
+      ])
+      const client = new MusicBrainzClient(fetch)
+
+      await Promise.all([
+        client.searchRecording('SharedTrack'),
+        client.searchRecording('SharedTrack'),
+      ])
+
       expect(fetch).toHaveBeenCalledOnce()
     })
 
@@ -428,7 +540,231 @@ function makeContext(overrides: Partial<PluginContext> = {}): PluginContext {
   } as unknown as PluginContext
 }
 
+function albumRelease(
+  tracks: Array<{ id: string; title: string; position: number }>,
+) {
+  return {
+    id: 'rel-album',
+    title: 'Album',
+    date: '2020',
+    status: 'Official',
+    'artist-credit': sampleRecording['artist-credit'],
+    'label-info': [],
+    genres: [],
+    'release-group': {
+      id: 'group-album',
+      title: 'Album',
+      'primary-type': 'Album',
+      'secondary-types': [],
+    },
+    media: [
+      {
+        position: 1,
+        tracks: tracks.map((track) => ({
+          id: `track-${track.id}`,
+          number: String(track.position),
+          position: track.position,
+          title: track.title,
+          length: 180_000,
+          recording: {
+            ...sampleRecording,
+            id: track.id,
+            title: track.title,
+            length: 180_000,
+            releases: [],
+          },
+        })),
+      },
+    ],
+  }
+}
+
 describe('MusicBrainzMetadataPlugin', () => {
+  it('shares one album lookup across concurrent tracks', async () => {
+    vi.useFakeTimers()
+    try {
+      const release = albumRelease([
+        { id: 'rec-First', title: 'First', position: 1 },
+        { id: 'rec-Second', title: 'Second', position: 2 },
+      ])
+      const fetchMock = vi.fn(async (urlString: string) => {
+        const url = new URL(urlString)
+        const isMusicBrainz = url.hostname === 'musicbrainz.org'
+        const isReleaseSearch = url.pathname === '/ws/2/release/'
+        const json: unknown = isReleaseSearch
+          ? { count: 1, releases: [release] }
+          : isMusicBrainz
+            ? release
+            : {}
+        const ok = isMusicBrainz
+        const status = ok ? 200 : 404
+
+        return {
+          ok,
+          status,
+          statusText: ok ? 'OK' : 'Not Found',
+          url: urlString,
+          headers: new Headers(),
+          json: async () => json,
+        } as unknown as Response
+      })
+      const plugin = new MusicBrainzMetadataPlugin()
+      await plugin.init(makeContext({ fetch: fetchMock }))
+
+      const enrichments = Promise.all([
+        plugin.enrich('Artist/Album/1 - First.mp3', 'audio', {
+          fileMetadata: {
+            title: 'First',
+            artist: 'Artist',
+            album: 'Album',
+            trackNumber: 1,
+          },
+        }),
+        plugin.enrich('Artist/Album/2 - Second.mp3', 'audio', {
+          fileMetadata: {
+            title: 'Second',
+            artist: 'Artist',
+            album: 'Album',
+            trackNumber: 2,
+          },
+        }),
+      ])
+      await vi.runAllTimersAsync()
+      const results = await enrichments
+
+      const musicBrainzUrls = fetchMock.mock.calls
+        .map(([url]) => new URL(url as string))
+        .filter((url) => url.hostname === 'musicbrainz.org')
+      expect(musicBrainzUrls.map((url) => url.pathname)).toEqual([
+        '/ws/2/release/',
+        '/ws/2/release/rel-album',
+      ])
+      expect(results.map((result) => result?.recordingMbid)).toEqual([
+        'rec-First',
+        'rec-Second',
+      ])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('does not serialize one album enrichment behind another', async () => {
+    vi.useFakeTimers()
+    try {
+      const release = albumRelease([
+        { id: 'rec-First', title: 'First', position: 1 },
+        { id: 'rec-Second', title: 'Second', position: 2 },
+      ])
+      const fetchMock = vi.fn(async (urlString: string) => {
+        const url = new URL(urlString)
+        const isMusicBrainz = url.hostname === 'musicbrainz.org'
+        const isReleaseSearch = url.pathname === '/ws/2/release/'
+        const json: unknown = isReleaseSearch
+          ? { count: 1, releases: [release] }
+          : isMusicBrainz
+            ? release
+            : {}
+        const ok = isMusicBrainz
+
+        return {
+          ok,
+          status: ok ? 200 : 404,
+          statusText: ok ? 'OK' : 'Not Found',
+          url: urlString,
+          headers: new Headers(),
+          json: async () => json,
+        } as unknown as Response
+      })
+      const plugin = new MusicBrainzMetadataPlugin()
+      await plugin.init(makeContext({ fetch: fetchMock }))
+
+      const enrichments = Promise.all([
+        plugin.enrich('Artist/Album One/1 - First.mp3', 'audio', {
+          fileMetadata: {
+            title: 'First',
+            artist: 'Artist',
+            album: 'Album One',
+            trackNumber: 1,
+          },
+        }),
+        plugin.enrich('Artist/Album Two/2 - Second.mp3', 'audio', {
+          fileMetadata: {
+            title: 'Second',
+            artist: 'Artist',
+            album: 'Album Two',
+            trackNumber: 2,
+          },
+        }),
+      ])
+      await vi.runAllTimersAsync()
+      await enrichments
+
+      const musicBrainzPaths = fetchMock.mock.calls
+        .map(([url]) => new URL(url as string))
+        .filter((url) => url.hostname === 'musicbrainz.org')
+        .map((url) => url.pathname)
+      expect(musicBrainzPaths.slice(0, 2)).toEqual([
+        '/ws/2/release/',
+        '/ws/2/release/',
+      ])
+    } finally {
+      vi.useRealTimers()
+    }
+  })
+
+  it('prefers embedded tags over release-scene folder names', async () => {
+    const release = {
+      ...albumRelease([{ id: 'rec-intro', title: 'Intro III', position: 1 }]),
+      title: 'Perception',
+      date: '2017',
+    }
+    const fetchMock = makeFetch([
+      {
+        ok: true,
+        json: { count: 1, releases: [release] },
+      },
+      { ok: true, json: release },
+      { ok: false, status: 404, json: {} },
+    ])
+    const plugin = new MusicBrainzMetadataPlugin()
+    const ctx = makeContext({ fetch: fetchMock })
+    await plugin.init(ctx)
+
+    const result = await plugin.enrich(
+      'NF - Perception (2017) (Mp3 320kbps) [Hunter]/NF - Perception (2017) [MZ Music]/1 - Intro III.mp3',
+      'audio',
+      {
+        fileMetadata: {
+          title: 'Intro III',
+          artist: 'NF',
+          album: 'Perception',
+        },
+      },
+    )
+
+    const url = new URL((fetchMock.mock.calls[0] as [string])[0])
+    expect(url.searchParams.get('query')).toBe(
+      'release:"Perception" AND artist:"NF"',
+    )
+    expect(result?.recordingMbid).toBe('rec-intro')
+  })
+
+  it('logs search failures as errors rather than no-match warnings', async () => {
+    const fetchMock = makeFetch([{ ok: false, status: 503, json: {} }])
+    const plugin = new MusicBrainzMetadataPlugin()
+    const ctx = makeContext({ fetch: fetchMock })
+    await plugin.init(ctx)
+
+    await plugin.enrich('NF/Perception/1 - Intro III.mp3', 'audio', {
+      fileMetadata: { title: 'Intro III', artist: 'NF', album: 'Perception' },
+    })
+
+    expect(ctx.logger.error).toHaveBeenCalledWith(
+      expect.stringContaining('enrichment failed'),
+    )
+    expect(ctx.logger.warn).not.toHaveBeenCalled()
+  })
+
   it('creates the tracks table on init', async () => {
     const plugin = new MusicBrainzMetadataPlugin()
     const ctx = makeContext()

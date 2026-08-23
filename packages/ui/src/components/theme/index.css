@@ -2,6 +2,7 @@
 @import "./colors.css";
 @import "./theme.default.css";
 @import "./variables.css";
+@import "./globals.css";
 
 :root {
   color-scheme: light dark;

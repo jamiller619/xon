@@ -1,15 +1,18 @@
 import { CollectionType } from '@xon/shared'
-import { eq } from 'drizzle-orm'
+import { aliasedTable, eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
+import { publicMediaColumns } from '../db/publicSelections.ts'
 import {
   collectionItems,
   collections,
+  libraries,
   mediaItems,
   users,
 } from '../db/schema.ts'
+import { insertWithGeneratedPublicId } from '../lib/publicId.ts'
 
-export async function onUserCreate(db: LibSQLDatabase, userId: string) {
-  await db.insert(collections).values([
+export async function onUserCreate(db: LibSQLDatabase, userId: number) {
+  for (const values of [
     {
       title: 'Favorites',
       type: CollectionType.Favorites,
@@ -20,36 +23,62 @@ export async function onUserCreate(db: LibSQLDatabase, userId: string) {
       type: CollectionType.Watchlist,
       userId,
     },
-  ])
+  ]) {
+    await insertWithGeneratedPublicId(async (publicId) => {
+      await db.insert(collections).values({ ...values, publicId })
+    })
+  }
 }
 
 export async function getUsers(db: LibSQLDatabase) {
-  return db.select().from(users)
+  return db
+    .select({
+      id: users.publicId,
+      name: users.name,
+      email: users.email,
+      emailVerified: users.emailVerified,
+      image: users.image,
+      createdAt: users.createdAt,
+      updatedAt: users.updatedAt,
+      isAnonymous: users.isAnonymous,
+    })
+    .from(users)
 }
 
-export async function getUserCollections(db: LibSQLDatabase, userId: string) {
-  return db.select().from(collections).where(eq(collections.userId, userId))
+export async function getUserCollections(db: LibSQLDatabase, userId: number) {
+  const parent = aliasedTable(collections, 'parent_collections')
+  return db
+    .select({
+      id: collections.publicId,
+      createdAt: collections.createdAt,
+      updatedAt: collections.updatedAt,
+      type: collections.type,
+      title: collections.title,
+      parentCollectionId: parent.publicId,
+      metadata: collections.metadata,
+    })
+    .from(collections)
+    .leftJoin(parent, eq(collections.parentCollectionId, parent.id))
+    .where(eq(collections.userId, userId))
 }
 
 export async function getUserCollectionMediaItems(
   db: LibSQLDatabase,
-  collectionId: string,
+  collectionPublicId: string,
 ) {
   const collection = await db
-    .select()
+    .select({ id: collections.id })
     .from(collections)
-    .where(eq(collections.id, collectionId))
+    .where(eq(collections.publicId, collectionPublicId))
     .get()
 
-  if (!collection) {
-    throw new Error('Collection not found')
-  }
+  if (!collection) throw new Error('Collection not found')
 
   return db
-    .select()
+    .select({ ...publicMediaColumns, libraryId: libraries.publicId })
     .from(mediaItems)
     .innerJoin(collectionItems, eq(collectionItems.mediaItemId, mediaItems.id))
-    .where(eq(collectionItems.collectionId, collectionId))
+    .innerJoin(libraries, eq(mediaItems.libraryId, libraries.id))
+    .where(eq(collectionItems.collectionId, collection.id))
     .orderBy(collectionItems.sortOrder)
-    .then((rows) => rows.map((row) => row.media_items))
 }

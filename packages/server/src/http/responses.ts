@@ -112,7 +112,7 @@ export function setConditionalCacheHeaders(
     )
 }
 
-export function noCacheJSON<T>(c: Context, data: T) {
+export function createNoStoreJSONResponse<T>(c: Context, data: T) {
   c.header('Cache-Control', 'no-store')
   return c.json(data)
 }

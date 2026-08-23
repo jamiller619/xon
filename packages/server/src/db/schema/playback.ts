@@ -12,10 +12,10 @@ import { users } from './users.ts'
 export const mediaPlayStates = sqliteTable(
   'media_play_states',
   {
-    userId: text('user_id')
+    userId: integer('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
-    mediaItemId: text('media_item_id')
+    mediaItemId: integer('media_item_id')
       .notNull()
       .references(() => mediaItems.id, { onDelete: 'cascade' }),
     position: integer('position').notNull().default(0),

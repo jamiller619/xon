@@ -1,9 +1,10 @@
 import { and, desc, eq, or } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
-import { mediaItems, mediaPlayStates } from '../db/schema.ts'
+import { publicMediaColumns } from '../db/publicSelections.ts'
+import { libraries, mediaItems, mediaPlayStates } from '../db/schema.ts'
 import { requireAuth } from '../http/authMiddleware.js'
-import { noCacheJSON } from '../http/responses.ts'
+import { createNoStoreJSONResponse } from '../http/responses.ts'
 
 export function makeUsersRouter(db: LibSQLDatabase) {
   const router = new Hono()
@@ -12,7 +13,9 @@ export function makeUsersRouter(db: LibSQLDatabase) {
     .get('/me', async (c) => {
       const user = c.get('user')
 
-      return noCacheJSON(c, user)
+      if (!user) return createNoStoreJSONResponse(c, null)
+      const { publicId, ...publicUser } = user
+      return createNoStoreJSONResponse(c, { ...publicUser, id: publicId })
     })
 
     // GET /users/me/play-states — latest resumable playback state for the dashboard.
@@ -20,17 +23,21 @@ export function makeUsersRouter(db: LibSQLDatabase) {
       const user = c.get('user')
       const rows = await db
         .select({
-          mediaItemId: mediaPlayStates.mediaItemId,
+          mediaItemId: mediaItems.publicId,
           position: mediaPlayStates.position,
           duration: mediaPlayStates.duration,
           status: mediaPlayStates.status,
           startedAt: mediaPlayStates.startedAt,
           updatedAt: mediaPlayStates.updatedAt,
           stoppedAt: mediaPlayStates.stoppedAt,
-          mediaItem: mediaItems,
+          mediaItem: {
+            ...publicMediaColumns,
+            libraryId: libraries.publicId,
+          },
         })
         .from(mediaPlayStates)
         .innerJoin(mediaItems, eq(mediaPlayStates.mediaItemId, mediaItems.id))
+        .innerJoin(libraries, eq(mediaItems.libraryId, libraries.id))
         .where(
           and(
             eq(mediaPlayStates.userId, user.id),
@@ -43,7 +50,7 @@ export function makeUsersRouter(db: LibSQLDatabase) {
         .orderBy(desc(mediaPlayStates.updatedAt))
         .limit(50)
 
-      return noCacheJSON(c, rows)
+      return createNoStoreJSONResponse(c, rows)
     })
 
     // GET /users/me/play-states/progress — compact lookup data for media cards.
@@ -52,15 +59,16 @@ export function makeUsersRouter(db: LibSQLDatabase) {
 
       const rows = await db
         .select({
-          mediaItemId: mediaPlayStates.mediaItemId,
+          mediaItemId: mediaItems.publicId,
           position: mediaPlayStates.position,
           duration: mediaPlayStates.duration,
           status: mediaPlayStates.status,
         })
         .from(mediaPlayStates)
+        .innerJoin(mediaItems, eq(mediaPlayStates.mediaItemId, mediaItems.id))
         .where(eq(mediaPlayStates.userId, user.id))
 
-      return noCacheJSON(c, rows)
+      return createNoStoreJSONResponse(c, rows)
     })
 
   return router

@@ -1,7 +1,13 @@
-import { eq, inArray } from 'drizzle-orm'
+import type { MediaItem } from '@xon/shared'
+import { and, eq, inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
-import type { MediaItem } from '../db/schema.ts'
-import { collectionItems, collections, mediaItems } from '../db/schema.ts'
+import { publicMediaColumns } from '../db/publicSelections.ts'
+import {
+  collectionItems,
+  collections,
+  libraries,
+  mediaItems,
+} from '../db/schema.ts'
 
 export interface UpdateMediaInput {
   title?: string | undefined
@@ -32,7 +38,10 @@ export async function updateMedia(
   id: string,
   input: UpdateMediaInput,
 ): Promise<MediaItem | undefined> {
-  const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
+  const rows = await db
+    .select()
+    .from(mediaItems)
+    .where(eq(mediaItems.publicId, id))
   const item = rows[0]
   if (!item) return undefined
 
@@ -45,23 +54,31 @@ export async function updateMedia(
     updates.metadata = { ...item.metadata, tags: [...input.tags] }
   }
 
-  await db.update(mediaItems).set(updates).where(eq(mediaItems.id, id))
+  await db.update(mediaItems).set(updates).where(eq(mediaItems.id, item.id))
   const updated = await db
-    .select()
+    .select({ ...publicMediaColumns, libraryId: libraries.publicId })
     .from(mediaItems)
-    .where(eq(mediaItems.id, id))
+    .innerJoin(libraries, eq(mediaItems.libraryId, libraries.id))
+    .where(eq(mediaItems.id, item.id))
 
-  return updated[0] as MediaItem
+  return updated[0]
 }
 
 export async function mutateMediaBulk(
   db: LibSQLDatabase,
+  userId: number,
   input: BulkMediaInput,
 ): Promise<BulkMediaResult> {
   const rows = await db
     .select({ id: mediaItems.id, metadata: mediaItems.metadata })
     .from(mediaItems)
-    .where(inArray(mediaItems.id, input.ids))
+    .innerJoin(libraries, eq(mediaItems.libraryId, libraries.id))
+    .where(
+      and(
+        inArray(mediaItems.publicId, input.ids),
+        eq(libraries.ownerId, userId),
+      ),
+    )
   const foundIds = rows.map((row) => row.id)
 
   if (foundIds.length !== input.ids.length) {
@@ -102,15 +119,21 @@ export async function mutateMediaBulk(
   const collectionRows = await db
     .select({ id: collections.id })
     .from(collections)
-    .where(eq(collections.id, input.collectionId))
+    .where(
+      and(
+        eq(collections.publicId, input.collectionId),
+        eq(collections.userId, userId),
+      ),
+    )
   if (!collectionRows[0]) return { status: 'collection-not-found' }
+  const collectionId = collectionRows[0].id
 
   await db.transaction(async (tx) => {
     for (const id of foundIds) {
       await tx
         .insert(collectionItems)
         .values({
-          collectionId: input.collectionId,
+          collectionId,
           mediaItemId: id,
           sortOrder: 0,
         })

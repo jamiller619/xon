@@ -1,4 +1,3 @@
-import crypto from 'node:crypto'
 import type {
   PersonImageResult,
   default as TmdbMetadataPlugin,
@@ -7,6 +6,7 @@ import type { Metadata } from '@xon/shared'
 import { eq } from 'drizzle-orm'
 import pLimit from 'p-limit'
 import { mediaItems, people, peopleMedia } from '../../db/schema.js'
+import { insertWithGeneratedPublicId } from '../../lib/publicId.js'
 import { registry } from '../../plugins/pluginManager.js'
 import type { PipelineStage } from '../pipeline.js'
 
@@ -64,39 +64,55 @@ export default {
 
     const peopleImages = await fetchPeopleImages(tmdbPlugin, uniqueCast)
 
+    if (job.data.id == null) {
+      throw new Error('Person stage: media item has no internal id')
+    }
+    const mediaItemId = job.data.id
+
     await ctx.db.transaction(async (tx) => {
       for (const [tmdbId, group] of castByPerson) {
         const primary = group[0]
         if (!primary) continue
 
         const avatarUrl = peopleImages.find((i) => i.personId === tmdbId)?.url
-        const [person] = await tx
-          .insert(people)
-          .values({
-            id: crypto.randomUUID(),
-            name: primary.name,
-            avatarUrl,
-            metadata: { tmdbId },
-          })
-          .onConflictDoUpdate({
-            target: people.name,
-            set: { avatarUrl, metadata: { tmdbId } },
-          })
-          .returning({ id: people.id })
+        const person = await insertWithGeneratedPublicId(async (publicId) => {
+          const [row] = await tx
+            .insert(people)
+            .values({
+              publicId,
+              name: primary.name,
+              avatarUrl,
+              metadata: { tmdbId },
+            })
+            .onConflictDoUpdate({
+              target: people.name,
+              set: { avatarUrl, metadata: { tmdbId } },
+            })
+            .returning({ id: people.id })
+          return row
+        })
 
         if (!person) continue
 
         for (const member of group) {
-          await tx
-            .insert(peopleMedia)
-            .values({
-              // biome-ignore lint/style/noNonNullAssertion: media id is set by this point
-              mediaId: job.data.id!,
-              personId: person.id,
-              role: member.character,
-              order: member.order,
-            })
-            .onConflictDoNothing()
+          await insertWithGeneratedPublicId(async (publicId) => {
+            await tx
+              .insert(peopleMedia)
+              .values({
+                publicId,
+                mediaId: mediaItemId,
+                personId: person.id,
+                role: member.character,
+                order: member.order,
+              })
+              .onConflictDoNothing({
+                target: [
+                  peopleMedia.personId,
+                  peopleMedia.mediaId,
+                  peopleMedia.role,
+                ],
+              })
+          })
         }
       }
 
@@ -105,8 +121,7 @@ export default {
       await tx
         .update(mediaItems)
         .set({ metadata })
-        // biome-ignore lint/style/noNonNullAssertion: media id is set by this point
-        .where(eq(mediaItems.id, job.data.id!))
+        .where(eq(mediaItems.id, mediaItemId))
     })
 
     return {

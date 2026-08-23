@@ -9,7 +9,7 @@ import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { fileTypeFromBuffer } from 'file-type'
 import sharp from 'sharp'
 import config from '../config.ts'
-import { mediaItems } from '../db/schema.ts'
+import { libraries, mediaItems } from '../db/schema.ts'
 import {
   isThumbnailCacheReference,
   mediaImageCacheReference,
@@ -60,7 +60,7 @@ const SUPPORTED_ARTWORK_MIME_TYPES = new Set([
   'image/webp',
 ])
 
-type MediaRow = typeof mediaItems.$inferSelect
+type MediaRow = typeof mediaItems.$inferSelect & { libraryPublicId: string }
 
 export type ThumbnailResult =
   | { status: 'media-not-found' }
@@ -103,8 +103,18 @@ export async function getArtworkMediaItem(
   db: LibSQLDatabase,
   id: string,
 ): Promise<MediaRow | undefined> {
-  const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
-  return rows[0]
+  const rows = await db
+    .select({
+      mediaItem: mediaItems,
+      libraryPublicId: libraries.publicId,
+    })
+    .from(mediaItems)
+    .innerJoin(libraries, eq(mediaItems.libraryId, libraries.id))
+    .where(eq(mediaItems.publicId, id))
+  const row = rows[0]
+  return row
+    ? { ...row.mediaItem, libraryPublicId: row.libraryPublicId }
+    : undefined
 }
 
 export async function getMediaThumbnail(
@@ -192,7 +202,7 @@ export async function replaceArtworkImages(
   await db
     .update(mediaItems)
     .set({ metadata, updatedAt: new Date() })
-    .where(eq(mediaItems.id, id))
+    .where(eq(mediaItems.id, item.id))
 
   const retained = new Set(artworkCacheFiles(nextImages))
   const removedCacheFiles = artworkCacheFiles(previousImages).filter(
@@ -204,7 +214,7 @@ export async function replaceArtworkImages(
       return filePath ? [unlink(filePath).catch(() => undefined)] : []
     }),
   )
-  void rebuildThumbnail(db, item.libraryId)
+  void rebuildThumbnail(db, item.libraryPublicId)
 
   return { status: 'ok', images: nextImages }
 }
@@ -236,9 +246,9 @@ export async function appendMatchedPosters(
     await db
       .update(mediaItems)
       .set({ metadata, updatedAt: new Date() })
-      .where(eq(mediaItems.id, id))
+      .where(eq(mediaItems.id, item.id))
 
-    void rebuildThumbnail(db, item.libraryId)
+    void rebuildThumbnail(db, item.libraryPublicId)
     return { status: 'ok', images }
   } catch (error) {
     return {
@@ -257,7 +267,7 @@ export async function generateArtworkPosters(
   if (!item.mediaType.startsWith('video/')) return { status: 'not-video' }
 
   const sourcePath = await resolveMediaItemFilePath(db, item)
-  const posters = await generateVideoPosters(sourcePath, id)
+  const posters = await generateVideoPosters(sourcePath, item.publicId)
   if (!posters) return { status: 'generation-failed' }
 
   const images = normalizedArtworkImages(item.metadata)
@@ -268,7 +278,7 @@ export async function generateArtworkPosters(
     await db
       .update(mediaItems)
       .set({ metadata, updatedAt: new Date() })
-      .where(eq(mediaItems.id, id))
+      .where(eq(mediaItems.id, item.id))
   } catch (error) {
     await Promise.all(
       posters.flatMap((poster) =>
@@ -281,7 +291,7 @@ export async function generateArtworkPosters(
     throw error
   }
 
-  void rebuildThumbnail(db, item.libraryId)
+  void rebuildThumbnail(db, item.libraryPublicId)
   return { status: 'ok', images }
 }
 
@@ -294,7 +304,7 @@ export async function generateArtworkBackdrops(
   if (!item.mediaType.startsWith('video/')) return { status: 'not-video' }
 
   const sourcePath = await resolveMediaItemFilePath(db, item)
-  const backdrops = await generateVideoBackdrops(sourcePath, id)
+  const backdrops = await generateVideoBackdrops(sourcePath, item.publicId)
   if (!backdrops) return { status: 'generation-failed' }
 
   const images = normalizedArtworkImages(item.metadata)
@@ -305,7 +315,7 @@ export async function generateArtworkBackdrops(
     await db
       .update(mediaItems)
       .set({ metadata, updatedAt: new Date() })
-      .where(eq(mediaItems.id, id))
+      .where(eq(mediaItems.id, item.id))
   } catch (error) {
     await Promise.all(
       backdrops.flatMap((path) => {
@@ -316,7 +326,7 @@ export async function generateArtworkBackdrops(
     throw error
   }
 
-  void rebuildThumbnail(db, item.libraryId)
+  void rebuildThumbnail(db, item.libraryPublicId)
   return { status: 'ok', images }
 }
 
@@ -332,7 +342,7 @@ export async function uploadArtwork(
   }
 
   const reference = mediaImageCacheReference(
-    item.id,
+    item.publicId,
     `${randomUUID()}.${detected.ext}`,
   )
   const destination = resolveCacheReference(reference)
@@ -354,7 +364,7 @@ export async function uploadArtwork(
     throw error
   }
 
-  void rebuildThumbnail(db, item.libraryId)
+  void rebuildThumbnail(db, item.libraryPublicId)
   return { status: 'ok', images }
 }
 

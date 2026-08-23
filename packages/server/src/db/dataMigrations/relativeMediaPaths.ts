@@ -85,7 +85,7 @@ export async function migrateRelativeMediaPaths(
       filePath: mediaItems.filePath,
     })
     .from(mediaItems)
-  const sourcesByLibrary = new Map<string, DataSource[]>()
+  const sourcesByLibrary = new Map<number, DataSource[]>()
 
   await db.transaction(async (tx) => {
     for (const row of libraryRows) {

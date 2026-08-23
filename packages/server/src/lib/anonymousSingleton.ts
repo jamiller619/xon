@@ -78,7 +78,7 @@ export function anonymousSingleton(): BetterAuthPlugin {
           }
 
           const session = await ctx.context.internalAdapter.createSession(
-            user.id,
+            String(user.id),
           )
 
           if (!session) {
@@ -87,9 +87,13 @@ export function anonymousSingleton(): BetterAuthPlugin {
             })
           }
 
-          await setSessionCookie(ctx, { session, user })
+          const authUser = { ...user, id: String(user.id) }
+          await setSessionCookie(ctx, { session, user: authUser })
 
-          return ctx.json({ token: session.token, user })
+          return ctx.json({
+            token: session.token,
+            user: { ...authUser, id: user.publicId },
+          })
         },
       ),
     },

@@ -4,12 +4,6 @@ import Button from '../button/Button.jsx'
 import Dialog from './Dialog.jsx'
 
 const styles = css`
-  /* Hallmark · pre-emit critique: P5 H5 E5 S5 R5 V4 */
-  /* Hallmark · component: confirmation dialog · genre: modern-minimal · theme: Xon
-   * states: default · hover · focus · active · disabled · loading · error · success
-   * contrast: inherited from Dialog and Button
-   */
-
   .actions {
     display: flex;
     align-items: center;

@@ -1,6 +1,8 @@
+import { and, eq } from 'drizzle-orm'
 import type { Context, MiddlewareHandler, Next } from 'hono'
 import { createMiddleware } from 'hono/factory'
 import type { LibSQLDatabase } from '../db/db.ts'
+import { sessions, users } from '../db/schema.ts'
 import auth from '../lib/auth.ts'
 import { createLogger } from '../logger.ts'
 import { sessionClientNameFromHeaders } from '../services/sessionClient.ts'
@@ -12,8 +14,19 @@ import { errorCodes, errorResponse } from './responses.ts'
 
 const logger = createLogger('auth-middleware')
 
-type User = typeof auth.$Infer.Session.user
-type Session = typeof auth.$Infer.Session.session
+type AuthUser = typeof auth.$Infer.Session.user
+type AuthSession = typeof auth.$Infer.Session.session
+
+export type User = Omit<AuthUser, 'id'> & {
+  id: number
+  publicId: string
+}
+
+export type Session = Omit<AuthSession, 'id' | 'userId'> & {
+  id: number
+  publicId: string
+  userId: number
+}
 
 export type AuthenticatedEnv = {
   Variables: {
@@ -33,17 +46,55 @@ export function makeSessionMiddleware(db?: LibSQLDatabase): MiddlewareHandler {
       return next()
     }
 
-    c.set('user', session.user)
-    c.set('session', session.session)
+    if (!db) {
+      c.set('user', null)
+      c.set('session', null)
+      return next()
+    }
+
+    const publicUserId = session.user.id
+    const publicSessionId = session.session.id
+    const internal = await db
+      .select({ userId: users.id, sessionId: sessions.id })
+      .from(sessions)
+      .innerJoin(users, eq(sessions.userId, users.id))
+      .where(
+        and(
+          eq(users.publicId, publicUserId),
+          eq(sessions.publicId, publicSessionId),
+        ),
+      )
+      .get()
+
+    if (!internal) {
+      c.set('user', null)
+      c.set('session', null)
+      return next()
+    }
+
+    const user = {
+      ...session.user,
+      id: internal.userId,
+      publicId: publicUserId,
+    }
+    const internalSession = {
+      ...session.session,
+      id: internal.sessionId,
+      publicId: publicSessionId,
+      userId: internal.userId,
+    }
+
+    c.set('user', user)
+    c.set('session', internalSession)
 
     if (db) {
       try {
         await captureSessionClientName(
           db,
-          session.session.id,
+          internalSession.id,
           sessionClientNameFromHeaders(c.req.raw.headers),
         )
-        await touchSessionActivity(db, session.session.id)
+        await touchSessionActivity(db, internalSession.id)
       } catch (error) {
         logger.warn('Could not update session activity', error)
       }
@@ -82,7 +133,7 @@ export const requireAuth = createMiddleware<AuthenticatedEnv>(
 
 declare module 'hono' {
   interface ContextVariableMap {
-    user: typeof auth.$Infer.Session.user | null
-    session: typeof auth.$Infer.Session.session | null
+    user: User | null
+    session: Session | null
   }
 }

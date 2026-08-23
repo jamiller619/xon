@@ -7,7 +7,11 @@ import {
   getPluginsByCategory,
   type PluginEntry,
 } from '../../plugins/pluginManager.js'
-import type { MediaJobData, PipelineStage } from '../pipeline.js'
+import type {
+  ItemPipelineStage,
+  MediaJobData,
+  PipelineStage,
+} from '../pipeline.js'
 
 export default {
   name: 'metadata',
@@ -28,6 +32,10 @@ export default {
     ctx.logger.debug(
       `Matched metadata plugins: [${plugins.map((p) => p.manifest.id).join(', ') ?? 'none'}] for file: ${job.file.path}`,
     )
+
+    if (plugins.length > 0) {
+      ctx.onJobActivity?.(job.file.path, 'Matching metadata')
+    }
 
     const data: MediaJobData = { ...job.data }
     data.metadata ??= {}
@@ -109,7 +117,7 @@ type MetadataPluginSelection = {
 }
 
 function getMetadataPlugins(
-  job: Parameters<PipelineStage['run']>[1],
+  job: Parameters<ItemPipelineStage['run']>[1],
 ): MetadataPluginSelection {
   const plugins = getPluginsByCategory<MetadataSourcePlugin>(
     'MetadataSource',
@@ -138,7 +146,7 @@ function getMetadataPlugins(
 }
 
 function makeSearchQuery(
-  job: Parameters<PipelineStage['run']>[1],
+  job: Parameters<ItemPipelineStage['run']>[1],
   data: MediaJobData,
 ): MetadataSearchQuery {
   const year = Number(data.fileMetadata?.year ?? data.metadata?.year)

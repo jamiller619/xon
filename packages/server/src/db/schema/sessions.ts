@@ -1,11 +1,16 @@
 import { relations, sql } from 'drizzle-orm'
 import { index, integer, sqliteTable, text } from 'drizzle-orm/sqlite-core'
+import { generatePublicId } from '../../lib/publicId.ts'
 import { users } from './users.js'
 
 export const sessions = sqliteTable(
   'sessions',
   {
-    id: text('id').primaryKey(),
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    publicId: text('public_id')
+      .notNull()
+      .unique('sessions_public_id_unique')
+      .$defaultFn(() => generatePublicId()),
     expiresAt: integer('expires_at', { mode: 'timestamp_ms' }).notNull(),
     token: text('token').notNull().unique(),
     createdAt: integer('created_at', { mode: 'timestamp_ms' })
@@ -20,7 +25,7 @@ export const sessions = sqliteTable(
     clientName: text('client_name'),
     ipAddress: text('ip_address'),
     userAgent: text('user_agent'),
-    userId: text('user_id')
+    userId: integer('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
   },

@@ -11,7 +11,7 @@ import { keys } from './shared.ts'
 export const people = sqliteTable(
   'people',
   {
-    ...keys,
+    ...keys('people'),
     name: text('name').notNull(),
     description: text('description'),
     avatarUrl: text('avatar_url'),
@@ -26,11 +26,11 @@ export const people = sqliteTable(
 export const peopleMedia = sqliteTable(
   'people_media',
   {
-    ...keys,
-    personId: text('person_id')
+    ...keys('people_media'),
+    personId: integer('person_id')
       .notNull()
       .references(() => people.id, { onDelete: 'cascade' }),
-    mediaId: text('media_id')
+    mediaId: integer('media_id')
       .notNull()
       .references(() => mediaItems.id, { onDelete: 'cascade' }),
     role: text('role').notNull(),

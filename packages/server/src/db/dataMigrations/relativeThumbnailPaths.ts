@@ -328,11 +328,15 @@ export async function migrateRelativeLocalArtworkPaths(
   const mediaRows = await db
     .select({
       id: mediaItems.id,
+      publicId: mediaItems.publicId,
       metadata: sql<unknown>`${mediaItems.metadata}`,
     })
     .from(mediaItems)
   const libraryRows = await db
-    .select({ id: libraries.id, images: sql<unknown>`${libraries.images}` })
+    .select({
+      id: libraries.id,
+      images: sql<unknown>`${libraries.images}`,
+    })
     .from(libraries)
 
   await db.transaction(async (tx) => {
@@ -348,7 +352,7 @@ export async function migrateRelativeLocalArtworkPaths(
       }
       if (!metadata || typeof metadata !== 'object') continue
       const originalMetadata = metadata
-      metadata = await migrateLegacyAppDataImages(metadata, row.id)
+      metadata = await migrateLegacyAppDataImages(metadata, row.publicId)
       const result = migrateLocalArtworkMetadata(metadata)
       if (!result.changed && metadata === originalMetadata) continue
       await tx

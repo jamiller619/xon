@@ -13,14 +13,14 @@ import { users } from './users.ts'
 export const collections = sqliteTable(
   'collections',
   {
-    ...keys,
+    ...keys('collections'),
     ...timestamps,
-    userId: text('user_id')
+    userId: integer('user_id')
       .notNull()
       .references(() => users.id, { onDelete: 'cascade' }),
     type: text('type').$type<CollectionType>().notNull(),
     title: text('title').notNull(),
-    parentCollectionId: text('parent_collection_id'),
+    parentCollectionId: integer('parent_collection_id'),
     metadata: text('metadata').notNull().default('{}'),
   },
   (table) => [
@@ -32,10 +32,10 @@ export const collections = sqliteTable(
 export const collectionItems = sqliteTable(
   'collection_items',
   {
-    collectionId: text('collection_id')
+    collectionId: integer('collection_id')
       .notNull()
       .references(() => collections.id, { onDelete: 'cascade' }),
-    mediaItemId: text('media_item_id')
+    mediaItemId: integer('media_item_id')
       .notNull()
       .references(() => mediaItems.id, { onDelete: 'cascade' }),
     sortOrder: integer('sort_order').notNull().default(0),

@@ -16,6 +16,10 @@ import {
   sql,
 } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
+import {
+  publicMediaColumns,
+  publicPersonColumns,
+} from '../db/publicSelections.ts'
 import { libraries, mediaItems, people, peopleMedia } from '../db/schema.ts'
 import { relativeMediaFilePath } from '../media/mediaFilePaths.ts'
 import * as libraryService from './libraryService.ts'
@@ -24,7 +28,11 @@ export async function getMediaById(
   db: LibSQLDatabase,
   id: string,
 ): Promise<MediaItem | undefined> {
-  const rows = await db.select().from(mediaItems).where(eq(mediaItems.id, id))
+  const rows = await db
+    .select({ ...publicMediaColumns, libraryId: libraries.publicId })
+    .from(mediaItems)
+    .innerJoin(libraries, eq(mediaItems.libraryId, libraries.id))
+    .where(eq(mediaItems.publicId, id))
 
   const media = rows[0]
 
@@ -34,17 +42,14 @@ export async function getMediaById(
 
   const cast = await db
     .select({
-      id: people.id,
-      name: people.name,
-      description: people.description,
-      avatarUrl: people.avatarUrl,
-      metadata: people.metadata,
+      ...publicPersonColumns,
       role: peopleMedia.role,
       order: peopleMedia.order,
     })
     .from(peopleMedia)
     .innerJoin(people, eq(peopleMedia.personId, people.id))
-    .where(eq(peopleMedia.mediaId, id))
+    .innerJoin(mediaItems, eq(peopleMedia.mediaId, mediaItems.id))
+    .where(eq(mediaItems.publicId, id))
     .orderBy(asc(peopleMedia.order))
 
   return {
@@ -80,7 +85,7 @@ export async function getMediaBySourcePath(
   absoluteFilePath: string,
   dataSourceId: string,
   dataSourcePath: string,
-): Promise<MediaItem | undefined> {
+): Promise<typeof mediaItems.$inferSelect | undefined> {
   const filePath = relativeMediaFilePath(absoluteFilePath, {
     id: dataSourceId,
     type: DataSourceType.local,
@@ -100,7 +105,7 @@ export async function getMediaBySourcePath(
 
 export async function getMediaByUser(
   db: LibSQLDatabase,
-  userId: string,
+  userId: number,
   pageProps?: PageProps,
   sortProps?: SortProps<MediaItem>,
 ) {
@@ -109,7 +114,7 @@ export async function getMediaByUser(
 
 export async function getMediaPageByUser(
   db: LibSQLDatabase,
-  userId: string,
+  userId: number,
   pageProps?: PageProps,
   sortProps?: SortProps<MediaItem>,
 ) {
@@ -127,7 +132,7 @@ export async function getMediaPageByUser(
 
 function getMediaRowsByUser(
   db: LibSQLDatabase,
-  userId: string,
+  userId: number,
   pageProps?: PageProps,
   sortProps?: SortProps<MediaItem>,
 ) {
@@ -141,23 +146,7 @@ function getMediaRowsByUser(
   const orderExpr = sortDir(mediaItemColumns[sortField])
 
   return db
-    .select({
-      id: mediaItems.id,
-      createdAt: mediaItems.createdAt,
-      updatedAt: mediaItems.updatedAt,
-      libraryId: mediaItems.libraryId,
-      dataSourceId: mediaItems.dataSourceId,
-      filePath: mediaItems.filePath,
-      fileSize: mediaItems.fileSize,
-      fileMetadata: mediaItems.fileMetadata,
-      mediaType: mediaItems.mediaType,
-      title: mediaItems.title,
-      description: mediaItems.description,
-      metadata: mediaItems.metadata,
-      drmProtected: mediaItems.drmProtected,
-      scannedAt: mediaItems.scannedAt,
-      tags: mediaItems.tags,
-    })
+    .select({ ...publicMediaColumns, libraryId: libraries.publicId })
     .from(mediaItems)
     .innerJoin(libraries, eq(mediaItems.libraryId, libraries.id))
     .where(eq(libraries.ownerId, userId))
@@ -178,7 +167,7 @@ function getMediaRowsByUser(
  */
 export async function getFeaturedMedia(
   db: LibSQLDatabase,
-  userId: string,
+  userId: number,
   limit = 10,
 ) {
   // Pull a pool larger than the display limit so the daily rotation has
@@ -188,23 +177,7 @@ export async function getFeaturedMedia(
   const voteAverage = sql`json_extract(${mediaItems.metadata}, '$.voteAverage')`
 
   const candidates = await db
-    .select({
-      id: mediaItems.id,
-      createdAt: mediaItems.createdAt,
-      updatedAt: mediaItems.updatedAt,
-      libraryId: mediaItems.libraryId,
-      dataSourceId: mediaItems.dataSourceId,
-      filePath: mediaItems.filePath,
-      fileSize: mediaItems.fileSize,
-      fileMetadata: mediaItems.fileMetadata,
-      mediaType: mediaItems.mediaType,
-      title: mediaItems.title,
-      description: mediaItems.description,
-      metadata: mediaItems.metadata,
-      drmProtected: mediaItems.drmProtected,
-      scannedAt: mediaItems.scannedAt,
-      tags: mediaItems.tags,
-    })
+    .select({ ...publicMediaColumns, libraryId: libraries.publicId })
     .from(mediaItems)
     .innerJoin(libraries, eq(mediaItems.libraryId, libraries.id))
     .where(
@@ -244,12 +217,13 @@ export async function getRelatedMedia(
 
   const source = await db
     .select({
+      id: mediaItems.id,
       libraryId: mediaItems.libraryId,
       dataSourceId: mediaItems.dataSourceId,
       metadata: mediaItems.metadata,
     })
     .from(mediaItems)
-    .where(eq(mediaItems.id, id))
+    .where(eq(mediaItems.publicId, id))
     .get()
 
   if (!source) return []
@@ -261,34 +235,24 @@ export async function getRelatedMedia(
     .select({ name: people.name })
     .from(peopleMedia)
     .innerJoin(people, eq(peopleMedia.personId, people.id))
-    .where(eq(peopleMedia.mediaId, id))
+    .where(eq(peopleMedia.mediaId, source.id))
   for (const person of sourcePeople) {
     sourcePersonNames.add(normalizePersonName(person.name))
   }
 
   const candidates = await db
     .select({
-      id: mediaItems.id,
-      createdAt: mediaItems.createdAt,
-      updatedAt: mediaItems.updatedAt,
-      libraryId: mediaItems.libraryId,
-      dataSourceId: mediaItems.dataSourceId,
-      filePath: mediaItems.filePath,
-      fileSize: mediaItems.fileSize,
-      fileMetadata: mediaItems.fileMetadata,
-      mediaType: mediaItems.mediaType,
-      matchId: mediaItems.matchId,
-      matchIdSource: mediaItems.matchIdSource,
-      title: mediaItems.title,
-      description: mediaItems.description,
-      metadata: mediaItems.metadata,
-      drmProtected: mediaItems.drmProtected,
-      scannedAt: mediaItems.scannedAt,
-      tags: mediaItems.tags,
+      internalId: mediaItems.id,
+      ...publicMediaColumns,
+      libraryId: libraries.publicId,
     })
     .from(mediaItems)
+    .innerJoin(libraries, eq(mediaItems.libraryId, libraries.id))
     .where(
-      and(eq(mediaItems.libraryId, source.libraryId), ne(mediaItems.id, id)),
+      and(
+        eq(mediaItems.libraryId, source.libraryId),
+        ne(mediaItems.id, source.id),
+      ),
     )
 
   if (candidates.length === 0) return []
@@ -296,7 +260,7 @@ export async function getRelatedMedia(
   // Merge normalized database cast names with metadata credits for each item.
   const peopleByMedia = new Map(
     candidates.map((candidate) => [
-      candidate.id,
+      candidate.internalId,
       peopleFromMetadata(candidate.metadata),
     ]),
   )
@@ -311,7 +275,7 @@ export async function getRelatedMedia(
       .where(
         inArray(
           peopleMedia.mediaId,
-          candidates.map((c) => c.id),
+          candidates.map((c) => c.internalId),
         ),
       )
 
@@ -330,7 +294,7 @@ export async function getRelatedMedia(
       sourceGenres,
     ),
     sharedPeople: intersectionSize(
-      peopleByMedia.get(item.id) ?? new Set(),
+      peopleByMedia.get(item.internalId) ?? new Set(),
       sourcePersonNames,
     ),
   }))
@@ -346,7 +310,24 @@ export async function getRelatedMedia(
     .filter((entry) => entry.sharedGenres > 0)
     .sort((a, b) => b.sharedGenres - a.sharedGenres || tieBreak(a, b))
 
-  return selectBalancedRelated(byPeople, byGenres, resultLimit)
+  return selectBalancedRelated(
+    byPeople.map(({ item, ...score }) => ({
+      ...score,
+      item: withoutInternalId(item),
+    })),
+    byGenres.map(({ item, ...score }) => ({
+      ...score,
+      item: withoutInternalId(item),
+    })),
+    resultLimit,
+  )
+}
+
+function withoutInternalId<T extends MediaItem & { internalId: number }>(
+  item: T,
+): MediaItem {
+  const { internalId: _internalId, ...publicItem } = item
+  return publicItem as MediaItem
 }
 
 function genreSet(value: unknown): Set<string> {

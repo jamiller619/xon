@@ -1,9 +1,12 @@
-import { anonymousClient } from 'better-auth/client/plugins'
+import {
+  anonymousClient,
+  customSessionClient,
+} from 'better-auth/client/plugins'
 import { createAuthClient } from 'better-auth/react'
 import { getWebClientName } from './clientName'
 
 export default createAuthClient({
-  plugins: [anonymousClient()],
+  plugins: [anonymousClient(), customSessionClient()],
   fetchOptions: {
     credentials: 'include',
     headers: {

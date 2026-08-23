@@ -3,7 +3,7 @@ import { join } from 'node:path'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import config from '../config.ts'
-import { noCacheJSON } from '../http/responses.ts'
+import { createNoStoreJSONResponse } from '../http/responses.ts'
 import { validate } from '../http/validate.ts'
 
 const DEFAULT_LINES = 500
@@ -66,7 +66,9 @@ export function makeAdminLogsRouter(): Hono {
       const { lines: limit } = c.req.valid('query')
       const logFile = join(config.get('appdata.logsPath'), 'current.jsonl')
 
-      return noCacheJSON(c, { lines: await readEntries(logFile, limit) })
+      return createNoStoreJSONResponse(c, {
+        lines: await readEntries(logFile, limit),
+      })
     })
 
     /**
@@ -80,7 +82,7 @@ export function makeAdminLogsRouter(): Hono {
       try {
         names = await readdir(logsDir)
       } catch {
-        return noCacheJSON(c, { files: [] })
+        return createNoStoreJSONResponse(c, { files: [] })
       }
 
       const files = await Promise.all(
@@ -94,7 +96,7 @@ export function makeAdminLogsRouter(): Hono {
 
       files.sort((a, b) => b.mtime.localeCompare(a.mtime))
 
-      return noCacheJSON(c, { files })
+      return createNoStoreJSONResponse(c, { files })
     })
 
     /**
@@ -110,7 +112,9 @@ export function makeAdminLogsRouter(): Hono {
         const { lines: limit } = c.req.valid('query')
         const logFile = join(config.get('appdata.logsPath'), name)
 
-        return noCacheJSON(c, { lines: await readEntries(logFile, limit) })
+        return createNoStoreJSONResponse(c, {
+          lines: await readEntries(logFile, limit),
+        })
       },
     )
 

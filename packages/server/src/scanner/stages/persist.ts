@@ -1,18 +1,52 @@
 import { DataSourceType } from '@xon/shared'
 import { and, eq } from 'drizzle-orm'
 import { mediaItems } from '../../db/schema.ts'
+import {
+  generatePublicId,
+  insertWithGeneratedPublicId,
+} from '../../lib/publicId.ts'
 import { relativeMediaFilePath } from '../../media/mediaFilePaths.ts'
 import type { MediaJob, PipelineContext, PipelineStage } from '../pipeline.ts'
 
+const SQLITE_BUSY_RETRIES = 4
+const SQLITE_BUSY_RETRY_DELAY_MS = 100
+
 export default {
   name: 'persist',
-  retry: 1,
+  concurrency: 1,
+  retry: SQLITE_BUSY_RETRIES,
+  retryDelayMs: SQLITE_BUSY_RETRY_DELAY_MS,
+  shouldRetry: isSqliteBusyError,
   async run(ctx, job) {
     if (job.type === 'new') return saveNewMediaItem(ctx, job)
     if (job.type === 'changed') return saveChangedMediaItem(ctx, job)
     if (job.type === 'refresh') return saveRefreshedMediaItem(ctx, job)
   },
 } satisfies PipelineStage
+
+function isSqliteBusyError(error: unknown): boolean {
+  let current = error
+  for (let depth = 0; current && depth < 6; depth++) {
+    const code =
+      typeof current === 'object' && 'code' in current
+        ? String(current.code)
+        : ''
+    const message =
+      current instanceof Error
+        ? current.message
+        : typeof current === 'object' && 'message' in current
+          ? String(current.message)
+          : String(current)
+    if (code.startsWith('SQLITE_BUSY') || message.includes('SQLITE_BUSY')) {
+      return true
+    }
+    current =
+      typeof current === 'object' && 'cause' in current
+        ? current.cause
+        : undefined
+  }
+  return false
+}
 
 async function saveChangedMediaItem(ctx: PipelineContext, job: MediaJob) {
   const storedPath = relativeMediaFilePath(job.file.path, {
@@ -56,10 +90,19 @@ async function saveChangedMediaItem(ctx: PipelineContext, job: MediaJob) {
       .where(eq(mediaItems.id, mediaItem.id))
   }
 
-  return mediaItem
+  return {
+    id: mediaItem.id,
+    publicId: mediaItem.publicId,
+    metadata: combinedMetadata,
+  }
 }
 
 async function saveRefreshedMediaItem(ctx: PipelineContext, job: MediaJob) {
+  if (job.data.id == null) {
+    job.errors.push(new Error('Persist stage: Refresh job has no internal id'))
+    return
+  }
+
   const [mediaItem] = await ctx.db
     .select()
     .from(mediaItems)
@@ -101,43 +144,59 @@ async function saveRefreshedMediaItem(ctx: PipelineContext, job: MediaJob) {
 }
 
 async function saveNewMediaItem(ctx: PipelineContext, job: MediaJob) {
-  await ctx.db.transaction(async (tx) => {
-    if (job.data.drmProtected == null || !job.data.title) {
-      ctx.logger.error('Persist stage: missing required fields', {
-        file: job.file.path,
-        jobId: job.data.id,
-        missing: [
-          job.data.drmProtected == null ? 'drmProtected' : null,
-          !job.data.title ? 'title' : null,
-        ].filter(Boolean),
-      })
-
-      return
-    }
-
-    await tx.insert(mediaItems).values({
-      id: job.data.id,
-      libraryId: job.libraryId,
-      dataSourceId: job.dataSourceId,
-      matchId: job.data.matchId,
-      matchIdSource: job.data.matchIdSource,
-      filePath: relativeMediaFilePath(job.file.path, {
-        id: job.dataSourceId,
-        type: DataSourceType.local,
-        path: job.dataSourcePath,
-      }),
-      fileSize: job.file.size,
-      fileMetadata: job.data.fileMetadata ?? {},
-      mediaType: job.data.mediaType ?? job.file.mediaType,
-      metadata: job.data.metadata ?? {},
-      drmProtected: job.data.drmProtected,
-      title: job.data.title,
-      description: job.data.description,
-      scannedAt: new Date(),
+  if (job.data.drmProtected == null || !job.data.title) {
+    ctx.logger.error('Persist stage: missing required fields', {
+      file: job.file.path,
+      jobId: job.data.id,
+      missing: [
+        job.data.drmProtected == null ? 'drmProtected' : null,
+        !job.data.title ? 'title' : null,
+      ].filter(Boolean),
     })
-  })
 
-  return {
-    id: job.data.id,
+    return undefined
   }
+  const drmProtected = job.data.drmProtected
+  const title = job.data.title
+
+  const discoveredPublicId = job.data.publicId
+  let firstAttempt = true
+  const created = await insertWithGeneratedPublicId(
+    async (publicId) => {
+      const [row] = await ctx.db
+        .insert(mediaItems)
+        .values({
+          publicId,
+          libraryId: job.libraryId,
+          dataSourceId: job.dataSourceId,
+          matchId: job.data.matchId,
+          matchIdSource: job.data.matchIdSource,
+          filePath: relativeMediaFilePath(job.file.path, {
+            id: job.dataSourceId,
+            type: DataSourceType.local,
+            path: job.dataSourcePath,
+          }),
+          fileSize: job.file.size,
+          fileMetadata: job.data.fileMetadata ?? {},
+          mediaType: job.data.mediaType ?? job.file.mediaType,
+          metadata: job.data.metadata ?? {},
+          drmProtected,
+          title,
+          description: job.data.description,
+          scannedAt: new Date(),
+        })
+        .returning({ id: mediaItems.id, publicId: mediaItems.publicId })
+
+      if (!row) throw new Error('Failed to create media item')
+      job.data.publicId = row.publicId
+      return row
+    },
+    () => {
+      if (!firstAttempt) return generatePublicId()
+      firstAttempt = false
+      return discoveredPublicId
+    },
+  )
+
+  return created
 }
