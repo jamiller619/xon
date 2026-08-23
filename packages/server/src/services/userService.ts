@@ -1,5 +1,5 @@
 import { CollectionType } from '@xon/shared'
-import { aliasedTable, eq } from 'drizzle-orm'
+import { aliasedTable, and, desc, eq, or } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { publicMediaColumns } from '../db/publicSelections.ts'
 import {
@@ -7,6 +7,7 @@ import {
   collections,
   libraries,
   mediaItems,
+  mediaPlayStates,
   users,
 } from '../db/schema.ts'
 import { insertWithGeneratedPublicId } from '../lib/publicId.ts'
@@ -43,6 +44,50 @@ export async function getUsers(db: LibSQLDatabase) {
       isAnonymous: users.isAnonymous,
     })
     .from(users)
+}
+
+export function getResumablePlayStates(db: LibSQLDatabase, userId: number) {
+  return db
+    .select({
+      mediaItemId: mediaItems.publicId,
+      position: mediaPlayStates.position,
+      duration: mediaPlayStates.duration,
+      status: mediaPlayStates.status,
+      startedAt: mediaPlayStates.startedAt,
+      updatedAt: mediaPlayStates.updatedAt,
+      stoppedAt: mediaPlayStates.stoppedAt,
+      mediaItem: {
+        ...publicMediaColumns,
+        libraryId: libraries.publicId,
+      },
+    })
+    .from(mediaPlayStates)
+    .innerJoin(mediaItems, eq(mediaPlayStates.mediaItemId, mediaItems.id))
+    .innerJoin(libraries, eq(mediaItems.libraryId, libraries.id))
+    .where(
+      and(
+        eq(mediaPlayStates.userId, userId),
+        or(
+          eq(mediaPlayStates.status, 'playing'),
+          eq(mediaPlayStates.status, 'stopped'),
+        ),
+      ),
+    )
+    .orderBy(desc(mediaPlayStates.updatedAt))
+    .limit(50)
+}
+
+export function getPlayStateProgress(db: LibSQLDatabase, userId: number) {
+  return db
+    .select({
+      mediaItemId: mediaItems.publicId,
+      position: mediaPlayStates.position,
+      duration: mediaPlayStates.duration,
+      status: mediaPlayStates.status,
+    })
+    .from(mediaPlayStates)
+    .innerJoin(mediaItems, eq(mediaPlayStates.mediaItemId, mediaItems.id))
+    .where(eq(mediaPlayStates.userId, userId))
 }
 
 export async function getUserCollections(db: LibSQLDatabase, userId: number) {

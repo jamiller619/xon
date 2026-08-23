@@ -1,9 +1,7 @@
-import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
 import { appCache } from '../cache.ts'
-import { libraries } from '../db/schema.ts'
 import { emitEvent } from '../events.ts'
 import { requireAuth } from '../http/authMiddleware.js'
 import {
@@ -191,18 +189,14 @@ export function makeScanRouter(
         const libraryId = c.req.param('libraryId') as string
         const { scanSchedule } = c.req.valid('json')
 
-        const existing = await db
-          .select()
-          .from(libraries)
-          .where(eq(libraries.publicId, libraryId))
-        if (existing.length === 0) return notFound(c, 'Library not found')
+        const library = await libraryService.updateLibraryScanSchedule(
+          db,
+          libraryId,
+          scanSchedule,
+        )
+        if (!library) return notFound(c, 'Library not found')
 
-        await db
-          .update(libraries)
-          .set({ scanSchedule, updatedAt: new Date() })
-          .where(eq(libraries.publicId, libraryId))
-
-        return c.json(await libraryService.getLibraryById(db, libraryId))
+        return c.json(library)
       },
     )
 

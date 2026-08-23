@@ -1,25 +1,6 @@
-import { CollectionType } from '@xon/shared'
-import {
-  aliasedTable,
-  and,
-  asc,
-  count,
-  desc,
-  eq,
-  inArray,
-  isNull,
-  like,
-} from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
-import { publicMediaColumns } from '../db/publicSelections.ts'
-import {
-  collectionItems,
-  collections,
-  libraries,
-  mediaItems,
-} from '../db/schema.ts'
 import { requireAuth } from '../http/authMiddleware.js'
 import {
   cachedJson,
@@ -36,15 +17,8 @@ import {
   resourceIdSchema,
 } from '../http/schemas.ts'
 import { validate } from '../http/validate.ts'
-import { insertWithGeneratedPublicId } from '../lib/publicId.ts'
-
-const MANUAL_COLLECTION_TYPES = [
-  CollectionType.Collection,
-  CollectionType.Playlist,
-  CollectionType.Album,
-  CollectionType.Shelf,
-  CollectionType.Folder,
-] as const
+import * as collectionService from '../services/collectionService.ts'
+import { MANUAL_COLLECTION_TYPES } from '../services/collectionService.ts'
 
 const createCollectionSchema = z.object({
   type: z.enum(MANUAL_COLLECTION_TYPES),
@@ -102,34 +76,20 @@ export function makeCollectionsRouter(db: LibSQLDatabase) {
       async (c) => {
         const body = c.req.valid('json')
         const userId = c.get('user').id
-
-        const created = await insertWithGeneratedPublicId(async (publicId) => {
-          const [row] = await db
-            .insert(collections)
-            .values({
-              publicId,
-              userId,
-              type: body.type as CollectionType,
-              title: body.title,
-              metadata: '{}',
-              createdAt: new Date(),
-            })
-            .returning({ publicId: collections.publicId })
-          return row
-        })
-        if (!created) throw new Error('Failed to create collection')
-
-        return c.json(
-          await getPublicCollection(db, created.publicId, userId),
-          201,
+        const collection = await collectionService.createCollection(
+          db,
+          userId,
+          body,
         )
+
+        return c.json(collection, 201)
       },
     )
 
     // GET /collections — list collections owned by the current user
     .get('/', requireAuth, async (c) => {
       const user = c.get('user')
-      const rows = await getPublicCollections(db, user.id)
+      const rows = await collectionService.getPublicCollections(db, user.id)
 
       return cachedJson(c, rows)
     })
@@ -142,45 +102,19 @@ export function makeCollectionsRouter(db: LibSQLDatabase) {
       async (c) => {
         const id = c.req.param('id')
         const user = c.get('user')
-        const collection = await db
-          .select({ id: collections.id })
-          .from(collections)
-          .where(
-            and(eq(collections.publicId, id), eq(collections.userId, user.id)),
-          )
-          .get()
-        if (!collection) return notFound(c, 'Collection not found')
-
-        const { mediaType, unmatched, sortBy, order, page, limit } =
-          c.req.valid('query')
-        const filters = and(
-          eq(collectionItems.collectionId, collection.id),
-          mediaType ? like(mediaItems.mediaType, `${mediaType}/%`) : undefined,
-          unmatched ? isNull(mediaItems.matchId) : undefined,
+        const query = c.req.valid('query')
+        const result = await collectionService.getCollectionMedia(
+          db,
+          id,
+          user.id,
+          query,
         )
-        const sortDirection = order === 'asc' ? asc : desc
-        const sortColumn =
-          sortBy === 'sortOrder'
-            ? collectionItems.sortOrder
-            : mediaItems[sortBy]
+        if (result.status === 'not_found') {
+          return notFound(c, 'Collection not found')
+        }
 
-        const rows = await db
-          .select({ ...publicMediaColumns, libraryId: libraries.publicId })
-          .from(collectionItems)
-          .innerJoin(mediaItems, eq(collectionItems.mediaItemId, mediaItems.id))
-          .innerJoin(libraries, eq(mediaItems.libraryId, libraries.id))
-          .where(filters)
-          .orderBy(sortDirection(sortColumn), asc(mediaItems.id))
-          .limit(limit)
-          .offset((page - 1) * limit)
-        const totals = await db
-          .select({ count: count() })
-          .from(collectionItems)
-          .innerJoin(mediaItems, eq(collectionItems.mediaItemId, mediaItems.id))
-          .where(filters)
-
-        const total = totals[0]?.count ?? 0
-        const items = rows
+        const { page, limit } = query
+        const { items, total } = result
         setPaginationHeaders(c, { page, limit, total })
         return cachedJson(c, items, {
           etagSource: { items, page, limit, total },
@@ -192,7 +126,11 @@ export function makeCollectionsRouter(db: LibSQLDatabase) {
     .get('/:id', requireAuth, async (c) => {
       const id = c.req.param('id')
       const user = c.get('user')
-      const collection = await getPublicCollection(db, id, user.id)
+      const collection = await collectionService.getPublicCollection(
+        db,
+        id,
+        user.id,
+      )
       if (!collection) return notFound(c, 'Collection not found')
 
       return cachedJson(c, collection)
@@ -207,15 +145,16 @@ export function makeCollectionsRouter(db: LibSQLDatabase) {
         const id = c.req.param('id')
         const body = c.req.valid('json')
         const user = c.get('user')
-        const collection = await getOwnedCollection(db, id, user.id)
-        if (!collection) return notFound(c, 'Collection not found')
-
-        // Only allow updating manual collection types
-        if (
-          !(MANUAL_COLLECTION_TYPES as readonly string[]).includes(
-            collection.type,
-          )
-        ) {
+        const result = await collectionService.updateCollection(
+          db,
+          id,
+          user.id,
+          body,
+        )
+        if (result.status === 'not_found') {
+          return notFound(c, 'Collection not found')
+        }
+        if (result.status === 'immutable') {
           return errorResponse(
             c,
             403,
@@ -224,18 +163,7 @@ export function makeCollectionsRouter(db: LibSQLDatabase) {
           )
         }
 
-        const updates: Partial<typeof collections.$inferInsert> = {}
-        if (body.title !== undefined) updates.title = body.title
-        if (body.type !== undefined) updates.type = body.type
-
-        if (Object.keys(updates).length > 0) {
-          await db
-            .update(collections)
-            .set(updates)
-            .where(eq(collections.id, collection.id))
-        }
-
-        return c.json(await getPublicCollection(db, id, user.id))
+        return c.json(result.collection)
       },
     )
 
@@ -243,15 +171,11 @@ export function makeCollectionsRouter(db: LibSQLDatabase) {
     .delete('/:id', requireAuth, async (c) => {
       const id = c.req.param('id')
       const user = c.get('user')
-      const collection = await getOwnedCollection(db, id, user.id)
-      if (!collection) return notFound(c, 'Collection not found')
-
-      // Only allow deleting manual collection types
-      if (
-        !(MANUAL_COLLECTION_TYPES as readonly string[]).includes(
-          collection.type,
-        )
-      ) {
+      const result = await collectionService.deleteCollection(db, id, user.id)
+      if (result.status === 'not_found') {
+        return notFound(c, 'Collection not found')
+      }
+      if (result.status === 'immutable') {
         return errorResponse(
           c,
           403,
@@ -260,7 +184,6 @@ export function makeCollectionsRouter(db: LibSQLDatabase) {
         )
       }
 
-      await db.delete(collections).where(eq(collections.id, collection.id))
       return noContent(c)
     })
 
@@ -273,60 +196,22 @@ export function makeCollectionsRouter(db: LibSQLDatabase) {
         const collectionId = c.req.param('id')
         const body = c.req.valid('json')
         const user = c.get('user')
-        const collection = await getOwnedCollection(db, collectionId, user.id)
-        if (!collection) return notFound(c, 'Collection not found')
-
-        // Collections are user-scoped and may contain items from many libraries.
-        const itemRows = await db
-          .select({ id: mediaItems.id })
-          .from(mediaItems)
-          .where(eq(mediaItems.publicId, body.mediaItemId))
-        if (itemRows.length === 0) return notFound(c, 'Media item not found')
-        const mediaItemId = itemRows[0]?.id
-        if (mediaItemId === undefined)
+        const result = await collectionService.addCollectionItem(
+          db,
+          collectionId,
+          user.id,
+          body,
+        )
+        if (result.status === 'collection_not_found') {
+          return notFound(c, 'Collection not found')
+        }
+        if (result.status === 'media_not_found') {
           return notFound(c, 'Media item not found')
-
-        const existingItem = await db
-          .select({ mediaItemId: collectionItems.mediaItemId })
-          .from(collectionItems)
-          .where(
-            and(
-              eq(collectionItems.collectionId, collection.id),
-              eq(collectionItems.mediaItemId, mediaItemId),
-            ),
-          )
-          .get()
-
-        // Determine sort order: use provided or append to end
-        let sortOrder = body.sortOrder
-        if (sortOrder === undefined) {
-          const existing = await db
-            .select({ sortOrder: collectionItems.sortOrder })
-            .from(collectionItems)
-            .where(eq(collectionItems.collectionId, collection.id))
-            .orderBy(asc(collectionItems.sortOrder))
-          const last = existing[existing.length - 1]
-          sortOrder = last ? last.sortOrder + 1 : 0
         }
 
-        await db
-          .insert(collectionItems)
-          .values({
-            collectionId: collection.id,
-            mediaItemId,
-            sortOrder,
-          })
-          .onConflictDoUpdate({
-            target: [collectionItems.collectionId, collectionItems.mediaItemId],
-            set: { sortOrder },
-          })
-
-        const result = {
-          collectionId: collection.publicId,
-          mediaItemId: body.mediaItemId,
-          sortOrder,
-        }
-        return existingItem ? c.json(result) : c.json(result, 201)
+        return result.status === 'updated'
+          ? c.json(result.item)
+          : c.json(result.item, 201)
       },
     )
 
@@ -339,55 +224,18 @@ export function makeCollectionsRouter(db: LibSQLDatabase) {
         const collectionId = c.req.param('id')
         const body = c.req.valid('json')
         const user = c.get('user')
-        const collection = await getOwnedCollection(db, collectionId, user.id)
-        if (!collection) return notFound(c, 'Collection not found')
-
-        const publicMediaIds = body.items.map(({ mediaItemId }) => mediaItemId)
-        const mediaRows = publicMediaIds.length
-          ? await db
-              .select({ id: mediaItems.id, publicId: mediaItems.publicId })
-              .from(mediaItems)
-              .where(inArray(mediaItems.publicId, publicMediaIds))
-          : []
-        const mediaIdsByPublicId = new Map(
-          mediaRows.map((item) => [item.publicId, item.id]),
+        const result = await collectionService.reorderCollectionItems(
+          db,
+          collectionId,
+          user.id,
+          body.items,
         )
-
-        if (body.items.length > 0) {
-          if (mediaIdsByPublicId.size !== body.items.length) {
-            return notFound(c, 'One or more collection items were not found')
-          }
-          const existingItems = await db
-            .select({ mediaItemId: collectionItems.mediaItemId })
-            .from(collectionItems)
-            .where(
-              and(
-                eq(collectionItems.collectionId, collection.id),
-                inArray(collectionItems.mediaItemId, [
-                  ...mediaIdsByPublicId.values(),
-                ]),
-              ),
-            )
-          if (existingItems.length !== body.items.length) {
-            return notFound(c, 'One or more collection items were not found')
-          }
+        if (result.status === 'collection_not_found') {
+          return notFound(c, 'Collection not found')
         }
-
-        await db.transaction(async (tx) => {
-          for (const item of body.items) {
-            const mediaItemId = mediaIdsByPublicId.get(item.mediaItemId)
-            if (mediaItemId === undefined) continue
-            await tx
-              .update(collectionItems)
-              .set({ sortOrder: item.sortOrder })
-              .where(
-                and(
-                  eq(collectionItems.collectionId, collection.id),
-                  eq(collectionItems.mediaItemId, mediaItemId),
-                ),
-              )
-          }
-        })
+        if (result.status === 'items_not_found') {
+          return notFound(c, 'One or more collection items were not found')
+        }
 
         return c.json({ success: true })
       },
@@ -402,86 +250,24 @@ export function makeCollectionsRouter(db: LibSQLDatabase) {
         const collectionId = c.req.param('id')
         const mediaItemId = c.req.param('mediaItemId')
         const user = c.get('user')
-        const collection = await getOwnedCollection(db, collectionId, user.id)
-        if (!collection) return notFound(c, 'Collection not found')
-
-        const mediaItem = await db
-          .select({ id: mediaItems.id })
-          .from(mediaItems)
-          .where(eq(mediaItems.publicId, mediaItemId))
-          .get()
-        if (!mediaItem) return notFound(c, 'Media item not found')
-
-        await db
-          .delete(collectionItems)
-          .where(
-            and(
-              eq(collectionItems.collectionId, collection.id),
-              eq(collectionItems.mediaItemId, mediaItem.id),
-            ),
-          )
+        const result = await collectionService.removeCollectionItem(
+          db,
+          collectionId,
+          user.id,
+          mediaItemId,
+        )
+        if (result.status === 'collection_not_found') {
+          return notFound(c, 'Collection not found')
+        }
+        if (result.status === 'media_not_found') {
+          return notFound(c, 'Media item not found')
+        }
 
         return noContent(c)
       },
     )
 
   return router
-}
-
-function getOwnedCollection(
-  db: LibSQLDatabase,
-  publicId: string,
-  userId: number,
-) {
-  return db
-    .select()
-    .from(collections)
-    .where(
-      and(eq(collections.publicId, publicId), eq(collections.userId, userId)),
-    )
-    .get()
-}
-
-function getPublicCollections(db: LibSQLDatabase, userId: number) {
-  const parent = aliasedTable(collections, 'parent_collections')
-  return db
-    .select({
-      id: collections.publicId,
-      createdAt: collections.createdAt,
-      updatedAt: collections.updatedAt,
-      type: collections.type,
-      title: collections.title,
-      parentCollectionId: parent.publicId,
-      metadata: collections.metadata,
-    })
-    .from(collections)
-    .leftJoin(parent, eq(collections.parentCollectionId, parent.id))
-    .where(eq(collections.userId, userId))
-    .orderBy(asc(collections.createdAt))
-}
-
-async function getPublicCollection(
-  db: LibSQLDatabase,
-  publicId: string,
-  userId: number,
-) {
-  const parent = aliasedTable(collections, 'parent_collection')
-  return db
-    .select({
-      id: collections.publicId,
-      createdAt: collections.createdAt,
-      updatedAt: collections.updatedAt,
-      type: collections.type,
-      title: collections.title,
-      parentCollectionId: parent.publicId,
-      metadata: collections.metadata,
-    })
-    .from(collections)
-    .leftJoin(parent, eq(collections.parentCollectionId, parent.id))
-    .where(
-      and(eq(collections.publicId, publicId), eq(collections.userId, userId)),
-    )
-    .get()
 }
 
 // Route schema for hono/client (RPC) type inference on the web client.

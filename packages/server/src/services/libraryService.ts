@@ -207,3 +207,19 @@ export async function updateLibrary(
 
   return getLibraryById(db, publicId)
 }
+
+export async function updateLibraryScanSchedule(
+  db: LibSQLDatabase,
+  publicId: string,
+  scanSchedule: string | null,
+): Promise<Library | undefined> {
+  const existing = await getLibraryRecordByPublicId(db, publicId)
+  if (!existing) return undefined
+
+  await db
+    .update(libraries)
+    .set({ scanSchedule, updatedAt: new Date() })
+    .where(eq(libraries.id, existing.id))
+
+  return getLibraryById(db, publicId)
+}
