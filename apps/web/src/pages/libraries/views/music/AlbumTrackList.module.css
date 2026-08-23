@@ -41,6 +41,7 @@
   h2 {
     color: var(--color-text);
     font-size: var(--text-3xl);
+    font-weight: 600;
     line-height: 1.05;
   }
 }

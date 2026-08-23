@@ -8,7 +8,7 @@ import type { MediaItem } from '@xon/shared'
 import { Button, Skeleton } from '@xon/ui'
 import ArtworkImage from '~/components/ArtworkImage'
 import { apiFetch, thumbnailUrl } from '~/lib/apiFetch'
-import { formatDuration } from '~/lib/utils'
+import { formatDuration, formatDurationSeconds } from '~/lib/utils'
 import { useAudioStore } from '~/store/audioStore'
 import styles from './AlbumTrackList.module.css'
 import type { MusicAlbumDetail, MusicGroup } from './musicTypes'
@@ -56,6 +56,7 @@ export default function AlbumTrackList({
   const detail = albumQuery.data
   const displayAlbum = detail ?? album
   const tracks = detail?.tracks ?? []
+  const albumDuration = getAlbumDuration(tracks)
 
   return (
     <article className={styles.page}>
@@ -80,6 +81,7 @@ export default function AlbumTrackList({
           <p className={styles.count}>
             {displayAlbum.songCount}{' '}
             {displayAlbum.songCount === 1 ? 'track' : 'tracks'}
+            {albumDuration != null && ` · ${albumDuration}`}
           </p>
         </div>
       </div>
@@ -159,5 +161,18 @@ export default function AlbumTrackList({
         </ol>
       )}
     </article>
+  )
+}
+
+function getAlbumDuration(tracks: MediaItem[]) {
+  return formatDurationSeconds(
+    tracks.reduce((total, track) => {
+      const duration = track.fileMetadata.duration
+      return typeof duration === 'number' &&
+        Number.isFinite(duration) &&
+        duration > 0
+        ? total + duration
+        : total
+    }, 0),
   )
 }

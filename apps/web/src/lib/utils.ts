@@ -28,9 +28,7 @@ export function formatYear(data: MediaItem): string | undefined {
   return Number.isNaN(year) ? undefined : String(year)
 }
 
-export function formatDuration(data?: MediaItem): string | undefined {
-  const value = data?.fileMetadata.duration
-
+export function formatDurationSeconds(value?: number): string | undefined {
   if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) return
 
   const totalSeconds = Math.round(value)
@@ -43,6 +41,10 @@ export function formatDuration(data?: MediaItem): string | undefined {
     minutes,
     seconds,
   })
+}
+
+export function formatDuration(data?: MediaItem): string | undefined {
+  return formatDurationSeconds(data?.fileMetadata.duration)
 }
 
 export function formatBytes(data?: MediaItem): string | undefined {

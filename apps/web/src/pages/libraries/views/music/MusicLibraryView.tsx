@@ -376,8 +376,8 @@ export default function MusicLibraryView({ library }: LibraryTypeViewProps) {
         onOpenChangeComplete={(open: boolean) => {
           if (!open) setSelectedAlbum(null)
         }}
-        title={selectedAlbum?.title ?? 'Album'}
-        description={selectedAlbum?.artist ?? 'Track list'}
+        // title={selectedAlbum?.title ?? 'Album'}
+        // description={selectedAlbum?.artist ?? 'Track list'}
       >
         {selectedAlbum != null && (
           <AlbumTrackList libraryId={library.id} album={selectedAlbum} />

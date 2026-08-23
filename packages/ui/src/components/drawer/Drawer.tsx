@@ -10,7 +10,7 @@ export type DrawerProps = Omit<
   UIDrawer.Root.Props,
   'children' | 'swipeDirection'
 > & {
-  title: ReactNode
+  title?: ReactNode
   description?: ReactNode
   children: ReactNode
   side?: 'left' | 'right'
@@ -39,16 +39,6 @@ export default function Drawer({
           <UIDrawer.Popup className={clsx(styles.popup, className)}>
             <Surface className={styles.surface} borderRadius="none">
               <header className={styles.header}>
-                <div className={styles.heading}>
-                  <UIDrawer.Title className={styles.title}>
-                    {title}
-                  </UIDrawer.Title>
-                  {description != null && (
-                    <UIDrawer.Description className={styles.description}>
-                      {description}
-                    </UIDrawer.Description>
-                  )}
-                </div>
                 <UIDrawer.Close
                   render={(closeProps) => (
                     <Button.Icon
@@ -60,6 +50,16 @@ export default function Drawer({
                     </Button.Icon>
                   )}
                 />
+                <div className={styles.heading}>
+                  <UIDrawer.Title className={styles.title}>
+                    {title}
+                  </UIDrawer.Title>
+                  {description != null && (
+                    <UIDrawer.Description className={styles.description}>
+                      {description}
+                    </UIDrawer.Description>
+                  )}
+                </div>
               </header>
               <UIDrawer.Content
                 className={clsx(styles.content, contentClassName)}
