@@ -11,8 +11,13 @@ const styles = css`
   }
 
   .pressed {
-    background: var(--color-accent-9);
+    background: var(--color-accent-gradient-reversed);
+    /* background: var(--color-accent-9); */
     color: var(--color-text);
+
+    &:hover {
+      background: var(--color-accent-gradient-reversed);
+    }
   }
 `
 
@@ -61,7 +66,10 @@ const groupStyles = css`
 
     button[data-pressed] {
       pointer-events: none;
-      background: var(--color-accent-9);
+      /* color: var(--color-gray-1); */
+      font-weight: 500;
+      background: var(--color-accent-gradient);
+      /* background: var(--color-accent-9); */
     }
   }
 `

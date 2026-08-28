@@ -1,3 +1,4 @@
+import { isGenreTag } from '@xon/shared'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { Hono } from 'hono'
 import { z } from 'zod'
@@ -24,10 +25,21 @@ const applyMatchSchema = z.object({
   matchId: z.string().min(1).max(200),
 })
 
+const manualTagsSchema = z.array(z.string()).superRefine((tags, ctx) => {
+  for (const [index, tag] of tags.entries()) {
+    if (!isGenreTag(tag)) continue
+    ctx.addIssue({
+      code: 'custom',
+      message: 'The genre: namespace is managed by Xon',
+      path: [index],
+    })
+  }
+})
+
 const updateMediaSchema = z.object({
   title: z.string().min(1).optional(),
   description: z.string().optional(),
-  tags: z.array(z.string()).optional(),
+  tags: manualTagsSchema.optional(),
 })
 
 const bulkIdsSchema = z
@@ -44,7 +56,7 @@ const bulkSchema = z.discriminatedUnion('action', [
     updates: z
       .object({
         genre: z.string().optional(),
-        tags: z.array(z.string()).optional(),
+        tags: manualTagsSchema.optional(),
         contentRating: z.enum(['G', 'PG', 'PG-13', 'R', 'unrated']).optional(),
       })
       .refine(

@@ -1,5 +1,4 @@
 import {
-  FolderSearch16Regular as ScanIcon,
   CheckmarkSquare20Regular as SelectIcon,
   CheckmarkSquare20Filled as SelectIconFilled,
 } from '@fluentui/react-icons'
@@ -7,6 +6,7 @@ import { useMutation } from '@tanstack/react-query'
 import { Button, Label, Select, ToggleButton, ToggleButtonGroup } from '@xon/ui'
 import FilterHeader from '~/components/FilterHeader'
 import { apiFetch, getAPIError } from '~/lib/apiFetch'
+import Icons from '~/lib/icons'
 import { useAppStore } from '~/store/appStore'
 import { useScanStore } from '~/store/scanStore'
 import { makeSortKey } from '../hooks/useLibrarySort'
@@ -120,7 +120,7 @@ export default function LibraryViewControls<
             title={scan.error instanceof Error ? scan.error.message : undefined}
             onClick={() => scan.mutate()}
           >
-            <ScanIcon aria-hidden="true" />
+            <Icons.Scan aria-hidden="true" />
             {scan.error
               ? 'Scan failed'
               : scanning

@@ -37,7 +37,7 @@ const styles = css`
   .footer {
     position: fixed;
     right: var(--space-lg);
-    bottom: var(--space-md);
+    bottom: calc(var(--audio-player-height, 0px) + var(--space-md));
     z-index: 10;
     display: flex;
     justify-content: flex-end;

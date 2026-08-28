@@ -58,7 +58,7 @@ const styles = css<
     align-items: center;
     gap: var(--menu-item-gap);
     padding-block: calc(var(--menu-item-padding-block) / 2);
-    padding-inline-start: calc(var(--menu-item-padding-inline) + 16px);
+    padding-inline-start: calc(var(--menu-item-padding-inline) + 0.5rem);
     border-radius: var(--menu-item-border-radius);
     corner-shape: var(--corner-shape);
     font-size: var(--menu-item-font-size);
@@ -90,8 +90,10 @@ const styles = css<
   }
 
   .icon {
-    width: 16px;
-    height: 16px;
+    width: 1rem;
+    height: 1rem;
+    display: grid;
+    place-content: center;
   }
 `
 

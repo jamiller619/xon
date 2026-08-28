@@ -17,6 +17,8 @@ describe('Search API', () => {
   let client: Client
   let db: LibSQLDatabase
   let databaseDirectory: string
+  let user1Id: number
+  let user2Id: number
 
   beforeEach(async () => {
     databaseDirectory = await mkdtemp(join(tmpdir(), 'xon-search-test-'))
@@ -26,37 +28,62 @@ describe('Search API', () => {
     db = drizzle(client)
     await migrateDatabase(db)
 
-    await db.insert(users).values([
-      { id: 'user-1', name: 'First User', email: 'first@example.com' },
-      { id: 'user-2', name: 'Second User', email: 'second@example.com' },
-    ])
-    await db.insert(libraries).values([
-      {
-        id: 'library-1',
-        ownerId: 'user-1',
-        name: 'First Movies',
-        type: 'video/movie',
-        dataSources: [],
-      },
-      {
-        id: 'library-2',
-        ownerId: 'user-2',
-        name: 'Second Movies',
-        type: 'video/movie',
-        dataSources: [],
-      },
-      {
-        id: 'library-music',
-        ownerId: 'user-1',
-        name: 'First Music',
-        type: 'audio',
-        dataSources: [],
-      },
-    ])
+    const insertedUsers = await db
+      .insert(users)
+      .values([
+        {
+          publicId: 'user-1',
+          name: 'First User',
+          email: 'first@example.com',
+        },
+        {
+          publicId: 'user-2',
+          name: 'Second User',
+          email: 'second@example.com',
+        },
+      ])
+      .returning({ id: users.id, publicId: users.publicId })
+    const firstUser = insertedUsers.find((user) => user.publicId === 'user-1')
+    const secondUser = insertedUsers.find((user) => user.publicId === 'user-2')
+    if (!firstUser || !secondUser) throw new Error('Failed to seed users')
+    user1Id = firstUser.id
+    user2Id = secondUser.id
+
+    const insertedLibraries = await db
+      .insert(libraries)
+      .values([
+        {
+          publicId: 'library-1',
+          ownerId: user1Id,
+          name: 'First Movies',
+          type: 'video/movie',
+          dataSources: [],
+        },
+        {
+          publicId: 'library-2',
+          ownerId: user2Id,
+          name: 'Second Movies',
+          type: 'video/movie',
+          dataSources: [],
+        },
+        {
+          publicId: 'library-music',
+          ownerId: user1Id,
+          name: 'First Music',
+          type: 'audio',
+          dataSources: [],
+        },
+      ])
+      .returning({ id: libraries.id, publicId: libraries.publicId })
+    const libraryId = (publicId: string) => {
+      const library = insertedLibraries.find((row) => row.publicId === publicId)
+      if (!library) throw new Error(`Failed to seed ${publicId}`)
+      return library.id
+    }
     await db.insert(mediaItems).values([
       {
-        id: 'arrival-title',
-        libraryId: 'library-1',
+        publicId: 'arrival-title',
+        libraryId: libraryId('library-1'),
         filePath: '/movies/arrival.mkv',
         fileSize: 1024,
         fileMetadata: {},
@@ -64,16 +91,16 @@ describe('Search API', () => {
         title: 'Arrival',
         description: 'First contact drama',
         metadata: {
-          genres: ['Science Fiction', 'Drama'],
+          genres: ['Science Fiction', 'Drama', 'Metadata Only'],
           cast: [{ name: 'Amy Adams', character: 'Louise Banks' }],
           crew: [{ name: 'Denis Villeneuve', job: 'Director' }],
         },
         scannedAt: new Date(),
-        tags: ['science-fiction'],
+        tags: ['genre:science-fiction', 'genre:drama'],
       },
       {
-        id: 'arrival-description',
-        libraryId: 'library-1',
+        publicId: 'arrival-description',
+        libraryId: libraryId('library-1'),
         filePath: '/movies/other.mkv',
         fileSize: 2048,
         fileMetadata: {},
@@ -82,11 +109,11 @@ describe('Search API', () => {
         description: 'An arrival changes everything',
         metadata: { genres: ['drama', 'Comedy', 'Drama'] },
         scannedAt: new Date(),
-        tags: [],
+        tags: ['genre:---'],
       },
       {
-        id: 'contact-soundtrack',
-        libraryId: 'library-music',
+        publicId: 'contact-soundtrack',
+        libraryId: libraryId('library-music'),
         filePath: '/music/contact.flac',
         fileSize: 8192,
         fileMetadata: {},
@@ -102,8 +129,8 @@ describe('Search API', () => {
         tags: [],
       },
       {
-        id: 'arrival-private',
-        libraryId: 'library-2',
+        publicId: 'arrival-private',
+        libraryId: libraryId('library-2'),
         filePath: '/private/arrival.mkv',
         fileSize: 4096,
         fileMetadata: {},
@@ -122,7 +149,7 @@ describe('Search API', () => {
     await rm(databaseDirectory, { recursive: true, force: true })
   })
 
-  function makeApp(userId?: string) {
+  function makeApp(userId?: number) {
     const app = new Hono()
     if (userId) {
       app.use('*', async (c, next) => {
@@ -143,7 +170,7 @@ describe('Search API', () => {
 
   it('ranks a title match ahead of a description match', async () => {
     const results = await searchMedia(db, {
-      userId: 'user-1',
+      userId: user1Id,
       query: 'arrival',
       page: 1,
       limit: 20,
@@ -158,7 +185,7 @@ describe('Search API', () => {
 
   it('supports prefix search', async () => {
     const results = await searchMedia(db, {
-      userId: 'user-1',
+      userId: user1Id,
       query: 'arriv',
       page: 1,
       limit: 20,
@@ -169,7 +196,7 @@ describe('Search API', () => {
 
   it('matches nested metadata values, including cast', async () => {
     const results = await searchMedia(db, {
-      userId: 'user-1',
+      userId: user1Id,
       query: 'Amy Villeneuve science',
       page: 1,
       limit: 20,
@@ -180,13 +207,13 @@ describe('Search API', () => {
 
   it('filters results by the owning library content type', async () => {
     const allResults = await searchMedia(db, {
-      userId: 'user-1',
+      userId: user1Id,
       query: 'contact',
       page: 1,
       limit: 20,
     })
     const musicResults = await searchMedia(db, {
-      userId: 'user-1',
+      userId: user1Id,
       query: 'contact',
       category: 'audio',
       page: 1,
@@ -202,13 +229,13 @@ describe('Search API', () => {
 
   it("never returns media from another user's libraries", async () => {
     const firstUser = await searchMedia(db, {
-      userId: 'user-1',
+      userId: user1Id,
       query: 'private',
       page: 1,
       limit: 20,
     })
     const secondUser = await searchMedia(db, {
-      userId: 'user-2',
+      userId: user2Id,
       query: 'private',
       page: 1,
       limit: 20,
@@ -237,7 +264,7 @@ describe('Search API', () => {
   })
 
   it('validates the query', async () => {
-    const response = await makeApp('user-1').request('/search')
+    const response = await makeApp(user1Id).request('/search')
 
     expect(response.status).toBe(400)
     await expect(response.json()).resolves.toMatchObject({
@@ -246,7 +273,7 @@ describe('Search API', () => {
   })
 
   it('validates the popular genre limit', async () => {
-    const response = await makeApp('user-1').request('/search/genres?limit=0')
+    const response = await makeApp(user1Id).request('/search/genres?limit=0')
 
     expect(response.status).toBe(400)
     await expect(response.json()).resolves.toMatchObject({
@@ -255,7 +282,7 @@ describe('Search API', () => {
   })
 
   it('returns the most-used genres from the current user libraries', async () => {
-    const response = await makeApp('user-1').request('/search/genres?limit=3')
+    const response = await makeApp(user1Id).request('/search/genres?limit=3')
 
     expect(response.status).toBe(200)
     expect(response.headers.get('ETag')).toBeTruthy()
@@ -266,8 +293,16 @@ describe('Search API', () => {
     ])
   })
 
+  it('does not count legacy metadata when an item has canonical genre tags', async () => {
+    const response = await makeApp(user1Id).request('/search/genres?limit=20')
+
+    expect(response.status).toBe(200)
+    const genres = (await response.json()) as Array<{ name: string }>
+    expect(genres.map((genre) => genre.name)).not.toContain('Metadata Only')
+  })
+
   it('returns MediaItem rows with pagination and cache headers', async () => {
-    const response = await makeApp('user-1').request(
+    const response = await makeApp(user1Id).request(
       '/search?q=arrival&page=1&limit=1',
     )
 
@@ -282,13 +317,13 @@ describe('Search API', () => {
         id: 'arrival-title',
         libraryId: 'library-1',
         title: 'Arrival',
-        tags: ['science-fiction'],
+        tags: ['genre:science-fiction', 'genre:drama'],
       },
     ])
   })
 
   it('paginates in stable relevance order', async () => {
-    const response = await makeApp('user-1').request(
+    const response = await makeApp(user1Id).request(
       '/search?q=arrival&page=2&limit=1',
     )
 
@@ -300,7 +335,7 @@ describe('Search API', () => {
   })
 
   it('accepts a category and includes it in pagination results', async () => {
-    const response = await makeApp('user-1').request(
+    const response = await makeApp(user1Id).request(
       '/search?q=contact&category=audio&page=1&limit=20',
     )
 

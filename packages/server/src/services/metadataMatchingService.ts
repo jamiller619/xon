@@ -3,7 +3,12 @@ import type {
   MetadataSearchResult,
   MetadataSourcePlugin,
 } from '@xon/plugin-sdk'
-import type { MediaType, Metadata, PosterImage } from '@xon/shared'
+import {
+  deriveMediaTags,
+  type MediaType,
+  type Metadata,
+  type PosterImage,
+} from '@xon/shared'
 import { eq } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { publicMediaColumns } from '../db/publicSelections.ts'
@@ -229,6 +234,11 @@ export async function applyMatch(
       .update(mediaItems)
       .set({
         metadata,
+        tags: deriveMediaTags({
+          metadata,
+          fileMetadata: context.item.fileMetadata,
+          existingTags: context.item.tags,
+        }),
         title,
         matchId,
         matchIdSource: selected.manifest.id,

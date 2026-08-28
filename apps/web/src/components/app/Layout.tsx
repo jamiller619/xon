@@ -1,6 +1,7 @@
 import { Flex, ScrollArea } from '@xon/ui'
 import clsx from 'clsx'
 import { useState } from 'react'
+import { createPortal } from 'react-dom'
 import { Outlet } from 'react-router-dom'
 import AudioPlayer from '~/components/viewers/AudioPlayer'
 import styles from './Layout.module.css'
@@ -27,8 +28,13 @@ export default function Layout() {
           <Outlet />
         </ScrollArea>
       </div>
-      <AudioPlayer />
-      <ScanBanner />
+      {createPortal(
+        <div className={styles.portal}>
+          <AudioPlayer />
+          <ScanBanner />
+        </div>,
+        document.body,
+      )}
     </Flex>
   )
 }

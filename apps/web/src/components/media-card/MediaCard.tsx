@@ -22,6 +22,7 @@ import { useRefreshMetadataConfirmation } from '~/components/confirmation/Confir
 import useMetadata from '~/hooks/useMetadata'
 import usePlayState from '~/hooks/usePlayState'
 import { apiFetch, thumbnailUrl } from '~/lib/apiFetch'
+import { mediaMetadataText } from '~/lib/mediaMetadata'
 import { mediaPath } from '~/lib/utils'
 import { useAudioStore } from '~/store/audioStore'
 import ArtworkImage from '../ArtworkImage'
@@ -90,6 +91,8 @@ export default function MediaCard({
     playTrack({
       id: item.id,
       title: item.title,
+      artist: mediaMetadataText(item, 'artist'),
+      album: mediaMetadataText(item, 'album'),
       mimeType: item.mediaType ?? 'audio/mpeg',
     })
   }
@@ -100,6 +103,8 @@ export default function MediaCard({
     addToQueue({
       id: item.id,
       title: item.title,
+      artist: mediaMetadataText(item, 'artist'),
+      album: mediaMetadataText(item, 'album'),
       mimeType: item.mediaType ?? 'audio/mpeg',
     })
   }

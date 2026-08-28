@@ -15,43 +15,6 @@
 }
 
 /*
- * Edge fades, shown only on the side(s) with more content to scroll to. The
- * gradient runs from --color-gray-1 at the edge to transparent inward, hinting
- * that there's more off-screen. pointer-events are disabled so the overlay
- * never blocks scrolling/clicks on the content beneath.
- */
-.viewport::before,
-.viewport::after {
-  content: "";
-  position: absolute;
-  top: 0;
-  bottom: 0;
-  width: var(--space-5xl);
-  pointer-events: none;
-  opacity: 0;
-  transition: opacity 150ms ease;
-  z-index: 1;
-}
-
-.viewport::before {
-  left: 0;
-  background: linear-gradient(to right, var(--color-gray-2), transparent);
-}
-
-.viewport::after {
-  right: 0;
-  background: linear-gradient(to left, var(--color-gray-2), transparent);
-}
-
-.fadeLeft::before {
-  opacity: 1;
-}
-
-.fadeRight::after {
-  opacity: 1;
-}
-
-/*
  * The scroll container itself carries no padding. Padding on a horizontal flex
  * scroll container is unreliable: the trailing (inline-end) gutter gets clipped
  * at the scroll extreme, and the measurements below (scrollWidth/clientWidth)
@@ -59,7 +22,7 @@
  */
 .content {
   overflow-x: auto;
-  scroll-snap-type: x proximity;
+  scroll-snap-type: x mandatory;
   scrollbar-width: none; /* Firefox */
   -ms-overflow-style: none; /* IE/Edge */
 
@@ -76,6 +39,20 @@
   &::-webkit-scrollbar {
     display: none; /* Chrome/Safari */
   }
+}
+
+/*
+ * Fade the inline end of the scrollable content while more content exists
+ * off-screen. Both declarations are required because Safari still uses the
+ * prefixed mask.
+ */
+.fadeRight .content {
+  -webkit-mask-image: linear-gradient(
+    to left,
+    transparent,
+    black var(--space-5xl)
+  );
+  mask-image: linear-gradient(to left, transparent, black var(--space-5xl));
 }
 
 /*

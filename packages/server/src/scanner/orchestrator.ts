@@ -60,6 +60,7 @@ const defaultStages: PipelineStage[] = [
   stage.drm,
   stage.title,
   stage.fileMetadata,
+  stage.tags,
   stage.persist,
   stage.thumbnail,
 ]
@@ -70,6 +71,7 @@ const stages: Partial<Record<ContentType, PipelineStage[]>> = {
     stage.title,
     stage.fileMetadata,
     stage.libraryMetadata,
+    stage.tags,
     stage.persist,
     stage.person,
     stage.thumbnail,
@@ -79,6 +81,7 @@ const stages: Partial<Record<ContentType, PipelineStage[]>> = {
     stage.title,
     stage.fileMetadata,
     stage.libraryMetadata,
+    stage.tags,
     stage.persist,
     stage.person,
     stage.thumbnail,
@@ -88,6 +91,7 @@ const stages: Partial<Record<ContentType, PipelineStage[]>> = {
     stage.title,
     stage.fileMetadata,
     stage.libraryMetadata,
+    stage.tags,
     stage.persist,
     stage.thumbnail,
     stage.musicFolderAssets,
@@ -97,6 +101,7 @@ const stages: Partial<Record<ContentType, PipelineStage[]>> = {
     stage.title,
     stage.fileMetadata,
     stage.libraryMetadata,
+    stage.tags,
     stage.persist,
     stage.thumbnail,
   ],
@@ -315,6 +320,7 @@ export async function scanLibrary(
 
 const refreshStagesDefault: PipelineStage[] = [
   stage.libraryMetadata,
+  stage.tags,
   stage.persist,
   stage.person,
   stage.thumbnail,
@@ -328,14 +334,14 @@ const refreshStagesDefault: PipelineStage[] = [
  * no-ops for movies/shows that already have plugin images.
  */
 const refreshStages: Partial<Record<ContentType, PipelineStage[]>> = {
-  audio: [stage.libraryMetadata, stage.persist, stage.thumbnail],
+  audio: [stage.libraryMetadata, stage.tags, stage.persist, stage.thumbnail],
 }
 
 /**
  * Re-run metadata plugins against already-persisted media items — the whole
  * library, or a single item when mediaItemId is given. Unlike a scan, this
  * never touches the filesystem: jobs are built from stored rows and only the
- * metadata/persist/person stages run.
+ * metadata/tags/persist/person stages run.
  */
 export async function refreshMetadata(
   db: LibSQLDatabase,
@@ -418,6 +424,7 @@ export async function refreshMetadata(
         title: item.title,
         fileMetadata: item.fileMetadata,
         metadata: seed,
+        tags: item.tags,
         matchId: item.matchId,
         matchIdSource: item.matchIdSource,
       },

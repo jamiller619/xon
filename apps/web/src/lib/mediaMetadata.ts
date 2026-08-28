@@ -1,4 +1,4 @@
-import type { MediaItem } from '@xon/shared'
+import { genreNamesFromTags, type MediaItem } from '@xon/shared'
 import { formatDuration, formatYear } from './utils'
 
 export type MetadataKey =
@@ -56,6 +56,13 @@ export function metadataValue(
   }
 }
 
+export function mediaMetadataText(
+  item: MediaItem,
+  key: string,
+): string | undefined {
+  return stringValue(item.fileMetadata[key]) ?? stringValue(item.metadata[key])
+}
+
 function metadataYear(item: MediaItem): string | undefined {
   const year = item.metadata.year
   if (typeof year === 'number' && Number.isInteger(year) && year > 0) {
@@ -70,6 +77,9 @@ function formatGenres(item: MediaItem, limit = 3): string | undefined {
 }
 
 export function mediaGenres(item: MediaItem): string[] {
+  const tagGenres = genreNamesFromTags(item.tags)
+  if (tagGenres.length > 0) return tagGenres
+
   const rawGenres = item.metadata.genres
   if (Array.isArray(rawGenres)) {
     const genres = rawGenres.flatMap((genre) => {

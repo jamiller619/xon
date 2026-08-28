@@ -22,6 +22,13 @@ const styles = css<'trigger' | 'popup'>`
      container queries, etc. all still see the original parent). */
   .trigger {
     display: contents;
+
+    /* Preserve scroll-snap behavior when the trigger is a direct child of a
+       snapping flex/grid container. A display: contents element has no box to
+       snap to, so its rendered children must carry the inherited alignment. */
+    > * {
+      scroll-snap-align: inherit;
+    }
   }
 
   .popup {

@@ -16,6 +16,10 @@
     }
   }
 
+  &.transparent {
+    background: transparent;
+  }
+
   &.small {
     border-radius: var(--border-radius-4);
   }

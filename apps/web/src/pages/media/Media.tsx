@@ -1,7 +1,3 @@
-import {
-  MoreVertical24Regular as MoreVerticalIcon,
-  Play24Filled as PlayIcon,
-} from '@fluentui/react-icons'
 import { useQuery } from '@tanstack/react-query'
 import type { Library, MediaItem } from '@xon/shared'
 import {
@@ -16,13 +12,14 @@ import clsx from 'clsx'
 import { lazy, useLayoutEffect, useRef, useState } from 'react'
 import { Link, useLocation, useParams } from 'react-router-dom'
 import { BackgroundSlideshow } from '~/components/background-slideshow/BackgroundSlideshow'
+import { PlayIcon } from '~/components/icons/playback'
 import { mediaPosterTransitionName } from '~/components/media-card/mediaViewTransition'
 import PluginSlot from '~/components/PluginSlot'
 import useCollections from '~/hooks/useCollections'
 import useQueryAPIHelper from '~/hooks/useQueryAPIHelper'
 import { artworkUrl, thumbnailUrl } from '~/lib/apiFetch'
 import basename from '~/lib/basename'
-import icons from '~/lib/icons'
+import Icons from '~/lib/icons'
 import { findScrollViewport } from '~/lib/scrollViewport'
 import MetaTable from './components/MetaTable'
 import styles from './Media.module.css'
@@ -32,18 +29,18 @@ import Related from './movies/Related'
 
 function buildMoreMenu(addToChildren?: MenuItem[] | undefined): MenuItems {
   return [
-    { label: 'Add to ...', icon: icons['Add to'], children: addToChildren },
-    { label: 'Edit metadata', icon: icons.Edit },
-    { label: 'Refresh metadata', icon: icons['Refresh metadata'] },
-    { label: 'Edit images', icon: icons['Edit images'] },
-    { label: 'Download', icon: icons.Download },
+    { label: 'Add to ...', icon: <Icons.AddTo />, children: addToChildren },
+    { label: 'Edit metadata', icon: <Icons.Edit /> },
+    { label: 'Refresh metadata', icon: <Icons.RefreshMetadata /> },
+    { label: 'Edit images', icon: <Icons.EditImages /> },
+    { label: 'Download', icon: <Icons.Download /> },
     // {
     //   label: 'Sort by',
     //   children: [{ label: 'Name' }],
     // },
     // 'separator',
-    { label: 'Fix match', icon: icons['Fix match'] },
-    { label: 'Delete', icon: icons.Delete },
+    { label: 'Fix match', icon: <Icons.FixMatch /> },
+    { label: 'Delete', icon: <Icons.Delete /> },
   ]
 }
 
@@ -220,7 +217,7 @@ export default function Media() {
             )}
           >
             <Button.Icon variant="ghost">
-              <MoreVerticalIcon />
+              <Icons.More />
             </Button.Icon>
           </Menu>
         </Flex>

@@ -1,5 +1,6 @@
 export * from './config.js'
 export * from './constants.js'
+export * from './mediaTags.js'
 export * from './mediaTypes.js'
 export * from './playback.js'
 export * from './schemas.js'

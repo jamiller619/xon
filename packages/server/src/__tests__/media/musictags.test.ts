@@ -4,7 +4,6 @@ vi.mock('music-metadata', () => ({
   parseFile: vi.fn(),
 }))
 
-import { MediaCategory } from '@xon/shared'
 import { parseFile } from 'music-metadata'
 import {
   extractMusicTags,
@@ -59,15 +58,14 @@ beforeEach(() => {
 
 describe('isMusicCategory', () => {
   it('returns true for music categories', () => {
-    expect(isMusicCategory(MediaCategory.Music)).toBe(true)
-    expect(isMusicCategory(MediaCategory.Audiobooks)).toBe(true)
+    expect(isMusicCategory('audio/music')).toBe(true)
+    expect(isMusicCategory('audio/audiobook')).toBe(true)
   })
 
   it('returns false for non-music categories', () => {
-    expect(isMusicCategory(MediaCategory.Movies)).toBe(false)
-    expect(isMusicCategory(MediaCategory.AudioClips)).toBe(false)
-    expect(isMusicCategory(MediaCategory.Podcasts)).toBe(false)
-    expect(isMusicCategory(MediaCategory.Pictures)).toBe(false)
+    expect(isMusicCategory('video/movie')).toBe(false)
+    expect(isMusicCategory('image/jpeg')).toBe(false)
+    expect(isMusicCategory('application/pdf')).toBe(false)
   })
 
   it('returns false for null', () => {
@@ -110,7 +108,7 @@ describe('extractMusicTags', () => {
       albumArtist: 'Queen',
       album: 'A Night at the Opera',
       year: 1975,
-      genre: 'Rock',
+      genres: ['Rock'],
       trackNumber: 11,
       discNumber: 1,
       hasAlbumArt: true,
@@ -148,7 +146,7 @@ describe('extractMusicTags', () => {
 
     expect(result?.title).toBe('Dreams')
     expect(result?.artist).toBe('Fleetwood Mac')
-    expect(result?.genre).toBe('Soft Rock')
+    expect(result?.genres).toEqual(['Soft Rock'])
     expect(result?.trackNumber).toBe(2)
     expect(result?.discNumber).toBeUndefined()
     expect(result?.codec).toBe('FLAC')
@@ -167,14 +165,14 @@ describe('extractMusicTags', () => {
     expect(result).toEqual({})
   })
 
-  it('takes first genre when multiple genres are present', async () => {
+  it('preserves every non-empty genre when multiple genres are present', async () => {
     mockParseFile.mockResolvedValue(
-      makeMeta({ genre: ['Jazz', 'Blues', 'Soul'] }) as never,
+      makeMeta({ genre: ['Jazz', '', 'Blues', 'Soul'] }) as never,
     )
 
     const result = await extractMusicTags('/music/track.mp3')
 
-    expect(result?.genre).toBe('Jazz')
+    expect(result?.genres).toEqual(['Jazz', 'Blues', 'Soul'])
   })
 
   it('sets hasAlbumArt true when picture array is non-empty', async () => {

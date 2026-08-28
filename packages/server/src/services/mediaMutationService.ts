@@ -1,4 +1,4 @@
-import type { MediaItem } from '@xon/shared'
+import { deriveMediaTags, type MediaItem, replaceManualTags } from '@xon/shared'
 import { and, eq, inArray } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { publicMediaColumns } from '../db/publicSelections.ts'
@@ -51,7 +51,7 @@ export async function updateMedia(
   if (input.title !== undefined) updates.title = input.title
   if (input.description !== undefined) updates.description = input.description
   if (input.tags !== undefined) {
-    updates.metadata = { ...item.metadata, tags: [...input.tags] }
+    updates.tags = replaceManualTags(item.tags, input.tags)
   }
 
   await db.update(mediaItems).set(updates).where(eq(mediaItems.id, item.id))
@@ -70,7 +70,12 @@ export async function mutateMediaBulk(
   input: BulkMediaInput,
 ): Promise<BulkMediaResult> {
   const rows = await db
-    .select({ id: mediaItems.id, metadata: mediaItems.metadata })
+    .select({
+      id: mediaItems.id,
+      fileMetadata: mediaItems.fileMetadata,
+      metadata: mediaItems.metadata,
+      tags: mediaItems.tags,
+    })
     .from(mediaItems)
     .innerJoin(libraries, eq(mediaItems.libraryId, libraries.id))
     .where(
@@ -98,17 +103,27 @@ export async function mutateMediaBulk(
           ...(input.updates.genre === undefined
             ? {}
             : { genre: input.updates.genre }),
-          ...(input.updates.tags === undefined
-            ? {}
-            : { tags: [...input.updates.tags] }),
           ...(input.updates.contentRating === undefined
             ? {}
             : { contentRating: input.updates.contentRating }),
         }
 
+        const manualTags =
+          input.updates.tags === undefined
+            ? row.tags
+            : replaceManualTags(row.tags, input.updates.tags)
+        const tags =
+          input.updates.genre === undefined
+            ? manualTags
+            : deriveMediaTags({
+                metadata,
+                fileMetadata: row.fileMetadata,
+                existingTags: manualTags,
+              })
+
         await tx
           .update(mediaItems)
-          .set({ metadata, updatedAt: new Date() })
+          .set({ metadata, tags, updatedAt: new Date() })
           .where(eq(mediaItems.id, row.id))
       }
     })

@@ -79,14 +79,18 @@ async function saveChangedMediaItem(ctx: PipelineContext, job: MediaJob) {
     ...mediaItem.metadata,
     ...job.data.metadata,
   }
+  const tags = job.data.tags ?? mediaItem.tags
 
-  if (JSON.stringify(combinedMetadata) !== JSON.stringify(mediaItem.metadata)) {
+  if (
+    JSON.stringify(combinedMetadata) !== JSON.stringify(mediaItem.metadata) ||
+    JSON.stringify(tags) !== JSON.stringify(mediaItem.tags)
+  ) {
     ctx.logger.debug(
       `Persist stage: Updating metadata for media item ${mediaItem.id}`,
     )
     await ctx.db
       .update(mediaItems)
-      .set({ metadata: combinedMetadata })
+      .set({ metadata: combinedMetadata, tags })
       .where(eq(mediaItems.id, mediaItem.id))
   }
 
@@ -94,6 +98,7 @@ async function saveChangedMediaItem(ctx: PipelineContext, job: MediaJob) {
     id: mediaItem.id,
     publicId: mediaItem.publicId,
     metadata: combinedMetadata,
+    tags,
   }
 }
 
@@ -131,6 +136,7 @@ async function saveRefreshedMediaItem(ctx: PipelineContext, job: MediaJob) {
     .update(mediaItems)
     .set({
       metadata: combinedMetadata,
+      tags: job.data.tags ?? mediaItem.tags,
       title: job.data.title ?? mediaItem.title,
       matchId: job.data.matchId ?? mediaItem.matchId,
       matchIdSource: job.data.matchIdSource ?? mediaItem.matchIdSource,
@@ -180,6 +186,7 @@ async function saveNewMediaItem(ctx: PipelineContext, job: MediaJob) {
           fileMetadata: job.data.fileMetadata ?? {},
           mediaType: job.data.mediaType ?? job.file.mediaType,
           metadata: job.data.metadata ?? {},
+          tags: job.data.tags ?? [],
           drmProtected,
           title,
           description: job.data.description,

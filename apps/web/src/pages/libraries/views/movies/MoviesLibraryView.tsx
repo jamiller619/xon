@@ -1,10 +1,10 @@
-import { ArrowSync16Regular as RefreshIcon } from '@fluentui/react-icons'
 import { useQuery } from '@tanstack/react-query'
 import type { LibraryStats } from '@xon/shared'
 import { Button } from '@xon/ui'
 import prettyBytes from 'pretty-bytes'
 import { useRefreshMetadataConfirmation } from '~/components/confirmation/ConfirmationProvider'
 import { apiFetch } from '~/lib/apiFetch'
+import Icons from '~/lib/icons'
 import type { LibraryTypeViewProps } from '../../LibraryTypeView'
 import MoviesView from './MoviesView'
 import { useRefreshMovieMetadata } from './useRefreshMovieMetadata'
@@ -53,7 +53,7 @@ export default function MoviesLibraryView({ library }: LibraryTypeViewProps) {
           disabled={metadataRefresh.isRefreshing}
           onClick={() => confirmRefresh(metadataRefresh.refresh)}
         >
-          <RefreshIcon />
+          <Icons.RefreshMetadata />
           {metadataRefresh.isRefreshing
             ? 'Refreshing metadata'
             : 'Refresh metadata'}

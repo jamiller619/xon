@@ -1,12 +1,17 @@
-import { create } from 'zustand'
+import { create, type StateCreator } from 'zustand'
+import { persist } from 'zustand/middleware'
+
+const AUDIO_PLAYER_STORAGE_KEY = 'xon:audio-player'
 
 export interface QueueItem {
   id: string
   title: string
+  artist?: string
+  album?: string
   mimeType: string
 }
 
-type RepeatMode = 'none' | 'one' | 'all'
+export type RepeatMode = 'none' | 'one' | 'all'
 
 interface AudioPlayerState {
   queue: QueueItem[]
@@ -30,7 +35,7 @@ interface AudioPlayerState {
   moveDown: (index: number) => void
 }
 
-export const useAudioStore = create<AudioPlayerState>((set) => ({
+const createAudioPlayerState: StateCreator<AudioPlayerState> = (set) => ({
   queue: [],
   currentIndex: -1,
   playing: false,
@@ -148,4 +153,18 @@ export const useAudioStore = create<AudioPlayerState>((set) => ({
       else if (ci === index + 1) ci = index
       return { queue: q, currentIndex: ci }
     }),
-}))
+})
+
+export const useAudioStore = create<AudioPlayerState>()(
+  persist(createAudioPlayerState, {
+    name: AUDIO_PLAYER_STORAGE_KEY,
+    partialize: (state) => ({
+      queue: state.queue,
+      currentIndex: state.currentIndex,
+      playing: state.playing,
+      volume: state.volume,
+      shuffle: state.shuffle,
+      repeat: state.repeat,
+    }),
+  }),
+)

@@ -90,14 +90,18 @@ export async function getMediaStreamDecision(
   }
 
   const playbackClient = parsePlaybackClient(client)
+  const isAudio = item.mediaType.startsWith('audio/')
   if (
-    (item.mediaType.startsWith('audio/') ||
-      item.mediaType.startsWith('video/')) &&
+    (isAudio || item.mediaType.startsWith('video/')) &&
     needsTranscoding(
       {
         mediaType: item.mediaType,
-        videoCodec: item.fileMetadata.codec,
-        audioCodec: item.fileMetadata.audioCodec,
+        // Music metadata stores the primary audio codec in `codec`; video
+        // metadata stores video and audio codecs in separate fields.
+        videoCodec: isAudio ? undefined : item.fileMetadata.codec,
+        audioCodec: isAudio
+          ? item.fileMetadata.codec
+          : item.fileMetadata.audioCodec,
       },
       playbackClient,
     )

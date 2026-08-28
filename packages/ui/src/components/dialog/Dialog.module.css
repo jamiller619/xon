@@ -3,7 +3,8 @@
   min-height: 100dvh;
   inset: 0;
   background-color: rgba(0, 0, 0, 0.57);
-  backdrop-filter: blur(3px);
+  backdrop-filter: blur(7px);
+  animation: 300ms ease-in forwards appear;
 }
 
 .popup {
@@ -16,9 +17,21 @@
   border-radius: var(--border-radius-5);
   corner-shape: var(--corner-shape);
   box-shadow: 0 0 18px rgb(0 0 0 / 40%);
+  opacity: 0;
 
   p {
     max-width: 32em;
+  }
+
+  animation: 100ms ease-in forwards 250ms appear;
+}
+
+@keyframes appear {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
   }
 }
 

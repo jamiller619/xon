@@ -1,6 +1,11 @@
 import type { MediaItem } from '@xon/shared'
 import { describe, expect, it } from 'vitest'
-import { formatMetadata, mediaGenres, metadataValue } from './mediaMetadata'
+import {
+  formatMetadata,
+  mediaGenres,
+  mediaMetadataText,
+  metadataValue,
+} from './mediaMetadata'
 
 const BASE_ITEM: MediaItem = {
   id: 'media-1',
@@ -42,6 +47,29 @@ describe('media metadata formatting', () => {
     ])
   })
 
+  it('prefers canonical genre tags and formats them for display', () => {
+    expect(
+      mediaGenres({
+        ...withMetadata({ genres: ['Metadata Should Not Win'] }),
+        tags: [
+          'favorite',
+          'genre:science-fiction',
+          'Genre:Science Fiction',
+          'genre:drama',
+        ],
+      }),
+    ).toEqual(['Science Fiction', 'Drama'])
+  })
+
+  it('falls back to metadata when genre tags are malformed', () => {
+    expect(
+      mediaGenres({
+        ...withMetadata({ genres: ['Comedy'] }),
+        tags: ['genre:', 'favorite'],
+      }),
+    ).toEqual(['Comedy'])
+  })
+
   it('prefers an explicit metadata year over the release date', () => {
     const item = withMetadata({ year: 1999, releaseDate: '2000-01-01' })
 
@@ -52,6 +80,21 @@ describe('media metadata formatting', () => {
     expect(
       formatMetadata(BASE_ITEM, ['year', 'type'], { separator: ' / ' }),
     ).toBe('Video')
+  })
+
+  it('reads trimmed text from embedded file metadata', () => {
+    const item = { ...BASE_ITEM, fileMetadata: { artist: '  NF  ' } }
+
+    expect(mediaMetadataText(item, 'artist')).toBe('NF')
+  })
+
+  it('falls back to library metadata when the embedded value is blank', () => {
+    const item = {
+      ...withMetadata({ album: 'Therapy Session' }),
+      fileMetadata: { album: '   ' },
+    }
+
+    expect(mediaMetadataText(item, 'album')).toBe('Therapy Session')
   })
 })
 

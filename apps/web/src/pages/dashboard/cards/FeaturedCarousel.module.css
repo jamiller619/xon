@@ -77,9 +77,7 @@
 
 .title {
   margin: 0;
-  font-size: var(--text-3xl);
-  font-weight: 600;
-  line-height: 1.1;
+  font-weight: 500;
 }
 
 .meta {

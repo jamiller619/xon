@@ -16,6 +16,12 @@
   z-index: 199;
 }
 
+.portal {
+  position: relative;
+  z-index: 502;
+  box-shadow: -12px 0 0 18px rgba(0, 0, 0, 0.3);
+}
+
 .sidebar {
   width: 48px;
   overflow: hidden;

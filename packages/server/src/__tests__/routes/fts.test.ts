@@ -13,6 +13,7 @@ describe('FTS5 media index', () => {
   let client: Client
   let db: LibSQLDatabase
   let databaseDirectory: string
+  let libraryId: number
 
   beforeEach(async () => {
     databaseDirectory = await mkdtemp(join(tmpdir(), 'xon-fts-test-'))
@@ -22,18 +23,27 @@ describe('FTS5 media index', () => {
     db = drizzle(client)
     await migrateDatabase(db)
 
-    await db.insert(users).values({
-      id: 'user-1',
-      name: 'Search User',
-      email: 'search@example.com',
-    })
-    await db.insert(libraries).values({
-      id: 'library-1',
-      ownerId: 'user-1',
-      name: 'Movies',
-      type: 'video/movie',
-      dataSources: [],
-    })
+    const [user] = await db
+      .insert(users)
+      .values({
+        publicId: 'user-1',
+        name: 'Search User',
+        email: 'search@example.com',
+      })
+      .returning({ id: users.id })
+    if (!user) throw new Error('Failed to seed user')
+    const [library] = await db
+      .insert(libraries)
+      .values({
+        publicId: 'library-1',
+        ownerId: user.id,
+        name: 'Movies',
+        type: 'video/movie',
+        dataSources: [],
+      })
+      .returning({ id: libraries.id })
+    if (!library) throw new Error('Failed to seed library')
+    libraryId = library.id
   })
 
   afterEach(async () => {
@@ -45,8 +55,8 @@ describe('FTS5 media index', () => {
     overrides: Partial<typeof mediaItems.$inferInsert> = {},
   ) {
     await db.insert(mediaItems).values({
-      id: 'media-1',
-      libraryId: 'library-1',
+      publicId: 'media-1',
+      libraryId,
       filePath: '/movies/arrival.mkv',
       fileSize: 1024,
       fileMetadata: {},
@@ -71,10 +81,14 @@ describe('FTS5 media index', () => {
 
   async function matchingIds(query: string): Promise<string[]> {
     const result = await client.execute({
-      sql: 'SELECT id FROM media_fts WHERE media_fts MATCH ? ORDER BY rank',
+      sql: `SELECT media.public_id
+            FROM media_fts
+            INNER JOIN media_items AS media ON media.id = media_fts.id
+            WHERE media_fts MATCH ?
+            ORDER BY rank`,
       args: [query],
     })
-    return result.rows.map((row) => String(row.id))
+    return result.rows.map((row) => String(row.public_id))
   }
 
   it('creates the FTS5 virtual table during migration', async () => {
@@ -257,7 +271,7 @@ describe('FTS5 media index', () => {
         tags: ['radio-astronomy'],
         metadata: { genres: ['Mystery'] },
       })
-      .where(eq(mediaItems.id, 'media-1'))
+      .where(eq(mediaItems.publicId, 'media-1'))
 
     await expect(matchingIds('OldTitle')).resolves.toEqual([])
     await expect(matchingIds('Contact')).resolves.toEqual(['media-1'])
@@ -268,7 +282,7 @@ describe('FTS5 media index', () => {
 
   it('removes indexed values when media is deleted', async () => {
     await insertMedia()
-    await db.delete(mediaItems).where(eq(mediaItems.id, 'media-1'))
+    await db.delete(mediaItems).where(eq(mediaItems.publicId, 'media-1'))
 
     await expect(matchingIds('Arrival')).resolves.toEqual([])
   })

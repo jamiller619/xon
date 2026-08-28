@@ -71,6 +71,15 @@
   --color-accent-a3: oklch(from var(--color-accent-9) l c h / 0.4);
   --color-accent-a4: oklch(from var(--color-accent-9) l c h / 0.2);
 
+  --color-accent-gradient: linear-gradient(
+    var(--color-accent-9),
+    var(--color-accent-7)
+  );
+  --color-accent-gradient-reversed: linear-gradient(
+    var(--color-accent-10),
+    var(--color-accent-11)
+  );
+
   --color-red-a1: oklch(from var(--color-red-2) l c h / 0.9);
   --color-red-a2: oklch(from var(--color-red-11) l c h / 0.15);
   --color-red-a3: oklch(from var(--color-red-2) l c h / 0.5);

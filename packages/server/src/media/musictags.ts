@@ -14,7 +14,7 @@ export type MusicTagsMetadata = {
   trackNumber?: number
   discNumber?: number
   year?: number
-  genre?: string
+  genres?: string[]
   hasAlbumArt?: boolean
   duration?: number
   bitrate?: number
@@ -58,8 +58,11 @@ export async function extractMusicTags(
     if (typeof common.album === 'string') result.album = common.album
     if (typeof common.year === 'number') result.year = common.year
     if (Array.isArray(common.genre) && common.genre.length > 0) {
-      const g = common.genre[0]
-      if (typeof g === 'string') result.genre = g
+      const genres = common.genre.filter(
+        (genre): genre is string =>
+          typeof genre === 'string' && genre.trim().length > 0,
+      )
+      if (genres.length > 0) result.genres = genres
     }
     if (common.track.no != null) result.trackNumber = common.track.no
     if (common.disk.no != null) result.discNumber = common.disk.no

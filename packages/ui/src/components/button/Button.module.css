@@ -1,6 +1,13 @@
 button.button,
 a.button {
   --height: var(--form-control-height);
+  --transition: 120ms ease;
+
+  @media (prefers-reduced-motion: reduce) {
+    --transition: none;
+  }
+
+  overflow: hidden;
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -26,12 +33,8 @@ a.button {
   cursor: pointer;
   user-select: none;
   transition:
-    transform 80ms ease,
-    background 80ms ease;
-
-  @media (prefers-reduced-motion: reduce) {
-    transition: none;
-  }
+    transform var(--transition),
+    background var(--transition);
 
   background: var(--color-gray-a2);
 
@@ -64,11 +67,26 @@ a.button {
 
   &.primary,
   &[type="submit"] {
-    background: var(--color-accent-9);
-    color: var(--color-gray-12);
+    position: relative;
+    z-index: 1;
+    background: var(--color-accent-gradient);
 
-    &:hover:not([data-disabled]) {
-      background: var(--color-accent-a1);
+    &::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      border-radius: inherit;
+      background: var(--color-accent-10);
+      opacity: 0;
+      z-index: -1;
+      transition: opacity var(--transition);
+      corner-shape: var(--corner-shape);
+    }
+
+    &:hover:not([data-disabled])::before {
+      opacity: 1;
     }
   }
 
@@ -88,6 +106,11 @@ a.button {
   &.small {
     --height: var(--form-control-height-small);
     font-size: var(--text-sm);
+
+    svg {
+      width: 16px;
+      height: 16px;
+    }
   }
 
   &.large {
@@ -124,12 +147,6 @@ a.button {
     &:hover:not([data-disabled]) {
       background: var(--color-red-9);
     }
-    /* color: #fe4e54;
-    background: #5d383a;
-
-    &:hover:not([data-disabled]) {
-      background: #fe4e54;
-    } */
   }
 
   &.borderRadiusSmall {
@@ -141,9 +158,14 @@ a.button {
   }
 
   &.iconButton {
+    /**
+     * For a circular button we need to add some padding to
+     * make the sizes visually consistent.
+     */
+    --circle-button-size: calc(var(--height) + 4px);
     padding: 0;
-    width: var(--height);
-    height: var(--height);
+    width: var(--circle-button-size);
+    height: var(--circle-button-size);
     border-radius: 50%;
     corner-shape: round;
 

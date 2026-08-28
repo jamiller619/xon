@@ -92,12 +92,11 @@ XScroller.Viewport = function Viewport({
   children: ReactNode
   className?: string | undefined
 }) {
-  const { viewportRef, canScrollPrev, canScrollNext } = useScrollerCtx()
+  const { viewportRef, canScrollNext } = useScrollerCtx()
 
   return (
     <div
       className={clsx(styles.viewport, {
-        [styles.fadeLeft as string]: canScrollPrev,
         [styles.fadeRight as string]: canScrollNext,
       })}
     >

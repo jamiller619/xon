@@ -49,14 +49,9 @@ const styles = css`
       -webkit-box-shadow: 0 0 0px 1000px var(--color-gray-5) inset;
     }
 
-    &:focus {
+    /* &:focus {
       background-color: var(--color-surface-3);
-    }
-
-    &:focus-visible {
-      outline: 2px solid var(--color-gray-12);
-      outline-offset: 2px;
-    }
+    } */
 
     &:hover:not(:disabled) {
       background-color: var(--color-gray-5);
@@ -67,8 +62,8 @@ const styles = css`
     }
 
     &[aria-invalid="true"] {
-      outline: 2px solid var(--color-red-11);
-      outline-offset: 1px;
+      outline: 1px solid var(--color-red-11);
+      outline-offset: -1px;
     }
 
     &:disabled {

@@ -1,4 +1,4 @@
-import type { MediaItem } from '@xon/shared'
+import { genreNameFromTag, genreTag, type MediaItem } from '@xon/shared'
 import { inArray, sql } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
 import { publicMediaColumns } from '../db/publicSelections.ts'
@@ -32,9 +32,10 @@ export interface PopularGenre {
   count: number
 }
 
-interface PopularGenreRow {
-  name: string
-  count: number
+interface PopularGenreValueRow {
+  media_id: number
+  value: string
+  tag_source: number
 }
 
 /**
@@ -118,50 +119,102 @@ export async function searchMedia(
 
 /**
  * Returns the genres used by the most media in a user's libraries. Genre names
- * are compared case-insensitively and duplicate values on one item count once.
- * The singular metadata.genre field keeps older and manually edited rows in
- * the result alongside the preferred metadata.genres array.
+ * come from canonical tags and duplicate values on one item count once. Rows
+ * without canonical tags temporarily fall back to plural or singular metadata.
  */
 export async function getPopularGenres(
   db: LibSQLDatabase,
   options: { userId: number; limit: number },
 ): Promise<PopularGenre[]> {
-  const rows = await db.all<PopularGenreRow>(sql`
-    WITH genre_values AS (
-      SELECT
-        media.id AS media_id,
-        trim(CAST(genre.value AS TEXT)) AS name
+  const rows = await db.all<PopularGenreValueRow>(sql`
+    WITH media_scope AS (
+      SELECT media.id, media.tags, media.metadata
       FROM media_items AS media
       INNER JOIN libraries AS library ON library.id = media.library_id
-      INNER JOIN json_each(media.metadata, '$.genres') AS genre
       WHERE library.owner_id = ${options.userId}
-        AND genre.type = 'text'
+    ),
+    tag_genres AS (
+      SELECT
+        media.id AS media_id,
+        trim(CAST(tag.value AS TEXT)) AS value,
+        1 AS tag_source
+      FROM media_scope AS media
+      INNER JOIN json_each(media.tags) AS tag
+      WHERE tag.type = 'text'
+        AND lower(trim(CAST(tag.value AS TEXT))) LIKE 'genre:%'
+        AND trim(substr(CAST(tag.value AS TEXT), 7)) <> ''
+    ),
+    metadata_genres AS (
+      SELECT
+        media.id AS media_id,
+        trim(CAST(genre.value AS TEXT)) AS value,
+        0 AS tag_source
+      FROM media_scope AS media
+      INNER JOIN json_each(media.metadata, '$.genres') AS genre
+      WHERE genre.type = 'text'
 
       UNION ALL
 
       SELECT
         media.id AS media_id,
-        trim(CAST(json_extract(media.metadata, '$.genre') AS TEXT)) AS name
-      FROM media_items AS media
-      INNER JOIN libraries AS library ON library.id = media.library_id
-      WHERE library.owner_id = ${options.userId}
-        AND json_type(media.metadata, '$.genre') = 'text'
-    ),
-    media_genres AS (
-      SELECT
-        media_id,
-        lower(name) AS normalized_name,
-        min(name) AS name
-      FROM genre_values
-      WHERE name <> ''
-      GROUP BY media_id, lower(name)
+        trim(CAST(json_extract(media.metadata, '$.genre') AS TEXT)) AS value,
+        0 AS tag_source
+      FROM media_scope AS media
+      WHERE json_type(media.metadata, '$.genre') = 'text'
     )
-    SELECT min(name) AS name, count(*) AS count
-    FROM media_genres
-    GROUP BY normalized_name
-    ORDER BY count DESC, name COLLATE NOCASE, name
-    LIMIT ${options.limit}
+    SELECT media_id, value, tag_source FROM tag_genres
+    UNION ALL
+    SELECT media_id, value, tag_source FROM metadata_genres
   `)
 
-  return rows.map((row) => ({ name: row.name, count: Number(row.count) }))
+  const valuesByMedia = new Map<
+    number,
+    { tagValues: string[]; metadataValues: string[] }
+  >()
+  for (const row of rows) {
+    const values = valuesByMedia.get(row.media_id) ?? {
+      tagValues: [],
+      metadataValues: [],
+    }
+    if (row.tag_source) values.tagValues.push(row.value)
+    else values.metadataValues.push(row.value)
+    valuesByMedia.set(row.media_id, values)
+  }
+
+  const counts = new Map<string, PopularGenre>()
+  for (const values of valuesByMedia.values()) {
+    const tagGenres = values.tagValues.flatMap((value) => {
+      const name = genreNameFromTag(value)
+      const tag = name ? genreTag(name) : undefined
+      return tag ? [tag] : []
+    })
+    const candidates =
+      tagGenres.length > 0
+        ? tagGenres
+        : values.metadataValues.flatMap((value) => {
+            const tag = genreTag(value)
+            return tag ? [tag] : []
+          })
+
+    for (const canonicalTag of new Set(candidates)) {
+      const existing = counts.get(canonicalTag)
+      if (existing) {
+        existing.count += 1
+        continue
+      }
+      const name = genreNameFromTag(canonicalTag)
+      if (name) counts.set(canonicalTag, { name, count: 1 })
+    }
+  }
+
+  return [...counts.values()]
+    .sort(
+      (left, right) =>
+        right.count - left.count ||
+        left.name.localeCompare(right.name, undefined, {
+          sensitivity: 'base',
+        }) ||
+        left.name.localeCompare(right.name),
+    )
+    .slice(0, options.limit)
 }

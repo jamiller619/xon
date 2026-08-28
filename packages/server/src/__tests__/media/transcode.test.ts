@@ -15,6 +15,30 @@ describe('parsePlaybackClient', () => {
 })
 
 describe('needsTranscoding', () => {
+  it('direct-plays browser-native MP3 metadata', () => {
+    expect(
+      needsTranscoding(
+        {
+          mediaType: 'audio/mpeg',
+          audioCodec: 'MPEG 1 Layer 3',
+        },
+        'web',
+      ),
+    ).toBe(false)
+  })
+
+  it('still transcodes unsupported audio containers', () => {
+    expect(
+      needsTranscoding(
+        {
+          mediaType: 'audio/x-ms-wma',
+          audioCodec: 'wmav2',
+        },
+        'web',
+      ),
+    ).toBe(true)
+  })
+
   it('returns false when both codecs are undefined', () => {
     expect(needsTranscoding({ mediaType: 'video/mp4' }, 'web')).toBe(false)
   })

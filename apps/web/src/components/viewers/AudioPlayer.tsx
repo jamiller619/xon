@@ -1,323 +1,73 @@
-import {
-  Next16Regular as NextIcon,
-  Pause16Regular as PauseIcon,
-  Play16Regular as PlayIcon,
-  Previous16Regular as PreviousIcon,
-  ArrowShuffle16Regular as ShuffleIcon,
-} from '@fluentui/react-icons'
-import { Button, Surface } from '@xon/ui'
-import clsx from 'clsx'
-import { useEffect, useRef, useState } from 'react'
-import { type PlayStatus, savePlayState } from '~/lib/playState'
+import { Surface } from '@xon/ui'
+import { useLayoutEffect, useRef, useState } from 'react'
 import type { QueueItem } from '~/store/audioStore'
 import { useAudioStore } from '~/store/audioStore'
 import styles from './AudioPlayer.module.css'
+import AudioPlayerControls from './AudioPlayerControls'
+import AudioQueuePanel from './AudioQueuePanel'
+import useAudioPlayback from './useAudioPlayback'
 
 export default function AudioPlayer() {
-  const queue = useAudioStore((s) => s.queue)
-  const currentIndex = useAudioStore((s) => s.currentIndex)
-  const playing = useAudioStore((s) => s.playing)
-  const volume = useAudioStore((s) => s.volume)
-  const shuffle = useAudioStore((s) => s.shuffle)
-  const repeat = useAudioStore((s) => s.repeat)
-  const playNext = useAudioStore((s) => s.playNext)
-  const playPrev = useAudioStore((s) => s.playPrev)
-  const setPlaying = useAudioStore((s) => s.setPlaying)
-  const setVolume = useAudioStore((s) => s.setVolume)
-  const toggleShuffle = useAudioStore((s) => s.toggleShuffle)
-  const toggleRepeat = useAudioStore((s) => s.toggleRepeat)
-  const playAtIndex = useAudioStore((s) => s.playAtIndex)
-  const removeFromQueue = useAudioStore((s) => s.removeFromQueue)
-  const clearQueue = useAudioStore((s) => s.clearQueue)
-  const moveUp = useAudioStore((s) => s.moveUp)
-  const moveDown = useAudioStore((s) => s.moveDown)
-
-  const audioRef = useRef<HTMLAudioElement>(null)
-  const [currentTime, setCurrentTime] = useState(0)
-  const [duration, setDuration] = useState(0)
+  const queueLength = useAudioStore((state) => state.queue.length)
+  const playerRef = useRef<HTMLDivElement>(null)
+  const currentTrack = useAudioStore(
+    (state): QueueItem | null => state.queue[state.currentIndex] ?? null,
+  )
   const [showQueue, setShowQueue] = useState(false)
+  const playback = useAudioPlayback(currentTrack)
+  const hasQueue = queueLength > 0
 
-  const currentTrack: QueueItem | null = queue[currentIndex] ?? null
-
-  // Keep a ref to playing so the track-load effect doesn't re-run on play/pause
-  const playingRef = useRef(playing)
-  useEffect(() => {
-    playingRef.current = playing
-  }, [playing])
-
-  // Sync playing state with audio element
-  useEffect(() => {
-    const audio = audioRef.current
-    if (!audio) return
-    if (playing) {
-      audio.play().catch(() => setPlaying(false))
-    } else {
-      audio.pause()
+  useLayoutEffect(() => {
+    if (queueLength === 0) {
+      document.documentElement.style.removeProperty('--audio-player-height')
+      return
     }
-  }, [playing, setPlaying])
 
-  // Sync volume
-  useEffect(() => {
-    if (audioRef.current) audioRef.current.volume = volume
-  }, [volume])
+    const player = playerRef.current
 
-  // When track changes, load and play
-  useEffect(() => {
-    const audio = audioRef.current
-    if (!audio) return
-    if (currentTrack) {
-      audio.src = `/api/media/${currentTrack.id}/stream`
-      audio.load()
-      if (playingRef.current) audio.play().catch(() => setPlaying(false))
-    } else {
-      audio.src = ''
+    if (!player) return
+
+    const updatePlayerHeight = () => {
+      document.documentElement.style.setProperty(
+        '--audio-player-height',
+        `${player.getBoundingClientRect().height}px`,
+      )
     }
-    setCurrentTime(0)
-    setDuration(0)
-  }, [currentTrack, setPlaying])
 
-  // Create a state row on play, refresh it while listening, and send one final
-  // position when playback stops or the track changes.
-  useEffect(() => {
-    if (!currentTrack) return
-    const audio = audioRef.current
-    if (!audio) return
-
-    const trackId = currentTrack.id
-    const report = (status: PlayStatus) => {
-      savePlayState(trackId, audio.currentTime, audio.duration, status)
-    }
-    const handlePlayState = () => report('playing')
-    const handlePauseState = () => {
-      if (!audio.ended) report('stopped')
-    }
-    const handleEndedState = () => report('completed')
-
-    audio.addEventListener('play', handlePlayState)
-    audio.addEventListener('pause', handlePauseState)
-    audio.addEventListener('ended', handleEndedState)
-
-    const interval = setInterval(() => {
-      if (!audio.paused) report('playing')
-    }, 10000)
+    updatePlayerHeight()
+    const resizeObserver = new ResizeObserver(updatePlayerHeight)
+    resizeObserver.observe(player)
 
     return () => {
-      clearInterval(interval)
-      audio.removeEventListener('play', handlePlayState)
-      audio.removeEventListener('pause', handlePauseState)
-      audio.removeEventListener('ended', handleEndedState)
-      if (!audio.ended && audio.currentTime > 0) report('stopped')
+      resizeObserver.disconnect()
+      document.documentElement.style.removeProperty('--audio-player-height')
     }
-  }, [currentTrack])
+  }, [queueLength])
 
-  if (queue.length === 0) return null
-
-  function handleTimeUpdate() {
-    setCurrentTime(audioRef.current?.currentTime ?? 0)
-  }
-
-  function handleLoadedMetadata() {
-    setDuration(audioRef.current?.duration ?? 0)
-  }
-
-  function handleEnded() {
-    playNext()
-  }
-
-  function handleSeek(e: React.ChangeEvent<HTMLInputElement>) {
-    const t = Number(e.target.value)
-    setCurrentTime(t)
-    if (audioRef.current) audioRef.current.currentTime = t
-  }
-
-  function formatTime(s: number): string {
-    if (!Number.isFinite(s)) return '0:00'
-    const m = Math.floor(s / 60)
-    const sec = Math.floor(s % 60)
-    return `${m}:${sec.toString().padStart(2, '0')}`
-  }
-
-  const repeatLabel = repeat === 'none' ? '↺' : repeat === 'all' ? '↺' : '↺¹'
-  const repeatTitle =
-    repeat === 'none'
-      ? 'Repeat: off'
-      : repeat === 'all'
-        ? 'Repeat: all'
-        : 'Repeat: one'
+  if (!hasQueue) return null
 
   return (
-    <Surface className={styles.bar} borderRadius="none">
-      {/* biome-ignore lint/a11y/useMediaCaption: audio player — captions not applicable for music */}
-      <audio
-        ref={audioRef}
-        onTimeUpdate={handleTimeUpdate}
-        onLoadedMetadata={handleLoadedMetadata}
-        onEnded={handleEnded}
-      />
+    <div ref={playerRef} className={styles.bar}>
+      <Surface transparent className={styles.playerSurface} borderRadius="none">
+        {/* biome-ignore lint/a11y/useMediaCaption: captions are not applicable to music playback */}
+        <audio
+          ref={playback.audioRef}
+          onTimeUpdate={playback.handleTimeUpdate}
+          onLoadedMetadata={playback.handleLoadedMetadata}
+          onEnded={playback.handleEnded}
+        />
 
-      {/* Queue panel */}
-      {showQueue && (
-        <div className={styles.queuePanel}>
-          <div className={styles.queueHeader ?? ''}>
-            <span className={styles.queueTitle ?? ''}>
-              Queue ({queue.length})
-            </span>
-            <button
-              type="button"
-              className={styles.queueClear ?? ''}
-              onClick={clearQueue}
-              title="Clear queue"
-            >
-              Clear all
-            </button>
-          </div>
-          <ul className={styles.queueList ?? ''}>
-            {queue.map((item, i) => (
-              <li
-                key={item.id}
-                className={`${styles.queueItem ?? ''}${i === currentIndex ? ` ${styles.queueItemActive ?? ''}` : ''}`}
-              >
-                <button
-                  type="button"
-                  className={styles.queueItemPlay ?? ''}
-                  onClick={() => playAtIndex(i)}
-                  title="Play this track"
-                >
-                  {i === currentIndex && playing ? '▶' : '▷'}
-                </button>
-                <span className={styles.queueItemTitle ?? ''}>
-                  {item.title}
-                </span>
-                <div className={styles.queueItemActions ?? ''}>
-                  <button
-                    type="button"
-                    className={styles.queueMoveBtn ?? ''}
-                    onClick={() => moveUp(i)}
-                    disabled={i === 0}
-                    title="Move up"
-                  >
-                    ↑
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.queueMoveBtn ?? ''}
-                    onClick={() => moveDown(i)}
-                    disabled={i === queue.length - 1}
-                    title="Move down"
-                  >
-                    ↓
-                  </button>
-                  <button
-                    type="button"
-                    className={styles.queueRemoveBtn ?? ''}
-                    onClick={() => removeFromQueue(i)}
-                    title="Remove from queue"
-                  >
-                    ✕
-                  </button>
-                </div>
-              </li>
-            ))}
-          </ul>
-        </div>
-      )}
+        {showQueue && <AudioQueuePanel />}
 
-      {/* Player bar */}
-      <div className={styles.controls}>
-        {/* Track info */}
-        <div className={styles.trackInfo}>
-          <span className={styles.trackTitle}>
-            {currentTrack?.title ?? '—'}
-          </span>
-          <span className={styles.trackType}>
-            {currentTrack?.mimeType?.split('/')[1]?.toUpperCase() ?? ''}
-          </span>
-        </div>
-
-        {/* Playback controls */}
-        <div className={styles.playbackControls}>
-          <Button
-            className={clsx(styles.iconBtn, shuffle && styles.active)}
-            onClick={toggleShuffle}
-            title={shuffle ? 'Shuffle: on' : 'Shuffle: off'}
-          >
-            <ShuffleIcon />
-            {/* ⇄ */}
-          </Button>
-          <Button
-            className={styles.iconBtn}
-            onClick={playPrev}
-            title="Previous"
-            disabled={queue.length === 0}
-          >
-            <PreviousIcon />
-          </Button>
-          <Button
-            className={styles.playBtn}
-            onClick={() => setPlaying(!playing)}
-            title={playing ? 'Pause' : 'Play'}
-          >
-            {playing ? <PlayIcon /> : <PauseIcon />}
-          </Button>
-          <Button
-            type="button"
-            className={styles.iconBtn}
-            onClick={playNext}
-            title="Next"
-            disabled={queue.length === 0}
-          >
-            <NextIcon />
-          </Button>
-          <button
-            type="button"
-            className={`${styles.iconBtn}${repeat !== 'none' ? ` ${styles.active ?? ''}` : ''}`}
-            onClick={toggleRepeat}
-            title={repeatTitle}
-          >
-            {repeatLabel}
-          </button>
-        </div>
-
-        {/* Seek bar */}
-        <div className={styles.seekArea ?? ''}>
-          <span className={styles.timeLabel ?? ''}>
-            {formatTime(currentTime)}
-          </span>
-          <input
-            type="range"
-            className={styles.seekBar ?? ''}
-            min={0}
-            max={duration || 1}
-            step={0.1}
-            value={currentTime}
-            onChange={handleSeek}
-          />
-          <span className={styles.timeLabel ?? ''}>{formatTime(duration)}</span>
-        </div>
-
-        {/* Volume + queue toggle */}
-        <div className={styles.rightControls ?? ''}>
-          <span className={styles.volIcon ?? ''}>🔊</span>
-          <input
-            type="range"
-            className={styles.volumeBar ?? ''}
-            min={0}
-            max={1}
-            step={0.02}
-            value={volume}
-            onChange={(e) => setVolume(Number(e.target.value))}
-            title="Volume"
-          />
-          <button
-            type="button"
-            className={`${styles.iconBtn ?? ''}${showQueue ? ` ${styles.active ?? ''}` : ''}`}
-            onClick={() => setShowQueue(!showQueue)}
-            title="Toggle queue"
-          >
-            ☰ {queue.length}
-          </button>
-        </div>
-      </div>
-    </Surface>
+        <AudioPlayerControls
+          currentTrack={currentTrack}
+          currentTime={playback.currentTime}
+          duration={playback.duration}
+          showQueue={showQueue}
+          onSeek={playback.seek}
+          onToggleQueue={() => setShowQueue((visible) => !visible)}
+        />
+      </Surface>
+    </div>
   )
 }

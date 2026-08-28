@@ -47,14 +47,39 @@ describe('mediaStreamingService', () => {
     expect(result).toEqual({ status: 'hls' })
     expect(needsTranscoding).toHaveBeenCalledOnce()
   })
+
+  it('checks music metadata as an audio codec rather than a video codec', async () => {
+    needsTranscoding.mockReturnValue(false)
+
+    const result = await getMediaStreamDecision(
+      itemDatabase('audio/mpeg', {
+        codec: 'MPEG 1 Layer 3',
+      }),
+      'media-1',
+      'web',
+    )
+
+    expect(result.status).toBe('direct')
+    expect(needsTranscoding).toHaveBeenCalledWith(
+      {
+        mediaType: 'audio/mpeg',
+        videoCodec: undefined,
+        audioCodec: 'MPEG 1 Layer 3',
+      },
+      'web',
+    )
+  })
 })
 
-function itemDatabase(mediaType: string): LibSQLDatabase {
+function itemDatabase(
+  mediaType: string,
+  fileMetadata = { codec: 'h264', audioCodec: 'aac' },
+): LibSQLDatabase {
   const item = {
     id: 'media-1',
     filePath: 'item',
     fileSize: 1,
-    fileMetadata: { codec: 'h264', audioCodec: 'aac' },
+    fileMetadata,
     mediaType,
     metadata: {},
   }

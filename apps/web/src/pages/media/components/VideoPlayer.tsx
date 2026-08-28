@@ -15,6 +15,7 @@ import Hls from 'hls.js'
 import { useEffect, useRef, useState } from 'react'
 import { apiFetch, apiUrl } from '~/lib/apiFetch'
 import { savePlayState } from '~/lib/playState'
+import { useAudioStore } from '~/store/audioStore'
 import { useAuthStore } from '~/store/authStore'
 import styles from '../Media.module.css'
 
@@ -52,6 +53,8 @@ export default function VideoPlayerDialog({
     [],
   )
   const [playbackError, setPlaybackError] = useState<string | null>(null)
+  const volume = useAudioStore((state) => state.volume)
+  const setVolume = useAudioStore((state) => state.setVolume)
 
   useEffect(() => {
     const controller = new AbortController()
@@ -121,6 +124,7 @@ export default function VideoPlayerDialog({
           playsInline
           autoPlay
           load="eager"
+          volume={volume}
           keyTarget="document"
           onCanPlay={() => setPlaybackError(null)}
           onPlay={() => {
@@ -147,6 +151,7 @@ export default function VideoPlayerDialog({
               'stopped',
             )
           }}
+          onVolumeChange={(detail) => setVolume(detail.volume)}
           onEnded={() => {
             const player = playerRef.current
             if (!player) return

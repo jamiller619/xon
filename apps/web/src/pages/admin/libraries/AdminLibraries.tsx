@@ -1,30 +1,22 @@
-import {
-  FolderAdd20Regular as AddLibraryIcon,
-  Delete16Regular as DeleteIcon,
-  Edit16Regular as EditIcon,
-  Folder16Regular as FolderIcon,
-  MoreVertical20Regular as MoreIcon,
-  FolderSearch16Regular as ScanIcon,
-} from '@fluentui/react-icons'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import type { ContentType, Library } from '@xon/shared'
 import {
   Button,
   ConfirmationDialog,
   Dialog,
-  Field,
   Flex,
-  RadioGroup,
+  Menu,
+  type MenuItems,
   Surface,
 } from '@xon/ui'
 import { css } from 'inline-css-modules'
-import { useState } from 'react'
+import { type MouseEventHandler, useState } from 'react'
 import CreateLibraryButton from '~/components/CreateLibraryButton'
-// import { LIBRARY_TYPES } from '~/components/create-library-form/libraryTypes'
 import LibraryIcon from '~/components/icons/LibraryIcon'
 import useLibraries, { updateLibraryMutation } from '~/hooks/useLibraries'
 import useLibraryThumbnail from '~/hooks/useLibraryThumbnail'
 import { getAPIError } from '~/lib/apiFetch'
+import Icons from '~/lib/icons'
 import { librariesAPI } from '~/lib/rpc'
 import Page from '~/pages/Page'
 
@@ -51,7 +43,6 @@ const styles = css`
   }
 
   .title {
-    font-size: var(--text-xl);
     font-weight: 500;
   }
 
@@ -84,7 +75,7 @@ export default function AdminLibraries() {
         <Flex gap="2">
           <CreateLibraryButton onSuccess={() => void refetchLibraries()} />
           <Button onClick={() => void console.log('test')}>
-            <AddLibraryIcon />
+            <Icons.AddLibrary />
             Scan all libraries
           </Button>
         </Flex>
@@ -167,31 +158,37 @@ function LibraryCard({ library }: { library: Library }) {
             type={library.type}
             size="large"
           />
-          <h3 className={styles.title}>{library.name}</h3>
+          <h5 className={styles.title}>{library.name}</h5>
           <Flex align="start" gap="1" className={styles.muted}>
-            <FolderIcon />
+            <Icons.Folder />
             <p className={styles.path}>
               {library.dataSources.map((ds) => ds.path).join(', ')}
             </p>
           </Flex>
-          <Flex gap="2">
-            <Button.Icon title="Edit library" onClick={openEditor}>
+          <Flex gap="2" justify="end">
+            {/* <Button.Icon title="Edit library" onClick={openEditor}>
               <EditIcon />
-            </Button.Icon>
-            <Button.Icon title="Scan library">
+            </Button.Icon> */}
+            {/* <Button.Icon title="Scan library">
               <ScanIcon />
-            </Button.Icon>
-            <Button.Icon title="More">
-              <MoreIcon />
-            </Button.Icon>
-            <Button.Icon
+            </Button.Icon> */}
+            <Menu
+              className={styles.moreMenu}
+              items={buildMoreMenu(openEditor, openDeleteConfirmation)}
+              align="start"
+            >
+              <Button.Icon>
+                <Icons.More />
+              </Button.Icon>
+            </Menu>
+            {/* <Button.Icon
               variant="danger"
               title="Delete library"
               className={styles.deleteButton}
               onClick={openDeleteConfirmation}
             >
               <DeleteIcon />
-            </Button.Icon>
+            </Button.Icon> */}
           </Flex>
         </Flex>
       </Surface>
@@ -247,4 +244,17 @@ function LibraryCard({ library }: { library: Library }) {
       />
     </>
   )
+}
+
+function buildMoreMenu(
+  editAction: MouseEventHandler | undefined,
+  deleteAction: MouseEventHandler | undefined,
+): MenuItems {
+  return [
+    { label: 'Edit library', icon: <Icons.Edit />, onClick: editAction },
+    { label: 'Refresh library metadata', icon: <Icons.RefreshMetadata /> },
+    { label: 'Edit images', icon: <Icons.EditImages /> },
+    { label: 'Scan library', icon: <Icons.Scan /> },
+    { label: 'Delete', icon: <Icons.Delete />, onClick: deleteAction },
+  ]
 }

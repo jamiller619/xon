@@ -10,7 +10,20 @@ type PlaybackProfile = {
 }
 
 const webProfile: PlaybackProfile = {
-  containers: new Set(['video/mp4', 'video/webm', 'video/ogg']),
+  containers: new Set([
+    'audio/aac',
+    'audio/flac',
+    'audio/mp4',
+    'audio/mpeg',
+    'audio/ogg',
+    'audio/wav',
+    'audio/webm',
+    'audio/x-flac',
+    'audio/x-wav',
+    'video/mp4',
+    'video/ogg',
+    'video/webm',
+  ]),
   videoCodecs: new Set(['h264', 'vp8', 'vp9', 'av1', 'theora']),
   audioCodecs: new Set([
     'aac',
@@ -25,13 +38,36 @@ const webProfile: PlaybackProfile = {
 }
 
 const appleProfile: PlaybackProfile = {
-  containers: new Set(['video/mp4', 'video/quicktime', 'video/x-m4v']),
+  containers: new Set([
+    'audio/aac',
+    'audio/mp4',
+    'audio/mpeg',
+    'audio/wav',
+    'audio/x-m4a',
+    'audio/x-wav',
+    'video/mp4',
+    'video/quicktime',
+    'video/x-m4v',
+  ]),
   videoCodecs: new Set(['h264', 'hevc']),
   audioCodecs: new Set(['aac', 'mp3', 'alac']),
 }
 
 const androidProfile: PlaybackProfile = {
-  containers: new Set(['video/mp4', 'video/webm', 'video/3gpp']),
+  containers: new Set([
+    'audio/aac',
+    'audio/flac',
+    'audio/mp4',
+    'audio/mpeg',
+    'audio/ogg',
+    'audio/wav',
+    'audio/webm',
+    'audio/x-flac',
+    'audio/x-wav',
+    'video/3gpp',
+    'video/mp4',
+    'video/webm',
+  ]),
   videoCodecs: new Set(['h264', 'vp8', 'vp9']),
   audioCodecs: new Set(['aac', 'mp3', 'opus', 'vorbis', 'flac']),
 }
@@ -66,15 +102,25 @@ export function needsTranscoding(
   if (!profile.containers.has(media.mediaType)) return true
   if (
     media.videoCodec !== undefined &&
-    !profile.videoCodecs.has(media.videoCodec)
+    !profile.videoCodecs.has(normalizeCodec(media.videoCodec))
   )
     return true
   if (
     media.audioCodec !== undefined &&
-    !profile.audioCodecs.has(media.audioCodec)
+    !profile.audioCodecs.has(normalizeCodec(media.audioCodec))
   )
     return true
   return false
+}
+
+function normalizeCodec(codec: string): string {
+  const normalized = codec.trim().toLowerCase()
+
+  // music-metadata uses a display name for MP3 while ffprobe uses `mp3`.
+  // Treat both metadata sources as the same playback capability.
+  if (/^mpeg (?:1|2|2\.5) layer 3$/.test(normalized)) return 'mp3'
+
+  return normalized
 }
 
 /**

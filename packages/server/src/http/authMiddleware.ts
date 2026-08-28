@@ -37,19 +37,38 @@ export type AuthenticatedEnv = {
 
 export function makeSessionMiddleware(db?: LibSQLDatabase): MiddlewareHandler {
   return async (c: Context, next: Next) => {
-    const session = await auth.api.getSession({ headers: c.req.raw.headers })
+    // Better Auth routes manage their own session cookies. Reading the session
+    // here first can consume a rolling refresh before auth.handler gets the
+    // request, leaving the renewed Set-Cookie header stranded in this
+    // middleware call.
+    if (c.req.path === '/api/auth' || c.req.path.startsWith('/api/auth/')) {
+      return next()
+    }
+
+    const { headers, response: session } = await auth.api.getSession({
+      headers: c.req.raw.headers,
+      returnHeaders: true,
+    })
+
+    const continueWithSessionCookies = async () => {
+      await next()
+
+      for (const cookie of headers.getSetCookie()) {
+        c.header('Set-Cookie', cookie, { append: true })
+      }
+    }
 
     if (!session) {
       c.set('user', null)
       c.set('session', null)
 
-      return next()
+      return continueWithSessionCookies()
     }
 
     if (!db) {
       c.set('user', null)
       c.set('session', null)
-      return next()
+      return continueWithSessionCookies()
     }
 
     const publicUserId = session.user.id
@@ -69,7 +88,7 @@ export function makeSessionMiddleware(db?: LibSQLDatabase): MiddlewareHandler {
     if (!internal) {
       c.set('user', null)
       c.set('session', null)
-      return next()
+      return continueWithSessionCookies()
     }
 
     const user = {
@@ -100,7 +119,7 @@ export function makeSessionMiddleware(db?: LibSQLDatabase): MiddlewareHandler {
       }
     }
 
-    return next()
+    return continueWithSessionCookies()
   }
 }
 

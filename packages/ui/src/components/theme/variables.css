@@ -89,7 +89,7 @@
   --menu-item-padding-inline: var(--space-2xs);
   --menu-item-padding-block: var(--space-md);
   --menu-item-border-radius: var(--border-radius-1);
-  --menu-item-gap: var(--space-xs);
+  --menu-item-gap: var(--space-sm);
   --menu-item-font-size: var(--text-sm);
   --menu-item-highlight: var(--color-gray-5);
   --menu-transition: 0.15s ease;

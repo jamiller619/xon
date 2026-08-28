@@ -1,13 +1,15 @@
 import {
   TextBulletListAdd20Regular as AddToQueueIcon,
   Album24Regular as AlbumIcon,
-  Play20Filled as PlayIcon,
+  // Play20Filled as PlayIcon,
 } from '@fluentui/react-icons'
 import { useQuery } from '@tanstack/react-query'
 import type { MediaItem } from '@xon/shared'
-import { Button, Skeleton } from '@xon/ui'
+import { Button, Flex, Skeleton } from '@xon/ui'
 import ArtworkImage from '~/components/ArtworkImage'
+import { PlayIcon, ShuffleIcon } from '~/components/icons/playback'
 import { apiFetch, thumbnailUrl } from '~/lib/apiFetch'
+import { mediaMetadataText } from '~/lib/mediaMetadata'
 import { formatDuration, formatDurationSeconds } from '~/lib/utils'
 import { useAudioStore } from '~/store/audioStore'
 import styles from './AlbumTrackList.module.css'
@@ -18,20 +20,17 @@ type AlbumTrackListProps = {
   album: MusicGroup
 }
 
-function metadataText(item: MediaItem, key: string): string | undefined {
-  const value = item.fileMetadata[key] ?? item.metadata[key]
-  return typeof value === 'string' && value.trim() ? value.trim() : undefined
-}
-
 function metadataNumber(item: MediaItem, key: string): number | undefined {
   const value = item.fileMetadata[key] ?? item.metadata[key]
   return typeof value === 'number' && Number.isFinite(value) ? value : undefined
 }
 
-function queueItem(track: MediaItem) {
+function queueItem(track: MediaItem, album: MusicGroup) {
   return {
     id: track.id,
     title: track.title,
+    artist: mediaMetadataText(track, 'artist') ?? album.artist,
+    album: mediaMetadataText(track, 'album') ?? album.title,
     mimeType: track.mediaType ?? 'audio/mpeg',
   }
 }
@@ -40,6 +39,8 @@ export default function AlbumTrackList({
   libraryId,
   album,
 }: AlbumTrackListProps) {
+  const clearQueue = useAudioStore((state) => state.clearQueue)
+  const playIndex = useAudioStore((state) => state.playAtIndex)
   const playTrack = useAudioStore((state) => state.playTrack)
   const addToQueue = useAudioStore((state) => state.addToQueue)
   const albumQuery = useQuery<MusicAlbumDetail>({
@@ -56,7 +57,18 @@ export default function AlbumTrackList({
   const detail = albumQuery.data
   const displayAlbum = detail ?? album
   const tracks = detail?.tracks ?? []
+  const firstTrack = tracks.at(0)
   const albumDuration = getAlbumDuration(tracks)
+
+  const handleAlbumAddToQueue = () => {
+    clearQueue()
+
+    for (const track of tracks) {
+      addToQueue(queueItem(track, displayAlbum))
+    }
+
+    playIndex(0)
+  }
 
   return (
     <article className={styles.page}>
@@ -72,7 +84,7 @@ export default function AlbumTrackList({
             fallback={<AlbumIcon />}
           />
         </div>
-        <div className={styles.albumInfo}>
+        <Flex dir="col" gap="1" className={styles.albumInfo}>
           <p className={styles.eyebrow}>Album</p>
           <h2>{displayAlbum.title}</h2>
           <p className={styles.artist}>
@@ -83,7 +95,20 @@ export default function AlbumTrackList({
             {displayAlbum.songCount === 1 ? 'track' : 'tracks'}
             {albumDuration != null && ` · ${albumDuration}`}
           </p>
-        </div>
+          <Flex gap="2">
+            {firstTrack && (
+              <Button.Icon
+                variant="primary"
+                onClick={() => handleAlbumAddToQueue()}
+              >
+                <PlayIcon />
+              </Button.Icon>
+            )}
+            <Button.Icon>
+              <ShuffleIcon />
+            </Button.Icon>
+          </Flex>
+        </Flex>
       </div>
 
       {albumQuery.isPending ? (
@@ -118,20 +143,17 @@ export default function AlbumTrackList({
             const trackNumber =
               metadataNumber(track, 'trackNumber') ?? index + 1
             const discNumber = metadataNumber(track, 'discNumber')
-            const artist = metadataText(track, 'artist')
+            const artist = mediaMetadataText(track, 'artist')
 
             return (
               <li className={styles.track} key={track.id}>
                 <button
                   type="button"
                   className={styles.trackMain}
-                  onClick={() => playTrack(queueItem(track))}
+                  onClick={() => playTrack(queueItem(track, displayAlbum))}
                   aria-label={`Play ${track.title}`}
                 >
-                  <PlayIcon
-                    className={styles.playIcon ?? ''}
-                    aria-hidden="true"
-                  />
+                  <PlayIcon className={styles.playIcon ?? ''} />
                   <span className={styles.trackNumber} aria-hidden="true">
                     {discNumber != null && discNumber > 1
                       ? `${discNumber}.${trackNumber}`
@@ -150,7 +172,7 @@ export default function AlbumTrackList({
                 <Button.Icon
                   className={styles.queueButton}
                   variant="ghost"
-                  onClick={() => addToQueue(queueItem(track))}
+                  onClick={() => addToQueue(queueItem(track, displayAlbum))}
                   aria-label={`Add ${track.title} to queue`}
                 >
                   <AddToQueueIcon />

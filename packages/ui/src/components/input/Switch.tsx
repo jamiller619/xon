@@ -39,8 +39,8 @@ const styles = css`
       opacity var(--switch-duration) var(--switch-easing);
 
     &[data-checked] {
-      border-color: var(--color-accent-9);
-      background-color: var(--color-accent-9);
+      background: var(--color-accent-gradient);
+      /* background-color: var(--color-accent-9); */
     }
 
     &:focus-visible,
@@ -87,7 +87,7 @@ const styles = css`
       transform var(--switch-duration) var(--switch-easing);
 
     &[data-checked] {
-      background-color: var(--color-accent-1);
+      background-color: var(--color-gray-2);
       transform: translateX(calc(var(--space-lg) - var(--space-2xs)));
     }
   }
