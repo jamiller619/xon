@@ -9,16 +9,11 @@ import {
   ArrowSyncRegular as RefreshIcon,
 } from '@fluentui/react-icons'
 import type { Library, MediaItem } from '@xon/shared'
-import {
-  Button,
-  Card,
-  ContextMenu,
-  type ContextMenuItem,
-  Dialog,
-} from '@xon/ui'
+import { Card, ContextMenu, type ContextMenuItem } from '@xon/ui'
 import { type ComponentPropsWithRef, useState } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useRefreshMetadataConfirmation } from '~/components/confirmation/ConfirmationProvider'
+import { getEditImagesDialogHref } from '~/components/dialog-router/dialogRoute'
 import useMetadata from '~/hooks/useMetadata'
 import usePlayState from '~/hooks/usePlayState'
 import { apiFetch, thumbnailUrl } from '~/lib/apiFetch'
@@ -26,7 +21,6 @@ import { mediaMetadataText } from '~/lib/mediaMetadata'
 import { mediaPath } from '~/lib/utils'
 import { useAudioStore } from '~/store/audioStore'
 import ArtworkImage from '../ArtworkImage'
-import EditImages from '../EditImages'
 import FixMatchDialog from '../fix-match/FixMatchDialog'
 import ListView from './ListView'
 import styles from './MediaCard.module.css'
@@ -57,10 +51,10 @@ export default function MediaCard({
   listRowProps,
 }: MediaCardProps) {
   const confirmRefresh = useRefreshMetadataConfirmation()
+  const location = useLocation()
   const navigate = useNavigate()
   const playTrack = useAudioStore((s) => s.playTrack)
   const addToQueue = useAudioStore((s) => s.addToQueue)
-  const [editImagesOpen, setEditImagesOpen] = useState(false)
   const [fixMatchOpen, setFixMatchOpen] = useState(false)
   const playState = usePlayState(item.id)
   const isAudio = item.mediaType?.startsWith('audio/') ?? false
@@ -68,6 +62,10 @@ export default function MediaCard({
   const link = mediaPath(item)
   const progress = getProgress(playState?.position, playState?.duration)
   const metadata = useMetadata(item, 'year')
+  const editImagesHref = getEditImagesDialogHref(location, {
+    type: 'media',
+    id: item.id,
+  })
 
   function handleOpen(e: React.MouseEvent<HTMLElement>) {
     if (onOpen) {
@@ -158,7 +156,7 @@ export default function MediaCard({
     {
       label: 'Edit images',
       icon: <ImageEditIcon />,
-      onClick: () => setEditImagesOpen(true),
+      onClick: () => void navigate(editImagesHref),
     },
     {
       label: 'Fix match',
@@ -243,19 +241,6 @@ export default function MediaCard({
           )}
         </Card>
       </ContextMenu>
-      <Dialog
-        open={editImagesOpen}
-        onOpenChange={setEditImagesOpen}
-        title={`${item.title}: Edit images`}
-        headerActions={
-          <Button size="small" onClick={handleRefreshMetadata}>
-            <RefreshIcon aria-hidden="true" />
-            Refresh Metadata
-          </Button>
-        }
-      >
-        <EditImages item={item} />
-      </Dialog>
       {fixMatchOpen && (
         <FixMatchDialog
           item={item}

@@ -10,8 +10,9 @@ import {
 } from '@xon/ui'
 import clsx from 'clsx'
 import { lazy, useLayoutEffect, useRef, useState } from 'react'
-import { Link, useLocation, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { BackgroundSlideshow } from '~/components/background-slideshow/BackgroundSlideshow'
+import { getEditImagesDialogHref } from '~/components/dialog-router/dialogRoute'
 import { PlayIcon } from '~/components/icons/playback'
 import { mediaPosterTransitionName } from '~/components/media-card/mediaViewTransition'
 import PluginSlot from '~/components/PluginSlot'
@@ -27,12 +28,19 @@ import Cast from './movies/Cast'
 import MovieSubtitle from './movies/MovieSubtitle'
 import Related from './movies/Related'
 
-function buildMoreMenu(addToChildren?: MenuItem[] | undefined): MenuItems {
+function buildMoreMenu(
+  addToChildren?: MenuItem[] | undefined,
+  editImages?: () => void,
+): MenuItems {
   return [
     { label: 'Add to ...', icon: <Icons.AddTo />, children: addToChildren },
     { label: 'Edit metadata', icon: <Icons.Edit /> },
     { label: 'Refresh metadata', icon: <Icons.RefreshMetadata /> },
-    { label: 'Edit images', icon: <Icons.EditImages /> },
+    {
+      label: 'Edit images',
+      icon: <Icons.EditImages />,
+      onClick: editImages,
+    },
     { label: 'Download', icon: <Icons.Download /> },
     // {
     //   label: 'Sort by',
@@ -48,9 +56,11 @@ const VideoPlayer = lazy(() => import('./components/VideoPlayer'))
 
 export default function Media() {
   const { id } = useParams<{ id: string }>()
+  const location = useLocation()
+  const navigate = useNavigate()
   const pageRef = useRef<HTMLDivElement>(null)
   const [showPlayer, setShowPlayer] = useState(false)
-  const placeholderData = useLocation().state as
+  const placeholderData = location.state as
     | (MediaItem & { library?: Library })
     | undefined
   const [collections, addMediaToCollection] = useCollections()
@@ -101,6 +111,10 @@ export default function Media() {
     : data.metadata.images?.logo
       ? [data.metadata.images.logo]
       : []
+  const editImagesHref = getEditImagesDialogHref(location, {
+    type: 'media',
+    id: data.id,
+  })
 
   return (
     <div ref={pageRef} className={styles.page}>
@@ -214,6 +228,7 @@ export default function Media() {
                   )
                 },
               })),
+              () => void navigate(editImagesHref),
             )}
           >
             <Button.Icon variant="ghost">

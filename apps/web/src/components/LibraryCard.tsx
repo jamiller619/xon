@@ -4,15 +4,14 @@ import {
   FolderSearchRegular as ScanIcon,
 } from '@fluentui/react-icons'
 import type { Library } from '@xon/shared'
-import { Card, ContextMenu, Dialog } from '@xon/ui'
+import { Card, ContextMenu } from '@xon/ui'
 import { css } from 'inline-css-modules'
-import { useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import { getEditImagesDialogHref } from '~/components/dialog-router/dialogRoute'
 import useLibraryThumbnail from '~/hooks/useLibraryThumbnail'
 import { apiPost } from '~/lib/apiFetch'
 import ArtworkImage from './ArtworkImage'
 import { useRefreshMetadataConfirmation } from './confirmation/ConfirmationProvider'
-import EditImages from './EditImages'
 
 const styles = css`
   .library {
@@ -57,8 +56,13 @@ type LibraryCardProps = {
 
 export default function LibraryCard({ data, withLink }: LibraryCardProps) {
   const confirmRefresh = useRefreshMetadataConfirmation()
-  const [editImagesOpen, setEditImagesOpen] = useState(false)
+  const location = useLocation()
+  const navigate = useNavigate()
   const thumbnailURL = useLibraryThumbnail(data)
+  const editImagesHref = getEditImagesDialogHref(location, {
+    type: 'library',
+    id: data.id,
+  })
 
   const cardContent = (
     <>
@@ -79,52 +83,43 @@ export default function LibraryCard({ data, withLink }: LibraryCardProps) {
   )
 
   return (
-    <>
-      <ContextMenu
-        items={[
-          {
-            label: 'Scan library',
-            icon: <ScanIcon />,
-            onClick: () => apiPost(`/api/libraries/${data.id}/scan`),
-          },
-          {
-            label: 'Edit images',
-            icon: <ImageEditIcon />,
-            onClick: () => setEditImagesOpen(true),
-          },
-          {
-            label: 'Refresh metadata',
-            icon: <RefreshIcon />,
-            onClick: () =>
-              confirmRefresh(() =>
-                apiPost(`/api/libraries/${data.id}/scan/refresh`),
-              ),
-          },
-        ]}
-        key={data.id}
-      >
-        {withLink ? (
-          <Card
-            as={Link}
-            to={`/libraries/${data.id}`}
-            key={data.id}
-            className={styles.library}
-          >
-            {cardContent}
-          </Card>
-        ) : (
-          <Card key={data.id} className={styles.library}>
-            {cardContent}
-          </Card>
-        )}
-      </ContextMenu>
-      <Dialog
-        open={editImagesOpen}
-        onOpenChange={setEditImagesOpen}
-        title={`${data.name}: Edit images`}
-      >
-        <EditImages library={data} />
-      </Dialog>
-    </>
+    <ContextMenu
+      items={[
+        {
+          label: 'Scan library',
+          icon: <ScanIcon />,
+          onClick: () => apiPost(`/api/libraries/${data.id}/scan`),
+        },
+        {
+          label: 'Edit images',
+          icon: <ImageEditIcon />,
+          onClick: () => void navigate(editImagesHref),
+        },
+        {
+          label: 'Refresh metadata',
+          icon: <RefreshIcon />,
+          onClick: () =>
+            confirmRefresh(() =>
+              apiPost(`/api/libraries/${data.id}/scan/refresh`),
+            ),
+        },
+      ]}
+      key={data.id}
+    >
+      {withLink ? (
+        <Card
+          as={Link}
+          to={`/libraries/${data.id}`}
+          key={data.id}
+          className={styles.library}
+        >
+          {cardContent}
+        </Card>
+      ) : (
+        <Card key={data.id} className={styles.library}>
+          {cardContent}
+        </Card>
+      )}
+    </ContextMenu>
   )
 }

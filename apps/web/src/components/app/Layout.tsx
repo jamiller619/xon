@@ -3,6 +3,7 @@ import clsx from 'clsx'
 import { useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Outlet } from 'react-router-dom'
+import DialogRouter from '~/components/dialog-router/DialogRouter'
 import AudioPlayer from '~/components/viewers/AudioPlayer'
 import styles from './Layout.module.css'
 import ScanBanner from './ScanBanner'
@@ -35,6 +36,7 @@ export default function Layout() {
         </div>,
         document.body,
       )}
+      <DialogRouter />
     </Flex>
   )
 }

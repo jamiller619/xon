@@ -11,7 +11,11 @@ import {
 } from '@xon/ui'
 import { css } from 'inline-css-modules'
 import { type MouseEventHandler, useState } from 'react'
-import CreateLibraryButton from '~/components/CreateLibraryButton'
+import { Link, useLocation, useNavigate } from 'react-router-dom'
+import {
+  getDialogHref,
+  getEditImagesDialogHref,
+} from '~/components/dialog-router/dialogRoute'
 import LibraryIcon from '~/components/icons/LibraryIcon'
 import useLibraries, { updateLibraryMutation } from '~/hooks/useLibraries'
 import useLibraryThumbnail from '~/hooks/useLibraryThumbnail'
@@ -66,14 +70,21 @@ const styles = css`
 `
 
 export default function AdminLibraries() {
-  const { data: libraries, refetch: refetchLibraries } = useLibraries()
+  const { data: libraries } = useLibraries()
+  const location = useLocation()
+  const createLibraryHref = getDialogHref(location, 'create-library')
 
   return (
     <Page>
       <header className={styles.header}>
         <Page.Title>Manage libraries</Page.Title>
         <Flex gap="2">
-          <CreateLibraryButton onSuccess={() => void refetchLibraries()} />
+          <Button
+            render={<Link to={createLibraryHref} aria-haspopup="dialog" />}
+          >
+            <Icons.AddLibrary />
+            Create library
+          </Button>
           <Button onClick={() => void console.log('test')}>
             <Icons.AddLibrary />
             Scan all libraries
@@ -92,6 +103,8 @@ export default function AdminLibraries() {
 function LibraryCard({ library }: { library: Library }) {
   const thumbnailURL = useLibraryThumbnail(library)
   const queryClient = useQueryClient()
+  const location = useLocation()
+  const navigate = useNavigate()
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [contentType, setContentType] = useState<ContentType>(library.type)
@@ -139,6 +152,11 @@ function LibraryCard({ library }: { library: Library }) {
     setDeleteOpen(true)
   }
 
+  const editImagesHref = getEditImagesDialogHref(location, {
+    type: 'library',
+    id: library.id,
+  })
+
   function closeDeleteConfirmation() {
     if (deleteLibrary.isPending) return
     setDeleteOpen(false)
@@ -174,7 +192,11 @@ function LibraryCard({ library }: { library: Library }) {
             </Button.Icon> */}
             <Menu
               className={styles.moreMenu}
-              items={buildMoreMenu(openEditor, openDeleteConfirmation)}
+              items={buildMoreMenu(
+                openEditor,
+                () => void navigate(editImagesHref),
+                openDeleteConfirmation,
+              )}
               align="start"
             >
               <Button.Icon>
@@ -248,12 +270,17 @@ function LibraryCard({ library }: { library: Library }) {
 
 function buildMoreMenu(
   editAction: MouseEventHandler | undefined,
+  editImagesAction: MouseEventHandler | undefined,
   deleteAction: MouseEventHandler | undefined,
 ): MenuItems {
   return [
     { label: 'Edit library', icon: <Icons.Edit />, onClick: editAction },
     { label: 'Refresh library metadata', icon: <Icons.RefreshMetadata /> },
-    { label: 'Edit images', icon: <Icons.EditImages /> },
+    {
+      label: 'Edit images',
+      icon: <Icons.EditImages />,
+      onClick: editImagesAction,
+    },
     { label: 'Scan library', icon: <Icons.Scan /> },
     { label: 'Delete', icon: <Icons.Delete />, onClick: deleteAction },
   ]
