@@ -3,14 +3,14 @@ import type { LibraryStats } from '@xon/shared'
 import { Button } from '@xon/ui'
 import prettyBytes from 'pretty-bytes'
 import { useRefreshMetadataConfirmation } from '~/components/confirmation/ConfirmationProvider'
+import { useRefreshMetadata } from '~/hooks/useLibraries'
 import { apiFetch } from '~/lib/apiFetch'
 import Icons from '~/lib/icons'
 import type { LibraryTypeViewProps } from '../../LibraryTypeView'
 import MoviesView from './MoviesView'
-import { useRefreshMovieMetadata } from './useRefreshMovieMetadata'
 
 export default function MoviesLibraryView({ library }: LibraryTypeViewProps) {
-  const metadataRefresh = useRefreshMovieMetadata(library.id)
+  const metadataRefresh = useRefreshMetadata(library.id)
   const confirmRefresh = useRefreshMetadataConfirmation()
   const { data: libraryStats } = useQuery<LibraryStats>({
     queryKey: ['library-stats', library.id],
@@ -49,12 +49,12 @@ export default function MoviesLibraryView({ library }: LibraryTypeViewProps) {
       {...(error ? { error } : {})}
       actions={
         <Button
-          loading={metadataRefresh.isRefreshing}
-          disabled={metadataRefresh.isRefreshing}
-          onClick={() => confirmRefresh(metadataRefresh.refresh)}
+          loading={metadataRefresh.isRunning}
+          disabled={metadataRefresh.isRunning}
+          onClick={() => confirmRefresh(() => metadataRefresh.mutate())}
         >
           <Icons.RefreshMetadata />
-          {metadataRefresh.isRefreshing
+          {metadataRefresh.isRunning
             ? 'Refreshing metadata'
             : 'Refresh metadata'}
         </Button>

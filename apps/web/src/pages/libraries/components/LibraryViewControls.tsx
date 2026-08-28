@@ -2,13 +2,11 @@ import {
   CheckmarkSquare20Regular as SelectIcon,
   CheckmarkSquare20Filled as SelectIconFilled,
 } from '@fluentui/react-icons'
-import { useMutation } from '@tanstack/react-query'
 import { Button, Label, Select, ToggleButton, ToggleButtonGroup } from '@xon/ui'
 import FilterHeader from '~/components/FilterHeader'
-import { apiFetch, getAPIError } from '~/lib/apiFetch'
+import { useScanLibrary } from '~/hooks/useLibraries'
 import Icons from '~/lib/icons'
 import { useAppStore } from '~/store/appStore'
-import { useScanStore } from '~/store/scanStore'
 import { makeSortKey } from '../hooks/useLibrarySort'
 import styles from '../Library.module.css'
 import type {
@@ -53,36 +51,7 @@ export default function LibraryViewControls<
   )
   const activeMode = modes.find((mode) => mode.id === viewMode) ?? modes[0]
   const showToolbarSort = activeMode?.sortPresentation === 'toolbar'
-  const scanRunning = useScanStore(
-    (state) =>
-      libraryId !== undefined && state.scans[libraryId]?.status === 'running',
-  )
-  const applyScanStarted = useScanStore((state) => state.applyStarted)
-  const removeScan = useScanStore((state) => state.remove)
-  const scan = useMutation({
-    onMutate: () => {
-      if (libraryId) applyScanStarted(libraryId)
-    },
-    mutationFn: async () => {
-      if (!libraryId) return
-      const response = await apiFetch(`/api/libraries/${libraryId}/scan`, {
-        method: 'POST',
-      })
-      if (response.status === 409) {
-        const body = (await response.json().catch(() => null)) as {
-          status?: string
-        } | null
-        if (body?.status === 'already_running') return
-      }
-      if (!response.ok) {
-        throw new Error(await getAPIError(response, 'Could not scan library'))
-      }
-    },
-    onError: () => {
-      if (libraryId) removeScan(libraryId)
-    },
-  })
-  const scanning = scan.isPending || scanRunning
+  const scan = useScanLibrary(libraryId)
 
   const handleSelectModeToggle = (pressed: boolean) => {
     setSelectMode(pressed)
@@ -115,15 +84,15 @@ export default function LibraryViewControls<
         {actions}
         {libraryId && (
           <Button
-            loading={scanning}
-            disabled={scanning}
+            loading={scan.isRunning}
+            disabled={scan.isRunning}
             title={scan.error instanceof Error ? scan.error.message : undefined}
             onClick={() => scan.mutate()}
           >
             <Icons.Scan aria-hidden="true" />
             {scan.error
               ? 'Scan failed'
-              : scanning
+              : scan.isRunning
                 ? 'Scanning library'
                 : 'Scan library'}
           </Button>

@@ -8,8 +8,8 @@ import { Card, ContextMenu } from '@xon/ui'
 import { css } from 'inline-css-modules'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { getEditImagesDialogHref } from '~/components/dialog-router/dialogRoute'
+import { useRefreshMetadata, useScanLibrary } from '~/hooks/useLibraries'
 import useLibraryThumbnail from '~/hooks/useLibraryThumbnail'
-import { apiPost } from '~/lib/apiFetch'
 import ArtworkImage from './ArtworkImage'
 import { useRefreshMetadataConfirmation } from './confirmation/ConfirmationProvider'
 
@@ -56,6 +56,8 @@ type LibraryCardProps = {
 
 export default function LibraryCard({ data, withLink }: LibraryCardProps) {
   const confirmRefresh = useRefreshMetadataConfirmation()
+  const scanLibrary = useScanLibrary(data.id)
+  const refreshMetadata = useRefreshMetadata(data.id)
   const location = useLocation()
   const navigate = useNavigate()
   const thumbnailURL = useLibraryThumbnail(data)
@@ -88,7 +90,7 @@ export default function LibraryCard({ data, withLink }: LibraryCardProps) {
         {
           label: 'Scan library',
           icon: <ScanIcon />,
-          onClick: () => apiPost(`/api/libraries/${data.id}/scan`),
+          onClick: () => scanLibrary.mutate(),
         },
         {
           label: 'Edit images',
@@ -98,10 +100,7 @@ export default function LibraryCard({ data, withLink }: LibraryCardProps) {
         {
           label: 'Refresh metadata',
           icon: <RefreshIcon />,
-          onClick: () =>
-            confirmRefresh(() =>
-              apiPost(`/api/libraries/${data.id}/scan/refresh`),
-            ),
+          onClick: () => confirmRefresh(() => refreshMetadata.mutate()),
         },
       ]}
       key={data.id}

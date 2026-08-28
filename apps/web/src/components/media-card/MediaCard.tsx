@@ -14,9 +14,10 @@ import { type ComponentPropsWithRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useRefreshMetadataConfirmation } from '~/components/confirmation/ConfirmationProvider'
 import { getEditImagesDialogHref } from '~/components/dialog-router/dialogRoute'
+import { useRefreshMetadata } from '~/hooks/useLibraries'
 import useMetadata from '~/hooks/useMetadata'
 import usePlayState from '~/hooks/usePlayState'
-import { apiFetch, thumbnailUrl } from '~/lib/apiFetch'
+import { thumbnailUrl } from '~/lib/apiFetch'
 import { mediaMetadataText } from '~/lib/mediaMetadata'
 import { mediaPath } from '~/lib/utils'
 import { useAudioStore } from '~/store/audioStore'
@@ -51,6 +52,7 @@ export default function MediaCard({
   listRowProps,
 }: MediaCardProps) {
   const confirmRefresh = useRefreshMetadataConfirmation()
+  const refreshMetadata = useRefreshMetadata(item.libraryId, item.id)
   const location = useLocation()
   const navigate = useNavigate()
   const playTrack = useAudioStore((s) => s.playTrack)
@@ -114,13 +116,7 @@ export default function MediaCard({
   }
 
   function handleRefreshMetadata() {
-    confirmRefresh(() =>
-      apiFetch(`/api/libraries/${item.libraryId}/scan/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mediaItemId: item.id }),
-      }),
-    )
+    confirmRefresh(() => refreshMetadata.mutate())
   }
 
   if (listView) {

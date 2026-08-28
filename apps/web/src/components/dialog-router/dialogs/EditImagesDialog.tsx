@@ -5,6 +5,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useRefreshMetadataConfirmation } from '~/components/confirmation/ConfirmationProvider'
 import { getEditImagesTarget } from '~/components/dialog-router/dialogRoute'
 import EditImages from '~/components/EditImages'
+import { useRefreshMetadata } from '~/hooks/useLibraries'
 import { apiFetch, getAPIError } from '~/lib/apiFetch'
 import Icons from '~/lib/icons'
 
@@ -44,17 +45,15 @@ export default function EditImagesDialog({ onClose }: EditImagesDialogProps) {
   const mediaItem = target?.type === 'media' ? (data as MediaItem) : undefined
   const library =
     target?.type === 'library' ? (data as LibraryImageTarget) : undefined
+  const metadataRefresh = useRefreshMetadata(
+    mediaItem?.libraryId,
+    mediaItem?.id,
+  )
   const title = mediaItem?.title ?? library?.name
 
   function refreshMetadata() {
     if (!mediaItem) return
-    confirmRefresh(() =>
-      apiFetch(`/api/libraries/${mediaItem.libraryId}/scan/refresh`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ mediaItemId: mediaItem.id }),
-      }),
-    )
+    confirmRefresh(() => metadataRefresh.mutate())
   }
 
   return (
@@ -66,7 +65,12 @@ export default function EditImagesDialog({ onClose }: EditImagesDialogProps) {
       title={title ? `${title}: Edit images` : 'Edit images'}
       headerActions={
         mediaItem ? (
-          <Button size="small" onClick={refreshMetadata}>
+          <Button
+            size="small"
+            loading={metadataRefresh.isRunning}
+            disabled={metadataRefresh.isRunning}
+            onClick={refreshMetadata}
+          >
             <Icons.RefreshMetadata aria-hidden="true" />
             Refresh Metadata
           </Button>
