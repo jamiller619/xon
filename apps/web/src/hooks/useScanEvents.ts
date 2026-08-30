@@ -30,6 +30,7 @@ export function useScanEvents(): void {
       queryClient.invalidateQueries({ queryKey: ['recentMedia'] })
       queryClient.invalidateQueries({ queryKey: ['featuredMedia'] })
       queryClient.invalidateQueries({ queryKey: ['libraries'] })
+      queryClient.invalidateQueries({ queryKey: ['library-stats'] })
     }
 
     return subscribeToEvents((event) => {

@@ -3,12 +3,9 @@ import {
   MediaPlayer,
   type MediaPlayerInstance,
   MediaProvider,
+  Poster,
   Track,
 } from '@vidstack/react'
-import {
-  DefaultVideoLayout,
-  defaultLayoutIcons,
-} from '@vidstack/react/player/layouts/default'
 import type { MediaItem, PlaybackClient } from '@xon/shared'
 import { Dialog } from '@xon/ui'
 import Hls from 'hls.js'
@@ -18,9 +15,10 @@ import { savePlayState } from '~/lib/playState'
 import { useAudioStore } from '~/store/audioStore'
 import { useAuthStore } from '~/store/authStore'
 import styles from '../Media.module.css'
+import VideoPlayerControls from './VideoPlayerControls'
 
-import '@vidstack/react/player/styles/default/theme.css'
-import '@vidstack/react/player/styles/default/layouts/video.css'
+import '@vidstack/react/player/styles/base.css'
+import '@vidstack/react/player/styles/default/captions.css'
 
 type ExternalSubtitleTrack = {
   type: 'external'
@@ -183,6 +181,13 @@ export default function VideoPlayerDialog({
           }}
         >
           <MediaProvider>
+            {poster && (
+              <Poster
+                className={styles.videoPoster}
+                src={poster}
+                alt={`${item.title} poster`}
+              />
+            )}
             {subtitleTracks.map((track) => (
               <Track
                 key={track.file}
@@ -196,7 +201,7 @@ export default function VideoPlayerDialog({
               />
             ))}
           </MediaProvider>
-          <DefaultVideoLayout icons={defaultLayoutIcons} />
+          <VideoPlayerControls title={item.title} mediaType={item.mediaType} />
         </MediaPlayer>
         {playbackError && (
           <div className={styles.playbackError} role="alert">

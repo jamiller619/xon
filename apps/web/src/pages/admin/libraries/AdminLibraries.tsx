@@ -1,5 +1,5 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
-import type { ContentType, Library } from '@xon/shared'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
+import type { ContentType, Library, LibraryStats } from '@xon/shared'
 import {
   Button,
   ConfirmationDialog,
@@ -10,17 +10,18 @@ import {
   Surface,
 } from '@xon/ui'
 import { css } from 'inline-css-modules'
+import prettyBytes from 'pretty-bytes'
 import { type MouseEventHandler, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   getDialogHref,
   getEditImagesDialogHref,
 } from '~/components/dialog-router/dialogRoute'
+import Icons from '~/components/icons/icons'
 import LibraryIcon from '~/components/icons/LibraryIcon'
 import useLibraries, { updateLibraryMutation } from '~/hooks/useLibraries'
 import useLibraryThumbnail from '~/hooks/useLibraryThumbnail'
-import { getAPIError } from '~/lib/apiFetch'
-import Icons from '~/lib/icons'
+import { apiFetch, getAPIError } from '~/lib/apiFetch'
 import { librariesAPI } from '~/lib/rpc'
 import Page from '~/pages/Page'
 
@@ -56,6 +57,11 @@ const styles = css`
     letter-spacing: 0.05em;
   }
 
+  .stats {
+    font-size: var(--text-sm);
+    font-variant-numeric: tabular-nums;
+  }
+
   .libraryIcon {
     color: var(--color-accent-9);
   }
@@ -79,9 +85,7 @@ export default function AdminLibraries() {
       <header className={styles.header}>
         <Page.Title>Manage libraries</Page.Title>
         <Flex gap="2">
-          <Button
-            render={<Link to={createLibraryHref} aria-haspopup="dialog" />}
-          >
+          <Button as={Link} to={createLibraryHref} aria-haspopup="dialog">
             <Icons.AddLibrary />
             Create library
           </Button>
@@ -108,6 +112,16 @@ function LibraryCard({ library }: { library: Library }) {
   const [editOpen, setEditOpen] = useState(false)
   const [deleteOpen, setDeleteOpen] = useState(false)
   const [contentType, setContentType] = useState<ContentType>(library.type)
+  const libraryStats = useQuery<LibraryStats>({
+    queryKey: ['library-stats', library.id],
+    queryFn: async ({ signal }) => {
+      const response = await apiFetch(`/api/libraries/${library.id}/stats`, {
+        signal,
+      })
+      if (!response.ok) throw new Error('Failed to load library stats')
+      return response.json()
+    },
+  })
   const updateLibrary = useMutation({
     ...updateLibraryMutation,
     onSuccess: () => {
@@ -133,6 +147,9 @@ function LibraryCard({ library }: { library: Library }) {
     onSuccess: () => {
       setDeleteOpen(false)
       queryClient.removeQueries({ queryKey: ['library', library.id] })
+      queryClient.removeQueries({
+        queryKey: ['library-stats', library.id],
+      })
       void queryClient.invalidateQueries({ queryKey: ['libraries'] })
     },
   })
@@ -183,6 +200,15 @@ function LibraryCard({ library }: { library: Library }) {
               {library.dataSources.map((ds) => ds.path).join(', ')}
             </p>
           </Flex>
+          <p className={`${styles.stats} ${styles.muted}`}>
+            {libraryStats.data
+              ? `${libraryStats.data.totalItems.toLocaleString()} ${
+                  libraryStats.data.totalItems === 1 ? 'item' : 'items'
+                } · ${prettyBytes(libraryStats.data.totalSize)}`
+              : libraryStats.isError
+                ? 'Stats unavailable'
+                : 'Loading stats…'}
+          </p>
           <Flex gap="2" justify="end">
             {/* <Button.Icon title="Edit library" onClick={openEditor}>
               <EditIcon />

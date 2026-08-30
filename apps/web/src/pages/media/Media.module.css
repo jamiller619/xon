@@ -47,6 +47,36 @@
   --video-border-radius: 0;
 }
 
+.videoPlayer[data-fullscreen] {
+  width: 100%;
+  height: 100%;
+  max-height: none;
+  aspect-ratio: auto;
+}
+
+.videoPoster {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  width: 100%;
+  height: 100%;
+  border: 0;
+  object-fit: contain;
+  background: var(--color-gray-1);
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.videoPoster[data-visible] {
+  opacity: 1;
+  visibility: visible;
+}
+
+.videoPoster[data-hidden] {
+  display: none;
+}
+
 .playbackError {
   position: absolute;
   inset: 3rem 0 0;

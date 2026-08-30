@@ -1,6 +1,8 @@
 import {
   FolderAdd20Regular as AddLibraryIcon,
   DrawerAddRegular as AddToIcon,
+  TextBulletListAddRegular as AddToPlaylistIcon,
+  Dismiss16Regular as CloseIcon,
   DeleteDismiss20Regular as DeleteIcon,
   ArrowDownload16Regular as DownloadIcon,
   DocumentEdit16Regular as EditIcon,
@@ -8,6 +10,8 @@ import {
   Folder16Regular as FolderIcon,
   ImageEdit16Regular as ImageEditIcon,
   MoreVertical24Regular as MoreIcon,
+  TabDesktop16Regular as OpenIcon,
+  TabDesktopCopyRegular as OpenInNewTabIcon,
   ArrowSync16Regular as RefreshIcon,
   FolderSearch16Regular as ScanIcon,
 } from '@fluentui/react-icons'
@@ -24,4 +28,8 @@ export default {
   More: MoreIcon,
   Folder: FolderIcon,
   AddLibrary: AddLibraryIcon,
+  Open: OpenIcon,
+  OpenInNewTab: OpenInNewTabIcon,
+  AddToPlaylist: AddToPlaylistIcon,
+  Close: CloseIcon,
 }

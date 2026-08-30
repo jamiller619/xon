@@ -92,19 +92,21 @@ export default function AudioPlayerControls({
       return response.json()
     },
   })
+  const resolvedArtist =
+    currentTrack?.artist?.trim() ||
+    (metadataQuery.data
+      ? mediaMetadataText(metadataQuery.data, 'artist')
+      : undefined)
+  const resolvedAlbum =
+    currentTrack?.album?.trim() ||
+    (metadataQuery.data
+      ? mediaMetadataText(metadataQuery.data, 'album')
+      : undefined)
   const resolvedTrack = currentTrack
     ? {
         ...currentTrack,
-        artist:
-          currentTrack.artist?.trim() ||
-          (metadataQuery.data
-            ? mediaMetadataText(metadataQuery.data, 'artist')
-            : undefined),
-        album:
-          currentTrack.album?.trim() ||
-          (metadataQuery.data
-            ? mediaMetadataText(metadataQuery.data, 'album')
-            : undefined),
+        ...(resolvedArtist ? { artist: resolvedArtist } : {}),
+        ...(resolvedAlbum ? { album: resolvedAlbum } : {}),
       }
     : null
   const queueLength = useAudioStore((state) => state.queue.length)
@@ -127,7 +129,7 @@ export default function AudioPlayerControls({
         : 'Repeat: one'
 
   return (
-    <Flex className={styles.controls} gap="2">
+    <Flex className={styles.controls} gap="2" align="center">
       <Flex className={styles.trackInfo} dir="col">
         <CyclingTrackTitle currentTrack={resolvedTrack} />
         <span className={styles.trackType}>
@@ -135,9 +137,9 @@ export default function AudioPlayerControls({
         </span>
       </Flex>
 
-      <Flex>
+      <Flex align="center">
         <Button.Icon
-          className={clsx(styles.iconBtn, shuffle && styles.active)}
+          className={clsx(shuffle && styles.buttonActive)}
           onClick={toggleShuffle}
           title={shuffle ? 'Shuffle: on' : 'Shuffle: off'}
           aria-label={shuffle ? 'Turn shuffle off' : 'Turn shuffle on'}
@@ -146,7 +148,6 @@ export default function AudioPlayerControls({
           <ShuffleIcon />
         </Button.Icon>
         <Button.Icon
-          className={styles.iconBtn}
           onClick={playPrev}
           title="Previous"
           aria-label="Previous track"
@@ -156,16 +157,15 @@ export default function AudioPlayerControls({
           <PreviousIcon />
         </Button.Icon>
         <Button.Icon
-          className={styles.playBtn}
+          className={styles.playButton}
           onClick={() => setPlaying(!playing)}
           title={playing ? 'Pause' : 'Play'}
           aria-label={playing ? 'Pause' : 'Play'}
-          variant="ghost"
+          variant="primary"
         >
           {playing ? <PauseIcon /> : <PlayIcon />}
         </Button.Icon>
         <Button.Icon
-          className={styles.iconBtn}
           onClick={playNext}
           title="Next"
           aria-label="Next track"
@@ -175,7 +175,7 @@ export default function AudioPlayerControls({
           <NextIcon />
         </Button.Icon>
         <Button.Icon
-          className={clsx(styles.iconBtn, repeat !== 'none' && styles.active)}
+          className={clsx(repeat !== 'none' && styles.active)}
           onClick={toggleRepeat}
           title={repeatTitle}
           aria-label={repeatTitle}

@@ -1,5 +1,4 @@
-button.button,
-a.button {
+.button {
   --height: var(--form-control-height);
   --transition: 120ms ease;
 
@@ -38,7 +37,11 @@ a.button {
 
   background: var(--color-gray-a2);
 
+  /* For when an anchor is made to look like a button */
+  text-decoration: none;
+
   &:hover {
+    text-decoration: none;
     background: oklch(from var(--color-gray-11) l c h / 0.3);
   }
 
@@ -168,6 +171,8 @@ a.button {
     height: var(--circle-button-size);
     border-radius: 50%;
     corner-shape: round;
+    display: grid;
+    place-content: center;
 
     &.ghost {
       background: transparent;

@@ -1,0 +1,452 @@
+/* Hallmark · macrostructure: adaptive media transport · genre: modern-minimal
+ * theme: Xon · tone: quiet utility · anchor: shared violet tokens
+ * pre-emit critique: P5 H5 E5 S5 R5 V4 · contrast: pass (40–41)
+ * nav/footer: n/a (42–45) · honest: pass (46) · chrome: pass (47)
+ * tokens: pass (48) · mobile: pass (34, 49–57) · icons: pass (30)
+ */
+.controls {
+  --control-duration: 180ms;
+  --control-ease-out: cubic-bezier(0.16, 1, 0.3, 1);
+  --control-ease-in: cubic-bezier(0.7, 0, 0.84, 0);
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  width: 100%;
+  height: 100%;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+  transition:
+    opacity calc(var(--control-duration) * 0.75) var(--control-ease-in),
+    visibility 0s linear var(--control-duration);
+}
+
+.controls[data-visible] {
+  opacity: 1;
+  visibility: visible;
+  transition:
+    opacity var(--control-duration) var(--control-ease-out),
+    visibility 0s;
+}
+
+.controlBar {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas:
+    "info actions"
+    "seek seek"
+    "transport volume";
+  align-items: center;
+  gap: var(--space-2xs) var(--space-xs);
+  width: 100%;
+  padding: var(--space-xs);
+  padding-block-end: max(var(--space-xs), env(safe-area-inset-bottom));
+  background: var(--color-gray-2);
+  color: var(--color-text);
+  box-shadow: var(--shadow-2);
+  pointer-events: auto;
+}
+
+.trackInfo {
+  grid-area: info;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.trackTitle,
+.trackType {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.trackTitle {
+  line-height: 1.5;
+}
+
+.trackType {
+  color: var(--color-text-muted);
+  font-size: var(--text-xs);
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.transport,
+.volumeArea,
+.videoActions,
+.trackPicker {
+  display: flex;
+  align-items: center;
+}
+
+.transport {
+  grid-area: transport;
+}
+
+.volumeArea {
+  grid-area: volume;
+  justify-self: end;
+  min-width: 0;
+}
+
+.videoActions {
+  grid-area: actions;
+  justify-self: end;
+  min-width: 0;
+}
+
+.controlButton,
+.playButton {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  width: 44px;
+  height: 44px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--color-text);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition:
+    background-color var(--control-duration) var(--control-ease-out),
+    transform 100ms var(--control-ease-out);
+}
+
+.controlButton svg,
+.playButton svg,
+.trackPicker > svg {
+  display: block;
+  width: 24px;
+  height: 24px;
+  fill: currentColor;
+}
+
+.controlButton:focus-visible,
+.playButton:focus-visible,
+.seekSlider:focus-visible,
+.volumeSlider:focus-visible,
+.trackSelect:focus-visible {
+  outline: 2px solid var(--color-accent-9);
+  outline-offset: 2px;
+}
+
+.controlButton:active,
+.playButton:active {
+  transform: translateY(1px);
+  background: var(--color-gray-a3);
+}
+
+.controlButton[aria-disabled="true"],
+.playButton[aria-disabled="true"] {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.playButton {
+  color: var(--color-accent-11);
+  background: var(--color-accent-a2);
+}
+
+.seekArea {
+  grid-area: seek;
+  display: flex;
+  align-items: center;
+  min-width: 0;
+  min-height: 44px;
+  padding-inline: var(--space-sm);
+  border-radius: var(--border-radius-4);
+  corner-shape: round;
+  background: var(--surface-2);
+  color: var(--color-text);
+}
+
+.timeLabel {
+  flex: 0 0 auto;
+  min-width: 4.4ch;
+  color: var(--color-gray-11);
+  font-size: var(--text-sm);
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.seekSlider,
+.volumeSlider {
+  --slider-fill: 0%;
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  height: 44px;
+  margin-inline: var(--space-xs);
+  outline: none;
+  cursor: pointer;
+  touch-action: none;
+}
+
+.seekSlider {
+  flex: 1 1 auto;
+}
+
+.volumeSlider {
+  width: 72px;
+  margin-inline-start: 0;
+}
+
+.sliderTrack {
+  position: relative;
+  width: 100%;
+  height: 4px;
+  overflow: hidden;
+  border-radius: var(--border-radius-4);
+  background: var(--color-gray-7);
+}
+
+.sliderProgress,
+.sliderFill {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  width: var(--slider-progress, 0%);
+}
+
+.sliderProgress {
+  background: var(--color-gray-9);
+}
+
+.sliderFill {
+  width: var(--slider-fill, 0%);
+  background: var(--color-accent-11);
+}
+
+.sliderThumb {
+  position: absolute;
+  inset-inline-start: var(--slider-fill, 0%);
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--color-accent-11);
+  opacity: 0;
+  transform: translateX(-50%);
+  transition: opacity var(--control-duration) var(--control-ease-out);
+  pointer-events: none;
+}
+
+.seekSlider:is(:hover, :focus-visible, [data-dragging]) .sliderThumb,
+.volumeSlider:is(:hover, :focus-visible, [data-dragging]) .sliderThumb {
+  opacity: 1;
+}
+
+.trackPicker {
+  position: relative;
+  justify-content: center;
+  flex: 0 0 44px;
+  width: 44px;
+  height: 44px;
+  min-width: 0;
+  color: var(--color-gray-11);
+}
+
+.trackPicker > svg {
+  display: block;
+  pointer-events: none;
+}
+
+.trackSelect {
+  position: absolute;
+  inset: 0;
+  width: 44px;
+  max-width: none;
+  opacity: 0;
+  cursor: pointer;
+}
+
+.trackPicker:focus-within {
+  border-radius: 50%;
+  outline: 2px solid var(--color-accent-9);
+  outline-offset: 2px;
+}
+
+.trackPicker:active {
+  border-radius: 50%;
+  background: var(--color-gray-a3);
+}
+
+.captions {
+  --media-cue-bg: var(--color-gray-a12);
+  --media-cue-color: var(--color-gray-1);
+  --media-captions-padding: var(--space-md);
+  z-index: 3;
+}
+
+:global([data-media-player][data-controls]) .captions {
+  padding-block-end: 8rem;
+}
+
+.buffering {
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  display: grid;
+  place-items: center;
+  pointer-events: none;
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid var(--color-gray-a7);
+  border-block-start-color: var(--color-accent-11);
+  border-radius: 50%;
+  animation: video-buffering 800ms linear infinite;
+}
+
+.gestures {
+  display: contents;
+}
+
+.gesture,
+.touchGesture,
+.seekBackGesture,
+.seekForwardGesture {
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  display: block;
+  opacity: 0;
+  visibility: hidden;
+  pointer-events: none;
+}
+
+.seekBackGesture {
+  inset-inline-end: auto;
+  width: 20%;
+  z-index: 2;
+}
+
+.seekForwardGesture {
+  inset-inline-start: auto;
+  width: 20%;
+  z-index: 2;
+}
+
+.visuallyHidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+@keyframes video-buffering {
+  to {
+    transform: rotate(1turn);
+  }
+}
+
+@media (hover: hover) and (pointer: fine) {
+  .controlButton:hover,
+  .playButton:hover {
+    background: var(--color-gray-a2);
+  }
+
+  .playButton:hover {
+    background: var(--color-accent-a3);
+  }
+
+  .trackPicker:hover {
+    border-radius: 50%;
+    background: var(--color-gray-a2);
+  }
+
+  .touchGesture {
+    display: none;
+  }
+}
+
+@media (pointer: coarse) {
+  .gesture[action="toggle:paused"] {
+    display: none;
+  }
+
+  .volumeSlider {
+    display: none;
+  }
+}
+
+@media (min-width: 40rem) {
+  .controlBar {
+    grid-template-columns: minmax(7rem, 1fr) auto auto;
+    grid-template-areas:
+      "info transport actions"
+      "seek seek volume";
+    gap: var(--space-xs);
+    padding-inline: var(--space-md);
+  }
+}
+
+@media (min-width: 72rem) {
+  .controlBar {
+    grid-template-columns: minmax(7rem, 11rem) auto minmax(8rem, 1fr) auto auto;
+    grid-template-areas: "info transport seek volume actions";
+  }
+
+  .trackPicker {
+    justify-content: flex-start;
+    flex-basis: auto;
+    width: auto;
+  }
+
+  .trackSelect {
+    position: static;
+    width: auto;
+    max-width: 7.5rem;
+    opacity: 1;
+  }
+
+  .trackPicker:focus-within {
+    outline: none;
+  }
+
+  .trackPicker:active,
+  .trackPicker:hover {
+    background: transparent;
+  }
+}
+
+@media (min-width: 64rem) {
+  .trackInfo {
+    min-width: 140px;
+    max-width: 200px;
+  }
+
+  .volumeSlider {
+    width: 88px;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .controls,
+  .controls[data-visible],
+  .controlButton,
+  .playButton,
+  .sliderThumb {
+    transition-duration: 0ms;
+  }
+
+  .spinner {
+    animation: none;
+  }
+}

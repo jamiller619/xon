@@ -1,6 +1,7 @@
 import { CollectionType } from '@xon/shared'
-import { aliasedTable, and, desc, eq, or } from 'drizzle-orm'
+import { and, desc, eq, or } from 'drizzle-orm'
 import type { LibSQLDatabase } from 'drizzle-orm/libsql'
+import { alias } from 'drizzle-orm/sqlite-core'
 import { publicMediaColumns } from '../db/publicSelections.ts'
 import {
   collectionItems,
@@ -91,7 +92,7 @@ export function getPlayStateProgress(db: LibSQLDatabase, userId: number) {
 }
 
 export async function getUserCollections(db: LibSQLDatabase, userId: number) {
-  const parent = aliasedTable(collections, 'parent_collections')
+  const parent = alias(collections, 'parent_collections')
   return db
     .select({
       id: collections.publicId,

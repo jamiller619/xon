@@ -1,26 +1,18 @@
-import {
-  TextBulletListAddRegular as AddToPlaylistIcon,
-  Delete16Regular as DeleteIcon,
-  LinkEdit16Regular as FixMatchIcon,
-  ImageEdit16Regular as ImageEditIcon,
-  TabDesktop16Regular as OpenIcon,
-  TabDesktopCopyRegular as OpenInNewTabIcon,
-  Play16Regular as PlayIcon,
-  ArrowSyncRegular as RefreshIcon,
-} from '@fluentui/react-icons'
 import type { Library, MediaItem } from '@xon/shared'
 import { Card, ContextMenu, type ContextMenuItem } from '@xon/ui'
 import { type ComponentPropsWithRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import { useRefreshMetadataConfirmation } from '~/components/confirmation/ConfirmationProvider'
 import { getEditImagesDialogHref } from '~/components/dialog-router/dialogRoute'
+import Icons from '~/components/icons/icons'
+import * as PlaybackIcons from '~/components/icons/playback'
 import { useRefreshMetadata } from '~/hooks/useLibraries'
 import useMetadata from '~/hooks/useMetadata'
 import usePlayState from '~/hooks/usePlayState'
 import { thumbnailUrl } from '~/lib/apiFetch'
 import { mediaMetadataText } from '~/lib/mediaMetadata'
 import { mediaPath } from '~/lib/utils'
-import { useAudioStore } from '~/store/audioStore'
+import { type QueueItem, useAudioStore } from '~/store/audioStore'
 import ArtworkImage from '../ArtworkImage'
 import FixMatchDialog from '../fix-match/FixMatchDialog'
 import ListView from './ListView'
@@ -38,6 +30,19 @@ interface MediaCardProps {
   isFavorited?: boolean
   onToggleFavorite?: (id: string, currentlyFavorited: boolean) => void
   listRowProps?: ComponentPropsWithRef<'tr'> & { 'data-index'?: number }
+}
+
+function queueItem(item: MediaItem): QueueItem {
+  const artist = mediaMetadataText(item, 'artist')
+  const album = mediaMetadataText(item, 'album')
+
+  return {
+    id: item.id,
+    title: item.title,
+    ...(artist ? { artist } : {}),
+    ...(album ? { album } : {}),
+    mimeType: item.mediaType ?? 'audio/mpeg',
+  }
 }
 
 export default function MediaCard({
@@ -88,25 +93,13 @@ export default function MediaCard({
   function handlePlay(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
-    playTrack({
-      id: item.id,
-      title: item.title,
-      artist: mediaMetadataText(item, 'artist'),
-      album: mediaMetadataText(item, 'album'),
-      mimeType: item.mediaType ?? 'audio/mpeg',
-    })
+    playTrack(queueItem(item))
   }
 
   function handleAddToQueue(e: React.MouseEvent) {
     e.preventDefault()
     e.stopPropagation()
-    addToQueue({
-      id: item.id,
-      title: item.title,
-      artist: mediaMetadataText(item, 'artist'),
-      album: mediaMetadataText(item, 'album'),
-      mimeType: item.mediaType ?? 'audio/mpeg',
-    })
+    addToQueue(queueItem(item))
   }
 
   function handleToggleFavorite(e: React.MouseEvent) {
@@ -135,38 +128,38 @@ export default function MediaCard({
   const contextMenuItems: ContextMenuItem[] = [
     {
       label: 'Open',
-      icon: <OpenIcon />,
+      icon: <Icons.Open />,
     },
     {
       label: 'Open in new tab',
-      icon: <OpenInNewTabIcon />,
+      icon: <Icons.OpenInNewTab />,
     },
     {
       label: 'Play',
-      icon: <PlayIcon />,
+      icon: <PlaybackIcons.PlayIcon />,
     },
     {
       label: 'Add to playlist',
-      icon: <AddToPlaylistIcon />,
+      icon: <Icons.AddToPlaylist />,
     },
     {
       label: 'Edit images',
-      icon: <ImageEditIcon />,
+      icon: <Icons.EditImages />,
       onClick: () => void navigate(editImagesHref),
     },
     {
       label: 'Fix match',
-      icon: <FixMatchIcon />,
+      icon: <Icons.FixMatch />,
       onClick: () => setFixMatchOpen(true),
     },
     {
       label: 'Refresh metadata',
-      icon: <RefreshIcon />,
+      icon: <Icons.RefreshMetadata />,
       onClick: handleRefreshMetadata,
     },
     {
       label: 'Delete',
-      icon: <DeleteIcon />,
+      icon: <Icons.Delete />,
     },
   ]
 

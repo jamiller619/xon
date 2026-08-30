@@ -7,6 +7,14 @@
   box-shadow: 0 -10px 10px 6px rgba(0, 0, 0, 0.2);
 }
 
+.playButton {
+  margin-inline: var(--space-2xs);
+}
+
+.buttonActive {
+  color: var(--color-accent-10);
+}
+
 .playerSurface {
   display: flex;
   flex-direction: column;
@@ -149,23 +157,13 @@
 }
 
 .queueItemActions {
-  opacity: 0;
-  transition: opacity 0.15s;
+  padding-right: var(--space-md);
 }
 
-.queueItem {
-  display: flex;
-  align-items: center;
-  color: var(--color-gray-11);
-
-  &:hover {
-    background: var(--color-gray-4);
-    color: var(--color-text);
-
-    .queueItemActions {
-      opacity: 1;
-    }
-  }
+.queueItemActions,
+.queueItemButton svg {
+  opacity: 0;
+  transition: opacity 0.15s;
 }
 
 .queueItemButton {
@@ -178,13 +176,34 @@
   align-items: center;
   gap: var(--space-xs);
   cursor: pointer;
-  padding: var(--space-2xs) var(--space-md);
+  padding: var(--space-2xs) var(--space-xl);
   color: inherit;
 
   svg {
     width: 16px;
     height: 16px;
     color: var(--color-accent-11);
+  }
+}
+
+.queueItem {
+  display: flex;
+  align-items: center;
+  color: var(--color-gray-11);
+  border-radius: var(--border-radius-2);
+
+  &:nth-child(odd) {
+    background: var(--color-gray-3);
+  }
+
+  &:hover {
+    background: var(--color-gray-a2);
+    color: var(--color-text);
+
+    .queueItemActions,
+    .queueItemButton svg {
+      opacity: 1;
+    }
   }
 }
 

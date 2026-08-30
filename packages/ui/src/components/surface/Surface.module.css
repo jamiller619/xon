@@ -33,6 +33,7 @@
   }
 
   button.surface {
-    backdrop-filter: none;
+    /* Removed for manage libraries more button */
+    /* backdrop-filter: none; */
   }
 }

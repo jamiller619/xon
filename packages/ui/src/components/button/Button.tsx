@@ -1,15 +1,32 @@
 import { Button as UIButton } from '@base-ui/react'
 import clsx from 'clsx'
+import { createElement, type ElementType } from 'react'
 import { useFormStatus } from 'react-dom'
 import surfaceStyles from '../surface/Surface.module.css'
-import type { BorderRadius, Size, Variant } from '../types.js'
+import type {
+  BorderRadius,
+  PolymorphicPropsWithRef,
+  Size,
+  Variant,
+} from '../types.js'
 import styles from './Button.module.css'
 
-export type ButtonProps = UIButton.Props & {
+type ButtonOwnProps = {
+  /** Low-level Base UI render override. Prefer `as` for polymorphic rendering. */
+  render?: UIButton.Props['render']
   variant?: Variant | 'link' | 'chip' | undefined
   size?: Size | undefined
   block?: boolean | undefined
   borderRadius?: BorderRadius
+  disabled?: boolean | undefined
+  focusableWhenDisabled?: boolean | undefined
+  /**
+   * Whether the rendered component produces a native `<button>`. This is
+   * inferred for intrinsic elements; set it when `as` is a custom component
+   * that ultimately renders a button.
+   */
+  nativeButton?: boolean | undefined
+  type?: 'button' | 'submit' | 'reset' | undefined
   /**
    * Force the loading spinner on. When omitted, a `type="submit"` button
    * automatically shows the spinner while its parent form's action is pending
@@ -19,7 +36,12 @@ export type ButtonProps = UIButton.Props & {
   loading?: boolean | undefined
 }
 
-export default function Button({
+export type ButtonProps<T extends ElementType = 'button'> =
+  PolymorphicPropsWithRef<T, ButtonOwnProps>
+
+export default function Button<T extends ElementType = 'button'>({
+  as,
+  render,
   className,
   variant,
   size,
@@ -29,9 +51,11 @@ export default function Button({
   type = 'button',
   disabled,
   children,
+  nativeButton,
   ...props
-}: ButtonProps) {
+}: ButtonProps<T>) {
   const { pending } = useFormStatus()
+  const isNativeButton = nativeButton ?? (as === undefined || as === 'button')
 
   // Only a submit button reflects its form's pending state. A non-submit
   // button — or one rendered outside any form — never spins on its own;
@@ -40,7 +64,9 @@ export default function Button({
 
   return (
     <UIButton
-      type={type}
+      type={isNativeButton ? type : undefined}
+      render={as ? createElement(as) : render}
+      nativeButton={isNativeButton}
       disabled={disabled || isLoading}
       {...props}
       className={clsx(
@@ -69,7 +95,9 @@ export default function Button({
   )
 }
 
-export function IconButton(props: ButtonProps) {
+export function IconButton<T extends ElementType = 'button'>(
+  props: ButtonProps<T>,
+) {
   return (
     <Button {...props} className={clsx(props.className, styles.iconButton)} />
   )

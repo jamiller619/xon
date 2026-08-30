@@ -7,11 +7,11 @@ import { useQuery } from '@tanstack/react-query'
 import type { MediaItem } from '@xon/shared'
 import { Button, Flex, Skeleton } from '@xon/ui'
 import ArtworkImage from '~/components/ArtworkImage'
-import { PlayIcon, ShuffleIcon } from '~/components/icons/playback'
+import { PauseIcon, PlayIcon, ShuffleIcon } from '~/components/icons/playback'
 import { apiFetch, thumbnailUrl } from '~/lib/apiFetch'
 import { mediaMetadataText } from '~/lib/mediaMetadata'
 import { formatDuration, formatDurationSeconds } from '~/lib/utils'
-import { useAudioStore } from '~/store/audioStore'
+import { type QueueItem, useAudioStore } from '~/store/audioStore'
 import styles from './AlbumTrackList.module.css'
 import type { MusicAlbumDetail, MusicGroup } from './musicTypes'
 
@@ -39,10 +39,15 @@ export default function AlbumTrackList({
   libraryId,
   album,
 }: AlbumTrackListProps) {
+  const queue = useAudioStore((state) => state.queue)
+  const currentIndex = useAudioStore((state) => state.currentIndex)
+  const currentTrack = queue[currentIndex]
   const clearQueue = useAudioStore((state) => state.clearQueue)
+  const playing = useAudioStore((state) => state.playing)
   const playIndex = useAudioStore((state) => state.playAtIndex)
   const playTrack = useAudioStore((state) => state.playTrack)
   const addToQueue = useAudioStore((state) => state.addToQueue)
+  const setPlaying = useAudioStore((state) => state.setPlaying)
   const albumQuery = useQuery<MusicAlbumDetail>({
     queryKey: ['music-library', libraryId, 'album', album.id],
     queryFn: async ({ signal }) => {
@@ -64,7 +69,7 @@ export default function AlbumTrackList({
     clearQueue()
 
     for (const track of tracks) {
-      addToQueue(queueItem(track, displayAlbum))
+      addToQueue(queueItem(track, displayAlbum) as QueueItem)
     }
 
     playIndex(0)
@@ -140,6 +145,7 @@ export default function AlbumTrackList({
           aria-label={`${displayAlbum.title} tracks`}
         >
           {tracks.map((track, index) => {
+            const isPlaying = currentTrack?.id === track.id && playing
             const trackNumber =
               metadataNumber(track, 'trackNumber') ?? index + 1
             const discNumber = metadataNumber(track, 'discNumber')
@@ -150,10 +156,20 @@ export default function AlbumTrackList({
                 <button
                   type="button"
                   className={styles.trackMain}
-                  onClick={() => playTrack(queueItem(track, displayAlbum))}
+                  onClick={() => {
+                    if (isPlaying) {
+                      setPlaying(false)
+                    } else {
+                      playTrack(queueItem(track, displayAlbum) as QueueItem)
+                    }
+                  }}
                   aria-label={`Play ${track.title}`}
                 >
-                  <PlayIcon className={styles.playIcon ?? ''} />
+                  {isPlaying ? (
+                    <PauseIcon className={styles.playIcon} />
+                  ) : (
+                    <PlayIcon className={styles.playIcon} />
+                  )}
                   <span className={styles.trackNumber} aria-hidden="true">
                     {discNumber != null && discNumber > 1
                       ? `${discNumber}.${trackNumber}`
@@ -172,7 +188,9 @@ export default function AlbumTrackList({
                 <Button.Icon
                   className={styles.queueButton}
                   variant="ghost"
-                  onClick={() => addToQueue(queueItem(track, displayAlbum))}
+                  onClick={() =>
+                    addToQueue(queueItem(track, displayAlbum) as QueueItem)
+                  }
                   aria-label={`Add ${track.title} to queue`}
                 >
                   <AddToQueueIcon />

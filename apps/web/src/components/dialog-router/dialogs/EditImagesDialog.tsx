@@ -5,9 +5,9 @@ import { useSearchParams } from 'react-router-dom'
 import { useRefreshMetadataConfirmation } from '~/components/confirmation/ConfirmationProvider'
 import { getEditImagesTarget } from '~/components/dialog-router/dialogRoute'
 import EditImages from '~/components/EditImages'
+import Icons from '~/components/icons/icons'
 import { useRefreshMetadata } from '~/hooks/useLibraries'
 import { apiFetch, getAPIError } from '~/lib/apiFetch'
-import Icons from '~/lib/icons'
 
 type EditImagesDialogProps = {
   onClose: () => void

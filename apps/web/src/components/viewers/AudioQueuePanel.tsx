@@ -1,7 +1,6 @@
-import { DeleteDismissRegular as ClearIcon } from '@fluentui/react-icons'
 import { Button, Flex } from '@xon/ui'
 import clsx from 'clsx'
-import Icons from '~/lib/icons'
+import Icons from '~/components/icons/icons'
 import { useAudioStore } from '~/store/audioStore'
 import { PauseIcon, PlayIcon } from '../icons/playback'
 import styles from './AudioPlayer.module.css'
@@ -45,15 +44,6 @@ export default function AudioQueuePanel() {
               )}
               aria-current={isPlaying ? 'true' : undefined}
             >
-              {/* <Button.Icon
-                variant="ghost"
-                size="xsmall"
-                onClick={() => playAtIndex(index)}
-                aria-label={`Play ${item.title}`}
-              >
-                <PlayIcon />
-              </Button.Icon>
-              <span className={styles.queueItemTitle}>{item.title}</span> */}
               <button
                 type="button"
                 className={styles.queueItemButton}

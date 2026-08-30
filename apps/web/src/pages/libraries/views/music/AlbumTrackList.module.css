@@ -88,7 +88,18 @@
     &:nth-child(odd) {
       background: var(--color-gray-3);
     }
+
+    &:hover {
+      background: var(--color-gray-a2);
+
+      button {
+        background: transparent;
+      }
+    }
   }
+  /* button {
+    pointer-events: none;
+  } */
 }
 
 .playIcon {
